@@ -15,5 +15,6 @@ This agent must stay **self-hostable and independent of Vercel infrastructure**.
 - Auth: non-Vercel route auth only — never `vercelOidc()` or Vercel Connect
 - Sandbox: microsandbox / Docker / local — not Vercel Sandbox
 - OAuth for connections: `defineInteractiveAuthorization` or your own `getToken`
+- ClickUp: official MCP at `agent/connections/clickup.ts` with self-hosted OAuth (no Vercel Connect)
 
 See `.cursor/rules/no-vercel-infra.mdc`.

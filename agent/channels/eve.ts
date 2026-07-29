@@ -1,11 +1,26 @@
 import { eveChannel } from "eve/channels/eve";
-import { localDev } from "eve/channels/auth";
+import { isLoopbackRequest, type AuthFn } from "eve/channels/auth";
+
+/**
+ * Loopback sessions as a real `user` principal so interactive connection
+ * OAuth (ClickUp MCP) can emit an authorization URL in `eve dev`.
+ * `localDev()` alone uses principalType "local-dev", which user-scoped
+ * connections reject.
+ */
+const localDevUser: AuthFn<Request> = (request) => {
+  if (!isLoopbackRequest(request)) return null;
+  return {
+    attributes: {},
+    authenticator: "local-dev-user",
+    issuer: "local",
+    principalId: "local-dev",
+    principalType: "user",
+  };
+};
 
 export default eveChannel({
   auth: [
-    // Open on localhost for `eve dev` and the REPL; ignored in production.
-    localDev(),
-    // Production stays fail-closed until a non-Vercel authenticator is added
-    // (JWT, Clerk, Auth.js, API key, or custom AuthFn). Do not use vercelOidc().
+    localDevUser,
+    // Production stays fail-closed until Better Auth (or another) verifier is added.
   ],
 });
