@@ -1,7 +1,7 @@
 "use client";
 
-import { useEveAgent } from "eve/react";
-import { useCallback, useState } from "react";
+import { type EveMessageData, type UseEveAgentHelpers } from "eve/react";
+import { useCallback } from "react";
 import {
   ChatConversation,
   ChatConversationContent,
@@ -13,9 +13,17 @@ import {
   type AgentInputResponse,
 } from "@/components/chat/message";
 
-export function EphemeralAgentChat() {
-  const agent = useEveAgent();
-  const [value, setValue] = useState("");
+export function EphemeralAgentChat({
+  agent,
+  draft,
+  onDraftChange,
+  onUserMessage,
+}: {
+  readonly agent: UseEveAgentHelpers<EveMessageData>;
+  readonly draft: string;
+  readonly onDraftChange: (value: string) => void;
+  readonly onUserMessage?: (text: string) => void;
+}) {
   const isBusy = agent.status === "submitted" || agent.status === "streaming";
   const messages = agent.data.messages;
   const lastMessage = messages.at(-1);
@@ -28,7 +36,7 @@ export function EphemeralAgentChat() {
   );
 
   return (
-    <div className="flex h-dvh flex-col bg-background text-foreground">
+    <div className="flex h-full min-h-0 flex-1 flex-col bg-background text-foreground">
       <ChatConversation className="min-h-0 flex-1">
         <ChatConversationContent className="mx-auto w-full max-w-3xl gap-4 px-4 py-6">
           {messages.length === 0 ? (
@@ -62,14 +70,15 @@ export function EphemeralAgentChat() {
         <div className="mx-auto w-full max-w-3xl">
           <ChatComposer
             isBusy={isBusy}
-            onChange={setValue}
+            onChange={onDraftChange}
             onStop={() => agent.stop()}
             onSubmit={async (text) => {
-              setValue("");
+              onDraftChange("");
+              onUserMessage?.(text);
               await agent.send({ message: text });
             }}
             placeholder="Ask Brain anything..."
-            value={value}
+            value={draft}
           />
         </div>
       </div>

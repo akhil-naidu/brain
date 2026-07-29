@@ -1,5 +1,5 @@
-import { EphemeralAgentChat } from "@/app/_components/ephemeral-agent-chat";
+import { BrainChatShell } from "@/app/_components/brain-chat-shell";
 
 export default function Page() {
-  return <EphemeralAgentChat />;
+  return <BrainChatShell />;
 }
