@@ -28,7 +28,7 @@
 - Consumes: `useChatShell().enabledConnections` / `setConnectionEnabled`
 - Produces: menu items for `clickup | slack | asana | gmail`
 
-- [ ] **Step 1: Implement menu**
+- [x] **Step 1: Implement menu**
 
 ```tsx
 const CONNECTION_ITEMS = [
@@ -41,9 +41,9 @@ const CONNECTION_ITEMS = [
 
 Copy structure from the template menu (checkbox rows + toggle pills). Remove setupStatus gate that depends on Neon/auth setup — treat as always ready (`setupReady = true`) for Brain v1.
 
-- [ ] **Step 2: Place menu in composer `footerStart`**
+- [x] **Step 2: Place menu in composer `footerStart`**
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add components/chat/integrations-menu.tsx components/icons.tsx app
@@ -66,7 +66,7 @@ EOF
 - Produces: each `send` includes clientContext describing enabled connections
 - Consumes: `EnabledConnections`
 
-- [ ] **Step 1: Port context helper**
+- [x] **Step 1: Port context helper**
 
 ```ts
 export function createConnectionClientContext(enabledConnections: EnabledConnections): string {
@@ -90,7 +90,7 @@ export function createConnectionClientContext(enabledConnections: EnabledConnect
 }
 ```
 
-- [ ] **Step 2: Send with context**
+- [x] **Step 2: Send with context**
 
 ```ts
 await agent.send({
@@ -99,17 +99,17 @@ await agent.send({
 });
 ```
 
-- [ ] **Step 3: Verify authorization rendering**
+- [x] **Step 3: Verify authorization rendering**
 
 Confirm message parts that request connection authorization show a usable control (open URL / continue) using the ported `AgentMessage` behavior. If the template required skip-auth server actions, replace with `agent.send` HITL response only (no DB skip action).
 
-- [ ] **Step 4: Manual verify**
+- [x] **Step 4: Manual verify**
 
 1. Menu lists ClickUp, Slack, Asana, Gmail.
 2. Toggle one off; send a message — clientContext reflects disabled set (inspect network payload or temporary console log).
 3. With credentials configured, triggering a connection tool surfaces an authorize affordance in the UI (not only `.eve/*-authorize-url.txt`).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app components lib

@@ -2,17 +2,20 @@
 
 import { type EveMessageData, type UseEveAgentHelpers } from "eve/react";
 import { useCallback } from "react";
+import { useChatShell } from "@/app/_components/chat-shell-context";
 import {
   ChatConversation,
   ChatConversationContent,
   ChatScrollButton,
 } from "@/components/chat/conversation";
 import { ChatComposer } from "@/components/chat/composer";
+import { IntegrationsMenu } from "@/components/chat/integrations-menu";
 import {
   AgentMessage,
   type AgentInputResponse,
 } from "@/components/chat/message";
 import { BrainMark } from "@/components/brain-mark";
+import { createConnectionClientContext } from "@/lib/chat/connection-context";
 
 export function EphemeralAgentChat({
   agent,
@@ -25,15 +28,19 @@ export function EphemeralAgentChat({
   readonly onDraftChange: (value: string) => void;
   readonly onUserMessage?: (text: string) => void;
 }) {
+  const { enabledConnections, setConnectionEnabled } = useChatShell();
   const isBusy = agent.status === "submitted" || agent.status === "streaming";
   const messages = agent.data.messages;
   const lastMessage = messages.at(-1);
 
   const handleInputResponses = useCallback(
     async (responses: readonly AgentInputResponse[]) => {
-      await agent.send({ inputResponses: [...responses] });
+      await agent.send({
+        inputResponses: [...responses],
+        clientContext: createConnectionClientContext(enabledConnections),
+      });
     },
-    [agent],
+    [agent, enabledConnections],
   );
 
   return (
@@ -71,13 +78,22 @@ export function EphemeralAgentChat({
       <div className="border-t border-border/60 bg-background/95 p-3 backdrop-blur">
         <div className="mx-auto w-full max-w-3xl">
           <ChatComposer
+            footerStart={
+              <IntegrationsMenu
+                enabledConnections={enabledConnections}
+                onConnectionEnabledChange={setConnectionEnabled}
+              />
+            }
             isBusy={isBusy}
             onChange={onDraftChange}
             onStop={() => agent.stop()}
             onSubmit={async (text) => {
               onDraftChange("");
               onUserMessage?.(text);
-              await agent.send({ message: text });
+              await agent.send({
+                message: text,
+                clientContext: createConnectionClientContext(enabledConnections),
+              });
             }}
             placeholder="Ask Brain anything..."
             value={draft}

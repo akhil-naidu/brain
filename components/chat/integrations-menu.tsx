@@ -1,0 +1,99 @@
+"use client";
+
+import type { ComponentType } from "react";
+import {
+  CheckSquareIcon,
+  HammerIcon,
+  MailIcon,
+  MessageSquareIcon,
+  ListTodoIcon,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import type { EnabledConnections } from "@/app/_components/chat-shell-context";
+import { cn } from "@/lib/utils";
+
+type ConnectionItem = {
+  readonly key: keyof EnabledConnections;
+  readonly label: string;
+  readonly Icon: ComponentType<{ readonly className?: string }>;
+};
+
+const CONNECTION_ITEMS: readonly ConnectionItem[] = [
+  { key: "clickup", label: "ClickUp", Icon: CheckSquareIcon },
+  { key: "slack", label: "Slack", Icon: MessageSquareIcon },
+  { key: "asana", label: "Asana", Icon: ListTodoIcon },
+  { key: "gmail", label: "Gmail", Icon: MailIcon },
+];
+
+export function IntegrationsMenu({
+  enabledConnections,
+  onConnectionEnabledChange,
+}: {
+  readonly enabledConnections: EnabledConnections;
+  readonly onConnectionEnabledChange: (
+    connection: keyof EnabledConnections,
+    enabled: boolean,
+  ) => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          aria-label="Connections"
+          className="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground/75 transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:bg-muted/60 focus-visible:text-foreground focus-visible:outline-none dark:text-muted-foreground/60 [&_*]:cursor-pointer"
+          type="button"
+        >
+          <HammerIcon className="size-4 shrink-0 cursor-pointer" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        className="w-48 rounded-md border-border bg-popover p-1"
+        sideOffset={4}
+      >
+        {CONNECTION_ITEMS.map(({ Icon, key, label }) => {
+          const enabled = enabledConnections[key];
+
+          return (
+            <DropdownMenuItem
+              aria-checked={enabled}
+              className="h-9 cursor-pointer gap-2 rounded-sm px-2 py-1 text-sm focus:bg-muted/70"
+              key={key}
+              onSelect={(event) => {
+                event.preventDefault();
+                onConnectionEnabledChange(key, !enabled);
+              }}
+              role="menuitemcheckbox"
+            >
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border bg-background text-foreground">
+                <Icon className="size-[18px] text-foreground" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm text-foreground">{label}</span>
+              </span>
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors",
+                  enabled ? "bg-emerald-500" : "bg-muted",
+                )}
+              >
+                <span
+                  className={cn(
+                    "size-3 rounded-full bg-white shadow-sm transition-transform",
+                    enabled ? "translate-x-[15px]" : "translate-x-0.5",
+                  )}
+                />
+              </span>
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
