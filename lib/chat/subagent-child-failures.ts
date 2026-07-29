@@ -43,14 +43,14 @@ function toolNameFromActionResult(
   return "tool";
 }
 
-function eventsForCurrentTurn(events: readonly HandleMessageStreamEvent[]) {
+function currentTurnStartIndex(events: readonly HandleMessageStreamEvent[]) {
   let startIndex = 0;
   for (let index = 0; index < events.length; index += 1) {
     if (events[index]?.type === "turn.started") {
       startIndex = index;
     }
   }
-  return events.slice(startIndex);
+  return startIndex;
 }
 
 /**
@@ -68,6 +68,12 @@ export function useSubagentChildFailures(
   const seenCalledRef = useRef(new Set<string>());
   const clientRef = useRef<Client | null>(null);
   const currentTurnStartRef = useRef(0);
+  const eventsRef = useRef(events);
+  eventsRef.current = events;
+
+  // Re-run only when the stream grows or the latest event type changes — not on
+  // unrelated parent re-renders that keep the same event list reference churn.
+  const eventsSig = `${events.length}:${events.at(-1)?.type ?? ""}`;
 
   const getClient = () => {
     clientRef.current ??= new Client({ host: "" });
@@ -76,12 +82,8 @@ export function useSubagentChildFailures(
 
   useEffect(() => {
     const activeChildren = activeChildrenRef.current;
-    let turnStartIndex = 0;
-    for (let index = 0; index < events.length; index += 1) {
-      if (events[index]?.type === "turn.started") {
-        turnStartIndex = index;
-      }
-    }
+    const currentEvents = eventsRef.current;
+    const turnStartIndex = currentTurnStartIndex(currentEvents);
 
     if (turnStartIndex !== currentTurnStartRef.current) {
       currentTurnStartRef.current = turnStartIndex;
@@ -93,9 +95,9 @@ export function useSubagentChildFailures(
       setFailuresByCallId((previous) => (previous.size === 0 ? previous : new Map()));
     }
 
-    const currentEvents = eventsForCurrentTurn(events);
+    const turnEvents = currentEvents.slice(turnStartIndex);
 
-    for (const event of currentEvents) {
+    for (const event of turnEvents) {
       if (event.type === "subagent.called") {
         const { callId, childSessionId, name } = event.data;
         if (seenCalledRef.current.has(callId) || activeChildren.has(callId)) {
@@ -108,14 +110,12 @@ export function useSubagentChildFailures(
 
         void (async () => {
           try {
-            const session = getClient().session({
+            const childSession = getClient().session({
               sessionId: childSessionId,
               streamIndex: 0,
             });
 
-            // Replay from the start so early child tool failures are not missed
-            // if we attach slightly after the child begins work.
-            for await (const childEvent of session.stream({
+            for await (const childEvent of childSession.stream({
               signal: abort.signal,
               startIndex: 0,
             })) {
@@ -135,8 +135,7 @@ export function useSubagentChildFailures(
               };
 
               setFailuresByCallId((previous) => {
-                const next = new Map(previous);
-                const existing = next.get(callId) ?? [];
+                const existing = previous.get(callId) ?? [];
                 if (
                   existing.some(
                     (item) =>
@@ -145,6 +144,7 @@ export function useSubagentChildFailures(
                 ) {
                   return previous;
                 }
+                const next = new Map(previous);
                 next.set(callId, [...existing, failure]);
                 return next;
               });
@@ -173,7 +173,8 @@ export function useSubagentChildFailures(
         event.type === "turn.completed" ||
         event.type === "turn.failed" ||
         event.type === "turn.cancelled" ||
-        event.type === "session.failed"
+        event.type === "session.failed" ||
+        event.type === "session.waiting"
       ) {
         for (const child of activeChildren.values()) {
           child.abort.abort();
@@ -181,7 +182,7 @@ export function useSubagentChildFailures(
         activeChildren.clear();
       }
     }
-  }, [events]);
+  }, [eventsSig]);
 
   useEffect(() => {
     return () => {

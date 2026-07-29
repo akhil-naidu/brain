@@ -28,8 +28,20 @@ type Cancellation = {
   turnId?: string;
 };
 
+const CANCEL_UI_FALLBACK_MS = 1_500;
+
 function toErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
+}
+
+function latestTurnId(events: readonly HandleMessageStreamEvent[]) {
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const event = events[index]!;
+    if (event.type === "turn.started") {
+      return event.data.turnId;
+    }
+  }
+  return undefined;
 }
 
 export function EphemeralAgentChat({
@@ -46,14 +58,30 @@ export function EphemeralAgentChat({
     new Client({ host: "", preserveCompletedSessions: true }).session(),
   );
   const cancellationRef = useRef<Cancellation>({ requested: false });
+  const cancelFallbackTimerRef = useRef<number | null>(null);
+  const agentStopRef = useRef<() => void>(() => undefined);
+  const agentStatusRef = useRef<string>("ready");
   const [cancellationState, setCancellationState] = useState<CancellationState>("idle");
   const [clientError, setClientError] = useState<string | null>(null);
   const [dismissedError, setDismissedError] = useState<string | null>(null);
 
+  const clearCancelFallbackTimer = useCallback(() => {
+    if (cancelFallbackTimerRef.current !== null) {
+      window.clearTimeout(cancelFallbackTimerRef.current);
+      cancelFallbackTimerRef.current = null;
+    }
+  }, []);
+
   const cancelTurn = useCallback(
     (turnId: string) => {
       const cancellation = cancellationRef.current;
-      if (!cancellation.requested || cancellation.sentTurnId === turnId) {
+      if (!cancellation.requested) {
+        return;
+      }
+      if (cancellation.sentTurnId === turnId) {
+        return;
+      }
+      if (!session.state.sessionId) {
         return;
       }
 
@@ -65,11 +93,11 @@ export function EphemeralAgentChat({
           return;
         }
 
-        cancellation.requested = false;
         cancellation.sentTurnId = undefined;
         setClientError(toErrorMessage(error, "Unable to cancel the response."));
         setDismissedError(null);
-        setCancellationState("idle");
+        setCancellationState("requested");
+        agentStopRef.current();
       });
     },
     [session],
@@ -88,16 +116,20 @@ export function EphemeralAgentChat({
         event.type === "turn.completed" ||
         event.type === "turn.failed" ||
         event.type === "turn.cancelled" ||
-        event.type === "session.failed"
+        event.type === "session.failed" ||
+        event.type === "session.waiting"
       ) {
         cancellationRef.current = { requested: false };
-        setCancellationState("idle");
+        clearCancelFallbackTimer();
+        setCancellationState((current) => (current === "idle" ? current : "idle"));
       }
     },
-    [cancelTurn],
+    [cancelTurn, clearCancelFallbackTimer],
   );
 
   const agent = useEveAgent({ onEvent: handleEvent, session });
+  agentStopRef.current = agent.stop;
+  agentStatusRef.current = agent.status;
   const childFailuresByCallId = useSubagentChildFailures(agent.events);
 
   const messages = agent.data.messages;
@@ -157,28 +189,52 @@ export function EphemeralAgentChat({
     }
   }, [agent.error?.message, agent.status]);
 
+  useEffect(() => {
+    if (!isBusy) {
+      clearCancelFallbackTimer();
+      setCancellationState((current) => (current === "idle" ? current : "idle"));
+      cancellationRef.current = { requested: false };
+    }
+  }, [clearCancelFallbackTimer, isBusy]);
+
+  useEffect(() => () => clearCancelFallbackTimer(), [clearCancelFallbackTimer]);
+
   const prepareTurn = useCallback(() => {
+    clearCancelFallbackTimer();
     cancellationRef.current = { requested: false };
     setCancellationState("idle");
     setClientError(null);
     setDismissedError(null);
-  }, []);
+  }, [clearCancelFallbackTimer]);
 
   const requestCancellation = useCallback(() => {
-    if (!isBusy || cancellationState !== "idle") {
+    if (!isBusy) {
       return;
     }
 
     const cancellation = cancellationRef.current;
     cancellation.requested = true;
+    cancellation.turnId = cancellation.turnId ?? latestTurnId(agent.events);
     setClientError(null);
     setDismissedError(null);
-    setCancellationState("requested");
+    setCancellationState((current) => (current === "cancelling" ? current : "requested"));
 
     if (cancellation.turnId !== undefined) {
+      cancellation.sentTurnId = undefined;
       cancelTurn(cancellation.turnId);
     }
-  }, [cancelTurn, cancellationState, isBusy]);
+
+    clearCancelFallbackTimer();
+    cancelFallbackTimerRef.current = window.setTimeout(() => {
+      const status = agentStatusRef.current;
+      if (status === "submitted" || status === "streaming") {
+        // Cooperative cancel can lag with subagents; unlock the composer.
+        agentStopRef.current();
+        setCancellationState("idle");
+        cancellationRef.current = { requested: false };
+      }
+    }, CANCEL_UI_FALLBACK_MS);
+  }, [agent.events, cancelTurn, clearCancelFallbackTimer, isBusy]);
 
   const handleInputResponses = useCallback(
     async (responses: readonly AgentInputResponse[]) => {
@@ -223,7 +279,6 @@ export function EphemeralAgentChat({
     return textPart && textPart.type === "text" ? textPart.text : null;
   }, [lastMessage]);
 
-  // Restore draft if the store surfaces an error after clearing it.
   useEffect(() => {
     if (agent.status !== "error" || draft.length > 0 || !failedUserText) {
       return;
@@ -242,7 +297,6 @@ export function EphemeralAgentChat({
     if (waitingForAuthorization) {
       return false;
     }
-    // Allow HITL replies even while a prior tool is still settling.
     const hasPendingInput = lastMessage.parts.some(
       (part) =>
         part.type === "dynamic-tool" &&
@@ -301,7 +355,12 @@ export function EphemeralAgentChat({
       <div className="border-t border-border/60 bg-background/95 p-3 backdrop-blur">
         <div className="mx-auto w-full max-w-3xl">
           <ChatComposer
-            disabledReason={authDisabledReason}
+            disabledReason={
+              authDisabledReason ??
+              (cancellationState === "cancelling" || cancellationState === "requested"
+                ? "Stopping…"
+                : undefined)
+            }
             footerStart={
               <IntegrationsMenu
                 enabledConnections={enabledConnections}
