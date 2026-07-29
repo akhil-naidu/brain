@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Faceted brain outline (straight segments only) -->
+  <path
+    stroke="currentColor"
+    stroke-width="1.5"
+    stroke-linecap="square"
+    stroke-linejoin="miter"
+    d="M16 3 L21 4 L25 7 L27 12 L27 17 L25 22 L21 26 L16 29 L11 26 L7 22 L5 17 L5 12 L7 7 L11 4 Z"
+  />
+  <!-- Hemisphere split -->
+  <path
+    stroke="currentColor"
+    stroke-width="1.5"
+    stroke-linecap="square"
+    d="M16 3 L16 29"
+  />
+  <!-- Circuit-like folds -->
+  <path
+    stroke="currentColor"
+    stroke-width="1.25"
+    stroke-linecap="square"
+    stroke-linejoin="miter"
+    d="M8 11 L14 11 M18 11 L24 11 M7 16 L14 16 M18 16 L25 16 M9 21 L14 21 M18 21 L23 21"
+  />
+  <!-- Upper lobe facets -->
+  <path
+    stroke="currentColor"
+    stroke-width="1.25"
+    stroke-linecap="square"
+    stroke-linejoin="miter"
+    d="M11 4 L14 8 L16 8 L18 8 L21 4 M14 8 L14 11 M18 8 L18 11"
+  />
+</svg>

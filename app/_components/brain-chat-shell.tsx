@@ -5,6 +5,7 @@ import { PanelLeftIcon } from "lucide-react";
 import { useCallback, useState } from "react";
 import { ChatShellProvider } from "@/app/_components/chat-shell-context";
 import { EphemeralAgentChat } from "@/app/_components/ephemeral-agent-chat";
+import { BrainMark } from "@/components/brain-mark";
 import { ChatSidebar } from "@/components/chat/sidebar";
 import { Button } from "@/components/ui/button";
 import { createFallbackTitle } from "@/lib/chat/title";
@@ -36,7 +37,12 @@ export function BrainChatShell() {
           )}
         >
           <ChatSidebar
-            brand={<span className="truncate font-semibold tracking-tight">Brain</span>}
+            brand={
+              <span className="flex min-w-0 items-center gap-2 text-foreground">
+                <BrainMark className="size-5 shrink-0 text-primary" />
+                <span className="truncate font-semibold tracking-tight">Brain</span>
+              </span>
+            }
             currentTitle={title}
             onNewChat={handleNewChat}
             onToggleSidebar={() => setSidebarOpen(false)}
