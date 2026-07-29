@@ -1,6 +1,6 @@
 # Plan 03 — Ephemeral Chat Core
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Browser chat that streams messages through `useEveAgent()` with template-like message/composer rendering — **no** DB, server actions, or chat persistence.
 
@@ -29,7 +29,7 @@
 **Interfaces:**
 - Produces: Tailwind classes work in App Router
 
-- [ ] **Step 1: Install deps (UI only — no neon/auth/connect)**
+- [x] **Step 1: Install deps (UI only — no neon/auth/connect)**
 
 ```bash
 npm install class-variance-authority clsx tailwind-merge lucide-react \
@@ -41,7 +41,7 @@ npm install class-variance-authority clsx tailwind-merge lucide-react \
 
 Match versions loosely to `/Users/dev/github/tmp/eve-chat-template/package.json` when possible; keep Brain’s existing `eve` / `ai` / `zod` versions unless `withEve` requires a bump (document any bump in the commit message).
 
-- [ ] **Step 2: Add PostCSS + `cn`**
+- [x] **Step 2: Add PostCSS + `cn`**
 
 `postcss.config.mjs`:
 
@@ -66,11 +66,11 @@ export function cn(...inputs: ClassValue[]) {
 }
 ```
 
-- [ ] **Step 3: Seed `app/globals.css` from template, strip Vercel-only bits**
+- [x] **Step 3: Seed `app/globals.css` from template, strip Vercel-only bits**
 
 Copy `/Users/dev/github/tmp/eve-chat-template/app/globals.css` into `app/globals.css`. Keep CSS variables; teal branding comes in Plan 05 (neutral tokens OK for now).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add package.json package-lock.json postcss.config.mjs lib/utils.ts app/globals.css
@@ -97,7 +97,7 @@ EOF
 - Produces: presentational components with **no** imports from `app/actions`, `lib/db`, `lib/auth*`, `@vercel/*`
 - Consumes: `cn`, Tailwind tokens
 
-- [ ] **Step 1: Copy UI + chat components from the mirror**
+- [x] **Step 1: Copy UI + chat components from the mirror**
 
 ```bash
 mkdir -p components/ui components/chat
@@ -107,7 +107,7 @@ cp /Users/dev/github/tmp/eve-chat-template/components/theme-provider.tsx compone
 cp /Users/dev/github/tmp/eve-chat-template/lib/chat/limits.ts lib/chat/limits.ts
 ```
 
-- [ ] **Step 2: Strip forbidden imports**
+- [x] **Step 2: Strip forbidden imports**
 
 Search and fix:
 
@@ -117,7 +117,7 @@ rg -n "better-auth|@vercel/|lib/db|app/actions|drizzle|upstash|AuthDisplay|sign-
 
 Expected: no matches after fixes. Composer placeholder → `Ask Brain anything...`. Fix `ChatComposer` props if template’s `onStop` is required but missing from the destructure (template has a type bug risk — ensure `onStop` is in the props list and wired to the stop button).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add components lib/chat
@@ -141,7 +141,7 @@ EOF
 - Produces: `EphemeralAgentChat` using `useEveAgent()`; exposes send/stop/reset via UI
 - Consumes: `ChatComposer`, `AgentMessage` / conversation helpers, `eve/react`
 
-- [ ] **Step 1: Implement thin bridge** (do **not** port 2k-line `agent-chat.tsx`)
+- [x] **Step 1: Implement thin bridge** (do **not** port 2k-line `agent-chat.tsx`)
 
 ```tsx
 "use client";
@@ -194,11 +194,11 @@ export function EphemeralAgentChat() {
 
 Adjust `AgentMessage` props to match the ported component’s actual API (read the file; wire HITL `onSend` / approve handlers as the template’s message component expects). If `AgentMessage` requires extra props from the template’s persistence layer, stub only what rendering needs (e.g. `isStreaming` from last message + status).
 
-- [ ] **Step 2: Mount on `/`**
+- [x] **Step 2: Mount on `/`**
 
 Update `app/page.tsx` to render `<EphemeralAgentChat />`. Wrap layout with ThemeProvider + TooltipProvider like the template (without Analytics/SpeedInsights/AuthDisplay).
 
-- [ ] **Step 3: Manual verify**
+- [x] **Step 3: Manual verify**
 
 ```bash
 npm run dev
@@ -206,7 +206,7 @@ npm run dev
 
 Browser: open `http://127.0.0.1:3000`, send `Say hi in one sentence.`, confirm assistant text streams into the thread. Confirm no network calls to `/api/chats` or Neon.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app components
