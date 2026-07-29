@@ -10,21 +10,38 @@ export function BrainMark({ className }: { readonly className?: string }) {
       xmlns="http://www.w3.org/2000/svg"
     >
       <path
-        d="M16 5.5C11.2 5.5 7.5 8.6 7.5 13.2C7.5 15.1 8.2 16.8 9.3 18.1C8.4 19.1 7.8 20.4 7.8 21.9C7.8 24.8 10.4 27 13.5 27C14.6 27 15.5 26.7 16 26.2C16.5 26.7 17.4 27 18.5 27C21.6 27 24.2 24.8 24.2 21.9C24.2 20.4 23.6 19.1 22.7 18.1C23.8 16.8 24.5 15.1 24.5 13.2C24.5 8.6 20.8 5.5 16 5.5Z"
+        d="M9.5 11.5C7.2 12.4 6 14.6 6.2 17.1C6.4 19.4 7.8 21.2 9.8 22.2C11.2 23 12.6 23.8 13.2 25.2C13.6 26.2 14.5 26.8 15.6 26.6L16.2 22.8C14.4 21.9 12.6 20.4 11.8 18.4C10.8 15.8 11.2 13.2 12.8 11.8C11.8 11.4 10.6 11.2 9.5 11.5Z"
         stroke="currentColor"
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeWidth="1.75"
+        strokeWidth="1.6"
       />
       <path
-        d="M16 5.5V26.2"
+        d="M22.5 11.5C24.8 12.4 26 14.6 25.8 17.1C25.6 19.4 24.2 21.2 22.2 22.2C20.8 23 19.4 23.8 18.8 25.2C18.4 26.2 17.5 26.8 16.4 26.6L15.8 22.8C17.6 21.9 19.4 20.4 20.2 18.4C21.2 15.8 20.8 13.2 19.2 11.8C20.2 11.4 21.4 11.2 22.5 11.5Z"
         stroke="currentColor"
         strokeLinecap="round"
-        strokeWidth="1.75"
+        strokeLinejoin="round"
+        strokeWidth="1.6"
       />
-      <circle cx="12.2" cy="14.5" fill="currentColor" r="1.15" />
-      <circle cx="19.8" cy="14.5" fill="currentColor" r="1.15" />
-      <circle cx="16" cy="19.2" fill="currentColor" r="1.15" />
+      <path
+        d="M12.8 11.8C13.6 9.2 15 7.4 16 6.6C17 7.4 18.4 9.2 19.2 11.8C18.2 12.4 17.1 12.8 16 12.8C14.9 12.8 13.8 12.4 12.8 11.8Z"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.6"
+      />
+      <path
+        d="M16 12.8L16.2 22.8"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.35"
+      />
+      <path
+        d="M9.2 16.2C10.4 16.8 11.4 17.6 12.1 18.6M22.8 16.2C21.6 16.8 20.6 17.6 19.9 18.6M10.6 20.4C11.5 20.9 12.3 21.5 12.8 22.4M21.4 20.4C20.5 20.9 19.7 21.5 19.2 22.4"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.2"
+      />
     </svg>
   );
 }
