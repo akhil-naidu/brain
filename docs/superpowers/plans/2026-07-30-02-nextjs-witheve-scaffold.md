@@ -1,6 +1,6 @@
 # Plan 02 — Next.js + withEve Scaffold
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Run Brain as a Next.js app that mounts the existing `agent/` via `withEve()`, with open anonymous `user` channel auth and a minimal homepage (no full chat yet).
 
@@ -30,7 +30,7 @@
 - Produces: `npm run dev` → Next + eve child process via `withEve`
 - Consumes: existing `agent/` root
 
-- [ ] **Step 1: Add Next/React deps (do not add neon/better-auth/upstash/connect)**
+- [x] **Step 1: Add Next/React deps (do not add neon/better-auth/upstash/connect)**
 
 ```bash
 npm install next@16.2.6 react@19.2.6 react-dom@19.2.6
@@ -39,7 +39,7 @@ npm install -D @types/react@19.2.15 @types/react-dom@19.2.3
 
 Keep existing `eve`, `@ai-sdk/openai`, `ai`, `zod`.
 
-- [ ] **Step 2: Create `next.config.ts`**
+- [x] **Step 2: Create `next.config.ts`**
 
 ```ts
 import type { NextConfig } from "next";
@@ -54,7 +54,7 @@ const nextConfig: NextConfig = {
 export default withEve(nextConfig);
 ```
 
-- [ ] **Step 3: Update `tsconfig.json` for Next + agent**
+- [x] **Step 3: Update `tsconfig.json` for Next + agent**
 
 ```json
 {
@@ -88,7 +88,7 @@ export default withEve(nextConfig);
 
 Also keep `package.json` imports `#*` → `./agent/*` as today.
 
-- [ ] **Step 4: Update scripts in `package.json`**
+- [x] **Step 4: Update scripts in `package.json`**
 
 ```json
 "scripts": {
@@ -102,7 +102,7 @@ Also keep `package.json` imports `#*` → `./agent/*` as today.
 }
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add package.json package-lock.json next.config.ts tsconfig.json
@@ -124,7 +124,7 @@ EOF
 - Produces: every request authenticated as `principalType: "user"` without credentials
 - Consumes: `eve/channels/eve`, `eve/channels/auth` types
 
-- [ ] **Step 1: Replace channel auth with fixed anonymous user**
+- [x] **Step 1: Replace channel auth with fixed anonymous user**
 
 ```ts
 import { eveChannel } from "eve/channels/eve";
@@ -145,7 +145,7 @@ export default eveChannel({
 });
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add agent/channels/eve.ts
@@ -168,7 +168,7 @@ EOF
 **Interfaces:**
 - Produces: `/` returns HTML containing “Brain”
 
-- [ ] **Step 1: Create minimal layout + page**
+- [x] **Step 1: Create minimal layout + page**
 
 `app/layout.tsx`:
 
@@ -217,7 +217,7 @@ body {
 }
 ```
 
-- [ ] **Step 2: Boot and verify**
+- [x] **Step 2: Boot and verify**
 
 ```bash
 npm run dev
@@ -239,7 +239,7 @@ curl -sS -o /tmp/brain-session.json -w "%{http_code}" \
 
 If session path differs in this eve version, check `node_modules/eve/docs/channels/eve` / frontend overview for the create-session route and adjust the curl — must still be **not 401**.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add app/
