@@ -39,7 +39,7 @@ export function BrainChatShell() {
           <ChatSidebar
             brand={
               <span className="flex min-w-0 items-center gap-2 text-foreground">
-                <BrainMark className="size-5 shrink-0 text-primary" />
+                <BrainMark className="size-5 shrink-0" />
                 <span className="truncate font-semibold tracking-tight">Brain</span>
               </span>
             }

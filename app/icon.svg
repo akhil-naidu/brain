@@ -1,65 +1,58 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
-  <!-- Isometric / 3/4 brain: left lobe, right lobe, top ridge, front folds -->
+  <!-- Emoji-style brain: soft pink lobes + folds -->
+  <defs>
+    <linearGradient id="brainFill" x1="8" y1="6" x2="24" y2="28" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF8FA8"/>
+      <stop offset="1" stop-color="#F06292"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Left hemisphere -->
   <path
-    stroke="currentColor"
-    stroke-width="1.6"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    d="M9.5 11.5
-       C7.2 12.4 6 14.6 6.2 17.1
-       C6.4 19.4 7.8 21.2 9.8 22.2
-       C11.2 23 12.6 23.8 13.2 25.2
-       C13.6 26.2 14.5 26.8 15.6 26.6
-       L16.2 22.8
-       C14.4 21.9 12.6 20.4 11.8 18.4
-       C10.8 15.8 11.2 13.2 12.8 11.8
-       C11.8 11.4 10.6 11.2 9.5 11.5
-       Z"
+    fill="url(#brainFill)"
+    d="M15.6 7.2
+       C13.8 5.1 10.2 5.3 8.6 7.4
+       C7.2 9.2 7.4 11.6 8.6 13.2
+       C7.1 14.2 6.2 16 6.4 17.9
+       C6.7 20.6 8.8 22.5 11.4 22.7
+       C12.2 24.6 14 25.8 15.9 25.6
+       L15.6 7.2Z"
   />
+  <!-- Right hemisphere -->
   <path
-    stroke="currentColor"
-    stroke-width="1.6"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    d="M22.5 11.5
-       C24.8 12.4 26 14.6 25.8 17.1
-       C25.6 19.4 24.2 21.2 22.2 22.2
-       C20.8 23 19.4 23.8 18.8 25.2
-       C18.4 26.2 17.5 26.8 16.4 26.6
-       L15.8 22.8
-       C17.6 21.9 19.4 20.4 20.2 18.4
-       C21.2 15.8 20.8 13.2 19.2 11.8
-       C20.2 11.4 21.4 11.2 22.5 11.5
-       Z"
+    fill="url(#brainFill)"
+    d="M16.4 7.2
+       C18.2 5.1 21.8 5.3 23.4 7.4
+       C24.8 9.2 24.6 11.6 23.4 13.2
+       C24.9 14.2 25.8 16 25.6 17.9
+       C25.3 20.6 23.2 22.5 20.6 22.7
+       C19.8 24.6 18 25.8 16.1 25.6
+       L16.4 7.2Z"
   />
-  <!-- Upper crown / depth ridge -->
+
+  <!-- Center fissure -->
   <path
-    stroke="currentColor"
-    stroke-width="1.6"
+    stroke="#E91E63"
+    stroke-width="1.1"
     stroke-linecap="round"
-    stroke-linejoin="round"
-    d="M12.8 11.8
-       C13.6 9.2 15 7.4 16 6.6
-       C17 7.4 18.4 9.2 19.2 11.8
-       C18.2 12.4 17.1 12.8 16 12.8
-       C14.9 12.8 13.8 12.4 12.8 11.8
-       Z"
+    opacity="0.55"
+    d="M16 7.4 V25.2"
   />
-  <!-- Depth crease -->
+
+  <!-- Cortical folds (emoji wrinkles) -->
   <path
-    stroke="currentColor"
-    stroke-width="1.35"
+    stroke="#E91E63"
+    stroke-width="1.15"
     stroke-linecap="round"
-    d="M16 12.8 L16.2 22.8"
-  />
-  <!-- Side fold accents for volume -->
-  <path
-    stroke="currentColor"
-    stroke-width="1.2"
-    stroke-linecap="round"
-    d="M9.2 16.2 C10.4 16.8 11.4 17.6 12.1 18.6
-       M22.8 16.2 C21.6 16.8 20.6 17.6 19.9 18.6
-       M10.6 20.4 C11.5 20.9 12.3 21.5 12.8 22.4
-       M21.4 20.4 C20.5 20.9 19.7 21.5 19.2 22.4"
+    opacity="0.45"
+    fill="none"
+    d="M9.2 9.4 C10.6 9.1 12 9.8 12.8 10.8
+       M8.4 12.6 C9.8 12.2 11.4 12.8 12.4 14
+       M9 16.2 C10.4 15.8 12 16.5 12.8 17.8
+       M10.2 19.6 C11.4 19.3 12.8 20 13.4 21.2
+       M22.8 9.4 C21.4 9.1 20 9.8 19.2 10.8
+       M23.6 12.6 C22.2 12.2 20.6 12.8 19.6 14
+       M23 16.2 C21.6 15.8 20 16.5 19.2 17.8
+       M21.8 19.6 C20.6 19.3 19.2 20 18.6 21.2"
   />
 </svg>

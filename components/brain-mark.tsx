@@ -9,38 +9,41 @@ export function BrainMark({ className }: { readonly className?: string }) {
       viewBox="0 0 32 32"
       xmlns="http://www.w3.org/2000/svg"
     >
+      <defs>
+        <linearGradient
+          gradientUnits="userSpaceOnUse"
+          id="brainEmojiFill"
+          x1="8"
+          x2="24"
+          y1="6"
+          y2="28"
+        >
+          <stop stopColor="#FF8FA8" />
+          <stop offset="1" stopColor="#F06292" />
+        </linearGradient>
+      </defs>
       <path
-        d="M9.5 11.5C7.2 12.4 6 14.6 6.2 17.1C6.4 19.4 7.8 21.2 9.8 22.2C11.2 23 12.6 23.8 13.2 25.2C13.6 26.2 14.5 26.8 15.6 26.6L16.2 22.8C14.4 21.9 12.6 20.4 11.8 18.4C10.8 15.8 11.2 13.2 12.8 11.8C11.8 11.4 10.6 11.2 9.5 11.5Z"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.6"
+        d="M15.6 7.2C13.8 5.1 10.2 5.3 8.6 7.4C7.2 9.2 7.4 11.6 8.6 13.2C7.1 14.2 6.2 16 6.4 17.9C6.7 20.6 8.8 22.5 11.4 22.7C12.2 24.6 14 25.8 15.9 25.6L15.6 7.2Z"
+        fill="url(#brainEmojiFill)"
       />
       <path
-        d="M22.5 11.5C24.8 12.4 26 14.6 25.8 17.1C25.6 19.4 24.2 21.2 22.2 22.2C20.8 23 19.4 23.8 18.8 25.2C18.4 26.2 17.5 26.8 16.4 26.6L15.8 22.8C17.6 21.9 19.4 20.4 20.2 18.4C21.2 15.8 20.8 13.2 19.2 11.8C20.2 11.4 21.4 11.2 22.5 11.5Z"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.6"
+        d="M16.4 7.2C18.2 5.1 21.8 5.3 23.4 7.4C24.8 9.2 24.6 11.6 23.4 13.2C24.9 14.2 25.8 16 25.6 17.9C25.3 20.6 23.2 22.5 20.6 22.7C19.8 24.6 18 25.8 16.1 25.6L16.4 7.2Z"
+        fill="url(#brainEmojiFill)"
       />
       <path
-        d="M12.8 11.8C13.6 9.2 15 7.4 16 6.6C17 7.4 18.4 9.2 19.2 11.8C18.2 12.4 17.1 12.8 16 12.8C14.9 12.8 13.8 12.4 12.8 11.8Z"
-        stroke="currentColor"
+        d="M16 7.4V25.2"
+        opacity="0.55"
+        stroke="#E91E63"
         strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.6"
+        strokeWidth="1.1"
       />
       <path
-        d="M16 12.8L16.2 22.8"
-        stroke="currentColor"
+        d="M9.2 9.4C10.6 9.1 12 9.8 12.8 10.8M8.4 12.6C9.8 12.2 11.4 12.8 12.4 14M9 16.2C10.4 15.8 12 16.5 12.8 17.8M10.2 19.6C11.4 19.3 12.8 20 13.4 21.2M22.8 9.4C21.4 9.1 20 9.8 19.2 10.8M23.6 12.6C22.2 12.2 20.6 12.8 19.6 14M23 16.2C21.6 15.8 20 16.5 19.2 17.8M21.8 19.6C20.6 19.3 19.2 20 18.6 21.2"
+        fill="none"
+        opacity="0.45"
+        stroke="#E91E63"
         strokeLinecap="round"
-        strokeWidth="1.35"
-      />
-      <path
-        d="M9.2 16.2C10.4 16.8 11.4 17.6 12.1 18.6M22.8 16.2C21.6 16.8 20.6 17.6 19.9 18.6M10.6 20.4C11.5 20.9 12.3 21.5 12.8 22.4M21.4 20.4C20.5 20.9 19.7 21.5 19.2 22.4"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.2"
+        strokeWidth="1.15"
       />
     </svg>
   );
