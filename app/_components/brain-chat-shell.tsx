@@ -1,6 +1,5 @@
 "use client";
 
-import { useEveAgent } from "eve/react";
 import { PanelLeftIcon } from "lucide-react";
 import { useCallback, useState } from "react";
 import { ChatShellProvider } from "@/app/_components/chat-shell-context";
@@ -12,16 +11,16 @@ import { createFallbackTitle } from "@/lib/chat/title";
 import { cn } from "@/lib/utils";
 
 export function BrainChatShell() {
-  const agent = useEveAgent();
+  const [sessionKey, setSessionKey] = useState(0);
   const [draft, setDraft] = useState("");
   const [title, setTitle] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const handleNewChat = useCallback(() => {
-    agent.reset();
+    setSessionKey((current) => current + 1);
     setTitle(null);
     setDraft("");
-  }, [agent]);
+  }, []);
 
   const handleUserMessage = useCallback((text: string) => {
     setTitle((current) => current ?? createFallbackTitle(text));
@@ -77,7 +76,7 @@ export function BrainChatShell() {
             </Button>
           </header>
           <EphemeralAgentChat
-            agent={agent}
+            key={sessionKey}
             draft={draft}
             onDraftChange={setDraft}
             onUserMessage={handleUserMessage}

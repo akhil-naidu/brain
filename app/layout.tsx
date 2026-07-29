@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { readonly children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="min-h-dvh antialiased">
+      <body className="min-h-dvh antialiased" suppressHydrationWarning>
         <ThemeProvider>
           <TooltipProvider>{children}</TooltipProvider>
         </ThemeProvider>

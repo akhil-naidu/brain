@@ -5,8 +5,10 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   CheckIcon,
+  CircleAlertIcon,
   ExternalLinkIcon,
   Loader2Icon,
+  MinusIcon,
   PlugIcon,
   XIcon,
 } from "lucide-react";
@@ -15,6 +17,7 @@ import { Markdown } from "@/components/chat/markdown";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
+import type { SubagentChildFailure } from "@/lib/chat/subagent-child-failures";
 import { cn } from "@/lib/utils";
 
 const STREAM_TEXT_TICK_MS = 60;
@@ -29,11 +32,13 @@ export type AgentInputResponse = {
 
 export function AgentMessage({
   canRespond,
+  childFailuresByCallId,
   isStreaming,
   message,
   onInputResponses,
 }: {
   readonly canRespond: boolean;
+  readonly childFailuresByCallId?: ReadonlyMap<string, readonly SubagentChildFailure[]>;
   readonly isStreaming: boolean;
   readonly message: EveMessage;
   readonly onInputResponses: (responses: readonly AgentInputResponse[]) => void | Promise<void>;
@@ -43,6 +48,7 @@ export function AgentMessage({
     -1,
   );
   const isUser = message.role === "user";
+  const sendFailed = message.metadata?.status === "failed";
 
   return (
     <article
@@ -58,10 +64,15 @@ export function AgentMessage({
           isUser
             ? "max-w-[85%] rounded-[18px] border border-border/40 bg-muted/70 px-3 py-1.5 text-[15px] leading-6 text-foreground shadow-sm"
             : "w-full max-w-none text-sm leading-relaxed text-foreground",
+          sendFailed ? "border-destructive/40" : undefined,
         )}
       >
+        {sendFailed ? (
+          <p className="mb-1 text-xs text-destructive">Message failed to send</p>
+        ) : null}
         <AgentMessageParts
           canRespond={canRespond}
+          childFailuresByCallId={childFailuresByCallId}
           isUser={isUser}
           lastTextIndex={lastTextIndex}
           messageId={message.id}
@@ -76,6 +87,7 @@ export function AgentMessage({
 
 function AgentMessageParts({
   canRespond,
+  childFailuresByCallId,
   isUser,
   lastTextIndex,
   messageId,
@@ -84,6 +96,7 @@ function AgentMessageParts({
   showCaret,
 }: {
   readonly canRespond: boolean;
+  readonly childFailuresByCallId?: ReadonlyMap<string, readonly SubagentChildFailure[]>;
   readonly isUser: boolean;
   readonly lastTextIndex: number;
   readonly messageId: string;
@@ -104,6 +117,7 @@ function AgentMessageParts({
     elements.push(
       <ToolGroup
         canRespond={canRespond}
+        childFailuresByCallId={childFailuresByCallId}
         isSettled={isSettled}
         key={`tools:${partsForGroup.map((part) => part.toolCallId).join(":")}`}
         onInputResponses={onInputResponses}
@@ -119,7 +133,8 @@ function AgentMessageParts({
       return;
     }
 
-    flushTools(true);
+    // Do not settle tools just because text/reasoning followed them mid-turn.
+    flushTools(false);
     const key = partKey(part, index);
 
     elements.push(
@@ -410,21 +425,33 @@ function ReasoningPart({
 
 function ToolGroup({
   canRespond,
+  childFailuresByCallId,
   isSettled,
   onInputResponses,
   parts,
 }: {
   readonly canRespond: boolean;
+  readonly childFailuresByCallId?: ReadonlyMap<string, readonly SubagentChildFailure[]>;
   readonly isSettled: boolean;
   readonly onInputResponses: (responses: readonly AgentInputResponse[]) => void | Promise<void>;
   readonly parts: readonly EveDynamicToolPart[];
 }) {
-  const shouldOpen = parts.some(needsInputResponse);
+  const shouldOpen =
+    parts.some(needsInputResponse) ||
+    parts.some((part) => {
+      const status = getSettledToolStatus(getToolStatus(part, childFailuresByCallId), isSettled);
+      return status === "error" || status === "denied" || status === "incomplete";
+    });
   const [open, setOpen] = useState(shouldOpen);
-  const status = getSettledToolStatus(getToolGroupStatus(parts), isSettled && !shouldOpen);
-  const label = summarizeToolGroup(parts, status);
+  const status = getSettledToolStatus(
+    getToolGroupStatus(parts, childFailuresByCallId),
+    isSettled && !parts.some(needsInputResponse),
+  );
+  const label = summarizeToolGroup(parts, status, childFailuresByCallId);
   const canExpand =
-    parts.length > 1 ? parts.some(hasToolDetails) : hasToolDetails(parts[0]!);
+    parts.length > 1
+      ? parts.some((part) => hasToolDetails(part, childFailuresByCallId))
+      : hasToolDetails(parts[0]!, childFailuresByCallId);
 
   useEffect(() => {
     if (shouldOpen) {
@@ -442,12 +469,15 @@ function ToolGroup({
         className={cn(
           "group flex max-w-full items-center gap-2 py-0.5 text-left text-sm leading-6 text-muted-foreground transition-colors",
           canExpand ? "cursor-pointer hover:text-foreground" : "cursor-default",
+          status === "error" || status === "denied" || status === "incomplete"
+            ? "text-destructive"
+            : undefined,
         )}
         disabled={!canExpand}
       >
         <ToolStatusIcon status={status} />
         <span className="truncate">{label}</span>
-        <span className="sr-only">{toolStatusLabel(status)}</span>
+        <span className="text-[11px] text-muted-foreground/80">{toolStatusLabel(status)}</span>
         {canExpand ? (
           <ChevronRightIcon
             className={cn(
@@ -462,6 +492,7 @@ function ToolGroup({
           {parts.length === 1 ? (
             <ToolDetails
               canRespond={canRespond}
+              childFailures={childFailuresByCallId?.get(parts[0]!.toolCallId)}
               onInputResponses={onInputResponses}
               part={parts[0]!}
             />
@@ -469,6 +500,7 @@ function ToolGroup({
             parts.map((part) => (
               <ToolCallItem
                 canRespond={canRespond}
+                childFailures={childFailuresByCallId?.get(part.toolCallId)}
                 isSettled={isSettled}
                 key={part.toolCallId}
                 onInputResponses={onInputResponses}
@@ -478,25 +510,34 @@ function ToolGroup({
           )}
         </CollapsibleContent>
       ) : null}
+      {!canExpand && childFailuresByCallId?.get(parts[0]?.toolCallId ?? "")?.length ? (
+        <ChildFailureList failures={childFailuresByCallId.get(parts[0]!.toolCallId)!} />
+      ) : null}
     </Collapsible>
   );
 }
 
 function ToolCallItem({
   canRespond,
+  childFailures,
   isSettled,
   onInputResponses,
   part,
 }: {
   readonly canRespond: boolean;
+  readonly childFailures?: readonly SubagentChildFailure[];
   readonly isSettled: boolean;
   readonly onInputResponses: (responses: readonly AgentInputResponse[]) => void | Promise<void>;
   readonly part: EveDynamicToolPart;
 }) {
-  const shouldOpen = needsInputResponse(part);
+  const shouldOpen =
+    needsInputResponse(part) ||
+    ["error", "denied", "incomplete"].includes(
+      getSettledToolStatus(getToolStatus(part, childFailures), isSettled),
+    );
   const [open, setOpen] = useState(shouldOpen);
-  const status = getSettledToolStatus(getToolStatus(part), isSettled && !shouldOpen);
-  const canExpand = hasToolDetails(part);
+  const status = getSettledToolStatus(getToolStatus(part, childFailures), isSettled && !needsInputResponse(part));
+  const canExpand = hasToolDetails(part, childFailures);
 
   useEffect(() => {
     if (shouldOpen) {
@@ -509,12 +550,16 @@ function ToolCallItem({
       className={cn(
         "flex w-full items-center gap-2 py-0.5 text-left text-sm leading-6 text-muted-foreground transition-colors",
         canExpand ? "cursor-pointer hover:text-foreground" : "cursor-default",
+        status === "error" || status === "denied" || status === "incomplete"
+          ? "text-destructive"
+          : undefined,
       )}
       type="button"
     >
       <ToolStatusIcon status={status} />
       <ToolNameLabel part={part} />
       <span className="truncate text-foreground/80">{describeToolAction(part, status)}</span>
+      <span className="sr-only">{toolStatusLabel(status)}</span>
       {canExpand ? (
         <ChevronRightIcon
           className={cn("ml-auto size-3 shrink-0 self-center transition-transform", open ? "rotate-90" : "")}
@@ -524,7 +569,12 @@ function ToolCallItem({
   );
 
   if (!canExpand) {
-    return <div className="py-0.5">{button}</div>;
+    return (
+      <div className="py-0.5">
+        {button}
+        {childFailures?.length ? <ChildFailureList failures={childFailures} /> : null}
+      </div>
+    );
   }
 
   return (
@@ -533,6 +583,7 @@ function ToolCallItem({
       <CollapsibleContent className="mt-1 ml-5">
         <ToolDetails
           canRespond={canRespond}
+          childFailures={childFailures}
           onInputResponses={onInputResponses}
           part={part}
         />
@@ -543,14 +594,18 @@ function ToolCallItem({
 
 function ToolDetails({
   canRespond,
+  childFailures,
   onInputResponses,
   part,
 }: {
   readonly canRespond: boolean;
+  readonly childFailures?: readonly SubagentChildFailure[];
   readonly onInputResponses: (responses: readonly AgentInputResponse[]) => void | Promise<void>;
   readonly part: EveDynamicToolPart;
 }) {
   const hasOutput = part.state === "output-available" || part.state === "output-error";
+  const denialReason =
+    part.state === "output-denied" ? part.approval?.reason?.trim() || "Tool execution denied" : null;
 
   return (
     <div className="space-y-1.5">
@@ -564,10 +619,26 @@ function ToolDetails({
         <ToolPayload
           label={part.state === "output-error" ? "error" : "result"}
           tone={part.state === "output-error" ? "destructive" : "default"}
-          value={part.state === "output-error" ? part.errorText : part.output}
+          value={part.state === "output-error" ? part.errorText || "Tool failed" : part.output}
         />
       ) : null}
+      {denialReason ? (
+        <ToolPayload label="denied" tone="destructive" value={denialReason} />
+      ) : null}
+      {childFailures?.length ? <ChildFailureList failures={childFailures} /> : null}
     </div>
+  );
+}
+
+function ChildFailureList({ failures }: { readonly failures: readonly SubagentChildFailure[] }) {
+  return (
+    <ul className="mt-1 space-y-1 text-xs text-destructive">
+      {failures.map((failure) => (
+        <li key={`${failure.toolName}:${failure.message}`}>
+          Child tool failed: {failure.toolName} — {failure.message}
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -582,10 +653,26 @@ function ToolStatusIcon({ status }: { readonly status: ToolStatus }) {
     );
   }
 
-  if (status === "error" || status === "denied") {
+  if (status === "error") {
     return (
       <span className="flex size-4 shrink-0 items-center justify-center self-center">
         <XIcon className={cn(className, "text-destructive")} />
+      </span>
+    );
+  }
+
+  if (status === "denied") {
+    return (
+      <span className="flex size-4 shrink-0 items-center justify-center self-center">
+        <CircleAlertIcon className={cn(className, "text-destructive")} />
+      </span>
+    );
+  }
+
+  if (status === "incomplete") {
+    return (
+      <span className="flex size-4 shrink-0 items-center justify-center self-center">
+        <MinusIcon className={cn(className, "text-amber-500")} />
       </span>
     );
   }
@@ -727,23 +814,58 @@ function InputRequestActions({
   );
 }
 
-type ToolStatus = "completed" | "denied" | "error" | "running";
+type ToolStatus = "completed" | "denied" | "error" | "incomplete" | "running";
+
+function resolveChildFailures(
+  part: EveDynamicToolPart,
+  childFailures?: readonly SubagentChildFailure[] | ReadonlyMap<string, readonly SubagentChildFailure[]>,
+): readonly SubagentChildFailure[] | undefined {
+  if (!childFailures) {
+    return undefined;
+  }
+  if (childFailures instanceof Map) {
+    return childFailures.get(part.toolCallId);
+  }
+  // ReadonlyMap from useState may not be a Map instance — detect by shape.
+  if (
+    !Array.isArray(childFailures) &&
+    typeof (childFailures as ReadonlyMap<string, readonly SubagentChildFailure[]>).get ===
+      "function"
+  ) {
+    return (childFailures as ReadonlyMap<string, readonly SubagentChildFailure[]>).get(
+      part.toolCallId,
+    );
+  }
+  return childFailures as readonly SubagentChildFailure[];
+}
 
 function needsInputResponse(part: EveDynamicToolPart) {
   return Boolean(part.toolMetadata?.eve?.inputRequest && !part.toolMetadata.eve.inputResponse);
 }
 
-function hasToolDetails(part: EveDynamicToolPart) {
+function hasToolDetails(
+  part: EveDynamicToolPart,
+  childFailures?: readonly SubagentChildFailure[] | ReadonlyMap<string, readonly SubagentChildFailure[]>,
+) {
+  const failures = resolveChildFailures(part, childFailures);
+
+  if (part.state === "output-error" || part.state === "output-denied") {
+    return true;
+  }
+
+  if (failures && failures.length > 0) {
+    return true;
+  }
+
   if (isConnectionSearchTool(part)) {
-    return false;
+    return Boolean(part.toolMetadata?.eve?.inputRequest);
   }
 
   const hasInput = part.input !== undefined && formatPayload(part.input).trim().length > 0;
   const hasOutput =
     part.state === "output-available" && formatPayload(part.output).trim().length > 0;
-  const hasError = part.state === "output-error" && part.errorText.trim().length > 0;
 
-  return hasInput || hasOutput || hasError || Boolean(part.toolMetadata?.eve?.inputRequest);
+  return hasInput || hasOutput || Boolean(part.toolMetadata?.eve?.inputRequest);
 }
 
 function isConnectionSearchTool(part: EveDynamicToolPart) {
@@ -752,15 +874,24 @@ function isConnectionSearchTool(part: EveDynamicToolPart) {
   return normalized.includes("connection") && normalized.includes("search");
 }
 
-function getToolStatus(part: EveDynamicToolPart): ToolStatus {
+function isSubagentCall(part: EveDynamicToolPart) {
+  return part.toolMetadata?.eve?.kind === "subagent-call";
+}
+
+function getToolStatus(
+  part: EveDynamicToolPart,
+  childFailures?: readonly SubagentChildFailure[] | ReadonlyMap<string, readonly SubagentChildFailure[]>,
+): ToolStatus {
+  const failures = resolveChildFailures(part, childFailures);
+
   switch (part.state) {
     case "input-streaming":
     case "input-available":
     case "approval-requested":
     case "approval-responded":
-      return "running";
+      return failures && failures.length > 0 ? "error" : "running";
     case "output-available":
-      return "completed";
+      return failures && failures.length > 0 ? "error" : "completed";
     case "output-denied":
       return "denied";
     case "output-error":
@@ -769,11 +900,15 @@ function getToolStatus(part: EveDynamicToolPart): ToolStatus {
 }
 
 function getSettledToolStatus(status: ToolStatus, isSettled: boolean): ToolStatus {
-  return isSettled && status === "running" ? "completed" : status;
+  // Never green-check unfinished work when the stream settles.
+  return isSettled && status === "running" ? "incomplete" : status;
 }
 
-function getToolGroupStatus(parts: readonly EveDynamicToolPart[]): ToolStatus {
-  const statuses = parts.map(getToolStatus);
+function getToolGroupStatus(
+  parts: readonly EveDynamicToolPart[],
+  childFailuresByCallId?: ReadonlyMap<string, readonly SubagentChildFailure[]>,
+): ToolStatus {
+  const statuses = parts.map((part) => getToolStatus(part, childFailuresByCallId));
 
   if (statuses.includes("error")) {
     return "error";
@@ -781,6 +916,10 @@ function getToolGroupStatus(parts: readonly EveDynamicToolPart[]): ToolStatus {
 
   if (statuses.includes("denied")) {
     return "denied";
+  }
+
+  if (statuses.includes("incomplete")) {
+    return "incomplete";
   }
 
   if (statuses.includes("running")) {
@@ -798,21 +937,32 @@ function toolStatusLabel(status: ToolStatus) {
       return "Denied";
     case "error":
       return "Error";
+    case "incomplete":
+      return "Incomplete";
     case "running":
       return "Running";
   }
 }
 
-function summarizeToolGroup(parts: readonly EveDynamicToolPart[], status: ToolStatus) {
+function summarizeToolGroup(
+  parts: readonly EveDynamicToolPart[],
+  status: ToolStatus,
+  childFailuresByCallId?: ReadonlyMap<string, readonly SubagentChildFailure[]>,
+) {
   if (parts.length === 1) {
     return describeToolAction(parts[0]!, status);
   }
 
   const counts = new Map<string, number>();
+  let failedCount = 0;
 
   for (const part of parts) {
     const category = toolCategory(resolveToolName(part));
     counts.set(category, (counts.get(category) ?? 0) + 1);
+    const partStatus = getToolStatus(part, childFailuresByCallId);
+    if (partStatus === "error" || partStatus === "denied" || partStatus === "incomplete") {
+      failedCount += 1;
+    }
   }
 
   const labels: string[] = [];
@@ -831,7 +981,14 @@ function summarizeToolGroup(parts: readonly EveDynamicToolPart[], status: ToolSt
     }
   }
 
-  return labels.join(", ") || `Used ${parts.length} tools`;
+  const base = labels.join(", ") || `Used ${parts.length} tools`;
+  if (failedCount > 0) {
+    return `${base} (${failedCount} failed)`;
+  }
+  if (status === "running") {
+    return `${base}…`;
+  }
+  return base;
 }
 
 function toolCategory(name: string) {
@@ -861,51 +1018,91 @@ function describeToolAction(part: EveDynamicToolPart, status = getToolStatus(par
   const command = readString(input, ["command", "cmd"]);
   const url = readString(input, ["url", "href"]);
   const connection = readString(input, ["connection", "connectionName", "connector", "source"]);
+  const errorSuffix =
+    part.state === "output-error" && part.errorText.trim()
+      ? ` — ${truncateInline(part.errorText, 96)}`
+      : part.state === "output-denied"
+        ? ` — ${truncateInline(part.approval?.reason?.trim() || "denied", 96)}`
+        : "";
+
+  if (isSubagentCall(part)) {
+    const display = formatDisplayName(part.toolMetadata?.eve?.name ?? name);
+    switch (status) {
+      case "running":
+        return `Working: ${display}`;
+      case "error":
+        return `Failed: ${display}${errorSuffix}`;
+      case "denied":
+        return `Denied: ${display}${errorSuffix}`;
+      case "incomplete":
+        return `Incomplete: ${display}`;
+      default:
+        return `Ran ${display}`;
+    }
+  }
+
+  const withStatus = (running: string, done: string, failed: string) => {
+    switch (status) {
+      case "running":
+        return running;
+      case "error":
+        return `${failed}${errorSuffix}`;
+      case "denied":
+        return `Denied: ${done}${errorSuffix}`;
+      case "incomplete":
+        return `Incomplete: ${done}`;
+      default:
+        return done;
+    }
+  };
 
   if (normalized.includes("connection") && normalized.includes("search")) {
-    const verb = status === "running" ? "Searching" : "Searched";
     const connectionName = resolveConnectionName(name, connection);
-
-    if (connectionName) {
-      return `${verb} ${formatDisplayName(connectionName)}`;
-    }
-
-    if (query && query !== "*") {
-      return `${verb} ${truncateInline(query, 72)}`;
-    }
-
-    return `${verb} connections`;
+    const target = connectionName
+      ? formatDisplayName(connectionName)
+      : query && query !== "*"
+        ? truncateInline(query, 72)
+        : "connections";
+    return withStatus(`Searching ${target}`, `Searched ${target}`, `Failed searching ${target}`);
   }
 
   if (normalized.includes("search") || normalized.includes("grep")) {
-    return query ? `Searched ${truncateInline(query, 72)}` : `Searched ${formatToolName(name)}`;
+    const target = query ? truncateInline(query, 72) : formatToolName(name);
+    return withStatus(`Searching ${target}`, `Searched ${target}`, `Failed searching ${target}`);
   }
 
   if (normalized.includes("read")) {
-    return path ? `Read ${shortenPath(path)}` : `Read ${formatToolName(name)}`;
+    const target = path ? shortenPath(path) : formatToolName(name);
+    return withStatus(`Reading ${target}`, `Read ${target}`, `Failed reading ${target}`);
   }
 
   if (normalized.includes("write") || normalized.includes("edit")) {
-    return path ? `Changed ${shortenPath(path)}` : `Changed ${formatToolName(name)}`;
+    const target = path ? shortenPath(path) : formatToolName(name);
+    return withStatus(`Changing ${target}`, `Changed ${target}`, `Failed changing ${target}`);
   }
 
   if (normalized.includes("fetch")) {
-    return url ? `Fetched ${truncateInline(url, 72)}` : `Fetched ${formatToolName(name)}`;
+    const target = url ? truncateInline(url, 72) : formatToolName(name);
+    return withStatus(`Fetching ${target}`, `Fetched ${target}`, `Failed fetching ${target}`);
   }
 
   if (command) {
-    return truncateInline(command, 72);
+    const target = truncateInline(command, 72);
+    return withStatus(`Running ${target}`, target, `Failed: ${target}`);
   }
 
   if (path) {
-    return shortenPath(path);
+    const target = shortenPath(path);
+    return withStatus(`Using ${target}`, target, `Failed: ${target}`);
   }
 
   if (query) {
-    return truncateInline(query, 72);
+    const target = truncateInline(query, 72);
+    return withStatus(`Using ${target}`, target, `Failed: ${target}`);
   }
 
-  return `Used ${formatToolName(name)}`;
+  const target = formatToolName(name);
+  return withStatus(`Using ${target}`, `Used ${target}`, `Failed: ${target}`);
 }
 
 function resolveToolName(part: EveDynamicToolPart) {
