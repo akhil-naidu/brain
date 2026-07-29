@@ -1,0 +1,62 @@
+export function ClickUpIcon({ className }: { readonly className?: string }) {
+  return (
+    <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
+      <path
+        d="M12.04 6.15 5.472 11.81 2.436 8.29 12.055 0l9.543 8.296-3.05 3.509z"
+        fill="#7B68EE"
+      />
+      <path
+        d="M2 18.439 5.69 15.611C7.651 18.171 9.734 19.35 12.053 19.35c2.307 0 4.33-1.166 6.203-3.704L22 18.405C19.298 22.065 15.941 24 12.053 24 8.178 24 4.788 22.078 2 18.439z"
+        fill="#FF02F0"
+      />
+    </svg>
+  );
+}
+
+export function SlackIcon({ className }: { readonly className?: string }) {
+  return (
+    <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
+      <path
+        d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z"
+        fill="#E01E5A"
+      />
+      <path
+        d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z"
+        fill="#36C5F0"
+      />
+      <path
+        d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zm-1.268 0a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312z"
+        fill="#2EB67D"
+      />
+      <path
+        d="M15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zm0-1.268a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"
+        fill="#ECB22E"
+      />
+    </svg>
+  );
+}
+
+export function AsanaIcon({ className }: { readonly className?: string }) {
+  return (
+    <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
+      <circle cx="12" cy="5.348" fill="#F06A6A" r="5.22" />
+      <circle cx="5.22" cy="17.873" fill="#F06A6A" r="5.22" />
+      <circle cx="18.78" cy="17.873" fill="#F06A6A" r="5.22" />
+    </svg>
+  );
+}
+
+export function GmailIcon({ className }: { readonly className?: string }) {
+  return (
+    <svg aria-hidden="true" className={className} fill="none" viewBox="52 42 88 66">
+      <path d="M58 108h14V74L52 59v43c0 3.32 2.69 6 6 6" fill="#4285F4" />
+      <path d="M120 108h14c3.32 0 6-2.69 6-6V59l-20 15" fill="#34A853" />
+      <path d="M120 48v26l20-15v-8c0-7.42-8.47-11.65-14.4-7.2" fill="#FBBC04" />
+      <path d="M72 74V48l24 18 24-18v26L96 92" fill="#EA4335" />
+      <path
+        d="M52 51v8l20 15V48l-5.6-4.2c-5.94-4.45-14.4-.22-14.4 7.2"
+        fill="#C5221F"
+      />
+    </svg>
+  );
+}

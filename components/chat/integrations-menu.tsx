@@ -1,13 +1,13 @@
 "use client";
 
 import type { ComponentType } from "react";
+import { HammerIcon } from "lucide-react";
 import {
-  CheckSquareIcon,
-  HammerIcon,
-  MailIcon,
-  MessageSquareIcon,
-  ListTodoIcon,
-} from "lucide-react";
+  AsanaIcon,
+  ClickUpIcon,
+  GmailIcon,
+  SlackIcon,
+} from "@/components/icons";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,10 +24,10 @@ type ConnectionItem = {
 };
 
 const CONNECTION_ITEMS: readonly ConnectionItem[] = [
-  { key: "clickup", label: "ClickUp", Icon: CheckSquareIcon },
-  { key: "slack", label: "Slack", Icon: MessageSquareIcon },
-  { key: "asana", label: "Asana", Icon: ListTodoIcon },
-  { key: "gmail", label: "Gmail", Icon: MailIcon },
+  { key: "clickup", label: "ClickUp", Icon: ClickUpIcon },
+  { key: "slack", label: "Slack", Icon: SlackIcon },
+  { key: "asana", label: "Asana", Icon: AsanaIcon },
+  { key: "gmail", label: "Gmail", Icon: GmailIcon },
 ];
 
 export function IntegrationsMenu({
@@ -70,8 +70,8 @@ export function IntegrationsMenu({
               }}
               role="menuitemcheckbox"
             >
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border bg-background text-foreground">
-                <Icon className="size-[18px] text-foreground" />
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border bg-background">
+                <Icon className="size-[18px]" />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm text-foreground">{label}</span>
