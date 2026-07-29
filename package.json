@@ -10,7 +10,11 @@
     "build": "eve build",
     "dev": "eve dev",
     "start": "eve start",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "openspec": "openspec",
+    "openspec:validate": "openspec validate --all --no-interactive",
+    "openspec:list": "openspec list",
+    "openspec:specs": "openspec list --specs"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.20",
@@ -19,6 +23,7 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "@fission-ai/openspec": "^1.7.0",
     "@types/node": "24.x",
     "microsandbox": "^0.5.10",
     "typescript": "7.0.2"

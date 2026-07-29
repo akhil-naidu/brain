@@ -19,3 +19,17 @@ This agent must stay **self-hostable and independent of Vercel infrastructure**.
 - Slack / Asana / Gmail: official MCP with self-hosted OAuth + env client credentials (`agent/connections/{slack,asana,gmail}.ts`)
 
 See `.cursor/rules/no-vercel-infra.mdc`.
+
+## OpenSpec
+
+This repo uses [OpenSpec](https://github.com/Fission-AI/OpenSpec) for behavior specs and change proposals.
+
+- Specs: `openspec/specs/`
+- Active changes: `openspec/changes/`
+- Config: `openspec/config.yaml`
+- Cursor slash commands: `/opsx-propose`, `/opsx-apply`, `/opsx-archive`, `/opsx-explore`, …
+- Validate: `npm run openspec:validate`
+
+Ordered implementation checklists for the Brain chat UI live separately in
+`docs/superpowers/plans/` (do not relocate). Design overview:
+`docs/superpowers/specs/2026-07-29-brain-chat-ui-design.md`.

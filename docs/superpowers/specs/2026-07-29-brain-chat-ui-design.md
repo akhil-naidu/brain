@@ -1,7 +1,7 @@
 # Brain Chat UI — Design Spec
 
 Date: 2026-07-29  
-Status: approved — implementation via ordered plans in `docs/superpowers/plans/`  
+Status: approved — implementation via ordered plans in `docs/superpowers/plans/`; OpenSpec change `openspec/changes/add-brain-chat-ui/`  
 Source inspiration: [vercel-labs/eve-chat-template](https://github.com/vercel-labs/eve-chat-template)
 
 ## Goal

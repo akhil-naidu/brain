@@ -18,3 +18,5 @@ Template mirror: `/Users/dev/github/tmp/eve-chat-template` (see `.cursor/rules/e
 ## How to run
 
 For each plan file: use **subagent-driven-development** (recommended) or **executing-plans**, task-by-task. After the plan’s Verifiable conclusion passes, commit that plan’s work, then open the next plan.
+
+OpenSpec behavior contract for this work: `openspec/changes/add-brain-chat-ui/` (validate with `npm run openspec:validate`).

@@ -1,0 +1,50 @@
+schema: spec-driven
+
+context: |
+  Project: Brain — self-hostable eve agent app with upcoming Next.js chat UI.
+  Package manager: npm (package-lock.json). Keep it.
+
+  Stack:
+  - eve agent in agent/ (defineAgent, channels, connections, sandbox)
+  - Models via Command Code (@ai-sdk/openai + COMMAND_CODE_API_KEY) — never Vercel AI Gateway
+  - MCP OAuth connections: ClickUp (DCR), Slack, Asana, Gmail (env client credentials)
+  - Planned UI: Next.js + withEve() + useEveAgent from eve/react, adapted from eve-chat-template
+
+  Hard constraints (never violate):
+  - No Vercel Connect, vercelOidc(), Neon/Drizzle chat persistence, Upstash, Better Auth / Sign in with Vercel
+  - No AI Gateway string models as the primary path
+  - Stay self-hostable: eve build / eve start or non-Vercel host
+  - See .cursor/rules/no-vercel-infra.mdc and AGENTS.md
+
+  Dual doc systems (both kept):
+  - OpenSpec: openspec/specs/ (behavior) + openspec/changes/ (deltas)
+  - Superpowers implementation plans: docs/superpowers/plans/ (ordered, verifiable) — do not delete or relocate
+  - Design overview: docs/superpowers/specs/2026-07-29-brain-chat-ui-design.md
+  - Template mirror: /Users/dev/github/tmp/eve-chat-template
+
+  Auth for browser UI: fixed anonymous user principal (principalType user) for local/trusted use so MCP OAuth works — not public-internet-ready.
+
+rules:
+  proposal:
+    - Respect no-vercel infrastructure policy in every proposal
+    - Point to docs/superpowers/plans/ when implementation sequencing already exists
+    - Always include a Non-goals section (via What Changes / Impact) for auth, persistence, and Vercel infra
+  specs:
+    - Specs describe observable behavior with SHALL/MUST and WHEN/THEN scenarios
+    - Do not encode Vercel-only services as requirements
+  design:
+    - Prefer adapting eve-chat-template UI patterns then stripping auth/DB/Connect
+    - Keep agent/ Command Code + MCP OAuth as source of truth for connections
+  tasks:
+    - Prefer referencing docs/superpowers/plans/01–07 checklists over duplicating them
+    - Each task group should map to a verifiable plan gate when implementing chat UI
+
+operations:
+  apply:
+    guidance:
+      - Execute docs/superpowers/plans in order; pass each Verifiable conclusion before the next
+      - Do not introduce better-auth, neon, upstash, or @vercel/connect
+  archive:
+    guidance:
+      - Ensure openspec/specs reflect shipped chat UI behavior
+      - Leave docs/superpowers/plans in place as historical/executable checklists

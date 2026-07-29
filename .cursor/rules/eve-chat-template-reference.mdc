@@ -1,0 +1,45 @@
+---
+description: Local eve-chat-template mirror for Brain UI parity and future feature ports
+alwaysApply: true
+---
+
+# eve-chat-template reference mirror
+
+Brain’s chat UI is adapted from [vercel-labs/eve-chat-template](https://github.com/vercel-labs/eve-chat-template), **without** Vercel Connect, Neon, Upstash, Better Auth, or AI Gateway.
+
+## Local clone (required reference)
+
+| Item | Value |
+| --- | --- |
+| Path | `/Users/dev/github/tmp/eve-chat-template` |
+| Upstream | `https://github.com/vercel-labs/eve-chat-template` |
+| Design | `docs/superpowers/specs/2026-07-29-brain-chat-ui-design.md` |
+| Plans | `docs/superpowers/plans/README.md` |
+| OpenSpec change | `openspec/changes/add-brain-chat-ui/` |
+| OpenSpec specs | `openspec/specs/` |
+
+Before implementing or porting chat UI, connections menus, message/tool rendering, HITL, or shell chrome:
+
+1. Prefer reading files from `/Users/dev/github/tmp/eve-chat-template/...` over guessing.
+2. If the clone is missing or stale, refresh it:
+
+```bash
+mkdir -p /Users/dev/github/tmp
+if [ -d /Users/dev/github/tmp/eve-chat-template/.git ]; then
+  git -C /Users/dev/github/tmp/eve-chat-template fetch origin
+  git -C /Users/dev/github/tmp/eve-chat-template checkout main
+  git -C /Users/dev/github/tmp/eve-chat-template pull --ff-only origin main
+else
+  git clone https://github.com/vercel-labs/eve-chat-template.git /Users/dev/github/tmp/eve-chat-template
+fi
+git -C /Users/dev/github/tmp/eve-chat-template rev-parse --short HEAD
+```
+
+3. When pulling new upstream ideas into Brain, **copy patterns then strip** auth/DB/Connect — never reintroduce forbidden Vercel infra (see `.cursor/rules/no-vercel-infra.mdc`).
+
+## High-value template paths
+
+- `app/_components/agent-chat.tsx` — eve client bridge (Brain: ephemeral only; no persist actions)
+- `components/chat/{composer,conversation,message,markdown,sidebar,integrations-menu}.tsx`
+- `next.config.ts` — `withEve()`
+- `docs/how-the-chatbot-works.md` — architecture explanation (ignore Neon/auth sections for Brain v1)
