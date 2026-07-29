@@ -56,24 +56,25 @@
 }
 
 .dark {
+  /* GitHub Primer dark canvas; Brain teal kept for primary/ring */
   color-scheme: dark;
-  --background: oklch(0.16 0.02 240);
-  --foreground: oklch(0.96 0.01 230);
-  --card: oklch(0.21 0.025 240);
-  --card-foreground: oklch(0.96 0.01 230);
-  --popover: oklch(0.21 0.025 240);
-  --popover-foreground: oklch(0.96 0.01 230);
+  --background: #0d1117;
+  --foreground: #e6edf3;
+  --card: #161b22;
+  --card-foreground: #e6edf3;
+  --popover: #161b22;
+  --popover-foreground: #e6edf3;
   --primary: oklch(0.72 0.09 230);
-  --primary-foreground: oklch(0.18 0.03 230);
-  --secondary: oklch(0.28 0.03 240);
-  --secondary-foreground: oklch(0.96 0.01 230);
-  --muted: oklch(0.28 0.03 240);
-  --muted-foreground: oklch(0.72 0.03 230);
-  --accent: oklch(0.3 0.04 230);
-  --accent-foreground: oklch(0.96 0.01 230);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
+  --primary-foreground: #0d1117;
+  --secondary: #21262d;
+  --secondary-foreground: #e6edf3;
+  --muted: #21262d;
+  --muted-foreground: #9198a1;
+  --accent: #21262d;
+  --accent-foreground: #e6edf3;
+  --destructive: #f85149;
+  --border: #30363d;
+  --input: #30363d;
   --ring: oklch(0.72 0.09 230);
 }
 

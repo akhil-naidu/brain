@@ -6,13 +6,20 @@ type Theme = "dark" | "light";
 
 export function ThemeProvider({ children }: { readonly children: ReactNode }) {
   useEffect(() => {
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const syncTheme = () => applyTheme(media.matches ? "dark" : "light");
+    const media =
+      typeof window.matchMedia === "function"
+        ? window.matchMedia("(prefers-color-scheme: dark)")
+        : null;
+
+    const syncTheme = () => {
+      // System preference when available; light is the fallback default.
+      applyTheme(media?.matches ? "dark" : "light");
+    };
 
     syncTheme();
-    media.addEventListener("change", syncTheme);
+    media?.addEventListener("change", syncTheme);
 
-    return () => media.removeEventListener("change", syncTheme);
+    return () => media?.removeEventListener("change", syncTheme);
   }, []);
 
   return children;
