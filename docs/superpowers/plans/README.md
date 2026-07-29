@@ -3,7 +3,8 @@
 Execute these plans **in order**. Each plan ends with a **Verifiable conclusion** — do not start the next plan until that checklist passes.
 
 Spec: [`../specs/2026-07-29-brain-chat-ui-design.md`](../specs/2026-07-29-brain-chat-ui-design.md)  
-Template mirror: `/Users/dev/github/tmp/eve-chat-template` (see `.cursor/rules/eve-chat-template-reference.mdc`)
+Template mirror: `/Users/dev/github/tmp/eve-chat-template` @ `f7c164a` (see `.cursor/rules/eve-chat-template-reference.mdc`)  
+Plan 01 status: **complete** (verifiable conclusion passed)
 
 | # | Plan | Verifiable conclusion (summary) |
 | --- | --- | --- |

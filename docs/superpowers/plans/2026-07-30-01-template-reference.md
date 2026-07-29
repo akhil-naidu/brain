@@ -24,7 +24,7 @@
 **Interfaces:**
 - Produces: readable tree at that path with `package.json`, `app/`, `components/chat/`
 
-- [ ] **Step 1: Ensure directory and clone**
+- [x] **Step 1: Ensure directory and clone**
 
 ```bash
 mkdir -p /Users/dev/github/tmp
@@ -37,7 +37,7 @@ else
 fi
 ```
 
-- [ ] **Step 2: Record HEAD for the plans README note**
+- [x] **Step 2: Record HEAD for the plans README note**
 
 ```bash
 git -C /Users/dev/github/tmp/eve-chat-template rev-parse --short HEAD
@@ -48,7 +48,7 @@ test -f /Users/dev/github/tmp/eve-chat-template/app/_components/agent-chat.tsx
 
 Expected: short SHA prints; both `test` commands exit 0.
 
-- [ ] **Step 3: Commit nothing for the clone** (external path). Proceed.
+- [x] **Step 3: Commit nothing for the clone** (external path). Proceed.
 
 ---
 
@@ -61,7 +61,7 @@ Expected: short SHA prints; both `test` commands exit 0.
 **Interfaces:**
 - Produces: always-apply rule pointing agents at the mirror path and sync commands
 
-- [ ] **Step 1: Confirm rule exists and path is exact**
+- [x] **Step 1: Confirm rule exists and path is exact**
 
 ```bash
 rg -n "github/tmp/eve-chat-template" .cursor/rules/eve-chat-template-reference.mdc
@@ -70,9 +70,9 @@ rg -n "2026-07-30-0" docs/superpowers/plans/README.md
 
 Expected: both match.
 
-- [ ] **Step 2: If missing, recreate from this session’s rule content** (path must be `/Users/dev/github/tmp/eve-chat-template`).
+- [x] **Step 2: If missing, recreate from this session’s rule content** (path must be `/Users/dev/github/tmp/eve-chat-template`).
 
-- [ ] **Step 3: Commit rule + plans index (and any plan files already written)**
+- [x] **Step 3: Commit rule + plans index (and any plan files already written)**
 
 ```bash
 git add .cursor/rules/eve-chat-template-reference.mdc docs/superpowers/plans/
