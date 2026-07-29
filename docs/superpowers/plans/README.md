@@ -8,6 +8,7 @@ Plan 01 status: **complete** (verifiable conclusion passed)
 Plan 02 status: **complete** (verifiable conclusion passed)
 Plan 03 status: **complete** (verifiable conclusion passed)
 Plan 04 status: **complete** (verifiable conclusion passed)
+Plan 05 status: **complete** (verifiable conclusion passed)
 
 | # | Plan | Verifiable conclusion (summary) |
 | --- | --- | --- |

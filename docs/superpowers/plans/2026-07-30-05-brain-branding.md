@@ -1,6 +1,6 @@
 # Plan 05 — Brain Branding
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Make the app read as **Brain**: straight-line geometric brain mark, teal/navy palette, product naming in metadata and chrome.
 
@@ -28,7 +28,7 @@
 **Interfaces:**
 - Produces: `<BrainMark />` React component + favicon
 
-- [ ] **Step 1: Create SVG**
+- [x] **Step 1: Create SVG**
 
 Design constraints:
 
@@ -53,7 +53,7 @@ Example skeleton (replace with a polished mark; keep straight segments only):
 </svg>
 ```
 
-- [ ] **Step 2: `components/brain-mark.tsx`**
+- [x] **Step 2: `components/brain-mark.tsx`**
 
 ```tsx
 import { cn } from "@/lib/utils";
@@ -73,9 +73,9 @@ export function BrainMark({ className }: { readonly className?: string }) {
 }
 ```
 
-- [ ] **Step 3: Wire sidebar + metadata title “Brain”**
+- [x] **Step 3: Wire sidebar + metadata title “Brain”**
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/icon.svg public/brain-mark.svg components/brain-mark.tsx app/layout.tsx components/chat/sidebar.tsx
@@ -96,7 +96,7 @@ EOF
 **Interfaces:**
 - Produces: `--primary` and related tokens in teal/navy family
 
-- [ ] **Step 1: Set tokens** (adjust to look good in light + dark)
+- [x] **Step 1: Set tokens** (adjust to look good in light + dark)
 
 Example direction (tune as needed):
 
@@ -114,9 +114,9 @@ Example direction (tune as needed):
 }
 ```
 
-- [ ] **Step 2: Visual check** — primary buttons / focus rings read teal-navy; no purple wash.
+- [x] **Step 2: Visual check** — primary buttons / focus rings read teal-navy; no purple wash.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add app/globals.css
