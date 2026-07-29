@@ -29,9 +29,17 @@ export function EphemeralAgentChat({
   readonly onUserMessage?: (text: string) => void;
 }) {
   const { enabledConnections, setConnectionEnabled } = useChatShell();
-  const isBusy = agent.status === "submitted" || agent.status === "streaming";
   const messages = agent.data.messages;
   const lastMessage = messages.at(-1);
+  const waitingForAuthorization = messages.some((message) =>
+    message.parts.some(
+      (part) => part.type === "authorization" && part.state === "required",
+    ),
+  );
+  const isBusy =
+    agent.status === "submitted" ||
+    agent.status === "streaming" ||
+    waitingForAuthorization;
 
   const handleInputResponses = useCallback(
     async (responses: readonly AgentInputResponse[]) => {

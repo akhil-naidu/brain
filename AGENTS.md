@@ -20,6 +20,13 @@ This agent must stay **self-hostable and independent of Vercel infrastructure**.
 
 See `.cursor/rules/no-vercel-infra.mdc`.
 
+## Chat UI
+
+- Run `npm run dev` (Next.js + `withEve()`) for the Brain browser chat UI — primary workflow
+- Agent terminal (`eve dev` / `npm run dev:eve`) is optional for debugging only
+- No login: the eve channel uses an anonymous `user` principal (local/trusted only)
+- Template reference mirror: `/Users/dev/github/tmp/eve-chat-template` (see `.cursor/rules/eve-chat-template-reference.mdc`)
+
 ## OpenSpec
 
 This repo uses [OpenSpec](https://github.com/Fission-AI/OpenSpec) for behavior specs and change proposals.
