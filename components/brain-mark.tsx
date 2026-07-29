@@ -10,27 +10,21 @@ export function BrainMark({ className }: { readonly className?: string }) {
       xmlns="http://www.w3.org/2000/svg"
     >
       <path
-        d="M16 3 L21 4 L25 7 L27 12 L27 17 L25 22 L21 26 L16 29 L11 26 L7 22 L5 17 L5 12 L7 7 L11 4 Z"
+        d="M16 5.5C11.2 5.5 7.5 8.6 7.5 13.2C7.5 15.1 8.2 16.8 9.3 18.1C8.4 19.1 7.8 20.4 7.8 21.9C7.8 24.8 10.4 27 13.5 27C14.6 27 15.5 26.7 16 26.2C16.5 26.7 17.4 27 18.5 27C21.6 27 24.2 24.8 24.2 21.9C24.2 20.4 23.6 19.1 22.7 18.1C23.8 16.8 24.5 15.1 24.5 13.2C24.5 8.6 20.8 5.5 16 5.5Z"
         stroke="currentColor"
-        strokeLinecap="square"
-        strokeLinejoin="miter"
-        strokeWidth="1.5"
-      />
-      <path d="M16 3 L16 29" stroke="currentColor" strokeLinecap="square" strokeWidth="1.5" />
-      <path
-        d="M8 11 L14 11 M18 11 L24 11 M7 16 L14 16 M18 16 L25 16 M9 21 L14 21 M18 21 L23 21"
-        stroke="currentColor"
-        strokeLinecap="square"
-        strokeLinejoin="miter"
-        strokeWidth="1.25"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.75"
       />
       <path
-        d="M11 4 L14 8 L16 8 L18 8 L21 4 M14 8 L14 11 M18 8 L18 11"
+        d="M16 5.5V26.2"
         stroke="currentColor"
-        strokeLinecap="square"
-        strokeLinejoin="miter"
-        strokeWidth="1.25"
+        strokeLinecap="round"
+        strokeWidth="1.75"
       />
+      <circle cx="12.2" cy="14.5" fill="currentColor" r="1.15" />
+      <circle cx="19.8" cy="14.5" fill="currentColor" r="1.15" />
+      <circle cx="16" cy="19.2" fill="currentColor" r="1.15" />
     </svg>
   );
 }

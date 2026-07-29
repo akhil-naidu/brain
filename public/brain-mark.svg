@@ -1,33 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
-  <!-- Faceted brain outline (straight segments only) -->
+  <!-- Modern abstract brain: twin lobes + synaptic nodes -->
   <path
     stroke="currentColor"
-    stroke-width="1.5"
-    stroke-linecap="square"
-    stroke-linejoin="miter"
-    d="M16 3 L21 4 L25 7 L27 12 L27 17 L25 22 L21 26 L16 29 L11 26 L7 22 L5 17 L5 12 L7 7 L11 4 Z"
+    stroke-width="1.75"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    d="M16 5.5
+       C11.2 5.5 7.5 8.6 7.5 13.2
+       C7.5 15.1 8.2 16.8 9.3 18.1
+       C8.4 19.1 7.8 20.4 7.8 21.9
+       C7.8 24.8 10.4 27 13.5 27
+       C14.6 27 15.5 26.7 16 26.2
+       C16.5 26.7 17.4 27 18.5 27
+       C21.6 27 24.2 24.8 24.2 21.9
+       C24.2 20.4 23.6 19.1 22.7 18.1
+       C23.8 16.8 24.5 15.1 24.5 13.2
+       C24.5 8.6 20.8 5.5 16 5.5
+       Z"
   />
-  <!-- Hemisphere split -->
   <path
     stroke="currentColor"
-    stroke-width="1.5"
-    stroke-linecap="square"
-    d="M16 3 L16 29"
+    stroke-width="1.75"
+    stroke-linecap="round"
+    d="M16 5.5 V26.2"
   />
-  <!-- Circuit-like folds -->
-  <path
-    stroke="currentColor"
-    stroke-width="1.25"
-    stroke-linecap="square"
-    stroke-linejoin="miter"
-    d="M8 11 L14 11 M18 11 L24 11 M7 16 L14 16 M18 16 L25 16 M9 21 L14 21 M18 21 L23 21"
-  />
-  <!-- Upper lobe facets -->
-  <path
-    stroke="currentColor"
-    stroke-width="1.25"
-    stroke-linecap="square"
-    stroke-linejoin="miter"
-    d="M11 4 L14 8 L16 8 L18 8 L21 4 M14 8 L14 11 M18 8 L18 11"
-  />
+  <circle cx="12.2" cy="14.5" r="1.15" fill="currentColor" />
+  <circle cx="19.8" cy="14.5" r="1.15" fill="currentColor" />
+  <circle cx="16" cy="19.2" r="1.15" fill="currentColor" />
 </svg>
