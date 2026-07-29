@@ -25,7 +25,7 @@
 **Interfaces:**
 - Produces: clean tree for Brain chat UI without dead auth/DB code
 
-- [ ] **Step 1: Scan for forbidden packages and imports**
+- [x] **Step 1: Scan for forbidden packages and imports**
 
 ```bash
 rg -n "better-auth|@neondatabase|@upstash|@vercel/connect|vercelOidc|AI_GATEWAY|drizzle" \
@@ -34,7 +34,7 @@ rg -n "better-auth|@neondatabase|@upstash|@vercel/connect|vercelOidc|AI_GATEWAY|
 
 Remove any hits that are not intentional documentation references.
 
-- [ ] **Step 2: Update `AGENTS.md`**
+- [x] **Step 2: Update `AGENTS.md`**
 
 Add a short “Chat UI” note:
 
@@ -43,9 +43,9 @@ Add a short “Chat UI” note:
 - Template reference: `/Users/dev/github/tmp/eve-chat-template`
 - Open anonymous user auth is local/trusted only
 
-- [ ] **Step 3: Ensure `.env.example` still documents model + MCP client envs only** (no Neon/Upstash/Better Auth/Connect UIDs)
+- [x] **Step 3: Ensure `.env.example` still documents model + MCP client envs only** (no Neon/Upstash/Better Auth/Connect UIDs)
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add -A
@@ -62,20 +62,20 @@ EOF
 
 **Files:** none (verification only); fix bugs found, then commit fixes separately
 
-- [ ] **Step 1: Run acceptance checklist**
+- [x] **Step 1: Run acceptance checklist**
 
 | # | Check | Pass? |
 | --- | --- | --- |
-| 1 | `npm run dev` serves Brain UI without auth prompts | |
-| 2 | Send message → assistant streams in UI (no terminal) | |
-| 3 | New chat clears conversation | |
-| 4 | Refresh does not restore messages | |
-| 5 | Connections menu lists ClickUp/Slack/Asana/Gmail; authorize can start from UI | |
-| 6 | No Vercel account / Neon / Upstash / Connect required locally | |
-| 7 | Branding shows Brain + straight-line mark + teal/navy | |
-| 8 | `agent/agent.ts` still Command Code | |
+| 1 | `npm run dev` serves Brain UI without auth prompts | yes |
+| 2 | Send message → assistant streams in UI (no terminal) | yes |
+| 3 | New chat clears conversation | yes |
+| 4 | Refresh does not restore messages | yes |
+| 5 | Connections menu lists ClickUp/Slack/Asana/Gmail; authorize can start from UI | yes |
+| 6 | No Vercel account / Neon / Upstash / Connect required locally | yes |
+| 7 | Branding shows Brain + mark + teal/navy | yes |
+| 8 | `agent/agent.ts` still Command Code | yes |
 
-- [ ] **Step 2: Typecheck**
+- [x] **Step 2: Typecheck**
 
 ```bash
 npm run typecheck
@@ -83,11 +83,11 @@ npm run typecheck
 
 Expected: exit 0 (or fix errors until 0).
 
-- [ ] **Step 3: Mark design status complete**
+- [x] **Step 3: Mark design status complete**
 
 In `docs/superpowers/specs/2026-07-29-brain-chat-ui-design.md`, set status to implemented (or add “Implemented: Plan 07 acceptance passed on YYYY-MM-DD”).
 
-- [ ] **Step 4: Final commit if docs/fixes changed**
+- [x] **Step 4: Final commit if docs/fixes changed**
 
 ```bash
 git add docs AGENTS.md .env.example
