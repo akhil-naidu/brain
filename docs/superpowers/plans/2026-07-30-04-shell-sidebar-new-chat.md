@@ -1,6 +1,6 @@
 # Plan 04 — Shell Sidebar + New Chat
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Template-like sidebar chrome with New chat that resets the ephemeral eve session — no persisted history.
 
@@ -30,7 +30,7 @@
 - Produces: `BrainChatShell` with sidebar + main slot; `onNewChat` calls agent `reset()` and clears local title
 - Consumes: Plan 03 `EphemeralAgentChat` (refactor to accept `agent` or expose `reset` via ref/callback)
 
-- [ ] **Step 1: Copy sidebar + title helper; strip persistence**
+- [x] **Step 1: Copy sidebar + title helper; strip persistence**
 
 ```bash
 cp /Users/dev/github/tmp/eve-chat-template/components/chat/sidebar.tsx components/chat/sidebar.tsx
@@ -53,7 +53,7 @@ export function ChatSidebar({
 }) { /* ... */ }
 ```
 
-- [ ] **Step 2: Slim shell context (optional but useful for Plan 06)**
+- [x] **Step 2: Slim shell context (optional but useful for Plan 06)**
 
 ```tsx
 "use client";
@@ -104,7 +104,7 @@ export function useChatShell() {
 
 (Plan 06 wires the menu; Plan 04 only needs the provider mounted.)
 
-- [ ] **Step 3: Wire shell + New chat → `reset()`**
+- [x] **Step 3: Wire shell + New chat → `reset()`**
 
 Refactor `EphemeralAgentChat` so the shell can call `reset` and read messages for title:
 
@@ -112,14 +112,14 @@ Refactor `EphemeralAgentChat` so the shell can call `reset` and read messages fo
 - On New chat: `agent.reset(); setTitle(null); setDraft("")`.
 - After first user message, set title via `lib/chat/title.ts`.
 
-- [ ] **Step 4: Manual verify**
+- [x] **Step 4: Manual verify**
 
 1. Open UI — sidebar visible with Brain brand slot (text OK until Plan 05).
 2. Send a message — title appears for current session.
 3. Click New chat — messages clear; composer empty.
 4. Confirm no `/api/chats` requests in Network tab.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app components lib/chat
