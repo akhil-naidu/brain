@@ -7,10 +7,13 @@
     "#evals/*": "./evals/*"
   },
   "scripts": {
-    "build": "eve build",
-    "dev": "eve dev",
-    "start": "eve start",
-    "typecheck": "tsc",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "dev:eve": "eve dev",
+    "build:eve": "eve build",
+    "start:eve": "eve start",
     "openspec": "openspec",
     "openspec:validate": "openspec validate --all --no-interactive",
     "openspec:list": "openspec list",
@@ -20,11 +23,16 @@
     "@ai-sdk/openai": "^4.0.20",
     "ai": "^7.0.34",
     "eve": "^0.27.6",
+    "next": "^16.2.6",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
     "zod": "4.4.3"
   },
   "devDependencies": {
     "@fission-ai/openspec": "^1.7.0",
     "@types/node": "24.x",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
     "microsandbox": "^0.5.10",
     "typescript": "7.0.2"
   },
