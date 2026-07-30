@@ -1,15 +1,21 @@
+import Image from "next/image";
+
 import { cn } from "@/lib/utils";
+
+/** Cache-bust when the transparent asset is replaced. */
+const BRAIN_MARK_SRC = "/brain-mark.png?v=3";
 
 export function BrainMark({ className }: { readonly className?: string }) {
   return (
-    <span
+    <Image
+      alt=""
       aria-hidden="true"
-      className={cn(
-        "inline-flex size-5 items-center justify-center text-[1.05rem] leading-none",
-        className,
-      )}
-    >
-      🧠
-    </span>
+      className={cn("size-5 object-contain", className)}
+      height={64}
+      // Preserve PNG alpha — the optimizer composites transparent pixels onto white.
+      unoptimized
+      src={BRAIN_MARK_SRC}
+      width={64}
+    />
   );
 }

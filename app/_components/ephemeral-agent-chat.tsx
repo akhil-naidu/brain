@@ -367,7 +367,7 @@ export function EphemeralAgentChat({
           {messages.length === 0 ? (
             <div className="flex flex-1 items-center justify-center py-24">
               <div className="text-center">
-                <BrainMark className="mx-auto size-10 text-[2.5rem]" />
+                <BrainMark className="mx-auto size-10" />
                 <h1 className="mt-4 text-2xl font-semibold tracking-tight">Brain</h1>
                 <p className="text-muted-foreground mt-2 text-sm">Ask anything to get started.</p>
               </div>
