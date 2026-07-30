@@ -130,7 +130,7 @@ function ToolSummary({
       className={cn(
         "group text-muted-foreground flex max-w-full items-center gap-2 py-0.5 text-left text-sm leading-6 transition-colors",
         canExpand ? "hover:text-foreground cursor-pointer" : undefined,
-        isProblemStatus(status) ? "text-destructive" : undefined,
+        toolStatusTextClass(status),
       )}
     >
       <ToolStatusIcon status={status} />
@@ -221,7 +221,7 @@ function ToolCallRow({
       className={cn(
         "text-muted-foreground flex w-full items-center gap-2 py-0.5 text-left text-sm leading-6 transition-colors",
         canExpand ? "hover:text-foreground cursor-pointer" : undefined,
-        isProblemStatus(status) ? "text-destructive" : undefined,
+        toolStatusTextClass(status),
       )}
     >
       <ToolStatusIcon status={status} />
@@ -245,6 +245,16 @@ function ToolCallRow({
 
 function isProblemStatus(status: ToolStatus): boolean {
   return status === "error" || status === "denied" || status === "incomplete";
+}
+
+function toolStatusTextClass(status: ToolStatus): string | undefined {
+  if (status === "error" || status === "denied") {
+    return "text-destructive";
+  }
+  if (status === "incomplete") {
+    return "text-amber-500";
+  }
+  return undefined;
 }
 
 function ToolStatusIcon({ status }: { readonly status: ToolStatus }): ReactNode {
