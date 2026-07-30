@@ -1,9 +1,12 @@
 "use client";
 
 import { PanelLeftIcon } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { ChatShellProvider } from "@/app/_components/chat-shell-context";
-import { EphemeralAgentChat } from "@/app/_components/ephemeral-agent-chat";
+import {
+  EphemeralAgentChat,
+  type DisposeEphemeralChat,
+} from "@/app/_components/ephemeral-agent-chat";
 import { BrainMark } from "@/components/brain-mark";
 import { ChatSidebar } from "@/components/chat/sidebar";
 import { Button } from "@/components/ui/button";
@@ -15,11 +18,28 @@ export function BrainChatShell() {
   const [draft, setDraft] = useState("");
   const [title, setTitle] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const disposeChatRef = useRef<DisposeEphemeralChat | null>(null);
+  const newChatPendingRef = useRef(false);
 
   const handleNewChat = useCallback(() => {
-    setSessionKey((current) => current + 1);
-    setTitle(null);
-    setDraft("");
+    if (newChatPendingRef.current) {
+      return;
+    }
+
+    newChatPendingRef.current = true;
+    void (async () => {
+      const disposed = (await disposeChatRef.current?.()) ?? true;
+      if (disposed) {
+        setSessionKey((current) => current + 1);
+        setTitle(null);
+        setDraft("");
+      }
+      newChatPendingRef.current = false;
+    })();
+  }, []);
+
+  const handleDisposeReady = useCallback((dispose: DisposeEphemeralChat | null) => {
+    disposeChatRef.current = dispose;
   }, []);
 
   const handleUserMessage = useCallback((text: string) => {
@@ -28,7 +48,7 @@ export function BrainChatShell() {
 
   return (
     <ChatShellProvider>
-      <div className="flex h-dvh bg-background text-foreground">
+      <div className="bg-background text-foreground flex h-dvh">
         <div
           className={cn(
             "hidden h-full shrink-0 overflow-hidden transition-[width] duration-200 md:block",
@@ -37,7 +57,7 @@ export function BrainChatShell() {
         >
           <ChatSidebar
             brand={
-              <span className="flex min-w-0 items-center gap-2 text-foreground">
+              <span className="text-foreground flex min-w-0 items-center gap-2">
                 <BrainMark className="size-5 shrink-0" />
                 <span className="truncate font-semibold tracking-tight">Brain</span>
               </span>
@@ -49,7 +69,7 @@ export function BrainChatShell() {
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex h-12 items-center gap-2 border-b border-border/60 px-3 md:px-4">
+          <header className="border-border/60 flex h-12 items-center gap-2 border-b px-3 md:px-4">
             {!sidebarOpen ? (
               <Button
                 aria-label="Open sidebar"
@@ -62,7 +82,7 @@ export function BrainChatShell() {
                 <PanelLeftIcon className="size-4" />
               </Button>
             ) : null}
-            <div className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+            <div className="text-muted-foreground min-w-0 flex-1 truncate text-sm">
               {title ?? "New chat"}
             </div>
             <Button
@@ -78,6 +98,7 @@ export function BrainChatShell() {
           <EphemeralAgentChat
             key={sessionKey}
             draft={draft}
+            onDisposeReady={handleDisposeReady}
             onDraftChange={setDraft}
             onUserMessage={handleUserMessage}
           />

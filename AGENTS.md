@@ -20,6 +20,22 @@ This agent must stay **self-hostable and independent of Vercel infrastructure**.
 
 See `.cursor/rules/no-vercel-infra.mdc`.
 
+## Quality gate
+
+Run `npm run verify` before finishing any change. It chains
+`format:check` → `lint` → `typecheck` → `test`, and CI (`.github/workflows/verify.yml`)
+runs the same chain plus `npm run build`.
+
+- **Node 24 is required** (`.nvmrc`); `eve` declares `>=24`. Run `nvm use` first.
+- **Lint is oxlint**, not ESLint. `typescript-eslint` declares `typescript: <6.1.0`
+  and cannot support this repo's TypeScript 7, so type-aware linting goes through
+  `oxlint --type-aware` (backed by `oxlint-tsgolint`). Config: `.oxlintrc.json`.
+- **Zero warnings is the bar.** `npm run lint` passes `--deny-warnings`. Fix the
+  underlying types rather than adding `oxlint-disable`, `any`, or `!`.
+- **`next build` needs `experimental.useTypeScriptCli`.** Next 16 drives the
+  TypeScript compiler API directly, which TypeScript 7 (tsgo) does not expose;
+  the flag routes build-time checking through the TypeScript CLI instead.
+
 ## Chat UI
 
 - Run `npm run dev` (Next.js + `withEve()`) for the Brain browser chat UI — primary workflow

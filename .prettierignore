@@ -1,0 +1,15 @@
+node_modules
+.next
+.eve
+.output
+.nitro
+dist
+coverage
+package-lock.json
+*.tsbuildinfo
+next-env.d.ts
+
+# Authored prose and specs — keep hand-formatting
+docs
+openspec
+*.md

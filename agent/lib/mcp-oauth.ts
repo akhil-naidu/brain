@@ -1,17 +1,68 @@
-import { createHash, randomBytes } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { chmod, mkdir, open, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { ConnectionPrincipal } from "eve/connections";
+import { z } from "zod";
+
+const EXPIRY_SKEW_MS = 60_000;
+const OAUTH_FETCH_TIMEOUT_MS = 15_000;
+
+const storedTokenSchema = z
+  .object({
+    accessToken: z.string().min(1),
+    expiresAt: z.number().finite().optional(),
+    refreshToken: z.string().min(1).optional(),
+    clientId: z.string().min(1).optional(),
+    clientSecret: z.string().min(1).optional(),
+  })
+  .strict();
+
+const oauthStoreSchema = z
+  .object({
+    clients: z.record(
+      z.string(),
+      z
+        .object({
+          clientId: z.string().min(1),
+          clientSecret: z.string().min(1).optional(),
+        })
+        .strict(),
+    ),
+    tokens: z.record(z.string(), storedTokenSchema),
+  })
+  .strict();
+
+const registrationResponseSchema = z
+  .object({
+    client_id: z.string().min(1),
+    client_secret: z.string().min(1).optional(),
+  })
+  .passthrough();
+
+const standardTokenResponseSchema = z
+  .object({
+    access_token: z.string().min(1),
+    expires_in: z.number().finite().nonnegative().optional(),
+    refresh_token: z.string().min(1).optional(),
+  })
+  .passthrough();
+
+const jsonObjectSchema = z.record(z.string(), z.unknown());
 
 export type StoredToken = {
   accessToken: string;
   expiresAt?: number;
   refreshToken?: string;
+  clientId?: string;
+  clientSecret?: string;
 };
 
-type OAuthStore = {
-  clients: Record<string, { clientId: string; clientSecret?: string }>;
-  tokens: Record<string, StoredToken>;
+type OAuthStore = z.infer<typeof oauthStoreSchema>;
+
+export type ParsedOAuthToken = {
+  accessToken: string;
+  expiresIn?: number;
+  refreshToken?: string;
 };
 
 export type McpOAuthProvider = {
@@ -38,12 +89,20 @@ export type McpOAuthProvider = {
   /** Extra authorize query params (e.g. Google access_type=offline). */
   authorizeExtraParams?: Record<string, string>;
   /** Providers like Slack wrap tokens in a proprietary JSON envelope. */
-  parseTokenResponse?: (json: Record<string, unknown>) => {
-    accessToken: string;
-    expiresIn?: number;
-    refreshToken?: string;
-  };
+  parseTokenResponse?: (json: unknown) => ParsedOAuthToken;
+  /** Exact remote tool names reviewed as read-only. Unknown tools require approval. */
+  safeReadOnlyTools: readonly string[];
 };
+
+export class OAuthRequestError extends Error {
+  constructor(readonly code: string) {
+    super(code);
+    this.name = "OAuthRequestError";
+  }
+}
+
+const storeLocks = new Map<string, Promise<void>>();
+const refreshes = new Map<string, Promise<{ token: string; expiresAt?: number } | null>>();
 
 function storePath(name: string): string {
   return path.join(process.cwd(), ".eve", `mcp-oauth-${name}.json`);
@@ -58,22 +117,87 @@ function principalKey(principal: ConnectionPrincipal): string {
   return `user:${principal.issuer ?? ""}:${principal.id}`;
 }
 
+function emptyStore(): OAuthStore {
+  return { clients: {}, tokens: {} };
+}
+
 async function readStore(name: string): Promise<OAuthStore> {
   try {
     const raw = await readFile(storePath(name), "utf8");
-    const parsed = JSON.parse(raw) as Partial<OAuthStore>;
-    return {
-      clients: parsed.clients ?? {},
-      tokens: parsed.tokens ?? {},
-    };
-  } catch {
-    return { clients: {}, tokens: {} };
+    const parsed: unknown = JSON.parse(raw);
+    const result = oauthStoreSchema.safeParse(parsed);
+    if (!result.success) {
+      throw new Error("oauth_store_corrupt");
+    }
+    return result.data;
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      "code" in error &&
+      typeof error.code === "string" &&
+      error.code === "ENOENT"
+    ) {
+      return emptyStore();
+    }
+    if (error instanceof SyntaxError) {
+      throw new Error("oauth_store_corrupt", { cause: error });
+    }
+    throw error;
   }
 }
 
 async function writeStore(name: string, store: OAuthStore): Promise<void> {
-  await mkdir(path.dirname(storePath(name)), { recursive: true });
-  await writeFile(storePath(name), `${JSON.stringify(store, null, 2)}\n`, "utf8");
+  const destination = storePath(name);
+  const directory = path.dirname(destination);
+  await mkdir(directory, { recursive: true, mode: 0o700 });
+  await chmod(directory, 0o700);
+
+  const temporary = path.join(
+    directory,
+    `.${path.basename(destination)}.${process.pid}.${randomBytes(8).toString("hex")}.tmp`,
+  );
+  try {
+    const handle = await open(temporary, "wx", 0o600);
+    try {
+      await handle.writeFile(`${JSON.stringify(store, null, 2)}\n`, "utf8");
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
+    await rename(temporary, destination);
+    await chmod(destination, 0o600);
+  } catch (error) {
+    await rm(temporary, { force: true });
+    throw error;
+  }
+}
+
+async function withStoreLock<T>(name: string, operation: () => Promise<T>): Promise<T> {
+  const previous = storeLocks.get(name) ?? Promise.resolve();
+  const release = { current: () => {} };
+  const gate = new Promise<void>((resolve) => {
+    release.current = resolve;
+  });
+  const queued = previous.then(() => gate);
+  storeLocks.set(name, queued);
+  await previous;
+  try {
+    return await operation();
+  } finally {
+    release.current();
+    if (storeLocks.get(name) === queued) {
+      storeLocks.delete(name);
+    }
+  }
+}
+
+async function updateStore<T>(name: string, update: (store: OAuthStore) => T): Promise<T> {
+  return withStoreLock(name, async () => {
+    const store = await readStore(name);
+    const result = update(store);
+    await writeStore(name, store);
+    return result;
+  });
 }
 
 export function makePkce(): { verifier: string; challenge: string } {
@@ -82,17 +206,50 @@ export function makePkce(): { verifier: string; challenge: string } {
   return { verifier, challenge };
 }
 
+export function generateOAuthState(): string {
+  return randomBytes(16).toString("base64url");
+}
+
+export function verifyOAuthState(expected: string, received: string | undefined): boolean {
+  if (!received) return false;
+  const expectedBytes = Buffer.from(expected);
+  const receivedBytes = Buffer.from(received);
+  return (
+    expectedBytes.length === receivedBytes.length && timingSafeEqual(expectedBytes, receivedBytes)
+  );
+}
+
+export function isTokenUsable(token: StoredToken, now = Date.now()): boolean {
+  return token.expiresAt === undefined || token.expiresAt > now + EXPIRY_SKEW_MS;
+}
+
+function tokenResult(token: StoredToken): { token: string; expiresAt?: number } {
+  return { token: token.accessToken, expiresAt: token.expiresAt };
+}
+
 export async function getStoredAccessToken(
   provider: McpOAuthProvider,
   principal: ConnectionPrincipal,
 ): Promise<{ token: string; expiresAt?: number } | null> {
   const store = await readStore(provider.name);
-  const entry = store.tokens[principalKey(principal)];
-  if (!entry?.accessToken) return null;
-  if (entry.expiresAt && entry.expiresAt <= Date.now() + 60_000) {
+  const key = principalKey(principal);
+  const entry = store.tokens[key];
+  if (!entry) return null;
+  if (isTokenUsable(entry)) return tokenResult(entry);
+  if (!entry.refreshToken || !entry.clientId) {
+    await deleteStoredTokenIfUnchanged(provider, principal, entry);
     return null;
   }
-  return { token: entry.accessToken, expiresAt: entry.expiresAt };
+
+  const refreshKey = `${provider.name}:${key}`;
+  const existingRefresh = refreshes.get(refreshKey);
+  if (existingRefresh) return existingRefresh;
+
+  const refresh = refreshStoredToken(provider, principal, entry).finally(() => {
+    refreshes.delete(refreshKey);
+  });
+  refreshes.set(refreshKey, refresh);
+  return refresh;
 }
 
 export async function storeAccessToken(
@@ -100,18 +257,172 @@ export async function storeAccessToken(
   principal: ConnectionPrincipal,
   token: StoredToken,
 ): Promise<void> {
-  const store = await readStore(provider.name);
-  store.tokens[principalKey(principal)] = token;
-  await writeStore(provider.name, store);
+  await updateStore(provider.name, (store) => {
+    store.tokens[principalKey(principal)] = token;
+  });
+}
+
+export async function deleteStoredToken(
+  provider: McpOAuthProvider,
+  principal: ConnectionPrincipal,
+): Promise<void> {
+  await updateStore(provider.name, (store) => {
+    delete store.tokens[principalKey(principal)];
+  });
+}
+
+async function deleteStoredTokenIfUnchanged(
+  provider: McpOAuthProvider,
+  principal: ConnectionPrincipal,
+  expected: StoredToken,
+): Promise<void> {
+  await updateStore(provider.name, (store) => {
+    const current = store.tokens[principalKey(principal)];
+    if (
+      current?.accessToken === expected.accessToken &&
+      current.refreshToken === expected.refreshToken
+    ) {
+      delete store.tokens[principalKey(principal)];
+    }
+  });
+}
+
+async function storeRefreshedTokenIfUnchanged(
+  provider: McpOAuthProvider,
+  principal: ConnectionPrincipal,
+  expected: StoredToken,
+  refreshed: StoredToken,
+): Promise<boolean> {
+  return updateStore(provider.name, (store) => {
+    const key = principalKey(principal);
+    const current = store.tokens[key];
+    if (
+      current?.accessToken !== expected.accessToken ||
+      current.refreshToken !== expected.refreshToken
+    ) {
+      return false;
+    }
+    store.tokens[key] = refreshed;
+    return true;
+  });
+}
+
+function parseJsonObject(raw: string): Record<string, unknown> {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    const result = jsonObjectSchema.safeParse(parsed);
+    if (!result.success) throw new OAuthRequestError("malformed_response");
+    return result.data;
+  } catch (error) {
+    if (error instanceof OAuthRequestError) throw error;
+    throw new OAuthRequestError("malformed_response");
+  }
+}
+
+async function readJsonObject(response: Response): Promise<Record<string, unknown>> {
+  return parseJsonObject(await response.text());
+}
+
+async function fetchOAuth(url: string, init: RequestInit, failureCode: string): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch {
+    throw new OAuthRequestError(failureCode);
+  }
+}
+
+export function parseStandardTokenResponse(json: unknown): ParsedOAuthToken {
+  const result = standardTokenResponseSchema.safeParse(json);
+  if (!result.success) throw new OAuthRequestError("malformed_response");
+  return {
+    accessToken: result.data.access_token,
+    expiresIn: result.data.expires_in,
+    refreshToken: result.data.refresh_token,
+  };
+}
+
+function parseProviderTokenResponse(
+  provider: McpOAuthProvider,
+  json: Record<string, unknown>,
+): ParsedOAuthToken {
+  try {
+    return provider.parseTokenResponse
+      ? provider.parseTokenResponse(json)
+      : parseStandardTokenResponse(json);
+  } catch (error) {
+    if (error instanceof OAuthRequestError) throw error;
+    throw new OAuthRequestError("malformed_response");
+  }
+}
+
+function storedTokenFromResponse(
+  parsed: ParsedOAuthToken,
+  client: { clientId: string; clientSecret?: string },
+  fallbackRefreshToken?: string,
+): StoredToken {
+  return {
+    accessToken: parsed.accessToken,
+    expiresAt: parsed.expiresIn === undefined ? undefined : Date.now() + parsed.expiresIn * 1000,
+    refreshToken: parsed.refreshToken ?? fallbackRefreshToken,
+    clientId: client.clientId,
+    clientSecret: client.clientSecret,
+  };
+}
+
+async function refreshStoredToken(
+  provider: McpOAuthProvider,
+  principal: ConnectionPrincipal,
+  entry: StoredToken,
+): Promise<{ token: string; expiresAt?: number } | null> {
+  if (!entry.refreshToken || !entry.clientId) return null;
+  const body = new URLSearchParams({
+    grant_type: "refresh_token",
+    refresh_token: entry.refreshToken,
+    client_id: entry.clientId,
+    resource: provider.resource ?? provider.mcpUrl,
+  });
+  if (provider.tokenAuthMethod === "client_secret_post") {
+    body.set("client_secret", entry.clientSecret ?? "");
+  }
+
+  try {
+    const response = await fetchOAuth(
+      provider.tokenEndpoint,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+          accept: "application/json",
+        },
+        body,
+        signal: AbortSignal.timeout(OAUTH_FETCH_TIMEOUT_MS),
+      },
+      "token_refresh_failed",
+    );
+    const json = await readJsonObject(response);
+    if (!response.ok) throw new OAuthRequestError("token_refresh_failed");
+    const parsed = parseProviderTokenResponse(provider, json);
+    const token = storedTokenFromResponse(
+      parsed,
+      { clientId: entry.clientId, clientSecret: entry.clientSecret },
+      entry.refreshToken,
+    );
+    const stored = await storeRefreshedTokenIfUnchanged(provider, principal, entry, token);
+    if (stored) return tokenResult(token);
+    const latest = await readStore(provider.name);
+    const current = latest.tokens[principalKey(principal)];
+    return current && isTokenUsable(current) ? tokenResult(current) : null;
+  } catch {
+    await deleteStoredTokenIfUnchanged(provider, principal, entry);
+    return null;
+  }
 }
 
 async function resolveClient(
   provider: McpOAuthProvider,
   redirectUri: string,
 ): Promise<{ clientId: string; clientSecret?: string }> {
-  const envClientId = provider.clientIdEnv
-    ? process.env[provider.clientIdEnv]?.trim()
-    : undefined;
+  const envClientId = provider.clientIdEnv ? process.env[provider.clientIdEnv]?.trim() : undefined;
   const envClientSecret = provider.clientSecretEnv
     ? process.env[provider.clientSecretEnv]?.trim()
     : undefined;
@@ -130,35 +441,34 @@ async function resolveClient(
   const existing = store.clients[redirectUri];
   if (existing?.clientId) return existing;
 
-  const response = await fetch(provider.registrationEndpoint, {
-    method: "POST",
-    headers: { "content-type": "application/json", accept: "application/json" },
-    body: JSON.stringify({
-      client_name: `brain-eve-${provider.name}`,
-      redirect_uris: [redirectUri],
-      grant_types: ["authorization_code", "refresh_token"],
-      response_types: ["code"],
-      token_endpoint_auth_method: provider.tokenAuthMethod,
-    }),
-  });
-  const body = (await response.json()) as {
-    client_id?: string;
-    client_secret?: string;
-    error?: string;
-    error_description?: string;
-  };
-  if (!response.ok || !body.client_id) {
-    throw new Error(
-      `${provider.displayName} OAuth client registration failed: ${body.error_description ?? body.error ?? response.status}`,
-    );
-  }
+  const response = await fetchOAuth(
+    provider.registrationEndpoint,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify({
+        client_name: `brain-eve-${provider.name}`,
+        redirect_uris: [redirectUri],
+        grant_types: ["authorization_code", "refresh_token"],
+        response_types: ["code"],
+        token_endpoint_auth_method: provider.tokenAuthMethod,
+      }),
+      signal: AbortSignal.timeout(OAUTH_FETCH_TIMEOUT_MS),
+    },
+    "client_registration_failed",
+  );
+  const json = await readJsonObject(response);
+  if (!response.ok) throw new OAuthRequestError("client_registration_failed");
+  const parsed = registrationResponseSchema.safeParse(json);
+  if (!parsed.success) throw new OAuthRequestError("malformed_response");
 
   const client = {
-    clientId: body.client_id,
-    clientSecret: body.client_secret,
+    clientId: parsed.data.client_id,
+    clientSecret: parsed.data.client_secret,
   };
-  store.clients[redirectUri] = client;
-  await writeStore(provider.name, store);
+  await updateStore(provider.name, (latest) => {
+    latest.clients[redirectUri] = client;
+  });
   return client;
 }
 
@@ -206,45 +516,26 @@ export async function exchangeAuthorizationCode(
     body.set("client_secret", opts.clientSecret ?? "");
   }
 
-  const response = await fetch(provider.tokenEndpoint, {
-    method: "POST",
-    headers: {
-      "content-type": "application/x-www-form-urlencoded",
-      accept: "application/json",
+  const response = await fetchOAuth(
+    provider.tokenEndpoint,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        accept: "application/json",
+      },
+      body,
+      signal: AbortSignal.timeout(OAUTH_FETCH_TIMEOUT_MS),
     },
-    body,
+    "token_exchange_failed",
+  );
+  const json = await readJsonObject(response);
+  if (!response.ok) throw new OAuthRequestError("token_exchange_failed");
+  const parsed = parseProviderTokenResponse(provider, json);
+  return storedTokenFromResponse(parsed, {
+    clientId: opts.clientId,
+    clientSecret: opts.clientSecret,
   });
-  const json = (await response.json()) as Record<string, unknown>;
-
-  let accessToken: string | undefined;
-  let expiresIn: number | undefined;
-  let refreshToken: string | undefined;
-
-  if (provider.parseTokenResponse) {
-    const parsed = provider.parseTokenResponse(json);
-    accessToken = parsed.accessToken;
-    expiresIn = parsed.expiresIn;
-    refreshToken = parsed.refreshToken;
-  } else {
-    accessToken =
-      typeof json.access_token === "string" ? json.access_token : undefined;
-    expiresIn = typeof json.expires_in === "number" ? json.expires_in : undefined;
-    refreshToken =
-      typeof json.refresh_token === "string" ? json.refresh_token : undefined;
-  }
-
-  if (!response.ok || !accessToken) {
-    throw new Error(
-      `${provider.displayName} token exchange failed: ${String(json.error_description ?? json.error ?? response.status)} (${JSON.stringify(json)})`,
-    );
-  }
-
-  return {
-    accessToken,
-    expiresAt:
-      typeof expiresIn === "number" ? Date.now() + expiresIn * 1000 : undefined,
-    refreshToken,
-  };
 }
 
 /** Persist a single-line authorize URL and try to open it in the system browser. */
@@ -269,17 +560,22 @@ export async function publishAuthorizeUrl(
 
   const { spawn } = await import("node:child_process");
   try {
+    let child;
     if (process.platform === "darwin") {
-      spawn("open", [url], { detached: true, stdio: "ignore" }).unref();
+      child = spawn("open", [url], { detached: true, stdio: "ignore" });
     } else if (process.platform === "win32") {
-      spawn("cmd", ["/c", "start", "", url], {
+      child = spawn("cmd", ["/c", "start", "", url], {
         detached: true,
         stdio: "ignore",
-      }).unref();
+      });
     } else {
-      spawn("xdg-open", [url], { detached: true, stdio: "ignore" }).unref();
+      child = spawn("xdg-open", [url], { detached: true, stdio: "ignore" });
     }
+    child.once("error", () => {
+      console.error(`Could not open a browser. Open this URL: ${url}`);
+    });
+    child.unref();
   } catch {
-    // Browser open is best-effort.
+    console.error(`Could not open a browser. Open this URL: ${url}`);
   }
 }

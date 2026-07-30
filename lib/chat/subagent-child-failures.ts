@@ -1,12 +1,14 @@
 "use client";
 
 import { Client, type HandleMessageStreamEvent } from "eve/client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export type SubagentChildFailure = {
   readonly message: string;
   readonly toolName: string;
 };
+
+type FailureMap = ReadonlyMap<string, readonly SubagentChildFailure[]>;
 
 type ActiveChild = {
   readonly abort: AbortController;
@@ -14,92 +16,134 @@ type ActiveChild = {
   readonly name: string;
 };
 
-function failureMessageFromActionResult(
-  event: Extract<HandleMessageStreamEvent, { type: "action.result" }>,
-) {
-  return (
-    event.data.error?.message ??
-    (typeof event.data.result.output === "string"
-      ? event.data.result.output
-      : event.data.result.output &&
-          typeof event.data.result.output === "object" &&
-          "message" in event.data.result.output &&
-          typeof event.data.result.output.message === "string"
-        ? event.data.result.output.message
-        : "Tool failed")
-  );
+type ActionResultEvent = Extract<HandleMessageStreamEvent, { type: "action.result" }>;
+
+const EMPTY_FAILURES: FailureMap = new Map();
+
+function failureMessageFromActionResult(event: ActionResultEvent) {
+  const { error, result } = event.data;
+
+  if (error?.message) {
+    return error.message;
+  }
+
+  if (typeof result.output === "string") {
+    return result.output;
+  }
+
+  if (
+    result.output &&
+    typeof result.output === "object" &&
+    "message" in result.output &&
+    typeof result.output.message === "string"
+  ) {
+    return result.output.message;
+  }
+
+  return "Tool failed";
 }
 
-function toolNameFromActionResult(
-  event: Extract<HandleMessageStreamEvent, { type: "action.result" }>,
-) {
+function toolNameFromActionResult(event: ActionResultEvent) {
   const result = event.data.result;
+
   if ("toolName" in result && typeof result.toolName === "string") {
     return result.toolName;
   }
+
   if ("subagentName" in result && typeof result.subagentName === "string") {
     return result.subagentName;
   }
+
   return "tool";
 }
 
-function currentTurnStartIndex(events: readonly HandleMessageStreamEvent[]) {
-  let startIndex = 0;
-  for (let index = 0; index < events.length; index += 1) {
-    if (events[index]?.type === "turn.started") {
-      startIndex = index;
-    }
+function isAbortError(error: unknown) {
+  return error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError");
+}
+
+function withFailure(
+  failures: FailureMap,
+  callId: string,
+  failure: SubagentChildFailure,
+): FailureMap {
+  const existing = failures.get(callId) ?? [];
+
+  const isDuplicate = existing.some(
+    (item) => item.toolName === failure.toolName && item.message === failure.message,
+  );
+
+  if (isDuplicate) {
+    return failures;
   }
-  return startIndex;
+
+  const next = new Map(failures);
+  next.set(callId, [...existing, failure]);
+
+  return next;
 }
 
 /**
  * Watches parent `subagent.called` events and attaches lightweight child
  * streams so mid-flight child tool failures can surface under the parent
  * subagent row without a full nested chat UI.
+ *
+ * Events are consumed through a cursor rather than by rescanning the current
+ * turn on every render, so cost stays linear in the length of a long session.
  */
-export function useSubagentChildFailures(
-  events: readonly HandleMessageStreamEvent[],
-): ReadonlyMap<string, readonly SubagentChildFailure[]> {
-  const [failuresByCallId, setFailuresByCallId] = useState<
-    ReadonlyMap<string, readonly SubagentChildFailure[]>
-  >(() => new Map());
+export function useSubagentChildFailures(events: readonly HandleMessageStreamEvent[]): FailureMap {
+  const [failuresByCallId, setFailuresByCallId] = useState<FailureMap>(EMPTY_FAILURES);
   const activeChildrenRef = useRef(new Map<string, ActiveChild>());
   const seenCalledRef = useRef(new Set<string>());
   const clientRef = useRef<Client | null>(null);
-  const currentTurnStartRef = useRef(0);
+  const processedCountRef = useRef(0);
   const eventsRef = useRef(events);
   eventsRef.current = events;
 
-  // Re-run only when the stream grows or the latest event type changes — not on
-  // unrelated parent re-renders that keep the same event list reference churn.
-  const eventsSig = `${events.length}:${events.at(-1)?.type ?? ""}`;
-
-  const getClient = () => {
-    clientRef.current ??= new Client({ host: "" });
-    return clientRef.current;
-  };
+  const eventCount = events.length;
 
   useEffect(() => {
     const activeChildren = activeChildrenRef.current;
     const currentEvents = eventsRef.current;
-    const turnStartIndex = currentTurnStartIndex(currentEvents);
 
-    if (turnStartIndex !== currentTurnStartRef.current) {
-      currentTurnStartRef.current = turnStartIndex;
+    const getClient = () => {
+      clientRef.current ??= new Client({ host: "" });
+      return clientRef.current;
+    };
+
+    const abortAllChildren = () => {
       for (const child of activeChildren.values()) {
         child.abort.abort();
       }
       activeChildren.clear();
+    };
+
+    const startNewTurn = () => {
+      abortAllChildren();
       seenCalledRef.current.clear();
-      setFailuresByCallId((previous) => (previous.size === 0 ? previous : new Map()));
+      setFailuresByCallId((previous) => (previous.size === 0 ? previous : EMPTY_FAILURES));
+    };
+
+    // The stream was replaced (new session or remount) — reprocess from scratch.
+    if (currentEvents.length < processedCountRef.current) {
+      startNewTurn();
+      processedCountRef.current = 0;
     }
 
-    const turnEvents = currentEvents.slice(turnStartIndex);
+    for (let index = processedCountRef.current; index < currentEvents.length; index += 1) {
+      const event = currentEvents[index];
 
-    for (const event of turnEvents) {
+      if (!event) {
+        continue;
+      }
+
+      if (event.type === "turn.started") {
+        startNewTurn();
+        continue;
+      }
+
       if (event.type === "subagent.called") {
         const { callId, childSessionId, name } = event.data;
+
         if (seenCalledRef.current.has(callId) || activeChildren.has(callId)) {
           continue;
         }
@@ -122,10 +166,8 @@ export function useSubagentChildFailures(
               if (childEvent.type !== "action.result") {
                 continue;
               }
-              if (
-                childEvent.data.status !== "failed" &&
-                childEvent.data.status !== "rejected"
-              ) {
+
+              if (childEvent.data.status !== "failed" && childEvent.data.status !== "rejected") {
                 continue;
               }
 
@@ -134,38 +176,36 @@ export function useSubagentChildFailures(
                 toolName: toolNameFromActionResult(childEvent),
               };
 
-              setFailuresByCallId((previous) => {
-                const existing = previous.get(callId) ?? [];
-                if (
-                  existing.some(
-                    (item) =>
-                      item.toolName === failure.toolName && item.message === failure.message,
-                  )
-                ) {
-                  return previous;
-                }
-                const next = new Map(previous);
-                next.set(callId, [...existing, failure]);
-                return next;
-              });
+              setFailuresByCallId((previous) => withFailure(previous, callId, failure));
             }
-          } catch {
-            // Child streams end on abort/settle; ignore disconnect noise.
+          } catch (error) {
+            // Aborts are the normal way these streams end once the child settles.
+            // Anything else is a real transport failure worth showing.
+            if (!isAbortError(error)) {
+              setFailuresByCallId((previous) =>
+                withFailure(previous, callId, {
+                  message: "Lost connection to this subagent's activity stream.",
+                  toolName: name,
+                }),
+              );
+            }
           } finally {
             activeChildren.get(callId)?.abort.abort();
             activeChildren.delete(callId);
           }
         })();
+
         continue;
       }
 
       if (event.type === "action.result") {
-        const callId = event.data.result.callId;
-        const child = activeChildren.get(callId);
+        const child = activeChildren.get(event.data.result.callId);
+
         if (child) {
           child.abort.abort();
-          activeChildren.delete(callId);
+          activeChildren.delete(event.data.result.callId);
         }
+
         continue;
       }
 
@@ -176,22 +216,23 @@ export function useSubagentChildFailures(
         event.type === "session.failed" ||
         event.type === "session.waiting"
       ) {
-        for (const child of activeChildren.values()) {
-          child.abort.abort();
-        }
-        activeChildren.clear();
+        abortAllChildren();
       }
     }
-  }, [eventsSig]);
+
+    processedCountRef.current = currentEvents.length;
+  }, [eventCount]);
 
   useEffect(() => {
+    const activeChildren = activeChildrenRef.current;
+
     return () => {
-      for (const child of activeChildrenRef.current.values()) {
+      for (const child of activeChildren.values()) {
         child.abort.abort();
       }
-      activeChildrenRef.current.clear();
+      activeChildren.clear();
     };
   }, []);
 
-  return useMemo(() => failuresByCallId, [failuresByCallId]);
+  return failuresByCallId;
 }

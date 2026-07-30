@@ -1,7 +1,10 @@
+import { countGraphemes } from "@/lib/text";
+
+/** Counted in grapheme clusters, matching what the composer shows the user. */
 export const MAX_CHAT_MESSAGE_CHARS = 8000;
 
 export function getChatMessageLength(message: string) {
-  return Array.from(message).length;
+  return countGraphemes(message);
 }
 
 export function getChatMessageLengthError(message: string) {
@@ -9,7 +12,7 @@ export function getChatMessageLengthError(message: string) {
     return null;
   }
 
-  return `Messages must be ${MAX_CHAT_MESSAGE_CHARS.toLocaleString()} characters or fewer.`;
+  return `Messages must be ${MAX_CHAT_MESSAGE_CHARS.toLocaleString("en-US")} characters or fewer.`;
 }
 
 export function assertChatMessageLength(message: string) {

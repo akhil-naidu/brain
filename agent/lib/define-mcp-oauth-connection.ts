@@ -4,16 +4,18 @@ import {
   defineInteractiveAuthorization,
   defineMcpClientConnection,
 } from "eve/connections";
-import { randomBytes } from "node:crypto";
 import {
   authorizeUrlPath,
   buildAuthorizeUrl,
+  deleteStoredToken,
   exchangeAuthorizationCode,
+  generateOAuthState,
   getStoredAccessToken,
   makePkce,
   type McpOAuthProvider,
   publishAuthorizeUrl,
   storeAccessToken,
+  verifyOAuthState,
 } from "./mcp-oauth";
 
 export type McpOAuthResume = {
@@ -23,8 +25,16 @@ export type McpOAuthResume = {
   state: string;
 };
 
-const WRITE_TOOL_HINT =
-  /(create|update|edit|post|send|add|set|write|comment|assign|move|complete|start|stop|log|delete|invite|schedule)/i;
+export function approvalForTool(
+  providerName: string,
+  safeReadOnlyTools: readonly string[],
+  qualifiedToolName: string,
+): "not-applicable" | "user-approval" {
+  const prefix = `${providerName}__`;
+  if (!qualifiedToolName.startsWith(prefix)) return "user-approval";
+  const remoteToolName = qualifiedToolName.slice(prefix.length);
+  return safeReadOnlyTools.includes(remoteToolName) ? "not-applicable" : "user-approval";
+}
 
 export function defineMcpOAuthConnection(opts: {
   provider: McpOAuthProvider;
@@ -44,17 +54,21 @@ export function defineMcpOAuthConnection(opts: {
         }
         return { token: cached.token, expiresAt: cached.expiresAt };
       },
+      async evict({ principal }) {
+        try {
+          await deleteStoredToken(provider, principal);
+        } catch {
+          console.error(`Could not evict the stored ${provider.displayName} OAuth token.`);
+        }
+      },
       async startAuthorization({ callbackUrl }) {
         const { verifier, challenge } = makePkce();
-        const state = randomBytes(16).toString("base64url");
-        const { url, clientId, clientSecret } = await buildAuthorizeUrl(
-          provider,
-          {
-            callbackUrl,
-            codeChallenge: challenge,
-            state,
-          },
-        );
+        const state = generateOAuthState();
+        const { url, clientId, clientSecret } = await buildAuthorizeUrl(provider, {
+          callbackUrl,
+          codeChallenge: challenge,
+          state,
+        });
         await publishAuthorizeUrl(provider, url, callbackUrl);
         return {
           challenge: {
@@ -66,11 +80,6 @@ export function defineMcpOAuthConnection(opts: {
         };
       },
       async completeAuthorization({ principal, callbackUrl, resume, callback }) {
-        const existing = await getStoredAccessToken(provider, principal);
-        if (existing) {
-          return { token: existing.token, expiresAt: existing.expiresAt };
-        }
-
         if (!resume) {
           throw new ConnectionAuthorizationFailedError(provider.name, {
             reason: "missing_resume_state",
@@ -78,16 +87,13 @@ export function defineMcpOAuthConnection(opts: {
           });
         }
         if (callback.params.error) {
+          const accessDenied = callback.params.error === "access_denied";
           throw new ConnectionAuthorizationFailedError(provider.name, {
-            reason: callback.params.error,
-            retryable: callback.params.error !== "access_denied",
+            reason: accessDenied ? "access_denied" : "authorization_failed",
+            retryable: !accessDenied,
           });
         }
-        if (
-          callback.params.state &&
-          resume.state &&
-          callback.params.state !== resume.state
-        ) {
+        if (!verifyOAuthState(resume.state, callback.params.state)) {
           throw new ConnectionAuthorizationFailedError(provider.name, {
             reason: "invalid_state",
             retryable: true,
@@ -99,6 +105,11 @@ export function defineMcpOAuthConnection(opts: {
             reason: "missing_code",
             retryable: true,
           });
+        }
+
+        const existing = await getStoredAccessToken(provider, principal);
+        if (existing) {
+          return { token: existing.token, expiresAt: existing.expiresAt };
         }
 
         try {
@@ -114,21 +125,19 @@ export function defineMcpOAuthConnection(opts: {
             token: token.accessToken,
             expiresAt: token.expiresAt,
           };
-        } catch (error) {
+        } catch {
           const raced = await getStoredAccessToken(provider, principal);
           if (raced) {
             return { token: raced.token, expiresAt: raced.expiresAt };
           }
-          const message =
-            error instanceof Error ? error.message : "token_exchange_failed";
           throw new ConnectionAuthorizationFailedError(provider.name, {
-            reason: message,
+            reason: "token_exchange_failed",
             retryable: true,
           });
         }
       },
     }),
     approval: ({ toolName }) =>
-      WRITE_TOOL_HINT.test(toolName) ? "user-approval" : "not-applicable",
+      approvalForTool(provider.name, provider.safeReadOnlyTools, toolName),
   });
 }

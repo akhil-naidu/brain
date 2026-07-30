@@ -4,6 +4,9 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
+const INITIAL_THEME_SCRIPT =
+  'document.documentElement.classList.add(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");document.documentElement.style.colorScheme=document.documentElement.classList.contains("dark")?"dark":"light";';
+
 export const metadata: Metadata = {
   title: "Brain",
   description: "Brain agent chat",
@@ -16,7 +19,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { readonly children: ReactNode }) {
   return (
-    <html className="light" lang="en" style={{ colorScheme: "light" }} suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script>{INITIAL_THEME_SCRIPT}</script>
+      </head>
       <body className="min-h-dvh antialiased" suppressHydrationWarning>
         <ThemeProvider>
           <TooltipProvider>{children}</TooltipProvider>

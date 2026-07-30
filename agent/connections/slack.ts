@@ -1,5 +1,6 @@
 import { defineMcpOAuthConnection } from "../lib/define-mcp-oauth-connection";
-import type { McpOAuthProvider } from "../lib/mcp-oauth";
+import { OAuthRequestError, type McpOAuthProvider } from "../lib/mcp-oauth";
+import { z } from "zod";
 
 /** Scopes advertised by https://mcp.slack.com/.well-known/oauth-protected-resource */
 const SLACK_SCOPES = [
@@ -31,6 +32,23 @@ const SLACK_SCOPES = [
   "mpim:read",
 ].join(" ");
 
+const slackTokenResponseSchema = z.discriminatedUnion("ok", [
+  z
+    .object({
+      ok: z.literal(true),
+      access_token: z.string().min(1),
+      expires_in: z.number().finite().nonnegative().optional(),
+      refresh_token: z.string().min(1).optional(),
+    })
+    .passthrough(),
+  z
+    .object({
+      ok: z.literal(false),
+      error: z.string().optional(),
+    })
+    .passthrough(),
+]);
+
 export const slackProvider: McpOAuthProvider = {
   name: "slack",
   displayName: "Slack",
@@ -43,21 +61,26 @@ export const slackProvider: McpOAuthProvider = {
   clientSecretEnv: "SLACK_MCP_CLIENT_SECRET",
   tokenAuthMethod: "client_secret_post",
   parseTokenResponse(json) {
-    if (json.ok === false) {
-      throw new Error(String(json.error ?? "slack_oauth_failed"));
-    }
-    const accessToken =
-      typeof json.access_token === "string" ? json.access_token : undefined;
-    if (!accessToken) {
-      throw new Error("slack_missing_access_token");
-    }
+    const result = slackTokenResponseSchema.safeParse(json);
+    if (!result.success) throw new OAuthRequestError("malformed_response");
+    if (!result.data.ok) throw new OAuthRequestError("token_exchange_failed");
     return {
-      accessToken,
-      expiresIn: typeof json.expires_in === "number" ? json.expires_in : undefined,
-      refreshToken:
-        typeof json.refresh_token === "string" ? json.refresh_token : undefined,
+      accessToken: result.data.access_token,
+      expiresIn: result.data.expires_in,
+      refreshToken: result.data.refresh_token,
     };
   },
+  safeReadOnlyTools: [
+    "search_messages",
+    "search_channels",
+    "search_users",
+    "search_emoji",
+    "read_channel_history",
+    "read_thread",
+    "list_channel_members",
+    "get_user_profile",
+    "read_canvas",
+  ],
 };
 
 export default defineMcpOAuthConnection({

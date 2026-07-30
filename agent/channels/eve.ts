@@ -1,8 +1,11 @@
 import { eveChannel } from "eve/channels/eve";
 import type { AuthFn } from "eve/channels/auth";
 
-/** Local/trusted open access — not for public internet without a real AuthFn. */
-const anonymousUser: AuthFn<Request> = () => ({
+/**
+ * SECURITY: Every caller shares one principal and all of its OAuth grants.
+ * This channel is safe only behind a trusted local boundary, never on the public internet.
+ */
+const anonymousUser: AuthFn = () => ({
   attributes: {},
   authenticator: "anonymous",
   issuer: "local",

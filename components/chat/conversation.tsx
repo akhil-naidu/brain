@@ -32,7 +32,9 @@ export function ChatConversationContent({
 
 export function ChatScrollButton({ className, ...props }: ComponentProps<typeof Button>) {
   const { isAtBottom, scrollToBottom } = useStickToBottomContext();
-  const handleScrollToBottom = useCallback(() => scrollToBottom(), [scrollToBottom]);
+  const handleScrollToBottom = useCallback(() => {
+    void scrollToBottom();
+  }, [scrollToBottom]);
 
   if (isAtBottom) {
     return null;
@@ -41,7 +43,10 @@ export function ChatScrollButton({ className, ...props }: ComponentProps<typeof 
   return (
     <Button
       aria-label="Scroll to latest message"
-      className={cn("absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full shadow-sm", className)}
+      className={cn(
+        "absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full shadow-sm",
+        className,
+      )}
       onClick={handleScrollToBottom}
       size="icon-sm"
       type="button"

@@ -45,14 +45,16 @@ export function ChatComposer({
   readonly value: string;
 }) {
   const composerId = useId();
+  const disabledReasonId = useId();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const textareaDisabled = disabled || isBusy || isPreparing;
+  const shouldFocusOnMountRef = useRef(autoFocus && !textareaDisabled);
   const trimmedValue = value.trim();
   const isOverMaxLength = getChatMessageLength(trimmedValue) > maxLength;
 
   useEffect(() => {
-    if (!autoFocus || textareaDisabled) {
-      return;
+    if (!shouldFocusOnMountRef.current || document.activeElement !== document.body) {
+      return undefined;
     }
 
     const frame = window.requestAnimationFrame(() => {
@@ -60,7 +62,7 @@ export function ChatComposer({
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [autoFocus, textareaDisabled]);
+  }, []);
 
   const submitValue = useCallback(() => {
     const text = value.trim();
@@ -81,6 +83,10 @@ export function ChatComposer({
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLTextAreaElement>) => {
+      if (event.nativeEvent.isComposing) {
+        return;
+      }
+
       if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault();
         submitValue();
@@ -92,9 +98,10 @@ export function ChatComposer({
   const form = (
     <form
       className={cn(
-        "min-w-0 rounded-[14px] border border-border/80 bg-card/95 shadow-sm transition-colors focus-within:border-border focus-within:ring-[1px] focus-within:ring-foreground/5 dark:bg-muted/45 dark:focus-within:ring-white/5",
+        "border-border/80 bg-card/95 focus-within:border-border focus-within:ring-foreground/5 dark:bg-muted/45 min-w-0 rounded-[14px] border shadow-sm transition-colors focus-within:ring-[1px] dark:focus-within:ring-white/5",
         className,
       )}
+      aria-describedby={disabledReason ? disabledReasonId : undefined}
       data-chat-composer
       onSubmit={handleSubmit}
     >
@@ -102,12 +109,11 @@ export function ChatComposer({
         Message Brain
       </label>
       <textarea
-        autoFocus={autoFocus}
-        className="max-h-32 min-h-12 w-full resize-none bg-transparent px-3 pt-3 pb-1 text-base leading-6 outline-none placeholder:text-muted-foreground/45 disabled:cursor-not-allowed disabled:opacity-60 sm:px-4 md:text-[15px] dark:placeholder:text-muted-foreground/60"
+        aria-describedby={disabledReason ? disabledReasonId : undefined}
+        className="placeholder:text-muted-foreground/45 dark:placeholder:text-muted-foreground/60 max-h-32 min-h-12 w-full resize-none bg-transparent px-3 pt-3 pb-1 text-base leading-6 outline-none disabled:cursor-not-allowed disabled:opacity-60 sm:px-4 md:text-[15px]"
         data-chat-composer-input
         disabled={textareaDisabled}
         id={composerId}
-        maxLength={maxLength}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
@@ -123,7 +129,7 @@ export function ChatComposer({
           {isBusy ? (
             <Button
               aria-label="Stop response"
-              className="size-6 cursor-pointer rounded-md bg-foreground/15 text-foreground shadow-none hover:bg-foreground/25"
+              className="bg-foreground/15 text-foreground hover:bg-foreground/25 size-6 cursor-pointer rounded-md shadow-none"
               onClick={onStop}
               size="icon-xs"
               type="button"
@@ -133,7 +139,7 @@ export function ChatComposer({
           ) : isPreparing ? (
             <Button
               aria-label="Preparing chat"
-              className="size-6 rounded-md bg-foreground/75 text-background"
+              className="bg-foreground/75 text-background size-6 rounded-md"
               disabled
               size="icon-xs"
               type="button"
@@ -143,7 +149,7 @@ export function ChatComposer({
           ) : (
             <Button
               aria-label="Send message"
-              className="size-6 cursor-pointer rounded-md bg-foreground text-background hover:bg-foreground/90 disabled:cursor-not-allowed disabled:pointer-events-auto disabled:opacity-30"
+              className="bg-foreground text-background hover:bg-foreground/90 size-6 cursor-pointer rounded-md disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-30"
               disabled={disabled || trimmedValue.length === 0 || isOverMaxLength}
               size="icon-xs"
               type="submit"
@@ -163,11 +169,11 @@ export function ChatComposer({
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <div aria-label={disabledReason} className="min-w-0" tabIndex={0}>
-          {form}
-        </div>
+        <div className="min-w-0">{form}</div>
       </TooltipTrigger>
-      <TooltipContent side="top">{disabledReason}</TooltipContent>
+      <TooltipContent id={disabledReasonId} side="top">
+        {disabledReason}
+      </TooltipContent>
     </Tooltip>
   );
 }

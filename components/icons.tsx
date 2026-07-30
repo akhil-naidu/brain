@@ -53,10 +53,7 @@ export function GmailIcon({ className }: { readonly className?: string }) {
       <path d="M120 108h14c3.32 0 6-2.69 6-6V59l-20 15" fill="#34A853" />
       <path d="M120 48v26l20-15v-8c0-7.42-8.47-11.65-14.4-7.2" fill="#FBBC04" />
       <path d="M72 74V48l24 18 24-18v26L96 92" fill="#EA4335" />
-      <path
-        d="M52 51v8l20 15V48l-5.6-4.2c-5.94-4.45-14.4-.22-14.4 7.2"
-        fill="#C5221F"
-      />
+      <path d="M52 51v8l20 15V48l-5.6-4.2c-5.94-4.45-14.4-.22-14.4 7.2" fill="#C5221F" />
     </svg>
   );
 }

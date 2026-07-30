@@ -2,7 +2,7 @@
 
 import { Client, type HandleMessageStreamEvent, isTurnFailureEvent } from "eve/client";
 import { useEveAgent } from "eve/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useChatShell } from "@/app/_components/chat-shell-context";
 import {
   ChatConversation,
@@ -12,12 +12,10 @@ import {
 import { ChatComposer } from "@/components/chat/composer";
 import { ErrorToast } from "@/components/chat/error-toast";
 import { IntegrationsMenu } from "@/components/chat/integrations-menu";
-import {
-  AgentMessage,
-  type AgentInputResponse,
-} from "@/components/chat/message";
+import { AgentMessage, type AgentInputResponse } from "@/components/chat/message";
 import { BrainMark } from "@/components/brain-mark";
 import { createConnectionClientContext } from "@/lib/chat/connection-context";
+import { getChatMessageLengthError } from "@/lib/chat/limits";
 import { useSubagentChildFailures } from "@/lib/chat/subagent-child-failures";
 
 type CancellationState = "idle" | "requested" | "cancelling";
@@ -28,28 +26,39 @@ type Cancellation = {
   turnId?: string;
 };
 
-const CANCEL_UI_FALLBACK_MS = 1_500;
+type ErrorNotice = {
+  readonly id: string;
+  readonly message: string;
+};
+
+export type DisposeEphemeralChat = () => Promise<boolean>;
+
+const MemoizedAgentMessage = memo(AgentMessage);
 
 function toErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
-function latestTurnId(events: readonly HandleMessageStreamEvent[]) {
-  for (let index = events.length - 1; index >= 0; index -= 1) {
-    const event = events[index]!;
-    if (event.type === "turn.started") {
-      return event.data.turnId;
-    }
+function failureEventId(event: HandleMessageStreamEvent) {
+  if (!isTurnFailureEvent(event)) {
+    return null;
   }
-  return undefined;
+
+  if (event.type === "session.failed") {
+    return `${event.type}:${event.data.sessionId}:${event.meta?.at ?? event.data.code}`;
+  }
+
+  return `${event.type}:${event.data.turnId}:${event.data.sequence}`;
 }
 
 export function EphemeralAgentChat({
   draft,
+  onDisposeReady,
   onDraftChange,
   onUserMessage,
 }: {
   readonly draft: string;
+  readonly onDisposeReady?: (dispose: DisposeEphemeralChat | null) => void;
   readonly onDraftChange: (value: string) => void;
   readonly onUserMessage?: (text: string) => void;
 }) {
@@ -58,19 +67,34 @@ export function EphemeralAgentChat({
     new Client({ host: "", preserveCompletedSessions: true }).session(),
   );
   const cancellationRef = useRef<Cancellation>({ requested: false });
-  const cancelFallbackTimerRef = useRef<number | null>(null);
   const agentStopRef = useRef<() => void>(() => undefined);
-  const agentStatusRef = useRef<string>("ready");
+  const disposalBoundaryRef = useRef(false);
+  const disposalResolveRef = useRef<((disposed: boolean) => void) | null>(null);
+  const errorSequenceRef = useRef(0);
+  const seenFailureIdsRef = useRef(new Set<string>());
   const [cancellationState, setCancellationState] = useState<CancellationState>("idle");
-  const [clientError, setClientError] = useState<string | null>(null);
+  const [clientError, setClientError] = useState<ErrorNotice | null>(null);
   const [dismissedError, setDismissedError] = useState<string | null>(null);
 
-  const clearCancelFallbackTimer = useCallback(() => {
-    if (cancelFallbackTimerRef.current !== null) {
-      window.clearTimeout(cancelFallbackTimerRef.current);
-      cancelFallbackTimerRef.current = null;
-    }
+  const showClientError = useCallback((message: string) => {
+    errorSequenceRef.current += 1;
+    setClientError({ id: `client:${errorSequenceRef.current}`, message });
+    setDismissedError(null);
   }, []);
+
+  const finishDisposal = useCallback(
+    async (resolve: (disposed: boolean) => void) => {
+      try {
+        await session.reset();
+        agentStopRef.current();
+        resolve(true);
+      } catch (error) {
+        showClientError(toErrorMessage(error, "Unable to start a new chat."));
+        resolve(false);
+      }
+    },
+    [session, showClientError],
+  );
 
   const cancelTurn = useCallback(
     (turnId: string) => {
@@ -94,18 +118,26 @@ export function EphemeralAgentChat({
         }
 
         cancellation.sentTurnId = undefined;
-        setClientError(toErrorMessage(error, "Unable to cancel the response."));
-        setDismissedError(null);
+        showClientError(toErrorMessage(error, "Unable to cancel the response."));
         setCancellationState("requested");
-        agentStopRef.current();
+        disposalResolveRef.current?.(false);
+        disposalResolveRef.current = null;
       });
     },
-    [session],
+    [session, showClientError],
   );
 
   const handleEvent = useCallback(
     (event: HandleMessageStreamEvent) => {
+      const failureId = failureEventId(event);
+      if (failureId && isTurnFailureEvent(event) && !seenFailureIdsRef.current.has(failureId)) {
+        seenFailureIdsRef.current.add(failureId);
+        setClientError({ id: failureId, message: event.data.message });
+        setDismissedError(null);
+      }
+
       if (event.type === "turn.started") {
+        disposalBoundaryRef.current = false;
         const cancellation = cancellationRef.current;
         cancellation.turnId = event.data.turnId;
         cancelTurn(event.data.turnId);
@@ -113,24 +145,34 @@ export function EphemeralAgentChat({
       }
 
       if (
-        event.type === "turn.completed" ||
-        event.type === "turn.failed" ||
-        event.type === "turn.cancelled" ||
+        event.type === "session.completed" ||
         event.type === "session.failed" ||
         event.type === "session.waiting"
       ) {
+        disposalBoundaryRef.current = true;
         cancellationRef.current = { requested: false };
-        clearCancelFallbackTimer();
         setCancellationState((current) => (current === "idle" ? current : "idle"));
       }
     },
-    [cancelTurn, clearCancelFallbackTimer],
+    [cancelTurn],
   );
 
-  const agent = useEveAgent({ onEvent: handleEvent, session });
+  const handleFinish = useCallback(() => {
+    if (!disposalBoundaryRef.current) {
+      return;
+    }
+
+    const resolve = disposalResolveRef.current;
+    if (resolve) {
+      disposalResolveRef.current = null;
+      void finishDisposal(resolve);
+    }
+  }, [finishDisposal]);
+
+  const agent = useEveAgent({ onEvent: handleEvent, onFinish: handleFinish, session });
   agentStopRef.current = agent.stop;
-  agentStatusRef.current = agent.status;
   const childFailuresByCallId = useSubagentChildFailures(agent.events);
+  const send = agent.send;
 
   const messages = agent.data.messages;
   const lastMessage = messages.at(-1);
@@ -144,9 +186,11 @@ export function EphemeralAgentChat({
   const waitingForAuthorization = Boolean(pendingAuthorization);
   const isStreaming = agent.status === "submitted" || agent.status === "streaming";
   const isBusy = isStreaming || waitingForAuthorization;
-  const displayError = clientError ?? agent.error?.message ?? null;
-  const visibleError =
-    displayError && displayError !== dismissedError ? displayError : null;
+  const agentError = agent.error?.message
+    ? { id: `agent:${agent.error.message}`, message: agent.error.message }
+    : null;
+  const displayError = clientError ?? agentError;
+  const visibleError = displayError && displayError.id !== dismissedError ? displayError : null;
 
   const hasVisibleAssistantWork = useMemo(() => {
     if (!lastMessage || lastMessage.role !== "assistant") {
@@ -163,26 +207,6 @@ export function EphemeralAgentChat({
 
   const showThinking = isStreaming && !hasVisibleAssistantWork;
 
-  const latestTurnFailureMessage = useMemo(() => {
-    for (let index = agent.events.length - 1; index >= 0; index -= 1) {
-      const event = agent.events[index]!;
-      if (isTurnFailureEvent(event)) {
-        return event.data.message;
-      }
-    }
-    return null;
-  }, [agent.events]);
-
-  useEffect(() => {
-    if (!latestTurnFailureMessage) {
-      return;
-    }
-    setClientError((previous) =>
-      previous === latestTurnFailureMessage ? previous : latestTurnFailureMessage,
-    );
-    setDismissedError((previous) => (previous === null ? previous : null));
-  }, [latestTurnFailureMessage]);
-
   useEffect(() => {
     if (agent.status === "error" && agent.error?.message) {
       setDismissedError((previous) => (previous === null ? previous : null));
@@ -191,21 +215,18 @@ export function EphemeralAgentChat({
 
   useEffect(() => {
     if (!isBusy) {
-      clearCancelFallbackTimer();
       setCancellationState((current) => (current === "idle" ? current : "idle"));
       cancellationRef.current = { requested: false };
     }
-  }, [clearCancelFallbackTimer, isBusy]);
-
-  useEffect(() => () => clearCancelFallbackTimer(), [clearCancelFallbackTimer]);
+  }, [isBusy]);
 
   const prepareTurn = useCallback(() => {
-    clearCancelFallbackTimer();
+    disposalBoundaryRef.current = false;
     cancellationRef.current = { requested: false };
     setCancellationState("idle");
     setClientError(null);
     setDismissedError(null);
-  }, [clearCancelFallbackTimer]);
+  }, []);
 
   const requestCancellation = useCallback(() => {
     if (!isBusy) {
@@ -214,7 +235,6 @@ export function EphemeralAgentChat({
 
     const cancellation = cancellationRef.current;
     cancellation.requested = true;
-    cancellation.turnId = cancellation.turnId ?? latestTurnId(agent.events);
     setClientError(null);
     setDismissedError(null);
     setCancellationState((current) => (current === "cancelling" ? current : "requested"));
@@ -223,52 +243,73 @@ export function EphemeralAgentChat({
       cancellation.sentTurnId = undefined;
       cancelTurn(cancellation.turnId);
     }
+  }, [cancelTurn, isBusy]);
 
-    clearCancelFallbackTimer();
-    cancelFallbackTimerRef.current = window.setTimeout(() => {
-      const status = agentStatusRef.current;
-      if (status === "submitted" || status === "streaming") {
-        // Cooperative cancel can lag with subagents; unlock the composer.
-        agentStopRef.current();
-        setCancellationState("idle");
-        cancellationRef.current = { requested: false };
-      }
-    }, CANCEL_UI_FALLBACK_MS);
-  }, [agent.events, cancelTurn, clearCancelFallbackTimer, isBusy]);
+  const dispose = useCallback<DisposeEphemeralChat>(async () => {
+    if (!isBusy) {
+      return await new Promise<boolean>((resolve) => {
+        void finishDisposal(resolve);
+      });
+    }
+
+    return await new Promise<boolean>((resolve) => {
+      disposalResolveRef.current = resolve;
+      requestCancellation();
+    });
+  }, [finishDisposal, isBusy, requestCancellation]);
+
+  useEffect(() => {
+    onDisposeReady?.(dispose);
+  }, [dispose, onDisposeReady]);
+
+  useEffect(() => {
+    return () => {
+      onDisposeReady?.(null);
+      disposalResolveRef.current?.(false);
+      disposalResolveRef.current = null;
+      agentStopRef.current();
+    };
+  }, [onDisposeReady]);
 
   const handleInputResponses = useCallback(
     async (responses: readonly AgentInputResponse[]) => {
       try {
         prepareTurn();
-        await agent.send({
+        await send({
           inputResponses: [...responses],
           clientContext: createConnectionClientContext(enabledConnections),
         });
       } catch (error) {
-        setClientError(toErrorMessage(error, "Failed to send response."));
+        showClientError(toErrorMessage(error, "Failed to send response."));
       }
     },
-    [agent, enabledConnections, prepareTurn],
+    [enabledConnections, prepareTurn, send, showClientError],
   );
 
   const handleSubmit = useCallback(
     async (text: string) => {
+      const lengthError = getChatMessageLengthError(text);
+      if (lengthError) {
+        showClientError(lengthError);
+        return;
+      }
+
       const previousDraft = text;
       onDraftChange("");
       onUserMessage?.(text);
       prepareTurn();
 
       try {
-        await agent.send({
+        await send({
           message: text,
           clientContext: createConnectionClientContext(enabledConnections),
         });
       } catch (error) {
         onDraftChange(previousDraft);
-        setClientError(toErrorMessage(error, "Failed to send message."));
+        showClientError(toErrorMessage(error, "Failed to send message."));
       }
     },
-    [agent, enabledConnections, onDraftChange, onUserMessage, prepareTurn],
+    [enabledConnections, onDraftChange, onUserMessage, prepareTurn, send, showClientError],
   );
 
   const failedUserText = useMemo(() => {
@@ -290,33 +331,37 @@ export function EphemeralAgentChat({
     ? `Connect ${pendingAuthorization.displayName} to continue this turn.`
     : undefined;
 
-  const canRespondToMessage = (messageId: string) => {
-    if (messageId !== lastMessage?.id) {
-      return false;
+  const canRespondToMessage = useCallback(
+    (messageId: string) => {
+      if (messageId !== lastMessage?.id) {
+        return false;
+      }
+      if (waitingForAuthorization) {
+        return false;
+      }
+      const hasPendingInput = lastMessage.parts.some(
+        (part) =>
+          part.type === "dynamic-tool" &&
+          part.toolMetadata?.eve?.inputRequest &&
+          !part.toolMetadata.eve.inputResponse,
+      );
+      if (hasPendingInput) {
+        return true;
+      }
+      return !isBusy;
+    },
+    [isBusy, lastMessage, waitingForAuthorization],
+  );
+
+  const dismissError = useCallback(() => {
+    if (visibleError) {
+      setDismissedError(visibleError.id);
     }
-    if (waitingForAuthorization) {
-      return false;
-    }
-    const hasPendingInput = lastMessage.parts.some(
-      (part) =>
-        part.type === "dynamic-tool" &&
-        part.toolMetadata?.eve?.inputRequest &&
-        !part.toolMetadata.eve.inputResponse,
-    );
-    if (hasPendingInput) {
-      return true;
-    }
-    return !isBusy;
-  };
+  }, [visibleError]);
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col bg-background text-foreground">
-      {visibleError ? (
-        <ErrorToast
-          message={visibleError}
-          onDismiss={() => setDismissedError(visibleError)}
-        />
-      ) : null}
+    <div className="bg-background text-foreground flex h-full min-h-0 flex-1 flex-col">
+      {visibleError ? <ErrorToast message={visibleError.message} onDismiss={dismissError} /> : null}
       <ChatConversation className="min-h-0 flex-1">
         <ChatConversationContent className="mx-auto w-full max-w-3xl gap-4 px-4 py-6">
           {messages.length === 0 ? (
@@ -324,14 +369,12 @@ export function EphemeralAgentChat({
               <div className="text-center">
                 <BrainMark className="mx-auto size-10 text-[2.5rem]" />
                 <h1 className="mt-4 text-2xl font-semibold tracking-tight">Brain</h1>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Ask anything to get started.
-                </p>
+                <p className="text-muted-foreground mt-2 text-sm">Ask anything to get started.</p>
               </div>
             </div>
           ) : null}
           {messages.map((message) => (
-            <AgentMessage
+            <MemoizedAgentMessage
               canRespond={canRespondToMessage(message.id)}
               childFailuresByCallId={childFailuresByCallId}
               isStreaming={
@@ -343,16 +386,16 @@ export function EphemeralAgentChat({
             />
           ))}
           {showThinking ? (
-            <article aria-live="polite" className="px-3" role="status">
-              <div className="text-[15px] font-medium leading-6 text-muted-foreground">
+            <output aria-live="polite" className="block px-3">
+              <div className="text-muted-foreground text-[15px] leading-6 font-medium">
                 <span className="shimmer-text">Thinking...</span>
               </div>
-            </article>
+            </output>
           ) : null}
         </ChatConversationContent>
         <ChatScrollButton />
       </ChatConversation>
-      <div className="border-t border-border/60 bg-background/95 p-3 backdrop-blur">
+      <div className="border-border/60 bg-background/95 border-t p-3 backdrop-blur">
         <div className="mx-auto w-full max-w-3xl">
           <ChatComposer
             disabledReason={

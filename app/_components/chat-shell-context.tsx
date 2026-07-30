@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 
 export type EnabledConnections = {
   readonly clickup: boolean;
@@ -23,15 +23,16 @@ export function ChatShellProvider({ children }: { readonly children: ReactNode }
     asana: true,
     gmail: true,
   });
+  const setConnectionEnabled = useCallback((key: keyof EnabledConnections, enabled: boolean) => {
+    setEnabledConnections((previous) => ({ ...previous, [key]: enabled }));
+  }, []);
 
   const value = useMemo<ChatShellValue>(
     () => ({
       enabledConnections,
-      setConnectionEnabled: (key, enabled) => {
-        setEnabledConnections((prev) => ({ ...prev, [key]: enabled }));
-      },
+      setConnectionEnabled,
     }),
-    [enabledConnections],
+    [enabledConnections, setConnectionEnabled],
   );
 
   return <ChatShellContext.Provider value={value}>{children}</ChatShellContext.Provider>;

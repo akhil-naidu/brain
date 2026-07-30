@@ -1,10 +1,24 @@
+# Dependencies
 node_modules
+
+# Secrets — .env.example is the tracked template
 .env*
-.eve
-.vercel
+!.env.example
+
+# Build output
 .next
 .output
 .nitro
 dist
-.DS_Store
 *.tsbuildinfo
+
+# Framework / tooling caches
+.eve
+.vercel
+
+# Test + lint caches
+coverage
+.oxlintcache
+
+# OS
+.DS_Store

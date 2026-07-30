@@ -2,12 +2,7 @@
 
 import type { ComponentType } from "react";
 import { HammerIcon } from "lucide-react";
-import {
-  AsanaIcon,
-  ClickUpIcon,
-  GmailIcon,
-  SlackIcon,
-} from "@/components/icons";
+import { AsanaIcon, ClickUpIcon, GmailIcon, SlackIcon } from "@/components/icons";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,7 +40,7 @@ export function IntegrationsMenu({
       <DropdownMenuTrigger asChild>
         <button
           aria-label="Connections"
-          className="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground/75 transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:bg-muted/60 focus-visible:text-foreground focus-visible:outline-none dark:text-muted-foreground/60 [&_*]:cursor-pointer"
+          className="text-muted-foreground/75 hover:bg-muted/60 hover:text-foreground focus-visible:bg-muted/60 focus-visible:text-foreground dark:text-muted-foreground/60 inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors focus-visible:outline-none [&_*]:cursor-pointer"
           type="button"
         >
           <HammerIcon className="size-4 shrink-0 cursor-pointer" />
@@ -53,7 +48,7 @@ export function IntegrationsMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
-        className="w-48 rounded-md border-border bg-popover p-1"
+        className="border-border bg-popover w-48 rounded-md p-1"
         sideOffset={4}
       >
         {CONNECTION_ITEMS.map(({ Icon, key, label }) => {
@@ -62,7 +57,7 @@ export function IntegrationsMenu({
           return (
             <DropdownMenuItem
               aria-checked={enabled}
-              className="h-9 cursor-pointer gap-2 rounded-sm px-2 py-1 text-sm focus:bg-muted/70"
+              className="focus:bg-muted/70 h-9 cursor-pointer gap-2 rounded-sm px-2 py-1 text-sm"
               key={key}
               onSelect={(event) => {
                 event.preventDefault();
@@ -70,11 +65,11 @@ export function IntegrationsMenu({
               }}
               role="menuitemcheckbox"
             >
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border bg-background">
+              <span className="border-border bg-background flex size-7 shrink-0 items-center justify-center rounded-md border">
                 <Icon className="size-[18px]" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm text-foreground">{label}</span>
+                <span className="text-foreground block truncate text-sm">{label}</span>
               </span>
               <span
                 aria-hidden="true"

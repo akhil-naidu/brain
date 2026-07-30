@@ -24,6 +24,7 @@ export const gmailProvider: McpOAuthProvider = {
     prompt: "consent",
     include_granted_scopes: "true",
   },
+  safeReadOnlyTools: ["get_thread", "list_drafts", "list_labels", "search_threads"],
 };
 
 export default defineMcpOAuthConnection({
