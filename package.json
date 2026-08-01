@@ -16,15 +16,17 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test",
+    "verify": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test",
     "dev:eve": "eve dev",
     "build:eve": "eve build",
     "start:eve": "eve start",
     "openspec": "openspec",
     "openspec:validate": "openspec validate --all --no-interactive",
     "openspec:list": "openspec list",
-    "openspec:specs": "openspec list --specs"
+    "openspec:specs": "openspec list --specs",
+    "preinstall": "node -e \"const ua=process.env.npm_config_user_agent||''; if(!ua.includes('pnpm')){console.error('Use pnpm to install dependencies (see packageManager in package.json).'); process.exit(1)}\""
   },
+  "packageManager": "pnpm@11.13.1",
   "dependencies": {
     "@ai-sdk/openai": "^4.0.20",
     "@streamdown/cjk": "^1.0.3",
@@ -64,10 +66,8 @@
     "typescript": "7.0.2",
     "vitest": "^4.1.10"
   },
-  "overrides": {
-    "ai": "^7.0.34"
-  },
   "engines": {
-    "node": "24.x"
+    "node": "24.x",
+    "pnpm": ">=11"
   }
 }

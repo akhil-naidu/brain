@@ -2,7 +2,7 @@ schema: spec-driven
 
 context: |
   Project: Brain — self-hostable eve agent app with upcoming Next.js chat UI.
-  Package manager: npm (package-lock.json). Keep it.
+  Package manager: pnpm (pnpm-lock.yaml). Keep it.
 
   Stack:
   - eve agent in agent/ (defineAgent, channels, connections, sandbox)

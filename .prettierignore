@@ -5,7 +5,7 @@ node_modules
 .nitro
 dist
 coverage
-package-lock.json
+pnpm-lock.yaml
 *.tsbuildinfo
 next-env.d.ts
 

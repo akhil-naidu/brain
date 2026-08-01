@@ -1,0 +1,7 @@
+# pnpm 11 project settings (overrides / allowBuilds live here, not in package.json)
+overrides:
+  ai: ^7.0.34
+
+allowBuilds:
+  "@fission-ai/openspec": true
+  sharp: true

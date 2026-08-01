@@ -21,5 +21,5 @@ Start with `node_modules/eve/docs/README.md`. It contains the full
 index and recommended reading order. Before writing any eve code, read the
 relevant guide there first.
 
-If `eve` is not installed yet, install it (`npm install eve`) or scaffold a new
-agent with `npx eve init <agent-name>`, then read the bundled docs.
+If `eve` is not installed yet, install it (`pnpm add eve`) or scaffold a new
+agent with `pnpm dlx eve init <agent-name>`, then read the bundled docs.
