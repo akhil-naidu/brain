@@ -15,19 +15,24 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 RUN pnpm run build
 
-FROM base AS runner
+# Runtime image: no Corepack/pnpm — start Next with node directly.
+FROM node:24-bookworm-slim AS runner
+WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
+ENV HOME=/home/nextjs
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates \
   && rm -rf /var/lib/apt/lists/* \
-  && groupadd --system --gid 1001 nodejs \
-  && useradd --system --uid 1001 --gid nodejs nextjs
+  && groupadd --gid 1001 nodejs \
+  && useradd --uid 1001 --gid nodejs --create-home --home-dir /home/nextjs nextjs \
+  && mkdir -p /app/.eve \
+  && chown -R nextjs:nodejs /app
 
-COPY --from=builder --chown=nextjs:nodejs /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
@@ -39,4 +44,4 @@ COPY --from=builder --chown=nextjs:nodejs /app/postcss.config.mjs ./postcss.conf
 
 USER nextjs
 EXPOSE 3000
-CMD ["pnpm", "run", "start"]
+CMD ["node", "node_modules/next/dist/bin/next", "start"]

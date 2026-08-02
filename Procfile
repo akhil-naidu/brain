@@ -1,1 +1,1 @@
-web: pnpm run start
+web: node node_modules/next/dist/bin/next start
