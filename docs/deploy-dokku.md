@@ -31,7 +31,10 @@ Increase curl patience and retry (still depends on reaching nodejs.org):
 dokku config:set brain CURL_CONNECT_TIMEOUT=180 CURL_TIMEOUT=1200
 ```
 
-Ensure a web process exists (`Procfile` has `web: npm run start`).
+Ensure a web process exists (`Procfile` has `web: pnpm run start`).
+
+Note: the repo uses **pnpm** (`pnpm-lock.yaml`). The Dockerfile enables Corepack
+and installs with `pnpm install --frozen-lockfile`.
 
 ## Smoke check
 
