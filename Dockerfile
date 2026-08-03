@@ -13,17 +13,17 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
-# eve build writes .output/server/index.mjs; withEve() auto-starts it on :4274
-# during `next start` and proxies /eve/v1/* there.
+# eve build writes .output/server/index.mjs (proxied at :4274 by withEve).
 RUN pnpm run build
 
-# Runtime image: no Corepack/pnpm — start Next with node directly.
+# Runtime image: no Corepack/pnpm — start eve + Next via scripts/start-production.mjs.
 FROM node:24-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
+ENV EVE_NEXT_PRODUCTION_PORT=4274
 ENV HOME=/home/nextjs
 
 RUN apt-get update \
@@ -40,6 +40,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder --chown=nextjs:nodejs /app/.output ./.output
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/agent ./agent
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
 COPY --from=builder --chown=nextjs:nodejs /app/next.config.ts ./next.config.ts
 COPY --from=builder --chown=nextjs:nodejs /app/tsconfig.json ./tsconfig.json
 COPY --from=builder --chown=nextjs:nodejs /app/next-env.d.ts ./next-env.d.ts
@@ -47,4 +48,4 @@ COPY --from=builder --chown=nextjs:nodejs /app/postcss.config.mjs ./postcss.conf
 
 USER nextjs
 EXPOSE 3000
-CMD ["node", "node_modules/next/dist/bin/next", "start"]
+CMD ["node", "scripts/start-production.mjs"]

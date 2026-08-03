@@ -1,1 +1,1 @@
-web: node node_modules/next/dist/bin/next start
+web: node scripts/start-production.mjs

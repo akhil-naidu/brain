@@ -8,7 +8,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "eve build && next build",
-    "start": "next start",
+    "start": "node scripts/start-production.mjs",
+    "start:next": "next start",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint --type-aware --deny-warnings",
     "lint:fix": "oxlint --type-aware --fix",

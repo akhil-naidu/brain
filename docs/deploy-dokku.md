@@ -6,13 +6,13 @@ often fails with SSL timeouts on constrained hosts).
 
 ## How chat works in production
 
-`next start` serves the UI on `:3000`. `withEve()` proxies `/eve/v1/*` to a
-local eve Nitro server on `:4274`, which it auto-starts from
-`.output/server/index.mjs`. That file only exists after `eve build`.
+`withEve()` proxies `/eve/v1/*` to a local eve Nitro server on `:4274`.
+`scripts/start-production.mjs` starts that server from `.output/server/index.mjs`,
+waits for the port, then boots Next on `:3000`.
 
-The Docker image runs `eve build && next build` and copies `.output` into the
-runtime image. If `.output` is missing, chat fails with
-`ECONNREFUSED 127.0.0.1:4274`.
+The Docker image runs `eve build && next build`, copies `.output` + the start
+script, and uses that script as `CMD`. If eve never binds `:4274`, chat fails
+with `ECONNREFUSED 127.0.0.1:4274`.
 
 ## One-time Dokku setup
 
@@ -41,19 +41,19 @@ Increase curl patience and retry (still depends on reaching nodejs.org):
 dokku config:set brain CURL_CONNECT_TIMEOUT=180 CURL_TIMEOUT=1200
 ```
 
-Ensure a web process exists (`Procfile` starts Next via `node …/next start`).
+Ensure a web process exists (`Procfile` → `node scripts/start-production.mjs`).
 
 Note: the repo uses **pnpm** (`pnpm-lock.yaml`). The Dockerfile installs with
-`pnpm install --frozen-lockfile`, but the runtime CMD invokes Next with `node`
-directly so Corepack does not need a writable home cache.
+`pnpm install --frozen-lockfile`; runtime uses plain `node` (no Corepack).
 
 ## Smoke check
 
 ```bash
 dokku logs brain -t
+# Expect: "[start-production] starting eve..." then "eve is up; starting Next..."
 curl -I https://<your-host>/
 curl -sS https://<your-host>/eve/v1/health
 ```
 
-Healthy chat needs both the Next ready line and a successful `/eve/v1/health`
-(not `ECONNREFUSED 127.0.0.1:4274` in the logs).
+Healthy chat needs the start-production eve lines and a successful
+`/eve/v1/health` (not `ECONNREFUSED 127.0.0.1:4274`).
