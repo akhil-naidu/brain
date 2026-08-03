@@ -13,6 +13,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+# eve build writes .output/server/index.mjs; withEve() auto-starts it on :4274
+# during `next start` and proxies /eve/v1/* there.
 RUN pnpm run build
 
 # Runtime image: no Corepack/pnpm — start Next with node directly.
@@ -35,6 +37,7 @@ RUN apt-get update \
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
+COPY --from=builder --chown=nextjs:nodejs /app/.output ./.output
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/agent ./agent
 COPY --from=builder --chown=nextjs:nodejs /app/next.config.ts ./next.config.ts

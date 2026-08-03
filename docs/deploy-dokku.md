@@ -4,6 +4,16 @@ Brain is a Next.js + `withEve()` app. Prefer the **Dockerfile** builder so the
 server never has to download Node from `nodejs.org` during build (herokuish
 often fails with SSL timeouts on constrained hosts).
 
+## How chat works in production
+
+`next start` serves the UI on `:3000`. `withEve()` proxies `/eve/v1/*` to a
+local eve Nitro server on `:4274`, which it auto-starts from
+`.output/server/index.mjs`. That file only exists after `eve build`.
+
+The Docker image runs `eve build && next build` and copies `.output` into the
+runtime image. If `.output` is missing, chat fails with
+`ECONNREFUSED 127.0.0.1:4274`.
+
 ## One-time Dokku setup
 
 ```bash
@@ -42,4 +52,8 @@ directly so Corepack does not need a writable home cache.
 ```bash
 dokku logs brain -t
 curl -I https://<your-host>/
+curl -sS https://<your-host>/eve/v1/health
 ```
+
+Healthy chat needs both the Next ready line and a successful `/eve/v1/health`
+(not `ECONNREFUSED 127.0.0.1:4274` in the logs).
