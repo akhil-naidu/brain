@@ -1,8 +1,10 @@
 "use client";
 
-import { PanelLeftIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { PanelLeftIcon, PencilIcon, PlusIcon, SearchIcon, Trash2Icon } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { filterChatsByTitle } from "@/lib/chat/filter-chats";
 import { DEFAULT_CHAT_TITLE } from "@/lib/chat/title";
 import type { ChatSummary } from "@/lib/chat/store/types";
 import { cn } from "@/lib/utils";
@@ -32,10 +34,13 @@ export function ChatSidebar({
 }) {
   const showDraftRow = !activeChatId;
   const draftTitle = currentTitle?.trim() || DEFAULT_CHAT_TITLE;
+  const [query, setQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const editingIdRef = useRef<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const filteredChats = filterChatsByTitle(chats, query);
+  const hasActiveQuery = query.trim().length > 0;
 
   useEffect(() => {
     if (!editingId) {
@@ -102,6 +107,17 @@ export function ChatSidebar({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
+        <div className="relative mb-2 px-0.5">
+          <SearchIcon className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
+          <Input
+            aria-label="Search chats"
+            className="h-8 bg-transparent pl-8 text-sm shadow-none"
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search chats"
+            type="search"
+            value={query}
+          />
+        </div>
         <p className="text-muted-foreground/70 px-2 pb-1 text-[11px] font-medium tracking-wide uppercase">
           Chats
         </p>
@@ -113,11 +129,14 @@ export function ChatSidebar({
             <span className="line-clamp-2">{draftTitle}</span>
           </div>
         ) : null}
-        {chats.length === 0 && !showDraftRow ? (
+        {chats.length === 0 && !showDraftRow && !hasActiveQuery ? (
           <p className="text-muted-foreground/70 px-2 py-2 text-sm">No chats yet</p>
         ) : null}
+        {hasActiveQuery && filteredChats.length === 0 ? (
+          <p className="text-muted-foreground/70 px-2 py-2 text-sm">No chats match</p>
+        ) : null}
         <ul className="flex flex-col gap-0.5">
-          {chats.map((chat) => {
+          {filteredChats.map((chat) => {
             const selected = chat.id === activeChatId;
             const editing = editingId === chat.id;
             return (
