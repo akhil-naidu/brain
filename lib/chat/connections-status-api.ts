@@ -24,10 +24,44 @@ export async function fetchConnectionStatuses(): Promise<readonly ConnectionStat
 
 const CONNECTION_STATUS_LABELS: Record<ConnectionStatus["status"], string> = {
   connected: "Connected",
-  needs_sign_in: "Sign in when asked",
+  needs_sign_in: "Sign in",
   needs_setup: "Needs setup",
 };
 
 export function connectionStatusLabel(status: ConnectionStatus["status"]): string {
   return CONNECTION_STATUS_LABELS[status];
+}
+
+const authorizeResponseSchema = z.object({
+  authorizeUrl: z.string().url(),
+  callbackUrl: z.string().url(),
+  displayName: z.string(),
+});
+
+export async function startConnectionAuthorize(
+  connectionId: string,
+): Promise<{ readonly authorizeUrl: string; readonly displayName: string }> {
+  const response = await fetch(`/api/connections/${connectionId}/authorize`, {
+    method: "POST",
+    cache: "no-store",
+  });
+  const data: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const error =
+      typeof data === "object" && data !== null && "error" in data && typeof data.error === "string"
+        ? data.error
+        : `Connection authorize failed (${response.status})`;
+    throw new Error(error);
+  }
+  const parsed = authorizeResponseSchema.parse(data);
+  return { authorizeUrl: parsed.authorizeUrl, displayName: parsed.displayName };
+}
+
+export function getSafeAuthorizeUrl(value: string): string | null {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:" ? value : null;
+  } catch {
+    return null;
+  }
 }
