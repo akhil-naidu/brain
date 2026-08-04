@@ -48,6 +48,21 @@ export function focusChatSearchShortcutLabel(platform = getPlatform()): string {
   return platform.toLowerCase().includes("mac") ? "⌘K" : "Ctrl+K";
 }
 
+/** ⌘/Ctrl+B — toggle the chat sidebar. */
+export function isToggleSidebarShortcutEvent(event: ShortcutKeyEvent): boolean {
+  if (event.key.toLowerCase() !== "b") {
+    return false;
+  }
+  if (event.shiftKey || event.altKey) {
+    return false;
+  }
+  return event.metaKey || event.ctrlKey;
+}
+
+export function toggleSidebarShortcutLabel(platform = getPlatform()): string {
+  return platform.toLowerCase().includes("mac") ? "⌘B" : "Ctrl+B";
+}
+
 export function isEditableKeyboardTarget(target: EventTarget | null | undefined): boolean {
   if (!(target instanceof HTMLElement)) {
     return false;

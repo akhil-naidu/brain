@@ -5,7 +5,9 @@ import {
   isFocusChatSearchShortcutEvent,
   isNewChatShortcutEvent,
   isSlashFocusChatSearchEvent,
+  isToggleSidebarShortcutEvent,
   newChatShortcutLabel,
+  toggleSidebarShortcutLabel,
 } from "@/lib/chat/keyboard";
 
 describe("isNewChatShortcutEvent", () => {
@@ -137,5 +139,47 @@ describe("focusChatSearchShortcutLabel", () => {
   it("uses mac-style glyphs on mac platforms", () => {
     expect(focusChatSearchShortcutLabel("MacIntel")).toBe("⌘K");
     expect(focusChatSearchShortcutLabel("Win32")).toBe("Ctrl+K");
+  });
+});
+
+describe("isToggleSidebarShortcutEvent", () => {
+  it("matches meta/ctrl + b", () => {
+    expect(
+      isToggleSidebarShortcutEvent({
+        key: "b",
+        altKey: false,
+        ctrlKey: false,
+        metaKey: true,
+        shiftKey: false,
+      }),
+    ).toBe(true);
+    expect(
+      isToggleSidebarShortcutEvent({
+        key: "B",
+        altKey: false,
+        ctrlKey: true,
+        metaKey: false,
+        shiftKey: false,
+      }),
+    ).toBe(true);
+  });
+
+  it("rejects shifted combinations", () => {
+    expect(
+      isToggleSidebarShortcutEvent({
+        key: "b",
+        altKey: false,
+        ctrlKey: false,
+        metaKey: true,
+        shiftKey: true,
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("toggleSidebarShortcutLabel", () => {
+  it("uses mac-style glyphs on mac platforms", () => {
+    expect(toggleSidebarShortcutLabel("MacIntel")).toBe("⌘B");
+    expect(toggleSidebarShortcutLabel("Win32")).toBe("Ctrl+B");
   });
 });
