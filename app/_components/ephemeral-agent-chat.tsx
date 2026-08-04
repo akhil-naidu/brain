@@ -32,7 +32,7 @@ import type { ChatRecord, ChatSummary } from "@/lib/chat/store/types";
 import { useSubagentChildFailures } from "@/lib/chat/subagent-child-failures";
 import { createFallbackTitle } from "@/lib/chat/title";
 import { copyTextToClipboard, messagesToMarkdown } from "@/lib/chat/export-markdown";
-import { canOfferRetry, getRetryableUserPrompt } from "@/lib/chat/retry-prompt";
+import { canOfferRetry, getLastUserMessage, getRetryableUserPrompt } from "@/lib/chat/retry-prompt";
 import { createTurnClientContext } from "@/lib/chat/turn-client-context";
 
 type CancellationState = "idle" | "requested" | "cancelling";
@@ -533,6 +533,20 @@ export function EphemeralAgentChat({
     void handleSubmit(retryableText);
   }, [handleSubmit, retryableText, showRetry]);
 
+  const lastUserMessage = useMemo(() => getLastUserMessage(messages), [messages]);
+  const editableUserMessageId =
+    !isBusy && !missingApiKey && lastUserMessage ? lastUserMessage.id : null;
+
+  const handleEditResend = useCallback(
+    (text: string) => {
+      if (!editableUserMessageId) {
+        return;
+      }
+      void handleSubmit(text);
+    },
+    [editableUserMessageId, handleSubmit],
+  );
+
   const authDisabledReason = pendingAuthorization
     ? `Connect ${pendingAuthorization.displayName} to continue this turn.`
     : undefined;
@@ -598,6 +612,7 @@ export function EphemeralAgentChat({
           ) : null}
           {messages.map((message) => (
             <MemoizedAgentMessage
+              canEdit={message.id === editableUserMessageId}
               canRespond={canRespondToMessage(message.id)}
               childFailuresByCallId={childFailuresByCallId}
               isStreaming={
@@ -605,6 +620,7 @@ export function EphemeralAgentChat({
               }
               key={message.id}
               message={message}
+              onEditResend={message.id === editableUserMessageId ? handleEditResend : undefined}
               onInputResponses={handleInputResponses}
             />
           ))}
