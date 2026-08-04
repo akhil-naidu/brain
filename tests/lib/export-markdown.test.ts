@@ -1,6 +1,6 @@
 import type { EveMessage } from "eve/react";
 import { describe, expect, it } from "vitest";
-import { messagesToMarkdown } from "@/lib/chat/export-markdown";
+import { messageToMarkdown, messagesToMarkdown } from "@/lib/chat/export-markdown";
 
 describe("messagesToMarkdown", () => {
   it("returns empty string for empty threads", () => {
@@ -57,5 +57,25 @@ describe("messagesToMarkdown", () => {
       },
     ];
     expect(messagesToMarkdown(messages)).toBe("");
+  });
+});
+
+describe("messageToMarkdown", () => {
+  it("exports a single message body without a role heading", () => {
+    const message: EveMessage = {
+      id: "a1",
+      role: "assistant",
+      parts: [{ type: "text", text: "Just the reply" }],
+    };
+    expect(messageToMarkdown(message)).toBe("Just the reply");
+  });
+
+  it("returns empty string when there is nothing to copy", () => {
+    const message: EveMessage = {
+      id: "a1",
+      role: "assistant",
+      parts: [{ type: "step-start" }],
+    };
+    expect(messageToMarkdown(message)).toBe("");
   });
 });

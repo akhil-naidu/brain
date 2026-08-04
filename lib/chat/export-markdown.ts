@@ -32,6 +32,11 @@ function messageBody(message: EveMessage): string {
   return message.parts.flatMap(partLines).join("\n\n").trim();
 }
 
+/** Markdown body for a single message (no role heading). */
+export function messageToMarkdown(message: EveMessage): string {
+  return messageBody(message);
+}
+
 export function messagesToMarkdown(messages: readonly EveMessage[], title?: string | null): string {
   const sections: string[] = [];
   const heading = title?.trim();
