@@ -5,7 +5,11 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { filterChatsByTitle } from "@/lib/chat/filter-chats";
-import { focusChatSearchShortcutLabel, newChatShortcutLabel } from "@/lib/chat/keyboard";
+import {
+  focusChatSearchShortcutLabel,
+  newChatShortcutLabel,
+  toggleSidebarShortcutLabel,
+} from "@/lib/chat/keyboard";
 import { DEFAULT_CHAT_TITLE } from "@/lib/chat/title";
 import type { ChatSummary } from "@/lib/chat/store/types";
 import { cn } from "@/lib/utils";
@@ -39,6 +43,7 @@ export function ChatSidebar({
   const draftTitle = currentTitle?.trim() || DEFAULT_CHAT_TITLE;
   const shortcutLabel = newChatShortcutLabel();
   const searchShortcutLabel = focusChatSearchShortcutLabel();
+  const sidebarShortcutLabel = toggleSidebarShortcutLabel();
   const [query, setQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -104,10 +109,11 @@ export function ChatSidebar({
           </div>
           {onToggleSidebar ? (
             <Button
-              aria-label="Close sidebar"
+              aria-label={`Close sidebar (${sidebarShortcutLabel})`}
               className="text-muted-foreground/55 hover:text-muted-foreground"
               onClick={onToggleSidebar}
               size="icon-sm"
+              title={`Close sidebar (${sidebarShortcutLabel})`}
               type="button"
               variant="ghost"
             >

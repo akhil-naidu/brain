@@ -25,6 +25,8 @@ import {
   isFocusChatSearchShortcutEvent,
   isNewChatShortcutEvent,
   isSlashFocusChatSearchEvent,
+  isToggleSidebarShortcutEvent,
+  toggleSidebarShortcutLabel,
 } from "@/lib/chat/keyboard";
 import { createFallbackTitle, normalizeChatTitle } from "@/lib/chat/title";
 import { cn } from "@/lib/utils";
@@ -204,6 +206,11 @@ export function BrainChatShell() {
       if (isFocusChatSearchShortcutEvent(event) || isSlashFocusChatSearchEvent(event)) {
         event.preventDefault();
         focusChatSearch();
+        return;
+      }
+      if (isToggleSidebarShortcutEvent(event)) {
+        event.preventDefault();
+        setSidebarOpen((open) => !open);
       }
     };
 
@@ -316,10 +323,11 @@ export function BrainChatShell() {
           <header className="border-border/60 flex h-12 items-center gap-2 border-b px-3 md:px-4">
             {!sidebarOpen ? (
               <Button
-                aria-label="Open sidebar"
+                aria-label={`Open sidebar (${toggleSidebarShortcutLabel()})`}
                 className="text-muted-foreground"
                 onClick={() => setSidebarOpen(true)}
                 size="icon-sm"
+                title={`Open sidebar (${toggleSidebarShortcutLabel()})`}
                 type="button"
                 variant="ghost"
               >

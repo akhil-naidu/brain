@@ -75,6 +75,27 @@ describe("ChatSidebar new chat shortcut hint", () => {
   });
 });
 
+describe("ChatSidebar toggle shortcut hint", () => {
+  it("exposes the sidebar toggle shortcut on the close control", () => {
+    render(
+      <ChatSidebar
+        activeChatId="chat-1"
+        brand={<span>Brain</span>}
+        chats={chats}
+        currentTitle="First chat"
+        onDeleteChat={vi.fn()}
+        onNewChat={vi.fn()}
+        onRenameChat={vi.fn()}
+        onSelectChat={vi.fn()}
+        onToggleSidebar={vi.fn()}
+      />,
+    );
+
+    const button = screen.getByRole("button", { name: /Close sidebar/i });
+    expect(button.getAttribute("title")).toMatch(/Close sidebar \(.+\)/);
+  });
+});
+
 describe("ChatSidebar search focus", () => {
   it("exposes the search shortcut and focuses on request", async () => {
     const { rerender } = render(
