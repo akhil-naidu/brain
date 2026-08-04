@@ -4,14 +4,14 @@
 Helps users start a conversation from the empty chat state with short suggested prompts.
 ## Requirements
 ### Requirement: Welcome prompts on empty chat
-When the chat has no messages and send is available, the empty state MUST show a small set of suggested prompts. Suggestions MUST NOT replace missing-API-key setup guidance.
+When the chat has no messages and send is available, the empty state MUST show a small set of suggested prompts. Suggestions MUST NOT replace unavailable-chat guidance.
 
 #### Scenario: Suggestions appear on a ready empty chat
 - **WHEN** the thread is empty and chat send is available
 - **THEN** the empty state lists suggested prompts
 
-#### Scenario: Suggestions hidden during setup guidance
-- **WHEN** the empty state is showing missing Command Code API key guidance
+#### Scenario: Suggestions hidden when chat is unavailable
+- **WHEN** the empty state is showing that chat is unavailable because setup is incomplete
 - **THEN** welcome prompts are not shown
 
 ### Requirement: Suggestion starts a turn
