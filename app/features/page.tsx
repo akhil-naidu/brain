@@ -1,12 +1,6 @@
-import type { Metadata } from "next";
-import { FeaturesShowcase } from "@/components/features/features-showcase";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Features · Brain",
-  description:
-    "Explore Brain’s browser chat, MCP connections, model picker, shortcuts, and self-hosted runtime.",
-};
-
+/** Old features URL — home is the showcase now. */
 export default function FeaturesPage() {
-  return <FeaturesShowcase />;
+  redirect("/");
 }

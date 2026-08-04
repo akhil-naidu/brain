@@ -100,7 +100,7 @@ export async function updateChat(
 }
 
 export function chatUrl(chatId: string | null): string {
-  return chatId ? `/?chat=${encodeURIComponent(chatId)}` : "/";
+  return chatId ? `/chat?chat=${encodeURIComponent(chatId)}` : "/chat";
 }
 
 export function readChatIdFromLocation(): string | null {

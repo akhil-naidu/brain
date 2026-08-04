@@ -53,7 +53,7 @@ export function FeaturesShowcase() {
         </Link>
         <Link
           className="rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-sm text-white/90 backdrop-blur transition hover:bg-white/10"
-          href="/"
+          href="/chat"
         >
           Open chat
         </Link>
@@ -86,7 +86,7 @@ export function FeaturesShowcase() {
           <div className="features-fade-up features-delay-3 mt-8 flex flex-wrap items-center gap-3">
             <Link
               className="rounded-full bg-[oklch(0.72_0.09_230)] px-5 py-2.5 text-sm font-semibold text-[oklch(0.16_0.03_240)] transition hover:bg-[oklch(0.78_0.08_230)]"
-              href="/"
+              href="/chat"
             >
               Open chat
             </Link>
@@ -168,7 +168,7 @@ export function FeaturesShowcase() {
             </div>
             <Link
               className="rounded-full bg-[oklch(0.72_0.09_230)] px-5 py-2.5 text-sm font-semibold text-[oklch(0.16_0.03_240)] transition hover:bg-[oklch(0.78_0.08_230)]"
-              href="/"
+              href="/chat"
             >
               Open chat
             </Link>

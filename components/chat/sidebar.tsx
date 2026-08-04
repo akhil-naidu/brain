@@ -249,9 +249,9 @@ export function ChatSidebar({
       <div className="border-border mt-auto border-t px-3 py-3">
         <Link
           className="text-muted-foreground hover:text-foreground text-xs transition-colors"
-          href="/features"
+          href="/"
         >
-          Features
+          Home
         </Link>
       </div>
     </aside>

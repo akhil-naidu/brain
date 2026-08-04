@@ -8,8 +8,11 @@ const INITIAL_THEME_SCRIPT =
   'document.documentElement.classList.add(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");document.documentElement.style.colorScheme=document.documentElement.classList.contains("dark")?"dark":"light";';
 
 export const metadata: Metadata = {
-  title: "Brain",
-  description: "Brain agent chat",
+  title: {
+    default: "Brain",
+    template: "%s · Brain",
+  },
+  description: "Self-hosted work assistant with browser chat and MCP connections.",
   applicationName: "Brain",
   icons: {
     icon: [{ url: "/icon.png?v=3", type: "image/png" }],
