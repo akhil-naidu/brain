@@ -20,7 +20,9 @@ import { IntegrationsMenu } from "@/components/chat/integrations-menu";
 import { AgentMessage, type AgentInputResponse } from "@/components/chat/message";
 import { BrainMark } from "@/components/brain-mark";
 import { ModelPicker } from "@/components/chat/model-picker";
+import { WelcomePrompts } from "@/components/chat/welcome-prompts";
 import { createChat, updateChat } from "@/lib/chat/chats-api";
+import { WELCOME_PROMPTS } from "@/lib/chat/welcome-prompts";
 import { getChatMessageLengthError } from "@/lib/chat/limits";
 import {
   formatProviderErrorMessage,
@@ -605,7 +607,17 @@ export function EphemeralAgentChat({
                     </p>
                   </div>
                 ) : (
-                  <p className="text-muted-foreground mt-2 text-sm">Ask anything to get started.</p>
+                  <>
+                    <p className="text-muted-foreground mt-2 text-sm">
+                      Ask anything to get started.
+                    </p>
+                    <WelcomePrompts
+                      onSelect={(prompt) => {
+                        void handleSubmit(prompt);
+                      }}
+                      prompts={WELCOME_PROMPTS}
+                    />
+                  </>
                 )}
               </div>
             </div>
