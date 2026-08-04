@@ -1,0 +1,34 @@
+## ADDED Requirements
+
+### Requirement: Menu OAuth start API
+The host MUST expose an authorize endpoint that starts MCP OAuth for a supported connection and the local chat principal without requiring a chat turn.
+
+#### Scenario: Authorize returns a browser URL when setup is complete
+- **WHEN** a connection has required client credentials configured and the client requests authorize for that connection id
+- **THEN** the system returns an https/http authorize URL and the Brain callback URL used as redirect_uri
+
+#### Scenario: Authorize rejects missing setup
+- **WHEN** a connection requires client credentials that are not configured
+- **THEN** the authorize endpoint fails with a clear needs-setup error and does not return an authorize URL
+
+### Requirement: Menu OAuth callback stores the token
+The host MUST complete the OAuth code exchange on the Brain callback route and store the access token for the local chat principal.
+
+#### Scenario: Successful callback connects the principal
+- **WHEN** the identity provider redirects to the Brain callback with a valid code and matching state
+- **THEN** the system stores a usable token for that connection and principal and shows a simple success page
+
+#### Scenario: Invalid callback state is rejected
+- **WHEN** the callback state does not match the pending authorize attempt
+- **THEN** the system does not store a token and reports failure
+
+### Requirement: Connect control in the integrations menu
+The integrations menu MUST offer Connect for connections that need sign-in.
+
+#### Scenario: Connect shown when sign-in is needed
+- **WHEN** the integrations menu loads status and a connection is needs_sign_in
+- **THEN** that row shows a Connect control that starts the authorize flow
+
+#### Scenario: Connect hidden when setup is missing
+- **WHEN** a connection is needs_setup
+- **THEN** the menu does not offer Connect for that row
