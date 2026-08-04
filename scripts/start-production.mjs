@@ -80,11 +80,7 @@ function waitForPort(port, timeoutMs = 60_000) {
       socket.on("error", () => {
         socket.destroy();
         if (Date.now() - started > timeoutMs) {
-          reject(
-            new Error(
-              `[start-production] Timed out waiting for eve on 127.0.0.1:${port}`,
-            ),
-          );
+          reject(new Error(`[start-production] Timed out waiting for eve on 127.0.0.1:${port}`));
           return;
         }
         setTimeout(tryConnect, 200);
@@ -106,9 +102,7 @@ spawnChild(process.execPath, [eveEntry], {
 try {
   await waitForPort(evePort);
 } catch (error) {
-  console.error(
-    error instanceof Error ? error.message : "[start-production] eve failed to start",
-  );
+  console.error(error instanceof Error ? error.message : "[start-production] eve failed to start");
   shutdown("SIGTERM");
   process.exit(1);
 }
