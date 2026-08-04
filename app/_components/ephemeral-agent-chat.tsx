@@ -22,6 +22,12 @@ import { BrainMark } from "@/components/brain-mark";
 import { ModelPicker } from "@/components/chat/model-picker";
 import { createChat, updateChat } from "@/lib/chat/chats-api";
 import { getChatMessageLengthError } from "@/lib/chat/limits";
+import {
+  formatProviderErrorMessage,
+  MISSING_COMMAND_CODE_API_KEY_COMPOSER_REASON,
+  MISSING_COMMAND_CODE_API_KEY_MESSAGE,
+} from "@/lib/chat/provider-setup";
+import { fetchSetupStatus } from "@/lib/chat/setup-api";
 import type { ChatRecord, ChatSummary } from "@/lib/chat/store/types";
 import { useSubagentChildFailures } from "@/lib/chat/subagent-child-failures";
 import { createFallbackTitle } from "@/lib/chat/title";
@@ -101,9 +107,34 @@ export function EphemeralAgentChat({
   const [clientError, setClientError] = useState<ErrorNotice | null>(null);
   const [dismissedError, setDismissedError] = useState<string | null>(null);
 
+  const [commandCodeConfigured, setCommandCodeConfigured] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const status = await fetchSetupStatus();
+        if (!cancelled) {
+          setCommandCodeConfigured(status.commandCodeApiKeyConfigured);
+        }
+      } catch {
+        if (!cancelled) {
+          // If setup status is unavailable, don't block chat; fall back to error rewriting.
+          setCommandCodeConfigured(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const showClientError = useCallback((message: string) => {
     errorSequenceRef.current += 1;
-    setClientError({ id: `client:${errorSequenceRef.current}`, message });
+    setClientError({
+      id: `client:${errorSequenceRef.current}`,
+      message: formatProviderErrorMessage(message),
+    });
     setDismissedError(null);
   }, []);
 
@@ -201,7 +232,10 @@ export function EphemeralAgentChat({
       const failureId = failureEventId(event);
       if (failureId && isTurnFailureEvent(event) && !seenFailureIdsRef.current.has(failureId)) {
         seenFailureIdsRef.current.add(failureId);
-        setClientError({ id: failureId, message: event.data.message });
+        setClientError({
+          id: failureId,
+          message: formatProviderErrorMessage(event.data.message),
+        });
         setDismissedError(null);
       }
 
@@ -273,10 +307,14 @@ export function EphemeralAgentChat({
   const isStreaming = agent.status === "submitted" || agent.status === "streaming";
   const isBusy = isStreaming || waitingForAuthorization;
   const agentError = agent.error?.message
-    ? { id: `agent:${agent.error.message}`, message: agent.error.message }
+    ? {
+        id: `agent:${agent.error.message}`,
+        message: formatProviderErrorMessage(agent.error.message),
+      }
     : null;
   const displayError = clientError ?? agentError;
   const visibleError = displayError && displayError.id !== dismissedError ? displayError : null;
+  const missingApiKey = commandCodeConfigured === false;
 
   const hasVisibleAssistantWork = useMemo(() => {
     if (!lastMessage || lastMessage.role !== "assistant") {
@@ -384,6 +422,11 @@ export function EphemeralAgentChat({
 
   const handleSubmit = useCallback(
     async (text: string) => {
+      if (missingApiKey) {
+        showClientError(MISSING_COMMAND_CODE_API_KEY_MESSAGE);
+        return;
+      }
+
       const lengthError = getChatMessageLengthError(text);
       if (lengthError) {
         showClientError(lengthError);
@@ -408,6 +451,7 @@ export function EphemeralAgentChat({
     },
     [
       ensureChat,
+      missingApiKey,
       onDraftChange,
       onUserMessage,
       prepareTurn,
@@ -474,7 +518,18 @@ export function EphemeralAgentChat({
               <div className="text-center">
                 <BrainMark className="mx-auto size-10" />
                 <h1 className="mt-4 text-2xl font-semibold tracking-tight">Brain</h1>
-                <p className="text-muted-foreground mt-2 text-sm">Ask anything to get started.</p>
+                {missingApiKey ? (
+                  <div className="mx-auto mt-4 max-w-md text-left">
+                    <p className="text-foreground text-sm font-medium">
+                      Command Code API key required
+                    </p>
+                    <p className="text-muted-foreground mt-2 text-sm leading-6">
+                      {MISSING_COMMAND_CODE_API_KEY_MESSAGE}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground mt-2 text-sm">Ask anything to get started.</p>
+                )}
               </div>
             </div>
           ) : null}
@@ -503,11 +558,14 @@ export function EphemeralAgentChat({
       <div className="border-border/60 bg-background/95 border-t p-3 backdrop-blur">
         <div className="mx-auto w-full max-w-3xl">
           <ChatComposer
+            disabled={missingApiKey}
             disabledReason={
-              authDisabledReason ??
-              (cancellationState === "cancelling" || cancellationState === "requested"
-                ? "Stopping…"
-                : undefined)
+              missingApiKey
+                ? MISSING_COMMAND_CODE_API_KEY_COMPOSER_REASON
+                : (authDisabledReason ??
+                  (cancellationState === "cancelling" || cancellationState === "requested"
+                    ? "Stopping…"
+                    : undefined))
             }
             footerStart={
               <div className="flex min-w-0 items-center gap-1">
@@ -516,7 +574,7 @@ export function EphemeralAgentChat({
                   onConnectionEnabledChange={setConnectionEnabled}
                 />
                 <ModelPicker
-                  disabled={isBusy}
+                  disabled={isBusy || missingApiKey}
                   onModelIdChange={setSelectedModelId}
                   selectedModelId={selectedModelId}
                 />

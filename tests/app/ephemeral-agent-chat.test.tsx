@@ -41,6 +41,10 @@ vi.mock("@/components/chat/model-picker", () => ({
   ModelPicker: () => null,
 }));
 
+vi.mock("@/lib/chat/setup-api", () => ({
+  fetchSetupStatus: async () => ({ commandCodeApiKeyConfigured: true }),
+}));
+
 vi.mock("@/components/brain-mark", () => ({
   BrainMark: () => null,
 }));
