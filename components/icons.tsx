@@ -57,3 +57,15 @@ export function GmailIcon({ className }: { readonly className?: string }) {
     </svg>
   );
 }
+
+export function DflowIcon({ className }: { readonly className?: string }) {
+  return (
+    <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
+      <rect fill="#0F766E" height="18" rx="4" width="18" x="3" y="3" />
+      <path
+        d="M8 8.5h4.2c2.2 0 3.6 1.3 3.6 3.5S14.4 15.5 12.2 15.5H8V8.5zm2.1 1.7v3.6h2c1.1 0 1.7-.6 1.7-1.8s-.6-1.8-1.7-1.8h-2z"
+        fill="#F8FAFC"
+      />
+    </svg>
+  );
+}

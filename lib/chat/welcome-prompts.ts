@@ -22,6 +22,11 @@ export const WELCOME_PROMPTS: readonly WelcomePrompt[] = [
     prompt: "Help me triage important unread email and suggest what needs a reply first.",
   },
   {
+    id: "dflow-status",
+    label: "Check dFlow deploys",
+    prompt: "List my dFlow applications and flag any recent failed deployments.",
+  },
+  {
     id: "plan-day",
     label: "Plan my day",
     prompt: "Help me plan my day based on my tasks and messages.",

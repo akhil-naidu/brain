@@ -8,6 +8,7 @@ describe("createTurnClientContext", () => {
       enabledConnections: {
         asana: true,
         clickup: false,
+        dflow: true,
         gmail: true,
         slack: true,
       },
@@ -25,6 +26,7 @@ describe("createTurnClientContext", () => {
       enabledConnections: {
         asana: true,
         clickup: true,
+        dflow: true,
         gmail: true,
         slack: true,
       },

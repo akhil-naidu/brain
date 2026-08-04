@@ -12,6 +12,7 @@ const fetchConnectionStatuses = vi.hoisted(() =>
     { id: "slack", displayName: "Slack", status: "needs_sign_in" as const },
     { id: "asana", displayName: "Asana", status: "needs_setup" as const, detail: "Set ASANA" },
     { id: "gmail", displayName: "Gmail", status: "needs_sign_in" as const },
+    { id: "dflow", displayName: "dFlow", status: "needs_sign_in" as const },
   ]),
 );
 
@@ -88,7 +89,13 @@ describe("IntegrationsMenu status", () => {
   it("loads connection status when the menu trigger is pressed", async () => {
     render(
       <IntegrationsMenu
-        enabledConnections={{ asana: true, clickup: true, gmail: true, slack: true }}
+        enabledConnections={{
+          asana: true,
+          clickup: true,
+          dflow: true,
+          gmail: true,
+          slack: true,
+        }}
         onConnectionEnabledChange={vi.fn()}
       />,
     );
