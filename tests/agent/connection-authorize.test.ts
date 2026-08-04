@@ -4,11 +4,16 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   completeMenuConnectionAuthorization,
+  disconnectMenuConnection,
   menuConnectionCallbackUrl,
   startMenuConnectionAuthorization,
 } from "@/agent/lib/connection-authorize";
 import { ANONYMOUS_CHAT_PRINCIPAL } from "@/agent/lib/connection-status";
-import { getStoredAccessToken, type McpOAuthProvider } from "@/agent/lib/mcp-oauth";
+import {
+  getStoredAccessToken,
+  storeAccessToken,
+  type McpOAuthProvider,
+} from "@/agent/lib/mcp-oauth";
 
 const originalCwd = process.cwd();
 const temporaryDirectories: string[] = [];
@@ -121,5 +126,26 @@ describe("completeMenuConnectionAuthorization", () => {
       state: "wrong-state",
     });
     expect(result).toMatchObject({ ok: false, retryable: true });
+  });
+});
+
+describe("disconnectMenuConnection", () => {
+  it("removes a stored token and is idempotent", async () => {
+    await useTemporaryWorkingDirectory();
+    await storeAccessToken(provider, ANONYMOUS_CHAT_PRINCIPAL, {
+      accessToken: "to-remove",
+      expiresAt: Date.now() + 120_000,
+    });
+    await expect(getStoredAccessToken(provider, ANONYMOUS_CHAT_PRINCIPAL)).resolves.toMatchObject({
+      token: "to-remove",
+    });
+
+    await expect(disconnectMenuConnection(provider)).resolves.toEqual({
+      displayName: "Authorize Test",
+    });
+    await expect(getStoredAccessToken(provider, ANONYMOUS_CHAT_PRINCIPAL)).resolves.toBeNull();
+    await expect(disconnectMenuConnection(provider)).resolves.toEqual({
+      displayName: "Authorize Test",
+    });
   });
 });

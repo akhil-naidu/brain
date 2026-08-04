@@ -6,6 +6,7 @@ import { ANONYMOUS_CHAT_PRINCIPAL } from "./connection-status";
 import {
   authorizeUrlPath,
   buildAuthorizeUrl,
+  deleteStoredToken,
   exchangeAuthorizationCode,
   generateOAuthState,
   getProviderCredentialSetupError,
@@ -169,4 +170,14 @@ export async function completeMenuConnectionAuthorization(
 
 export function menuConnectionCallbackUrl(origin: string, connectionId: string): string {
   return new URL(`/api/connections/${connectionId}/callback`, origin).toString();
+}
+
+/** Clear the local chat principal token (and any pending menu OAuth) for a connection. */
+export async function disconnectMenuConnection(
+  provider: McpOAuthProvider,
+  principal: ConnectionPrincipal = ANONYMOUS_CHAT_PRINCIPAL,
+): Promise<{ readonly displayName: string }> {
+  await deleteStoredToken(provider, principal);
+  await clearPending(provider.name);
+  return { displayName: provider.displayName };
 }
