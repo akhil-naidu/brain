@@ -1,11 +1,12 @@
 "use client";
 
 import type { EveMessage } from "eve/react";
-import { PencilIcon } from "lucide-react";
+import { CheckIcon, CopyIcon, PencilIcon } from "lucide-react";
 import { memo, useEffect, useRef, useState } from "react";
 
 import { AgentMessageParts } from "@/components/chat/message-parts/message-parts";
 import { Button } from "@/components/ui/button";
+import { copyTextToClipboard, messageToMarkdown } from "@/lib/chat/export-markdown";
 import type { SubagentChildFailure } from "@/lib/chat/subagent-child-failures";
 import { cn } from "@/lib/utils";
 
@@ -48,9 +49,21 @@ function AgentMessageView({
   const isUser = message.role === "user";
   const sendFailed = message.metadata?.status === "failed";
   const originalText = userTextFromMessage(message);
+  const copyMarkdown = messageToMarkdown(message);
+  const canCopy = copyMarkdown.length > 0;
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(originalText);
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
+  const copyResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyResetRef.current) {
+        clearTimeout(copyResetRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!canEdit && editing) {
@@ -85,6 +98,29 @@ function AgentMessageView({
     setEditing(false);
     void onEditResend(next);
   };
+
+  const handleCopy = () => {
+    if (!canCopy) {
+      return;
+    }
+    void (async () => {
+      try {
+        await copyTextToClipboard(copyMarkdown);
+        setCopyState("copied");
+      } catch {
+        setCopyState("error");
+      }
+      if (copyResetRef.current) {
+        clearTimeout(copyResetRef.current);
+      }
+      copyResetRef.current = setTimeout(() => {
+        setCopyState("idle");
+        copyResetRef.current = null;
+      }, 1500);
+    })();
+  };
+
+  const showActions = !editing && (canCopy || (canEdit && onEditResend));
 
   return (
     <article
@@ -150,18 +186,59 @@ function AgentMessageView({
               parts={message.parts}
               showCaret={isStreaming && message.role === "assistant"}
             />
-            {canEdit && onEditResend ? (
-              <div className="absolute right-1 -bottom-3 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
-                <Button
-                  aria-label="Edit message"
-                  className="bg-background text-muted-foreground hover:text-foreground border-border/60 size-7 border shadow-sm"
-                  onClick={beginEdit}
-                  size="icon-xs"
-                  type="button"
-                  variant="ghost"
-                >
-                  <PencilIcon className="size-3.5" />
-                </Button>
+            {showActions ? (
+              <div
+                className={cn(
+                  "absolute -bottom-3 flex gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100",
+                  isUser ? "right-1" : "left-0",
+                )}
+              >
+                {canCopy ? (
+                  <Button
+                    aria-label={
+                      copyState === "copied"
+                        ? "Copied"
+                        : copyState === "error"
+                          ? "Copy failed"
+                          : "Copy message"
+                    }
+                    className={cn(
+                      "bg-background border-border/60 size-7 border shadow-sm",
+                      copyState === "error"
+                        ? "text-destructive"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                    onClick={handleCopy}
+                    size="icon-xs"
+                    title={
+                      copyState === "copied"
+                        ? "Copied"
+                        : copyState === "error"
+                          ? "Copy failed"
+                          : "Copy message"
+                    }
+                    type="button"
+                    variant="ghost"
+                  >
+                    {copyState === "copied" ? (
+                      <CheckIcon className="size-3.5" />
+                    ) : (
+                      <CopyIcon className="size-3.5" />
+                    )}
+                  </Button>
+                ) : null}
+                {canEdit && onEditResend ? (
+                  <Button
+                    aria-label="Edit message"
+                    className="bg-background text-muted-foreground hover:text-foreground border-border/60 size-7 border shadow-sm"
+                    onClick={beginEdit}
+                    size="icon-xs"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <PencilIcon className="size-3.5" />
+                  </Button>
+                ) : null}
               </div>
             ) : null}
           </>

@@ -1,9 +1,16 @@
 import type { EveMessage } from "eve/react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AgentMessage } from "@/components/chat/message";
 
 afterEach(cleanup);
+
+const writeText = vi.fn(async () => undefined);
+
+Object.defineProperty(navigator, "clipboard", {
+  configurable: true,
+  value: { writeText },
+});
 
 const userMessage = {
   id: "user-1",
@@ -57,5 +64,27 @@ describe("AgentMessage edit", () => {
 
     expect(onEditResend).not.toHaveBeenCalled();
     expect(screen.getByText("Original prompt")).toBeDefined();
+  });
+});
+
+describe("AgentMessage copy", () => {
+  it("copies the message markdown to the clipboard", async () => {
+    writeText.mockClear();
+
+    render(
+      <AgentMessage
+        canRespond={false}
+        isStreaming={false}
+        message={userMessage}
+        onInputResponses={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Copy message" }));
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith("Original prompt");
+    });
+    expect(screen.getByRole("button", { name: "Copied" })).toBeDefined();
   });
 });
