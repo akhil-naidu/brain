@@ -227,6 +227,43 @@ function tokenResult(token: StoredToken): { token: string; expiresAt?: number } 
   return { token: token.accessToken, expiresAt: token.expiresAt };
 }
 
+export type StoredTokenAuthState = "connected" | "needs_sign_in";
+
+/**
+ * Read-only peek of stored auth state. Does not refresh tokens over the network.
+ * Refreshable-but-expired tokens count as connected.
+ */
+export async function getStoredTokenAuthState(
+  provider: Pick<McpOAuthProvider, "name">,
+  principal: ConnectionPrincipal,
+): Promise<StoredTokenAuthState> {
+  const store = await readStore(provider.name);
+  const entry = store.tokens[principalKey(principal)];
+  if (!entry) {
+    return "needs_sign_in";
+  }
+  if (isTokenUsable(entry)) {
+    return "connected";
+  }
+  if (entry.refreshToken && entry.clientId) {
+    return "connected";
+  }
+  return "needs_sign_in";
+}
+
+export function getProviderCredentialSetupError(
+  provider: Pick<McpOAuthProvider, "clientIdEnv" | "clientSecretEnv">,
+  env: { readonly [key: string]: string | undefined } = process.env,
+): string | null {
+  if (provider.clientIdEnv && !env[provider.clientIdEnv]?.trim()) {
+    return `Set ${provider.clientIdEnv}`;
+  }
+  if (provider.clientSecretEnv && !env[provider.clientSecretEnv]?.trim()) {
+    return `Set ${provider.clientSecretEnv}`;
+  }
+  return null;
+}
+
 export async function getStoredAccessToken(
   provider: McpOAuthProvider,
   principal: ConnectionPrincipal,
