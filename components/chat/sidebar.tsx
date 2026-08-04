@@ -5,6 +5,7 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { filterChatsByTitle } from "@/lib/chat/filter-chats";
+import { newChatShortcutLabel } from "@/lib/chat/keyboard";
 import { DEFAULT_CHAT_TITLE } from "@/lib/chat/title";
 import type { ChatSummary } from "@/lib/chat/store/types";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,7 @@ export function ChatSidebar({
 }) {
   const showDraftRow = !activeChatId;
   const draftTitle = currentTitle?.trim() || DEFAULT_CHAT_TITLE;
+  const shortcutLabel = newChatShortcutLabel();
   const [query, setQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -99,10 +101,14 @@ export function ChatSidebar({
         <button
           className="text-muted-foreground hover:bg-muted/50 hover:text-foreground flex h-9 w-full cursor-pointer items-center gap-2 rounded-md px-2 text-sm transition-colors"
           onClick={onNewChat}
+          title={`New chat (${shortcutLabel})`}
           type="button"
         >
           <PlusIcon className="size-4 shrink-0" />
-          <span>New chat</span>
+          <span className="min-w-0 flex-1 text-left">New chat</span>
+          <span className="text-muted-foreground/55 shrink-0 text-[11px] tracking-wide">
+            {shortcutLabel}
+          </span>
         </button>
       </div>
 

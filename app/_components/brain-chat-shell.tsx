@@ -21,6 +21,7 @@ import {
   updateChat,
 } from "@/lib/chat/chats-api";
 import type { ChatRecord, ChatSummary } from "@/lib/chat/store/types";
+import { isNewChatShortcutEvent } from "@/lib/chat/keyboard";
 import { createFallbackTitle, normalizeChatTitle } from "@/lib/chat/title";
 import { cn } from "@/lib/utils";
 
@@ -182,6 +183,21 @@ export function BrainChatShell() {
       setActive((current) => emptyActive(current.remountKey + 1));
     });
   }, [runWithDisposal]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!isNewChatShortcutEvent(event)) {
+        return;
+      }
+      event.preventDefault();
+      handleNewChat();
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [handleNewChat]);
 
   const handleSelectChat = useCallback(
     (chatId: string) => {

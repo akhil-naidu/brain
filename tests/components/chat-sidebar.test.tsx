@@ -65,6 +65,16 @@ describe("ChatSidebar rename", () => {
   });
 });
 
+describe("ChatSidebar new chat shortcut hint", () => {
+  it("exposes the new chat shortcut on the New chat control", () => {
+    renderSidebar();
+
+    const button = screen.getByRole("button", { name: /New chat/i });
+    expect(button.getAttribute("title")).toMatch(/New chat \(.+\)/);
+    expect(button.textContent).toMatch(/⌘⇧O|Ctrl\+Shift\+O/);
+  });
+});
+
 describe("ChatSidebar search", () => {
   it("filters chats by title query", () => {
     renderSidebar();
