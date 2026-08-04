@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { isNewChatShortcutEvent, newChatShortcutLabel } from "@/lib/chat/keyboard";
+import {
+  focusChatSearchShortcutLabel,
+  isEditableKeyboardTarget,
+  isFocusChatSearchShortcutEvent,
+  isNewChatShortcutEvent,
+  isSlashFocusChatSearchEvent,
+  newChatShortcutLabel,
+} from "@/lib/chat/keyboard";
 
 describe("isNewChatShortcutEvent", () => {
   it("matches meta/ctrl + shift + o", () => {
@@ -58,5 +65,77 @@ describe("newChatShortcutLabel", () => {
   it("uses mac-style glyphs on mac platforms", () => {
     expect(newChatShortcutLabel("MacIntel")).toBe("⌘⇧O");
     expect(newChatShortcutLabel("Win32")).toBe("Ctrl+Shift+O");
+  });
+});
+
+describe("isFocusChatSearchShortcutEvent", () => {
+  it("matches meta/ctrl + k", () => {
+    expect(
+      isFocusChatSearchShortcutEvent({
+        key: "k",
+        altKey: false,
+        ctrlKey: false,
+        metaKey: true,
+        shiftKey: false,
+      }),
+    ).toBe(true);
+    expect(
+      isFocusChatSearchShortcutEvent({
+        key: "K",
+        altKey: false,
+        ctrlKey: true,
+        metaKey: false,
+        shiftKey: false,
+      }),
+    ).toBe(true);
+  });
+
+  it("rejects shifted or incomplete combinations", () => {
+    expect(
+      isFocusChatSearchShortcutEvent({
+        key: "k",
+        altKey: false,
+        ctrlKey: false,
+        metaKey: true,
+        shiftKey: true,
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("isSlashFocusChatSearchEvent", () => {
+  it("matches bare slash outside editable fields", () => {
+    expect(
+      isSlashFocusChatSearchEvent({
+        key: "/",
+        altKey: false,
+        ctrlKey: false,
+        metaKey: false,
+        shiftKey: false,
+        target: document.body,
+      }),
+    ).toBe(true);
+  });
+
+  it("ignores slash while typing in an input", () => {
+    const input = document.createElement("input");
+    expect(
+      isSlashFocusChatSearchEvent({
+        key: "/",
+        altKey: false,
+        ctrlKey: false,
+        metaKey: false,
+        shiftKey: false,
+        target: input,
+      }),
+    ).toBe(false);
+    expect(isEditableKeyboardTarget(input)).toBe(true);
+  });
+});
+
+describe("focusChatSearchShortcutLabel", () => {
+  it("uses mac-style glyphs on mac platforms", () => {
+    expect(focusChatSearchShortcutLabel("MacIntel")).toBe("⌘K");
+    expect(focusChatSearchShortcutLabel("Win32")).toBe("Ctrl+K");
   });
 });
