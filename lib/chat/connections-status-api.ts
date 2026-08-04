@@ -65,3 +65,22 @@ export function getSafeAuthorizeUrl(value: string): string | null {
     return null;
   }
 }
+
+export async function disconnectConnection(
+  connectionId: string,
+): Promise<{ readonly displayName: string }> {
+  const response = await fetch(`/api/connections/${connectionId}/disconnect`, {
+    method: "DELETE",
+    cache: "no-store",
+  });
+  const data: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const error =
+      typeof data === "object" && data !== null && "error" in data && typeof data.error === "string"
+        ? data.error
+        : `Connection disconnect failed (${response.status})`;
+    throw new Error(error);
+  }
+  const parsed = z.object({ displayName: z.string() }).parse(data);
+  return { displayName: parsed.displayName };
+}
