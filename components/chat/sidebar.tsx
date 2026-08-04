@@ -1,6 +1,7 @@
 "use client";
 
 import { PanelLeftIcon, PencilIcon, PlusIcon, SearchIcon, Trash2Icon } from "lucide-react";
+import Link from "next/link";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -243,6 +244,15 @@ export function ChatSidebar({
             );
           })}
         </ul>
+      </div>
+
+      <div className="border-border mt-auto border-t px-3 py-3">
+        <Link
+          className="text-muted-foreground hover:text-foreground text-xs transition-colors"
+          href="/features"
+        >
+          Features
+        </Link>
       </div>
     </aside>
   );
