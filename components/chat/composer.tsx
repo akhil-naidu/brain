@@ -128,7 +128,7 @@ export function ChatComposer({
         <div className="flex shrink-0 items-center">
           {isBusy ? (
             <Button
-              aria-label="Stop response"
+              aria-label={disabledReason === "Stopping…" ? "Stopping response" : "Stop response"}
               className="bg-foreground/15 text-foreground hover:bg-foreground/25 size-6 cursor-pointer rounded-md shadow-none"
               onClick={onStop}
               size="icon-xs"

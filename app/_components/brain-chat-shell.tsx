@@ -78,6 +78,12 @@ export function BrainChatShell() {
   const copyResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    if (window.matchMedia("(max-width: 767px)").matches) {
+      setSidebarOpen(false);
+    }
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
 
     void (async () => {
@@ -291,6 +297,32 @@ export function BrainChatShell() {
     }));
   }, []);
 
+  const sidebarBrand = (
+    <span className="text-foreground flex min-w-0 items-center gap-2">
+      <BrainMark className="size-5 shrink-0" />
+      <span className="truncate font-semibold tracking-tight">Brain</span>
+    </span>
+  );
+
+  const closeMobileSidebar = useCallback(() => {
+    if (window.matchMedia("(max-width: 767px)").matches) {
+      setSidebarOpen(false);
+    }
+  }, []);
+
+  const handleMobileSelectChat = useCallback(
+    (chatId: string) => {
+      closeMobileSidebar();
+      handleSelectChat(chatId);
+    },
+    [closeMobileSidebar, handleSelectChat],
+  );
+
+  const handleMobileNewChat = useCallback(() => {
+    closeMobileSidebar();
+    handleNewChat();
+  }, [closeMobileSidebar, handleNewChat]);
+
   return (
     <ChatShellProvider>
       <div className="bg-background text-foreground flex h-dvh">
@@ -302,12 +334,7 @@ export function BrainChatShell() {
         >
           <ChatSidebar
             activeChatId={active.id}
-            brand={
-              <span className="text-foreground flex min-w-0 items-center gap-2">
-                <BrainMark className="size-5 shrink-0" />
-                <span className="truncate font-semibold tracking-tight">Brain</span>
-              </span>
-            }
+            brand={sidebarBrand}
             chats={chats}
             currentTitle={active.title}
             onDeleteChat={handleDeleteChat}
@@ -319,8 +346,33 @@ export function BrainChatShell() {
           />
         </div>
 
+        {sidebarOpen ? (
+          <div className="fixed inset-0 z-40 md:hidden">
+            <button
+              aria-label="Close sidebar"
+              className="absolute inset-0 bg-black/40"
+              onClick={() => setSidebarOpen(false)}
+              type="button"
+            />
+            <div className="border-border bg-background absolute inset-y-0 left-0 shadow-xl">
+              <ChatSidebar
+                activeChatId={active.id}
+                brand={sidebarBrand}
+                chats={chats}
+                currentTitle={active.title}
+                onDeleteChat={handleDeleteChat}
+                onNewChat={handleMobileNewChat}
+                onRenameChat={handleRenameChat}
+                onSelectChat={handleMobileSelectChat}
+                onToggleSidebar={() => setSidebarOpen(false)}
+                searchFocusRequest={searchFocusRequest}
+              />
+            </div>
+          </div>
+        ) : null}
+
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="border-border/60 flex h-12 items-center gap-2 border-b px-3 md:px-4">
+          <header className="border-border/50 flex h-12 items-center gap-2 px-3 md:border-b md:px-4">
             {!sidebarOpen ? (
               <Button
                 aria-label={`Open sidebar (${toggleSidebarShortcutLabel()})`}

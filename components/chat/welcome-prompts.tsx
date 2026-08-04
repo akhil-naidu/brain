@@ -17,15 +17,15 @@ export function WelcomePrompts({
   }
 
   return (
-    <div className={cn("mx-auto mt-8 w-full max-w-md text-left", className)}>
-      <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
+    <div className={cn("mx-auto mt-7 w-full max-w-md text-left", className)}>
+      <p className="text-muted-foreground/80 mb-2 text-xs font-medium tracking-wide uppercase">
         Try asking
       </p>
-      <ul className="flex flex-col gap-1">
+      <ul className="flex flex-col gap-0.5">
         {prompts.map((item) => (
           <li key={item.id}>
             <button
-              className="text-foreground hover:bg-muted/60 w-full cursor-pointer rounded-md px-3 py-2 text-left text-sm transition-colors"
+              className="text-foreground hover:bg-muted/70 focus-visible:ring-ring/50 w-full cursor-pointer rounded-lg px-3 py-2.5 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
               onClick={() => onSelect(item.prompt)}
               type="button"
             >
