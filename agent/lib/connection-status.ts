@@ -1,6 +1,7 @@
 import type { ConnectionPrincipal } from "eve/connections";
 import { asanaProvider } from "../connections/asana";
 import { clickupProvider } from "../connections/clickup";
+import { dflowProvider } from "../connections/dflow";
 import { gmailProvider } from "../connections/gmail";
 import { slackProvider } from "../connections/slack";
 import {
@@ -30,6 +31,7 @@ export const CHAT_CONNECTION_PROVIDERS: readonly McpOAuthProvider[] = [
   slackProvider,
   asanaProvider,
   gmailProvider,
+  dflowProvider,
 ];
 
 export function getChatConnectionProvider(id: string): McpOAuthProvider | undefined {
