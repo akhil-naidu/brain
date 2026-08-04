@@ -1,26 +1,35 @@
 "use client";
 
-import { PanelLeftIcon, PlusIcon } from "lucide-react";
+import { PanelLeftIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { DEFAULT_CHAT_TITLE } from "@/lib/chat/title";
+import type { ChatSummary } from "@/lib/chat/store/types";
 import { cn } from "@/lib/utils";
 
 export function ChatSidebar({
   brand,
+  chats,
   className,
+  activeChatId,
   currentTitle,
+  onDeleteChat,
   onNewChat,
+  onSelectChat,
   onToggleSidebar,
 }: {
   readonly brand: ReactNode;
+  readonly chats: readonly ChatSummary[];
   readonly className?: string;
+  readonly activeChatId: string | null;
   readonly currentTitle: string | null;
+  readonly onDeleteChat: (chatId: string) => void;
   readonly onNewChat: () => void;
+  readonly onSelectChat: (chatId: string) => void;
   readonly onToggleSidebar?: () => void;
 }) {
-  const sessionTitle = currentTitle?.trim() || DEFAULT_CHAT_TITLE;
-  const hasActiveSession = Boolean(currentTitle?.trim());
+  const showDraftRow = !activeChatId;
+  const draftTitle = currentTitle?.trim() || DEFAULT_CHAT_TITLE;
 
   return (
     <aside
@@ -59,18 +68,56 @@ export function ChatSidebar({
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
         <p className="text-muted-foreground/70 px-2 pb-1 text-[11px] font-medium tracking-wide uppercase">
-          This session
+          Chats
         </p>
-        {hasActiveSession ? (
+        {showDraftRow ? (
           <div
             aria-current="page"
-            className="bg-muted/50 text-foreground rounded-md px-2 py-2 text-sm"
+            className="bg-muted/50 text-foreground mb-1 rounded-md px-2 py-2 text-sm"
           >
-            <span className="line-clamp-2">{sessionTitle}</span>
+            <span className="line-clamp-2">{draftTitle}</span>
           </div>
-        ) : (
-          <p className="text-muted-foreground/70 px-2 py-2 text-sm">No messages yet</p>
-        )}
+        ) : null}
+        {chats.length === 0 && !showDraftRow ? (
+          <p className="text-muted-foreground/70 px-2 py-2 text-sm">No chats yet</p>
+        ) : null}
+        <ul className="flex flex-col gap-0.5">
+          {chats.map((chat) => {
+            const selected = chat.id === activeChatId;
+            return (
+              <li key={chat.id}>
+                <div
+                  className={cn(
+                    "group flex items-start gap-1 rounded-md",
+                    selected ? "bg-muted/50" : "hover:bg-muted/40",
+                  )}
+                >
+                  <button
+                    aria-current={selected ? "page" : undefined}
+                    className={cn(
+                      "min-w-0 flex-1 cursor-pointer px-2 py-2 text-left text-sm",
+                      selected ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+                    )}
+                    onClick={() => onSelectChat(chat.id)}
+                    type="button"
+                  >
+                    <span className="line-clamp-2">{chat.title}</span>
+                  </button>
+                  <Button
+                    aria-label={`Delete ${chat.title}`}
+                    className="text-muted-foreground/50 hover:text-foreground mt-1 mr-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                    onClick={() => onDeleteChat(chat.id)}
+                    size="icon-sm"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <Trash2Icon className="size-3.5" />
+                  </Button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       </div>
     </aside>
   );

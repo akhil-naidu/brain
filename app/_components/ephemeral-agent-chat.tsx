@@ -1,6 +1,11 @@
 "use client";
 
-import { Client, type HandleMessageStreamEvent, isTurnFailureEvent } from "eve/client";
+import {
+  Client,
+  type HandleMessageStreamEvent,
+  type SessionState,
+  isTurnFailureEvent,
+} from "eve/client";
 import { useEveAgent } from "eve/react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useChatShell } from "@/app/_components/chat-shell-context";
@@ -14,9 +19,12 @@ import { ErrorToast } from "@/components/chat/error-toast";
 import { IntegrationsMenu } from "@/components/chat/integrations-menu";
 import { AgentMessage, type AgentInputResponse } from "@/components/chat/message";
 import { BrainMark } from "@/components/brain-mark";
+import { createChat, updateChat } from "@/lib/chat/chats-api";
 import { createConnectionClientContext } from "@/lib/chat/connection-context";
 import { getChatMessageLengthError } from "@/lib/chat/limits";
+import type { ChatRecord, ChatSummary } from "@/lib/chat/store/types";
 import { useSubagentChildFailures } from "@/lib/chat/subagent-child-failures";
+import { createFallbackTitle } from "@/lib/chat/title";
 
 type CancellationState = "idle" | "requested" | "cancelling";
 
@@ -32,6 +40,8 @@ type ErrorNotice = {
 };
 
 export type DisposeEphemeralChat = () => Promise<boolean>;
+
+const EMPTY_EVENTS: readonly HandleMessageStreamEvent[] = [];
 
 const MemoizedAgentMessage = memo(AgentMessage);
 
@@ -52,20 +62,33 @@ function failureEventId(event: HandleMessageStreamEvent) {
 }
 
 export function EphemeralAgentChat({
+  chatId,
   draft,
+  initialEvents,
+  initialSession,
+  onChatCreated,
+  onChatUpdated,
   onDisposeReady,
   onDraftChange,
   onUserMessage,
 }: {
+  readonly chatId: string | null;
   readonly draft: string;
+  readonly initialEvents?: readonly HandleMessageStreamEvent[];
+  readonly initialSession?: SessionState | null;
+  readonly onChatCreated?: (chat: ChatRecord) => void;
+  readonly onChatUpdated?: (chat: ChatSummary) => void;
   readonly onDisposeReady?: (dispose: DisposeEphemeralChat | null) => void;
   readonly onDraftChange: (value: string) => void;
   readonly onUserMessage?: (text: string) => void;
 }) {
   const { enabledConnections, setConnectionEnabled } = useChatShell();
+  const seedEvents = initialEvents ?? EMPTY_EVENTS;
   const [session] = useState(() =>
-    new Client({ host: "", preserveCompletedSessions: true }).session(),
+    new Client({ host: "", preserveCompletedSessions: true }).session(initialSession ?? undefined),
   );
+  const chatIdRef = useRef(chatId);
+  chatIdRef.current = chatId;
   const cancellationRef = useRef<Cancellation>({ requested: false });
   const agentStopRef = useRef<() => void>(() => undefined);
   const disposalBoundaryRef = useRef(false);
@@ -81,6 +104,48 @@ export function EphemeralAgentChat({
     setClientError({ id: `client:${errorSequenceRef.current}`, message });
     setDismissedError(null);
   }, []);
+
+  const ensureChat = useCallback(
+    async (titleSource: string) => {
+      if (chatIdRef.current) {
+        return chatIdRef.current;
+      }
+
+      const chat = await createChat({ title: createFallbackTitle(titleSource) });
+      chatIdRef.current = chat.id;
+      onChatCreated?.(chat);
+      return chat.id;
+    },
+    [onChatCreated],
+  );
+
+  const persistChatUpdate = useCallback(
+    async (input: {
+      readonly eveSession?: SessionState | null;
+      readonly appendEvents?: readonly HandleMessageStreamEvent[];
+      readonly events?: readonly HandleMessageStreamEvent[];
+    }) => {
+      const id = chatIdRef.current;
+      if (!id) {
+        return;
+      }
+
+      try {
+        const chat = await updateChat(id, input);
+        onChatUpdated?.(chat);
+      } catch {
+        showClientError("Unable to save chat history.");
+      }
+    },
+    [onChatUpdated, showClientError],
+  );
+
+  const persistSession = useCallback(
+    (nextSession: SessionState) => {
+      void persistChatUpdate({ eveSession: nextSession });
+    },
+    [persistChatUpdate],
+  );
 
   const finishDisposal = useCallback(
     async (resolve: (disposed: boolean) => void) => {
@@ -129,6 +194,8 @@ export function EphemeralAgentChat({
 
   const handleEvent = useCallback(
     (event: HandleMessageStreamEvent) => {
+      void persistChatUpdate({ appendEvents: [event] });
+
       const failureId = failureEventId(event);
       if (failureId && isTurnFailureEvent(event) && !seenFailureIdsRef.current.has(failureId)) {
         seenFailureIdsRef.current.add(failureId);
@@ -154,22 +221,39 @@ export function EphemeralAgentChat({
         setCancellationState((current) => (current === "idle" ? current : "idle"));
       }
     },
-    [cancelTurn],
+    [cancelTurn, persistChatUpdate],
   );
 
-  const handleFinish = useCallback(() => {
-    if (!disposalBoundaryRef.current) {
-      return;
-    }
+  const handleFinish = useCallback(
+    (snapshot: {
+      readonly events: readonly HandleMessageStreamEvent[];
+      readonly session: SessionState;
+    }) => {
+      void persistChatUpdate({
+        eveSession: snapshot.session,
+        events: snapshot.events,
+      });
 
-    const resolve = disposalResolveRef.current;
-    if (resolve) {
-      disposalResolveRef.current = null;
-      void finishDisposal(resolve);
-    }
-  }, [finishDisposal]);
+      if (!disposalBoundaryRef.current) {
+        return;
+      }
 
-  const agent = useEveAgent({ onEvent: handleEvent, onFinish: handleFinish, session });
+      const resolve = disposalResolveRef.current;
+      if (resolve) {
+        disposalResolveRef.current = null;
+        void finishDisposal(resolve);
+      }
+    },
+    [finishDisposal, persistChatUpdate],
+  );
+
+  const agent = useEveAgent({
+    initialEvents: seedEvents,
+    onEvent: handleEvent,
+    onFinish: handleFinish,
+    onSessionChange: persistSession,
+    session,
+  });
   agentStopRef.current = agent.stop;
   const childFailuresByCallId = useSubagentChildFailures(agent.events);
   const send = agent.send;
@@ -274,6 +358,7 @@ export function EphemeralAgentChat({
   const handleInputResponses = useCallback(
     async (responses: readonly AgentInputResponse[]) => {
       try {
+        await ensureChat("Follow-up");
         prepareTurn();
         await send({
           inputResponses: [...responses],
@@ -283,7 +368,7 @@ export function EphemeralAgentChat({
         showClientError(toErrorMessage(error, "Failed to send response."));
       }
     },
-    [enabledConnections, prepareTurn, send, showClientError],
+    [enabledConnections, ensureChat, prepareTurn, send, showClientError],
   );
 
   const handleSubmit = useCallback(
@@ -300,6 +385,7 @@ export function EphemeralAgentChat({
       prepareTurn();
 
       try {
+        await ensureChat(text);
         await send({
           message: text,
           clientContext: createConnectionClientContext(enabledConnections),
@@ -309,7 +395,15 @@ export function EphemeralAgentChat({
         showClientError(toErrorMessage(error, "Failed to send message."));
       }
     },
-    [enabledConnections, onDraftChange, onUserMessage, prepareTurn, send, showClientError],
+    [
+      enabledConnections,
+      ensureChat,
+      onDraftChange,
+      onUserMessage,
+      prepareTurn,
+      send,
+      showClientError,
+    ],
   );
 
   const failedUserText = useMemo(() => {

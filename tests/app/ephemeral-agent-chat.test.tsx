@@ -94,7 +94,7 @@ afterEach(cleanup);
 
 function renderChat() {
   const onDraftChange = vi.fn();
-  render(<EphemeralAgentChat draft="" onDraftChange={onDraftChange} />);
+  render(<EphemeralAgentChat chatId={null} draft="" onDraftChange={onDraftChange} />);
   return { onDraftChange };
 }
 

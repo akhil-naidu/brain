@@ -1,7 +1,8 @@
 "use client";
 
+import type { HandleMessageStreamEvent, SessionState } from "eve/client";
 import { PanelLeftIcon } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ChatShellProvider } from "@/app/_components/chat-shell-context";
 import {
   EphemeralAgentChat,
@@ -10,40 +11,190 @@ import {
 import { BrainMark } from "@/components/brain-mark";
 import { ChatSidebar } from "@/components/chat/sidebar";
 import { Button } from "@/components/ui/button";
+import {
+  deleteChat,
+  getChat,
+  listChats,
+  readChatIdFromLocation,
+  replaceChatUrl,
+} from "@/lib/chat/chats-api";
+import type { ChatRecord, ChatSummary } from "@/lib/chat/store/types";
 import { createFallbackTitle } from "@/lib/chat/title";
 import { cn } from "@/lib/utils";
 
+type ActiveChatState = {
+  readonly id: string | null;
+  readonly title: string | null;
+  readonly initialSession: SessionState | null;
+  readonly initialEvents: readonly HandleMessageStreamEvent[];
+  readonly remountKey: number;
+};
+
+function emptyActive(remountKey: number): ActiveChatState {
+  return {
+    id: null,
+    title: null,
+    initialSession: null,
+    initialEvents: [],
+    remountKey,
+  };
+}
+
+function toSummary(chat: ChatRecord | ChatSummary): ChatSummary {
+  return {
+    id: chat.id,
+    title: chat.title,
+    createdAt: chat.createdAt,
+    updatedAt: chat.updatedAt,
+  };
+}
+
+function upsertChatSummary(chats: readonly ChatSummary[], chat: ChatSummary): ChatSummary[] {
+  const rest = chats.filter((item) => item.id !== chat.id);
+  return [chat, ...rest].toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
 export function BrainChatShell() {
-  const [sessionKey, setSessionKey] = useState(0);
   const [draft, setDraft] = useState("");
-  const [title, setTitle] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [chats, setChats] = useState<ChatSummary[]>([]);
+  const [active, setActive] = useState<ActiveChatState>(() => emptyActive(0));
+  const [bootstrapped, setBootstrapped] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const disposeChatRef = useRef<DisposeEphemeralChat | null>(null);
-  const newChatPendingRef = useRef(false);
+  const navigationPendingRef = useRef(false);
 
-  const handleNewChat = useCallback(() => {
-    if (newChatPendingRef.current) {
-      return;
-    }
+  useEffect(() => {
+    let cancelled = false;
 
-    newChatPendingRef.current = true;
     void (async () => {
-      const disposed = (await disposeChatRef.current?.()) ?? true;
-      if (disposed) {
-        setSessionKey((current) => current + 1);
-        setTitle(null);
-        setDraft("");
+      try {
+        const listed = await listChats();
+        if (cancelled) {
+          return;
+        }
+        setChats([...listed]);
+
+        const urlChatId = readChatIdFromLocation();
+        if (!urlChatId) {
+          setBootstrapped(true);
+          return;
+        }
+
+        try {
+          const chat = await getChat(urlChatId);
+          if (cancelled) {
+            return;
+          }
+          setActive({
+            id: chat.id,
+            title: chat.title,
+            initialSession: chat.eveSession,
+            initialEvents: chat.events,
+            remountKey: 0,
+          });
+        } catch {
+          replaceChatUrl(null);
+          setActive(emptyActive(0));
+        }
+        setBootstrapped(true);
+      } catch (error) {
+        if (!cancelled) {
+          setLoadError(error instanceof Error ? error.message : "Unable to load chats.");
+          setBootstrapped(true);
+        }
       }
-      newChatPendingRef.current = false;
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleDisposeReady = useCallback((dispose: DisposeEphemeralChat | null) => {
     disposeChatRef.current = dispose;
   }, []);
 
+  const runWithDisposal = useCallback(async (action: () => void | Promise<void>) => {
+    if (navigationPendingRef.current) {
+      return;
+    }
+    navigationPendingRef.current = true;
+    try {
+      const disposed = (await disposeChatRef.current?.()) ?? true;
+      if (disposed) {
+        await action();
+      }
+    } finally {
+      navigationPendingRef.current = false;
+    }
+  }, []);
+
+  const handleNewChat = useCallback(() => {
+    void runWithDisposal(() => {
+      replaceChatUrl(null);
+      setDraft("");
+      setActive((current) => emptyActive(current.remountKey + 1));
+    });
+  }, [runWithDisposal]);
+
+  const handleSelectChat = useCallback(
+    (chatId: string) => {
+      if (chatId === active.id) {
+        return;
+      }
+
+      void runWithDisposal(async () => {
+        const chat = await getChat(chatId);
+        replaceChatUrl(chat.id);
+        setDraft("");
+        setActive((current) => ({
+          id: chat.id,
+          title: chat.title,
+          initialSession: chat.eveSession,
+          initialEvents: chat.events,
+          remountKey: current.remountKey + 1,
+        }));
+      });
+    },
+    [active.id, runWithDisposal],
+  );
+
+  const handleDeleteChat = useCallback(
+    (chatId: string) => {
+      void runWithDisposal(async () => {
+        await deleteChat(chatId);
+        setChats((current) => current.filter((chat) => chat.id !== chatId));
+        if (active.id === chatId) {
+          replaceChatUrl(null);
+          setDraft("");
+          setActive((current) => emptyActive(current.remountKey + 1));
+        }
+      });
+    },
+    [active.id, runWithDisposal],
+  );
+
+  const handleChatCreated = useCallback((chat: ChatRecord) => {
+    replaceChatUrl(chat.id);
+    setActive((current) => ({
+      ...current,
+      id: chat.id,
+      title: chat.title,
+    }));
+    setChats((current) => upsertChatSummary(current, toSummary(chat)));
+  }, []);
+
+  const handleChatUpdated = useCallback((chat: ChatSummary) => {
+    setChats((current) => upsertChatSummary(current, chat));
+    setActive((current) => (current.id === chat.id ? { ...current, title: chat.title } : current));
+  }, []);
+
   const handleUserMessage = useCallback((text: string) => {
-    setTitle((current) => current ?? createFallbackTitle(text));
+    setActive((current) => ({
+      ...current,
+      title: current.title ?? createFallbackTitle(text),
+    }));
   }, []);
 
   return (
@@ -56,14 +207,18 @@ export function BrainChatShell() {
           )}
         >
           <ChatSidebar
+            activeChatId={active.id}
             brand={
               <span className="text-foreground flex min-w-0 items-center gap-2">
                 <BrainMark className="size-5 shrink-0" />
                 <span className="truncate font-semibold tracking-tight">Brain</span>
               </span>
             }
-            currentTitle={title}
+            chats={chats}
+            currentTitle={active.title}
+            onDeleteChat={handleDeleteChat}
             onNewChat={handleNewChat}
+            onSelectChat={handleSelectChat}
             onToggleSidebar={() => setSidebarOpen(false)}
           />
         </div>
@@ -83,7 +238,7 @@ export function BrainChatShell() {
               </Button>
             ) : null}
             <div className="text-muted-foreground min-w-0 flex-1 truncate text-sm">
-              {title ?? "New chat"}
+              {active.title ?? "New chat"}
             </div>
             <Button
               className="md:hidden"
@@ -95,13 +250,28 @@ export function BrainChatShell() {
               New chat
             </Button>
           </header>
-          <EphemeralAgentChat
-            key={sessionKey}
-            draft={draft}
-            onDisposeReady={handleDisposeReady}
-            onDraftChange={setDraft}
-            onUserMessage={handleUserMessage}
-          />
+          {!bootstrapped ? (
+            <div className="text-muted-foreground flex flex-1 items-center justify-center text-sm">
+              Loading chats…
+            </div>
+          ) : loadError ? (
+            <div className="text-destructive flex flex-1 items-center justify-center px-4 text-center text-sm">
+              {loadError}
+            </div>
+          ) : (
+            <EphemeralAgentChat
+              key={active.remountKey}
+              chatId={active.id}
+              draft={draft}
+              initialEvents={active.initialEvents}
+              initialSession={active.initialSession}
+              onChatCreated={handleChatCreated}
+              onChatUpdated={handleChatUpdated}
+              onDisposeReady={handleDisposeReady}
+              onDraftChange={setDraft}
+              onUserMessage={handleUserMessage}
+            />
+          )}
         </div>
       </div>
     </ChatShellProvider>
