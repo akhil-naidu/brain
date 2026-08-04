@@ -5,7 +5,7 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { filterChatsByTitle } from "@/lib/chat/filter-chats";
-import { newChatShortcutLabel } from "@/lib/chat/keyboard";
+import { focusChatSearchShortcutLabel, newChatShortcutLabel } from "@/lib/chat/keyboard";
 import { DEFAULT_CHAT_TITLE } from "@/lib/chat/title";
 import type { ChatSummary } from "@/lib/chat/store/types";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,7 @@ export function ChatSidebar({
   onRenameChat,
   onSelectChat,
   onToggleSidebar,
+  searchFocusRequest = 0,
 }: {
   readonly brand: ReactNode;
   readonly chats: readonly ChatSummary[];
@@ -32,15 +33,18 @@ export function ChatSidebar({
   readonly onRenameChat: (chatId: string, title: string) => void | Promise<void>;
   readonly onSelectChat: (chatId: string) => void;
   readonly onToggleSidebar?: () => void;
+  readonly searchFocusRequest?: number;
 }) {
   const showDraftRow = !activeChatId;
   const draftTitle = currentTitle?.trim() || DEFAULT_CHAT_TITLE;
   const shortcutLabel = newChatShortcutLabel();
+  const searchShortcutLabel = focusChatSearchShortcutLabel();
   const [query, setQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const editingIdRef = useRef<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const renameInputRef = useRef<HTMLInputElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const filteredChats = filterChatsByTitle(chats, query);
   const hasActiveQuery = query.trim().length > 0;
 
@@ -48,9 +52,22 @@ export function ChatSidebar({
     if (!editingId) {
       return;
     }
-    inputRef.current?.focus();
-    inputRef.current?.select();
+    renameInputRef.current?.focus();
+    renameInputRef.current?.select();
   }, [editingId]);
+
+  useEffect(() => {
+    if (searchFocusRequest <= 0) {
+      return undefined;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [searchFocusRequest]);
 
   const beginRename = (chat: ChatSummary) => {
     editingIdRef.current = chat.id;
@@ -117,12 +134,17 @@ export function ChatSidebar({
           <SearchIcon className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
           <Input
             aria-label="Search chats"
-            className="h-8 bg-transparent pl-8 text-sm shadow-none"
+            className="h-8 bg-transparent pr-12 pl-8 text-sm shadow-none"
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search chats"
+            ref={searchInputRef}
+            title={`Search chats (${searchShortcutLabel})`}
             type="search"
             value={query}
           />
+          <span className="text-muted-foreground/55 pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-[11px] tracking-wide">
+            {searchShortcutLabel}
+          </span>
         </div>
         <p className="text-muted-foreground/70 px-2 pb-1 text-[11px] font-medium tracking-wide uppercase">
           Chats
@@ -168,7 +190,7 @@ export function ChatSidebar({
                           cancelRename();
                         }
                       }}
-                      ref={inputRef}
+                      ref={renameInputRef}
                       value={editValue}
                     />
                   ) : (

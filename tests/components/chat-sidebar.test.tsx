@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ChatSidebar } from "@/components/chat/sidebar";
 import type { ChatSummary } from "@/lib/chat/store/types";
@@ -72,6 +72,45 @@ describe("ChatSidebar new chat shortcut hint", () => {
     const button = screen.getByRole("button", { name: /New chat/i });
     expect(button.getAttribute("title")).toMatch(/New chat \(.+\)/);
     expect(button.textContent).toMatch(/⌘⇧O|Ctrl\+Shift\+O/);
+  });
+});
+
+describe("ChatSidebar search focus", () => {
+  it("exposes the search shortcut and focuses on request", async () => {
+    const { rerender } = render(
+      <ChatSidebar
+        activeChatId="chat-1"
+        brand={<span>Brain</span>}
+        chats={chats}
+        currentTitle="First chat"
+        onDeleteChat={vi.fn()}
+        onNewChat={vi.fn()}
+        onRenameChat={vi.fn()}
+        onSelectChat={vi.fn()}
+        searchFocusRequest={0}
+      />,
+    );
+
+    const search = screen.getByRole("searchbox", { name: "Search chats" });
+    expect(search.getAttribute("title")).toMatch(/Search chats \(.+\)/);
+
+    rerender(
+      <ChatSidebar
+        activeChatId="chat-1"
+        brand={<span>Brain</span>}
+        chats={chats}
+        currentTitle="First chat"
+        onDeleteChat={vi.fn()}
+        onNewChat={vi.fn()}
+        onRenameChat={vi.fn()}
+        onSelectChat={vi.fn()}
+        searchFocusRequest={1}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(search);
+    });
   });
 });
 

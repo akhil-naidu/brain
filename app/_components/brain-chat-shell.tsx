@@ -21,7 +21,11 @@ import {
   updateChat,
 } from "@/lib/chat/chats-api";
 import type { ChatRecord, ChatSummary } from "@/lib/chat/store/types";
-import { isNewChatShortcutEvent } from "@/lib/chat/keyboard";
+import {
+  isFocusChatSearchShortcutEvent,
+  isNewChatShortcutEvent,
+  isSlashFocusChatSearchEvent,
+} from "@/lib/chat/keyboard";
 import { createFallbackTitle, normalizeChatTitle } from "@/lib/chat/title";
 import { cn } from "@/lib/utils";
 
@@ -66,6 +70,7 @@ export function BrainChatShell() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [threadActions, setThreadActions] = useState<ChatThreadActions | null>(null);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
+  const [searchFocusRequest, setSearchFocusRequest] = useState(0);
   const disposeChatRef = useRef<DisposeEphemeralChat | null>(null);
   const navigationPendingRef = useRef(false);
   const copyResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -184,20 +189,29 @@ export function BrainChatShell() {
     });
   }, [runWithDisposal]);
 
+  const focusChatSearch = useCallback(() => {
+    setSidebarOpen(true);
+    setSearchFocusRequest((current) => current + 1);
+  }, []);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!isNewChatShortcutEvent(event)) {
+      if (isNewChatShortcutEvent(event)) {
+        event.preventDefault();
+        handleNewChat();
         return;
       }
-      event.preventDefault();
-      handleNewChat();
+      if (isFocusChatSearchShortcutEvent(event) || isSlashFocusChatSearchEvent(event)) {
+        event.preventDefault();
+        focusChatSearch();
+      }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => {
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [handleNewChat]);
+  }, [focusChatSearch, handleNewChat]);
 
   const handleSelectChat = useCallback(
     (chatId: string) => {
@@ -294,6 +308,7 @@ export function BrainChatShell() {
             onRenameChat={handleRenameChat}
             onSelectChat={handleSelectChat}
             onToggleSidebar={() => setSidebarOpen(false)}
+            searchFocusRequest={searchFocusRequest}
           />
         </div>
 
