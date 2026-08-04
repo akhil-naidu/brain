@@ -19,12 +19,13 @@ import { ErrorToast } from "@/components/chat/error-toast";
 import { IntegrationsMenu } from "@/components/chat/integrations-menu";
 import { AgentMessage, type AgentInputResponse } from "@/components/chat/message";
 import { BrainMark } from "@/components/brain-mark";
+import { ModelPicker } from "@/components/chat/model-picker";
 import { createChat, updateChat } from "@/lib/chat/chats-api";
-import { createConnectionClientContext } from "@/lib/chat/connection-context";
 import { getChatMessageLengthError } from "@/lib/chat/limits";
 import type { ChatRecord, ChatSummary } from "@/lib/chat/store/types";
 import { useSubagentChildFailures } from "@/lib/chat/subagent-child-failures";
 import { createFallbackTitle } from "@/lib/chat/title";
+import { createTurnClientContext } from "@/lib/chat/turn-client-context";
 
 type CancellationState = "idle" | "requested" | "cancelling";
 
@@ -82,7 +83,8 @@ export function EphemeralAgentChat({
   readonly onDraftChange: (value: string) => void;
   readonly onUserMessage?: (text: string) => void;
 }) {
-  const { enabledConnections, setConnectionEnabled } = useChatShell();
+  const { enabledConnections, selectedModelId, setConnectionEnabled, setSelectedModelId } =
+    useChatShell();
   const seedEvents = initialEvents ?? EMPTY_EVENTS;
   const [session] = useState(() =>
     new Client({ host: "", preserveCompletedSessions: true }).session(initialSession ?? undefined),
@@ -355,6 +357,15 @@ export function EphemeralAgentChat({
     };
   }, [onDisposeReady]);
 
+  const turnClientContext = useMemo(
+    () =>
+      createTurnClientContext({
+        enabledConnections,
+        modelId: selectedModelId,
+      }),
+    [enabledConnections, selectedModelId],
+  );
+
   const handleInputResponses = useCallback(
     async (responses: readonly AgentInputResponse[]) => {
       try {
@@ -362,13 +373,13 @@ export function EphemeralAgentChat({
         prepareTurn();
         await send({
           inputResponses: [...responses],
-          clientContext: createConnectionClientContext(enabledConnections),
+          clientContext: turnClientContext,
         });
       } catch (error) {
         showClientError(toErrorMessage(error, "Failed to send response."));
       }
     },
-    [enabledConnections, ensureChat, prepareTurn, send, showClientError],
+    [ensureChat, prepareTurn, send, showClientError, turnClientContext],
   );
 
   const handleSubmit = useCallback(
@@ -388,7 +399,7 @@ export function EphemeralAgentChat({
         await ensureChat(text);
         await send({
           message: text,
-          clientContext: createConnectionClientContext(enabledConnections),
+          clientContext: turnClientContext,
         });
       } catch (error) {
         onDraftChange(previousDraft);
@@ -396,13 +407,13 @@ export function EphemeralAgentChat({
       }
     },
     [
-      enabledConnections,
       ensureChat,
       onDraftChange,
       onUserMessage,
       prepareTurn,
       send,
       showClientError,
+      turnClientContext,
     ],
   );
 
@@ -499,10 +510,17 @@ export function EphemeralAgentChat({
                 : undefined)
             }
             footerStart={
-              <IntegrationsMenu
-                enabledConnections={enabledConnections}
-                onConnectionEnabledChange={setConnectionEnabled}
-              />
+              <div className="flex min-w-0 items-center gap-1">
+                <IntegrationsMenu
+                  enabledConnections={enabledConnections}
+                  onConnectionEnabledChange={setConnectionEnabled}
+                />
+                <ModelPicker
+                  disabled={isBusy}
+                  onModelIdChange={setSelectedModelId}
+                  selectedModelId={selectedModelId}
+                />
+              </div>
             }
             isBusy={isBusy}
             onChange={onDraftChange}

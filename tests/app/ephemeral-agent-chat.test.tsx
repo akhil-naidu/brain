@@ -31,8 +31,14 @@ vi.mock("eve/react", () => ({
 vi.mock("@/app/_components/chat-shell-context", () => ({
   useChatShell: () => ({
     enabledConnections: { asana: true, clickup: true, gmail: true, slack: true },
+    selectedModelId: "deepseek/deepseek-v4-pro",
     setConnectionEnabled: vi.fn(),
+    setSelectedModelId: vi.fn(),
   }),
+}));
+
+vi.mock("@/components/chat/model-picker", () => ({
+  ModelPicker: () => null,
 }));
 
 vi.mock("@/components/brain-mark", () => ({
