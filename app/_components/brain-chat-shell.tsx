@@ -18,9 +18,10 @@ import {
   listChats,
   readChatIdFromLocation,
   replaceChatUrl,
+  updateChat,
 } from "@/lib/chat/chats-api";
 import type { ChatRecord, ChatSummary } from "@/lib/chat/store/types";
-import { createFallbackTitle } from "@/lib/chat/title";
+import { createFallbackTitle, normalizeChatTitle } from "@/lib/chat/title";
 import { cn } from "@/lib/utils";
 
 type ActiveChatState = {
@@ -219,6 +220,18 @@ export function BrainChatShell() {
     [active.id, runWithDisposal],
   );
 
+  const handleRenameChat = useCallback(async (chatId: string, title: string) => {
+    try {
+      const chat = await updateChat(chatId, { title: normalizeChatTitle(title) });
+      setChats((current) => upsertChatSummary(current, toSummary(chat)));
+      setActive((current) =>
+        current.id === chat.id ? { ...current, title: chat.title } : current,
+      );
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Unable to rename chat.");
+    }
+  }, []);
+
   const handleChatCreated = useCallback((chat: ChatRecord) => {
     replaceChatUrl(chat.id);
     setActive((current) => ({
@@ -262,6 +275,7 @@ export function BrainChatShell() {
             currentTitle={active.title}
             onDeleteChat={handleDeleteChat}
             onNewChat={handleNewChat}
+            onRenameChat={handleRenameChat}
             onSelectChat={handleSelectChat}
             onToggleSidebar={() => setSidebarOpen(false)}
           />
