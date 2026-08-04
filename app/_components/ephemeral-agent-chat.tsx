@@ -58,6 +58,9 @@ export type ChatThreadActions = {
   readonly copyAsMarkdown: (title?: string | null) => Promise<void>;
 };
 
+/** Navigation-only: detach if cooperative cancel has not settled. Stop never uses this. */
+const DISPOSE_CANCEL_TIMEOUT_MS = 8_000;
+
 const EMPTY_EVENTS: readonly HandleMessageStreamEvent[] = [];
 
 const MemoizedAgentMessage = memo(AgentMessage);
@@ -113,11 +116,19 @@ export function EphemeralAgentChat({
   const agentStopRef = useRef<() => void>(() => undefined);
   const disposalBoundaryRef = useRef(false);
   const disposalResolveRef = useRef<((disposed: boolean) => void) | null>(null);
+  const disposalTimeoutRef = useRef<number | null>(null);
   const errorSequenceRef = useRef(0);
   const seenFailureIdsRef = useRef(new Set<string>());
   const [cancellationState, setCancellationState] = useState<CancellationState>("idle");
   const [clientError, setClientError] = useState<ErrorNotice | null>(null);
   const [dismissedError, setDismissedError] = useState<string | null>(null);
+
+  const clearDisposalTimeout = useCallback(() => {
+    if (disposalTimeoutRef.current !== null) {
+      window.clearTimeout(disposalTimeoutRef.current);
+      disposalTimeoutRef.current = null;
+    }
+  }, []);
 
   const [commandCodeConfigured, setCommandCodeConfigured] = useState<boolean | null>(null);
 
@@ -194,6 +205,9 @@ export function EphemeralAgentChat({
 
   const finishDisposal = useCallback(
     async (resolve: (disposed: boolean) => void) => {
+      clearDisposalTimeout();
+      cancellationRef.current = { requested: false };
+      setCancellationState("idle");
       try {
         await session.reset();
         agentStopRef.current();
@@ -203,7 +217,7 @@ export function EphemeralAgentChat({
         resolve(false);
       }
     },
-    [session, showClientError],
+    [clearDisposalTimeout, session, showClientError],
   );
 
   const cancelTurn = useCallback(
@@ -228,13 +242,20 @@ export function EphemeralAgentChat({
         }
 
         cancellation.sentTurnId = undefined;
+
+        const disposeResolve = disposalResolveRef.current;
+        if (disposeResolve) {
+          // New chat / navigation: detach so the user is not stuck if cancel fails.
+          disposalResolveRef.current = null;
+          void finishDisposal(disposeResolve);
+          return;
+        }
+
         showClientError(toErrorMessage(error, "Unable to cancel the response."));
         setCancellationState("requested");
-        disposalResolveRef.current?.(false);
-        disposalResolveRef.current = null;
       });
     },
-    [session, showClientError],
+    [finishDisposal, session, showClientError],
   );
 
   const handleEvent = useCallback(
@@ -413,17 +434,40 @@ export function EphemeralAgentChat({
   }, [cancelTurn, isBusy]);
 
   const dispose = useCallback<DisposeEphemeralChat>(async () => {
-    if (!isBusy) {
+    // Idle or authorization-only busy: no stream boundary to wait for.
+    if (!isStreaming) {
+      const turnId = cancellationRef.current.turnId;
+      if (isBusy && turnId && session.state.sessionId) {
+        void session.cancel({ turnId }).catch(() => undefined);
+      }
       return await new Promise<boolean>((resolve) => {
         void finishDisposal(resolve);
       });
     }
 
     return await new Promise<boolean>((resolve) => {
-      disposalResolveRef.current = resolve;
+      let settled = false;
+      const settle = (disposed: boolean) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        clearDisposalTimeout();
+        resolve(disposed);
+      };
+
+      disposalResolveRef.current = settle;
       requestCancellation();
+      disposalTimeoutRef.current = window.setTimeout(() => {
+        if (settled) {
+          return;
+        }
+        // Cooperative cancel lagged (e.g. deep subagents). Detach for navigation only.
+        disposalResolveRef.current = null;
+        void finishDisposal(settle);
+      }, DISPOSE_CANCEL_TIMEOUT_MS);
     });
-  }, [finishDisposal, isBusy, requestCancellation]);
+  }, [clearDisposalTimeout, finishDisposal, isBusy, isStreaming, requestCancellation, session]);
 
   useEffect(() => {
     onDisposeReady?.(dispose);
@@ -432,11 +476,12 @@ export function EphemeralAgentChat({
   useEffect(() => {
     return () => {
       onDisposeReady?.(null);
+      clearDisposalTimeout();
       disposalResolveRef.current?.(false);
       disposalResolveRef.current = null;
       agentStopRef.current();
     };
-  }, [onDisposeReady]);
+  }, [clearDisposalTimeout, onDisposeReady]);
 
   const turnClientContext = useMemo(
     () =>
@@ -592,12 +637,18 @@ export function EphemeralAgentChat({
         />
       ) : null}
       <ChatConversation className="min-h-0 flex-1">
-        <ChatConversationContent className="mx-auto w-full max-w-3xl gap-4 px-4 py-6">
+        <ChatConversationContent
+          className={
+            messages.length === 0
+              ? "mx-auto flex min-h-full w-full max-w-3xl flex-col justify-center gap-5 px-4 py-10 sm:px-6"
+              : "mx-auto w-full max-w-3xl gap-5 px-4 py-5 sm:px-6"
+          }
+        >
           {messages.length === 0 ? (
-            <div className="flex flex-1 items-center justify-center py-24">
-              <div className="text-center">
-                <BrainMark className="mx-auto size-10" />
-                <h1 className="mt-4 text-2xl font-semibold tracking-tight">Brain</h1>
+            <div className="flex flex-1 items-center justify-center">
+              <div className="w-full text-center">
+                <BrainMark className="mx-auto size-11" />
+                <h1 className="mt-5 text-[1.75rem] font-semibold tracking-tight">Brain</h1>
                 {missingApiKey ? (
                   <div className="mx-auto mt-4 max-w-md text-center">
                     <p className="text-foreground text-sm font-medium">
@@ -647,7 +698,11 @@ export function EphemeralAgentChat({
         </ChatConversationContent>
         <ChatScrollButton />
       </ChatConversation>
-      <div className="border-border/60 bg-background/95 border-t p-3 backdrop-blur">
+      <div className="bg-background relative px-3 pt-1 pb-3 sm:px-4 sm:pb-4">
+        <div
+          aria-hidden
+          className="from-background pointer-events-none absolute inset-x-0 -top-10 h-10 bg-gradient-to-t to-transparent"
+        />
         <div className="mx-auto w-full max-w-3xl">
           <ChatComposer
             disabled={missingApiKey}

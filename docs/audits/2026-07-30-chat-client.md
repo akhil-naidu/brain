@@ -16,7 +16,9 @@ Framework ground truth was checked against eve 0.27.6's bundled documentation an
 
 ### P1 Stop fallback detaches before cancellation settles
 
-**Location:** `app/_components/ephemeral-agent-chat.tsx:227-235`
+**Status:** Fixed (Stop keeps the stream open until a terminal boundary; only New-chat/navigation dispose may detach after an 8s timeout).
+
+**Location:** `app/_components/ephemeral-agent-chat.tsx` (was timer at ~227-235)
 
 **Problem:** The Stop button requests cooperative cancellation, but after 1.5 seconds it aborts the local stream and marks cancellation idle even if eve has not emitted the cancellation boundary. This is especially likely in the exact case named by the comment: recursive subagent cancellation can take longer than 1.5 seconds. The composer can then accept another message while the previous turn is still cancelling, and the `ClientSession` has not consumed the required `turn.cancelled` → `session.waiting` boundary. A subsequent send can fail against the still-active turn or consume the old boundary as the new response's first boundary, leaving the new turn's output unobserved.
 
@@ -44,7 +46,9 @@ eve explicitly requires the opposite behavior:
 
 ### P1 Starting a new chat leaves the old durable turn running
 
-**Location:** `app/_components/brain-chat-shell.tsx:19-23`; `app/_components/ephemeral-agent-chat.tsx:200`
+**Status:** Fixed (`onDisposeReady` + `runWithDisposal` cancel/reset before remount; auth-only busy detaches immediately with best-effort cancel).
+
+**Location:** `app/_components/brain-chat-shell.tsx`; `app/_components/ephemeral-agent-chat.tsx`
 
 **Problem:** “New chat” changes the keyed component immediately. The old `EphemeralAgentChat` unmounts, but its only cleanup clears a UI timer; it does not cooperatively cancel the active eve turn or abort its stream. The old `useEveAgent` async operation can therefore keep consuming events and running callback closures after its UI is gone, while the server continues model/tool/subagent work and billing. In an ephemeral-only UI there is no way to return to that discarded run.
 
@@ -68,7 +72,9 @@ The shipped `useEveAgent` contract only says `stop()` aborts the in-flight strea
 
 ### P2 Repeated identical turn failures are not shown
 
-**Location:** `app/_components/ephemeral-agent-chat.tsx:166-184`
+**Status:** Fixed (failure toasts keyed by event identity via `failureEventId` / `seenFailureIdsRef`).
+
+**Location:** `app/_components/ephemeral-agent-chat.tsx`
 
 **Problem:** Failure notification is keyed only by the failure message string. `prepareTurn()` clears `clientError`, but `latestTurnFailureMessage` still evaluates to the prior string. If a later turn fails with the same message, the effect dependency is unchanged, so the effect does not run and the second failure gets no toast. This is common for repeatable failures such as the same tool or provider error.
 
