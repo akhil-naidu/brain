@@ -32,6 +32,10 @@ export const CHAT_CONNECTION_PROVIDERS: readonly McpOAuthProvider[] = [
   gmailProvider,
 ];
 
+export function getChatConnectionProvider(id: string): McpOAuthProvider | undefined {
+  return CHAT_CONNECTION_PROVIDERS.find((provider) => provider.name === id);
+}
+
 export async function resolveConnectionAuthStatus(
   provider: McpOAuthProvider,
   principal: ConnectionPrincipal = ANONYMOUS_CHAT_PRINCIPAL,
