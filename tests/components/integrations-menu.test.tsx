@@ -1,6 +1,10 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { integrationStatusText, IntegrationsMenu } from "@/components/chat/integrations-menu";
+import {
+  integrationStatusText,
+  IntegrationsMenu,
+  shouldOfferConnectionConnect,
+} from "@/components/chat/integrations-menu";
 
 const fetchConnectionStatuses = vi.hoisted(() =>
   vi.fn(async () => [
@@ -35,7 +39,7 @@ describe("integrationStatusText", () => {
         status: { id: "slack", displayName: "Slack", status: "needs_sign_in" },
         statusError: null,
       }),
-    ).toBe("Sign in when asked");
+    ).toBe("Sign in");
     expect(
       integrationStatusText({
         loading: false,
@@ -50,6 +54,33 @@ describe("integrationStatusText", () => {
         statusError: "boom",
       }),
     ).toBe("Status unavailable");
+  });
+});
+
+describe("shouldOfferConnectionConnect", () => {
+  it("offers Connect only when sign-in is needed", () => {
+    expect(
+      shouldOfferConnectionConnect({
+        id: "slack",
+        displayName: "Slack",
+        status: "needs_sign_in",
+      }),
+    ).toBe(true);
+    expect(
+      shouldOfferConnectionConnect({
+        id: "clickup",
+        displayName: "ClickUp",
+        status: "connected",
+      }),
+    ).toBe(false);
+    expect(
+      shouldOfferConnectionConnect({
+        id: "asana",
+        displayName: "Asana",
+        status: "needs_setup",
+      }),
+    ).toBe(false);
+    expect(shouldOfferConnectionConnect(undefined)).toBe(false);
   });
 });
 

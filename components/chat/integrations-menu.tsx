@@ -1,7 +1,7 @@
 "use client";
 
 import type { ComponentType } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { HammerIcon } from "lucide-react";
 import { AsanaIcon, ClickUpIcon, GmailIcon, SlackIcon } from "@/components/icons";
 import {
@@ -14,6 +14,8 @@ import type { EnabledConnections } from "@/app/_components/chat-shell-context";
 import {
   connectionStatusLabel,
   fetchConnectionStatuses,
+  getSafeAuthorizeUrl,
+  startConnectionAuthorize,
   type ConnectionStatus,
 } from "@/lib/chat/connections-status-api";
 import { cn } from "@/lib/utils";
@@ -48,6 +50,10 @@ export function integrationStatusText(input: {
   return "—";
 }
 
+export function shouldOfferConnectionConnect(status: ConnectionStatus | undefined): boolean {
+  return status?.status === "needs_sign_in";
+}
+
 export function IntegrationsMenu({
   enabledConnections,
   onConnectionEnabledChange,
@@ -58,9 +64,12 @@ export function IntegrationsMenu({
     enabled: boolean,
   ) => void;
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const [statusById, setStatusById] = useState<ReadonlyMap<string, ConnectionStatus> | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(false);
+  const [connectingId, setConnectingId] = useState<string | null>(null);
+  const [connectError, setConnectError] = useState<string | null>(null);
 
   const loadStatus = () => {
     setLoadingStatus(true);
@@ -79,11 +88,67 @@ export function IntegrationsMenu({
     })();
   };
 
+  useEffect(() => {
+    if (!menuOpen) {
+      return undefined;
+    }
+
+    const onFocus = () => {
+      loadStatus();
+    };
+    window.addEventListener("focus", onFocus);
+
+    const interval =
+      connectingId === null
+        ? undefined
+        : window.setInterval(() => {
+            loadStatus();
+          }, 2000);
+
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      if (interval !== undefined) {
+        window.clearInterval(interval);
+      }
+    };
+  }, [menuOpen, connectingId]);
+
+  useEffect(() => {
+    if (!connectingId || !statusById) {
+      return;
+    }
+    if (statusById.get(connectingId)?.status === "connected") {
+      setConnectingId(null);
+      setConnectError(null);
+    }
+  }, [connectingId, statusById]);
+
+  const startConnect = (connectionId: keyof EnabledConnections) => {
+    setConnectingId(connectionId);
+    setConnectError(null);
+    void (async () => {
+      try {
+        const { authorizeUrl } = await startConnectionAuthorize(connectionId);
+        const safeUrl = getSafeAuthorizeUrl(authorizeUrl);
+        if (!safeUrl) {
+          throw new Error("Authorization URL cannot be opened.");
+        }
+        window.open(safeUrl, "_blank", "noopener,noreferrer");
+      } catch (error) {
+        setConnectingId(null);
+        setConnectError(error instanceof Error ? error.message : "Unable to start sign-in.");
+      }
+    })();
+  };
+
   return (
     <DropdownMenu
       onOpenChange={(open) => {
+        setMenuOpen(open);
         if (open) {
           loadStatus();
+        } else {
+          setConnectError(null);
         }
       }}
     >
@@ -101,7 +166,7 @@ export function IntegrationsMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
-        className="border-border bg-popover w-64 rounded-md p-1"
+        className="border-border bg-popover w-72 rounded-md p-1"
         sideOffset={4}
       >
         {statusError ? (
@@ -109,14 +174,21 @@ export function IntegrationsMenu({
             {statusError}
           </p>
         ) : null}
+        {connectError ? (
+          <p className="text-destructive px-2 py-1.5 text-xs" role="alert">
+            {connectError}
+          </p>
+        ) : null}
         {CONNECTION_ITEMS.map(({ Icon, key, label }) => {
           const enabled = enabledConnections[key];
           const status = statusById?.get(key);
           const statusText = integrationStatusText({
-            loading: loadingStatus,
+            loading: loadingStatus && !statusById,
             status,
             statusError,
           });
+          const showConnect = shouldOfferConnectionConnect(status);
+          const isConnecting = connectingId === key;
 
           return (
             <DropdownMenuItem
@@ -125,6 +197,10 @@ export function IntegrationsMenu({
               key={key}
               onSelect={(event) => {
                 event.preventDefault();
+                const target = event.target;
+                if (target instanceof Element && target.closest("[data-connection-connect]")) {
+                  return;
+                }
                 onConnectionEnabledChange(key, !enabled);
               }}
               role="menuitemcheckbox"
@@ -145,9 +221,28 @@ export function IntegrationsMenu({
                   )}
                   title={status?.detail}
                 >
-                  {statusText}
+                  {isConnecting ? "Waiting for sign-in…" : statusText}
                 </span>
               </span>
+              {showConnect ? (
+                <button
+                  className="border-border bg-background text-foreground hover:bg-muted inline-flex h-6 shrink-0 items-center rounded-md border px-1.5 text-[11px] font-medium"
+                  data-connection-connect
+                  disabled={isConnecting}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    startConnect(key);
+                  }}
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                  }}
+                  type="button"
+                >
+                  Connect
+                </button>
+              ) : null}
               <span
                 aria-hidden="true"
                 className={cn(
