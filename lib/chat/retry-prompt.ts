@@ -14,19 +14,24 @@ function userMessageText(message: EveMessage): string | null {
   return trimmed.length > 0 ? text : null;
 }
 
-/** Most recent user prompt text that can be resent after a failure. */
-export function getRetryableUserPrompt(messages: readonly EveMessage[]): string | null {
+/** Most recent user message that has text content. */
+export function getLastUserMessage(messages: readonly EveMessage[]): EveMessage | null {
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const message = messages[index];
     if (!message) {
       continue;
     }
-    const text = userMessageText(message);
-    if (text !== null) {
-      return text;
+    if (userMessageText(message) !== null) {
+      return message;
     }
   }
   return null;
+}
+
+/** Most recent user prompt text that can be resent after a failure. */
+export function getRetryableUserPrompt(messages: readonly EveMessage[]): string | null {
+  const message = getLastUserMessage(messages);
+  return message ? userMessageText(message) : null;
 }
 
 export function canOfferRetry(input: {

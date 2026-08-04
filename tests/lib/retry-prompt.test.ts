@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { EveMessage } from "eve/react";
-import { canOfferRetry, getRetryableUserPrompt } from "@/lib/chat/retry-prompt";
+import { canOfferRetry, getLastUserMessage, getRetryableUserPrompt } from "@/lib/chat/retry-prompt";
 
 function userMessage(text: string, status?: "failed"): EveMessage {
   return {
@@ -18,6 +18,18 @@ function assistantMessage(text: string): EveMessage {
     role: "assistant",
   };
 }
+
+describe("getLastUserMessage", () => {
+  it("returns the most recent user message even after an assistant reply", () => {
+    const user = userMessage("prompt");
+    expect(getLastUserMessage([user, assistantMessage("partial")])?.id).toBe(user.id);
+  });
+
+  it("returns null when there is no user text", () => {
+    expect(getLastUserMessage([assistantMessage("only assistant")])).toBeNull();
+    expect(getLastUserMessage([])).toBeNull();
+  });
+});
 
 describe("getRetryableUserPrompt", () => {
   it("returns the last user text when it is the latest message", () => {
