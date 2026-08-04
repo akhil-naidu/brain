@@ -16,6 +16,7 @@ This agent must stay **self-hostable and independent of Vercel infrastructure**.
 - Sandbox: microsandbox / Docker / local — not Vercel Sandbox
 - OAuth for connections: `defineInteractiveAuthorization` or your own `getToken`
 - ClickUp: official MCP with self-hosted OAuth / DCR (`agent/connections/clickup.ts`)
+- dFlow: official Cloud MCP with self-hosted OAuth / DCR (`agent/connections/dflow.ts`)
 - Slack / Asana / Gmail: official MCP with self-hosted OAuth + env client credentials (`agent/connections/{slack,asana,gmail}.ts`)
 
 See `.cursor/rules/no-vercel-infra.mdc`.
