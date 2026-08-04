@@ -28,6 +28,7 @@ import {
   formatProviderErrorMessage,
   MISSING_COMMAND_CODE_API_KEY_COMPOSER_REASON,
   MISSING_COMMAND_CODE_API_KEY_MESSAGE,
+  MISSING_COMMAND_CODE_API_KEY_TITLE,
 } from "@/lib/chat/provider-setup";
 import { fetchSetupStatus } from "@/lib/chat/setup-api";
 import type { ChatRecord, ChatSummary } from "@/lib/chat/store/types";
@@ -598,9 +599,9 @@ export function EphemeralAgentChat({
                 <BrainMark className="mx-auto size-10" />
                 <h1 className="mt-4 text-2xl font-semibold tracking-tight">Brain</h1>
                 {missingApiKey ? (
-                  <div className="mx-auto mt-4 max-w-md text-left">
+                  <div className="mx-auto mt-4 max-w-md text-center">
                     <p className="text-foreground text-sm font-medium">
-                      Command Code API key required
+                      {MISSING_COMMAND_CODE_API_KEY_TITLE}
                     </p>
                     <p className="text-muted-foreground mt-2 text-sm leading-6">
                       {MISSING_COMMAND_CODE_API_KEY_MESSAGE}

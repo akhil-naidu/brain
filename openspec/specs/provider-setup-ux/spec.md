@@ -1,7 +1,7 @@
 # provider-setup-ux Specification
 
 ## Purpose
-Helps local operators configure Command Code by surfacing a clear missing-API-key message in the Brain chat UI instead of opaque provider failures.
+Keeps chat from failing opaquely when the model provider is not configured, while keeping operator env details out of the normal-user UI.
 ## Requirements
 ### Requirement: Setup status without exposing secrets
 The system MUST expose a same-origin setup status that indicates whether `COMMAND_CODE_API_KEY` is configured. The response MUST NOT include the secret value.
@@ -14,21 +14,20 @@ The system MUST expose a same-origin setup status that indicates whether `COMMAN
 - **WHEN** `COMMAND_CODE_API_KEY` is a non-empty value
 - **THEN** the setup status reports that the Command Code API key is configured
 
-### Requirement: Proactive missing-key guidance in chat UI
-When the Command Code API key is not configured, the chat UI MUST show setup guidance that names `COMMAND_CODE_API_KEY` and points operators to `.env` / `.env.example`. The composer MUST prevent sending turns until the key is configured, with a clear disabled reason.
+### Requirement: Unavailable chat messaging for end users
+When the Command Code API key is not configured, the chat UI MUST tell the user that chat is unavailable without naming env vars, `.env`, or provider product keys. Operator setup details remain in project docs such as `.env.example`. The composer MUST prevent sending turns until the key is configured.
 
-#### Scenario: Empty chat shows setup guidance
+#### Scenario: Empty chat shows unavailable guidance
 - **WHEN** the chat UI loads and the setup status says the key is not configured
-- **THEN** the empty state includes instructions to set `COMMAND_CODE_API_KEY`
+- **THEN** the empty state says chat is unavailable and that setup is incomplete
 
 #### Scenario: Composer blocks send without key
 - **WHEN** the key is not configured and the user focuses the composer
-- **THEN** send is disabled with a reason that mentions the missing API key
+- **THEN** send is disabled with a short unavailable reason that does not name env vars
 
 ### Requirement: Friendly provider auth errors
-When a turn fails with an error that indicates missing or invalid API credentials, the UI MUST show the same clear Command Code setup guidance instead of only the raw provider text.
+When a turn fails with an error that indicates missing or invalid API credentials, the UI MUST show the same end-user unavailable guidance instead of only the raw provider text or operator env instructions.
 
 #### Scenario: Auth-like failure is rewritten
 - **WHEN** the agent reports an error mentioning an API key or unauthorized credential failure
-- **THEN** the UI shows guidance to set `COMMAND_CODE_API_KEY` in `.env`
-
+- **THEN** the UI shows the end-user unavailable guidance rather than env-file instructions
