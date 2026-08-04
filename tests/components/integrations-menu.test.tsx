@@ -4,6 +4,7 @@ import {
   integrationStatusText,
   IntegrationsMenu,
   shouldOfferConnectionConnect,
+  shouldOfferConnectionDisconnect,
 } from "@/components/chat/integrations-menu";
 
 const fetchConnectionStatuses = vi.hoisted(() =>
@@ -82,6 +83,26 @@ describe("shouldOfferConnectionConnect", () => {
       }),
     ).toBe(false);
     expect(shouldOfferConnectionConnect(undefined)).toBe(false);
+  });
+});
+
+describe("shouldOfferConnectionDisconnect", () => {
+  it("offers Disconnect only when connected", () => {
+    expect(
+      shouldOfferConnectionDisconnect({
+        id: "clickup",
+        displayName: "ClickUp",
+        status: "connected",
+      }),
+    ).toBe(true);
+    expect(
+      shouldOfferConnectionDisconnect({
+        id: "slack",
+        displayName: "Slack",
+        status: "needs_sign_in",
+      }),
+    ).toBe(false);
+    expect(shouldOfferConnectionDisconnect(undefined)).toBe(false);
   });
 });
 

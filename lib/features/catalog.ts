@@ -81,9 +81,9 @@ export const FEATURE_SECTIONS: readonly FeatureSection[] = [
       },
       {
         id: "connect-status",
-        title: "Connect + status in the menu",
+        title: "Connect, status, and Disconnect",
         summary:
-          "See Connected / Sign in / Needs setup, then start OAuth from the integrations menu.",
+          "See Connected / Sign in / Needs setup, start OAuth from the menu, or clear a local token with Disconnect.",
       },
     ],
   },

@@ -13,6 +13,7 @@ import {
 import type { EnabledConnections } from "@/app/_components/chat-shell-context";
 import {
   connectionStatusLabel,
+  disconnectConnection,
   fetchConnectionStatuses,
   getSafeAuthorizeUrl,
   startConnectionAuthorize,
@@ -55,6 +56,10 @@ export function shouldOfferConnectionConnect(status: ConnectionStatus | undefine
   return status?.status === "needs_sign_in";
 }
 
+export function shouldOfferConnectionDisconnect(status: ConnectionStatus | undefined): boolean {
+  return status?.status === "connected";
+}
+
 export function IntegrationsMenu({
   enabledConnections,
   onConnectionEnabledChange,
@@ -70,6 +75,7 @@ export function IntegrationsMenu({
   const [statusError, setStatusError] = useState<string | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(false);
   const [connectingId, setConnectingId] = useState<string | null>(null);
+  const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
   const [connectError, setConnectError] = useState<string | null>(null);
 
   const loadStatus = () => {
@@ -142,6 +148,21 @@ export function IntegrationsMenu({
     })();
   };
 
+  const startDisconnect = (connectionId: keyof EnabledConnections) => {
+    setDisconnectingId(connectionId);
+    setConnectError(null);
+    void (async () => {
+      try {
+        await disconnectConnection(connectionId);
+        loadStatus();
+      } catch (error) {
+        setConnectError(error instanceof Error ? error.message : "Unable to disconnect.");
+      } finally {
+        setDisconnectingId(null);
+      }
+    })();
+  };
+
   return (
     <DropdownMenu
       onOpenChange={(open) => {
@@ -189,7 +210,9 @@ export function IntegrationsMenu({
             statusError,
           });
           const showConnect = shouldOfferConnectionConnect(status);
+          const showDisconnect = shouldOfferConnectionDisconnect(status);
           const isConnecting = connectingId === key;
+          const isDisconnecting = disconnectingId === key;
 
           return (
             <DropdownMenuItem
@@ -199,7 +222,10 @@ export function IntegrationsMenu({
               onSelect={(event) => {
                 event.preventDefault();
                 const target = event.target;
-                if (target instanceof Element && target.closest("[data-connection-connect]")) {
+                if (
+                  target instanceof Element &&
+                  target.closest("[data-connection-connect], [data-connection-disconnect]")
+                ) {
                   return;
                 }
                 onConnectionEnabledChange(key, !enabled);
@@ -222,7 +248,11 @@ export function IntegrationsMenu({
                   )}
                   title={status?.detail}
                 >
-                  {isConnecting ? "Waiting for sign-in…" : statusText}
+                  {isConnecting
+                    ? "Waiting for sign-in…"
+                    : isDisconnecting
+                      ? "Disconnecting…"
+                      : statusText}
                 </span>
               </span>
               {showConnect ? (
@@ -242,6 +272,25 @@ export function IntegrationsMenu({
                   type="button"
                 >
                   Connect
+                </button>
+              ) : null}
+              {showDisconnect ? (
+                <button
+                  className="border-border bg-background text-foreground hover:bg-muted inline-flex h-6 shrink-0 items-center rounded-md border px-1.5 text-[11px] font-medium"
+                  data-connection-disconnect
+                  disabled={isDisconnecting}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    startDisconnect(key);
+                  }}
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                  }}
+                  type="button"
+                >
+                  Disconnect
                 </button>
               ) : null}
               <span
