@@ -19,6 +19,13 @@ export function createFallbackTitle(input: string) {
     .replace(/\s+/g, " ")
     .trim();
 
+  return normalizeChatTitle(text);
+}
+
+/** Normalize a user-edited chat title for persistence. */
+export function normalizeChatTitle(input: string) {
+  const text = input.replace(/\s+/g, " ").trim();
+
   if (!text) {
     return DEFAULT_CHAT_TITLE;
   }
