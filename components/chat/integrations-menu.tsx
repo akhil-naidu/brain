@@ -1,6 +1,7 @@
 "use client";
 
 import type { ComponentType } from "react";
+import { useState } from "react";
 import { HammerIcon } from "lucide-react";
 import { AsanaIcon, ClickUpIcon, GmailIcon, SlackIcon } from "@/components/icons";
 import {
@@ -10,6 +11,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { EnabledConnections } from "@/app/_components/chat-shell-context";
+import {
+  connectionStatusLabel,
+  fetchConnectionStatuses,
+  type ConnectionStatus,
+} from "@/lib/chat/connections-status-api";
 import { cn } from "@/lib/utils";
 
 type ConnectionItem = {
@@ -25,6 +31,23 @@ const CONNECTION_ITEMS: readonly ConnectionItem[] = [
   { key: "gmail", label: "Gmail", Icon: GmailIcon },
 ];
 
+export function integrationStatusText(input: {
+  readonly loading: boolean;
+  readonly status: ConnectionStatus | undefined;
+  readonly statusError: string | null;
+}): string {
+  if (input.loading) {
+    return "Checking…";
+  }
+  if (input.status) {
+    return connectionStatusLabel(input.status.status);
+  }
+  if (input.statusError) {
+    return "Status unavailable";
+  }
+  return "—";
+}
+
 export function IntegrationsMenu({
   enabledConnections,
   onConnectionEnabledChange,
@@ -35,12 +58,42 @@ export function IntegrationsMenu({
     enabled: boolean,
   ) => void;
 }) {
+  const [statusById, setStatusById] = useState<ReadonlyMap<string, ConnectionStatus> | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [loadingStatus, setLoadingStatus] = useState(false);
+
+  const loadStatus = () => {
+    setLoadingStatus(true);
+    setStatusError(null);
+    void (async () => {
+      try {
+        const connections = await fetchConnectionStatuses();
+        setStatusById(new Map(connections.map((item) => [item.id, item])));
+      } catch (error) {
+        setStatusError(
+          error instanceof Error ? error.message : "Unable to load connection status.",
+        );
+      } finally {
+        setLoadingStatus(false);
+      }
+    })();
+  };
+
   return (
-    <DropdownMenu>
+    <DropdownMenu
+      onOpenChange={(open) => {
+        if (open) {
+          loadStatus();
+        }
+      }}
+    >
       <DropdownMenuTrigger asChild>
         <button
           aria-label="Connections"
           className="text-muted-foreground/75 hover:bg-muted/60 hover:text-foreground focus-visible:bg-muted/60 focus-visible:text-foreground dark:text-muted-foreground/60 inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors focus-visible:outline-none [&_*]:cursor-pointer"
+          onPointerDown={() => {
+            loadStatus();
+          }}
           type="button"
         >
           <HammerIcon className="size-4 shrink-0 cursor-pointer" />
@@ -48,16 +101,27 @@ export function IntegrationsMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
-        className="border-border bg-popover w-48 rounded-md p-1"
+        className="border-border bg-popover w-64 rounded-md p-1"
         sideOffset={4}
       >
+        {statusError ? (
+          <p className="text-destructive px-2 py-1.5 text-xs" role="alert">
+            {statusError}
+          </p>
+        ) : null}
         {CONNECTION_ITEMS.map(({ Icon, key, label }) => {
           const enabled = enabledConnections[key];
+          const status = statusById?.get(key);
+          const statusText = integrationStatusText({
+            loading: loadingStatus,
+            status,
+            statusError,
+          });
 
           return (
             <DropdownMenuItem
               aria-checked={enabled}
-              className="focus:bg-muted/70 h-9 cursor-pointer gap-2 rounded-sm px-2 py-1 text-sm"
+              className="focus:bg-muted/70 h-auto cursor-pointer gap-2 rounded-sm px-2 py-1.5 text-sm"
               key={key}
               onSelect={(event) => {
                 event.preventDefault();
@@ -70,6 +134,19 @@ export function IntegrationsMenu({
               </span>
               <span className="min-w-0 flex-1">
                 <span className="text-foreground block truncate text-sm">{label}</span>
+                <span
+                  className={cn(
+                    "mt-0.5 block truncate text-[11px]",
+                    status?.status === "connected"
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : status?.status === "needs_setup"
+                        ? "text-destructive"
+                        : "text-muted-foreground",
+                  )}
+                  title={status?.detail}
+                >
+                  {statusText}
+                </span>
               </span>
               <span
                 aria-hidden="true"
