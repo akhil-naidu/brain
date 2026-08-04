@@ -1,11 +1,12 @@
 "use client";
 
 import type { HandleMessageStreamEvent, SessionState } from "eve/client";
-import { PanelLeftIcon } from "lucide-react";
+import { CheckIcon, CopyIcon, PanelLeftIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChatShellProvider } from "@/app/_components/chat-shell-context";
 import {
   EphemeralAgentChat,
+  type ChatThreadActions,
   type DisposeEphemeralChat,
 } from "@/app/_components/ephemeral-agent-chat";
 import { BrainMark } from "@/components/brain-mark";
@@ -61,8 +62,11 @@ export function BrainChatShell() {
   const [active, setActive] = useState<ActiveChatState>(() => emptyActive(0));
   const [bootstrapped, setBootstrapped] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [threadActions, setThreadActions] = useState<ChatThreadActions | null>(null);
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
   const disposeChatRef = useRef<DisposeEphemeralChat | null>(null);
   const navigationPendingRef = useRef(false);
+  const copyResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -114,6 +118,46 @@ export function BrainChatShell() {
   const handleDisposeReady = useCallback((dispose: DisposeEphemeralChat | null) => {
     disposeChatRef.current = dispose;
   }, []);
+
+  const handleThreadActionsReady = useCallback((actions: ChatThreadActions | null) => {
+    setThreadActions(actions);
+    setCopyState("idle");
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (copyResetTimeoutRef.current) {
+        clearTimeout(copyResetTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleCopyChat = useCallback(() => {
+    if (!threadActions?.canCopy) {
+      return;
+    }
+
+    void (async () => {
+      try {
+        await threadActions.copyAsMarkdown(active.title);
+        setCopyState("copied");
+        if (copyResetTimeoutRef.current) {
+          clearTimeout(copyResetTimeoutRef.current);
+        }
+        copyResetTimeoutRef.current = setTimeout(() => {
+          setCopyState("idle");
+        }, 2000);
+      } catch {
+        setCopyState("error");
+        if (copyResetTimeoutRef.current) {
+          clearTimeout(copyResetTimeoutRef.current);
+        }
+        copyResetTimeoutRef.current = setTimeout(() => {
+          setCopyState("idle");
+        }, 2500);
+      }
+    })();
+  }, [active.title, threadActions]);
 
   const runWithDisposal = useCallback(async (action: () => void | Promise<void>) => {
     if (navigationPendingRef.current) {
@@ -240,6 +284,38 @@ export function BrainChatShell() {
             <div className="text-muted-foreground min-w-0 flex-1 truncate text-sm">
               {active.title ?? "New chat"}
             </div>
+            {threadActions?.canCopy ? (
+              <Button
+                aria-label={
+                  copyState === "copied"
+                    ? "Copied"
+                    : copyState === "error"
+                      ? "Copy failed"
+                      : "Copy chat as Markdown"
+                }
+                className={cn(
+                  "text-muted-foreground",
+                  copyState === "error" ? "text-destructive" : undefined,
+                )}
+                onClick={handleCopyChat}
+                size="icon-sm"
+                title={
+                  copyState === "copied"
+                    ? "Copied"
+                    : copyState === "error"
+                      ? "Couldn't copy — check clipboard permissions"
+                      : "Copy chat as Markdown"
+                }
+                type="button"
+                variant="ghost"
+              >
+                {copyState === "copied" ? (
+                  <CheckIcon className="size-4" />
+                ) : (
+                  <CopyIcon className="size-4" />
+                )}
+              </Button>
+            ) : null}
             <Button
               className="md:hidden"
               onClick={handleNewChat}
@@ -269,6 +345,7 @@ export function BrainChatShell() {
               onChatUpdated={handleChatUpdated}
               onDisposeReady={handleDisposeReady}
               onDraftChange={setDraft}
+              onThreadActionsReady={handleThreadActionsReady}
               onUserMessage={handleUserMessage}
             />
           )}

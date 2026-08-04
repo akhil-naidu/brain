@@ -31,6 +31,7 @@ import { fetchSetupStatus } from "@/lib/chat/setup-api";
 import type { ChatRecord, ChatSummary } from "@/lib/chat/store/types";
 import { useSubagentChildFailures } from "@/lib/chat/subagent-child-failures";
 import { createFallbackTitle } from "@/lib/chat/title";
+import { copyTextToClipboard, messagesToMarkdown } from "@/lib/chat/export-markdown";
 import { createTurnClientContext } from "@/lib/chat/turn-client-context";
 
 type CancellationState = "idle" | "requested" | "cancelling";
@@ -47,6 +48,11 @@ type ErrorNotice = {
 };
 
 export type DisposeEphemeralChat = () => Promise<boolean>;
+
+export type ChatThreadActions = {
+  readonly canCopy: boolean;
+  readonly copyAsMarkdown: (title?: string | null) => Promise<void>;
+};
 
 const EMPTY_EVENTS: readonly HandleMessageStreamEvent[] = [];
 
@@ -77,6 +83,7 @@ export function EphemeralAgentChat({
   onChatUpdated,
   onDisposeReady,
   onDraftChange,
+  onThreadActionsReady,
   onUserMessage,
 }: {
   readonly chatId: string | null;
@@ -87,6 +94,7 @@ export function EphemeralAgentChat({
   readonly onChatUpdated?: (chat: ChatSummary) => void;
   readonly onDisposeReady?: (dispose: DisposeEphemeralChat | null) => void;
   readonly onDraftChange: (value: string) => void;
+  readonly onThreadActionsReady?: (actions: ChatThreadActions | null) => void;
   readonly onUserMessage?: (text: string) => void;
 }) {
   const { enabledConnections, selectedModelId, setConnectionEnabled, setSelectedModelId } =
@@ -295,6 +303,37 @@ export function EphemeralAgentChat({
   const send = agent.send;
 
   const messages = agent.data.messages;
+
+  useEffect(() => {
+    if (!onThreadActionsReady) {
+      return undefined;
+    }
+
+    onThreadActionsReady({
+      canCopy: messages.some((message) =>
+        message.parts.some(
+          (part) =>
+            (part.type === "text" && part.text.trim().length > 0) ||
+            (part.type === "reasoning" && part.text.trim().length > 0) ||
+            part.type === "dynamic-tool" ||
+            part.type === "authorization" ||
+            part.type === "file",
+        ),
+      ),
+      copyAsMarkdown: async (title) => {
+        const markdown = messagesToMarkdown(messages, title);
+        if (!markdown) {
+          throw new Error("Nothing to copy yet.");
+        }
+        await copyTextToClipboard(markdown);
+      },
+    });
+
+    return () => {
+      onThreadActionsReady(null);
+    };
+  }, [messages, onThreadActionsReady]);
+
   const lastMessage = messages.at(-1);
   const pendingAuthorization = useMemo(
     () =>
