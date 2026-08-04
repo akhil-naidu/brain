@@ -32,6 +32,7 @@ import type { ChatRecord, ChatSummary } from "@/lib/chat/store/types";
 import { useSubagentChildFailures } from "@/lib/chat/subagent-child-failures";
 import { createFallbackTitle } from "@/lib/chat/title";
 import { copyTextToClipboard, messagesToMarkdown } from "@/lib/chat/export-markdown";
+import { canOfferRetry, getRetryableUserPrompt } from "@/lib/chat/retry-prompt";
 import { createTurnClientContext } from "@/lib/chat/turn-client-context";
 
 type CancellationState = "idle" | "requested" | "cancelling";
@@ -515,6 +516,23 @@ export function EphemeralAgentChat({
     onDraftChange(failedUserText);
   }, [agent.status, draft.length, failedUserText, onDraftChange]);
 
+  const retryableText = useMemo(() => getRetryableUserPrompt(messages), [messages]);
+  const showRetry = canOfferRetry({
+    agentStatus: agent.status,
+    hasVisibleError: Boolean(visibleError),
+    isBusy,
+    lastMessage,
+    missingApiKey,
+    retryableText,
+  });
+
+  const handleRetry = useCallback(() => {
+    if (!showRetry || retryableText === null) {
+      return;
+    }
+    void handleSubmit(retryableText);
+  }, [handleSubmit, retryableText, showRetry]);
+
   const authDisabledReason = pendingAuthorization
     ? `Connect ${pendingAuthorization.displayName} to continue this turn.`
     : undefined;
@@ -549,7 +567,13 @@ export function EphemeralAgentChat({
 
   return (
     <div className="bg-background text-foreground flex h-full min-h-0 flex-1 flex-col">
-      {visibleError ? <ErrorToast message={visibleError.message} onDismiss={dismissError} /> : null}
+      {visibleError ? (
+        <ErrorToast
+          message={visibleError.message}
+          onDismiss={dismissError}
+          onRetry={showRetry ? handleRetry : undefined}
+        />
+      ) : null}
       <ChatConversation className="min-h-0 flex-1">
         <ChatConversationContent className="mx-auto w-full max-w-3xl gap-4 px-4 py-6">
           {messages.length === 0 ? (

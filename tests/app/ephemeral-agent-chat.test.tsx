@@ -5,13 +5,13 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const agent = vi.hoisted(() => ({
-  data: { messages: [] },
-  error: undefined,
-  events: [],
+  data: { messages: [] as Array<Record<string, unknown>> },
+  error: undefined as { message: string } | undefined,
+  events: [] as unknown[],
   reset: vi.fn(),
   send: vi.fn(),
   session: { streamIndex: 0 },
-  status: "ready",
+  status: "ready" as string,
   stop: vi.fn(),
 }));
 
@@ -45,6 +45,23 @@ vi.mock("@/lib/chat/setup-api", () => ({
   fetchSetupStatus: async () => ({ commandCodeApiKeyConfigured: true }),
 }));
 
+vi.mock("@/lib/chat/chats-api", () => ({
+  createChat: vi.fn(async () => ({
+    createdAt: new Date().toISOString(),
+    events: [],
+    eveSession: null,
+    id: "chat-1",
+    title: "Summarize ClickUp",
+    updatedAt: new Date().toISOString(),
+  })),
+  updateChat: vi.fn(async (id: string) => ({
+    createdAt: new Date().toISOString(),
+    id,
+    title: "Summarize ClickUp",
+    updatedAt: new Date().toISOString(),
+  })),
+}));
+
 vi.mock("@/components/brain-mark", () => ({
   BrainMark: () => null,
 }));
@@ -73,12 +90,19 @@ vi.mock("@/components/chat/error-toast", () => ({
   ErrorToast: ({
     message,
     onDismiss,
+    onRetry,
   }: {
     readonly message: string;
     readonly onDismiss: () => void;
+    readonly onRetry?: () => void;
   }) => (
     <output>
       {message}
+      {onRetry ? (
+        <button onClick={onRetry} type="button">
+          Retry
+        </button>
+      ) : null}
       <button onClick={onDismiss} type="button">
         Dismiss
       </button>
@@ -100,11 +124,18 @@ vi.mock("@/lib/chat/subagent-child-failures", () => ({
 
 import { EphemeralAgentChat } from "@/app/_components/ephemeral-agent-chat";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  agent.data = { messages: [] };
+  agent.error = undefined;
+  agent.status = "ready";
+  agent.send.mockReset();
+  agent.send.mockResolvedValue(undefined);
+});
 
-function renderChat() {
+function renderChat(draft = "") {
   const onDraftChange = vi.fn();
-  render(<EphemeralAgentChat chatId={null} draft="" onDraftChange={onDraftChange} />);
+  render(<EphemeralAgentChat chatId={null} draft={draft} onDraftChange={onDraftChange} />);
   return { onDraftChange };
 }
 
@@ -150,5 +181,32 @@ describe("EphemeralAgentChat", () => {
 
     act(() => callbacks.onEvent?.(secondFailure));
     expect(screen.getByText("Provider unavailable")).toBeDefined();
+  });
+
+  it("retries the last user prompt from the error toast", async () => {
+    agent.status = "error";
+    agent.error = { message: "Provider unavailable" };
+    agent.data = {
+      messages: [
+        {
+          id: "user-1",
+          parts: [{ type: "text", text: "Summarize ClickUp" }],
+          role: "user",
+        },
+      ],
+    };
+
+    renderChat();
+
+    expect(screen.getByText("Provider unavailable")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+    await waitFor(() => {
+      expect(agent.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: "Summarize ClickUp",
+        }),
+      );
+    });
   });
 });
