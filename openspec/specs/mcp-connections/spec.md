@@ -1,9 +1,7 @@
 ## Purpose
 
 Defines Brain's official MCP connections (ClickUp, Slack, Asana, Gmail) and how OAuth credentials are obtained for user-scoped tool access without Vercel Connect.
-
 ## Requirements
-
 ### Requirement: ClickUp MCP connection with dynamic client registration
 The system MUST provide a ClickUp MCP connection using the official ClickUp MCP endpoint and OAuth with dynamic client registration. ClickUp MUST NOT require static client id/secret env vars.
 
@@ -38,3 +36,19 @@ MCP connection OAuth MUST be implemented with self-hosted interactive authorizat
 #### Scenario: No Connect UID required
 - **WHEN** an operator configures MCP connections using `.env.example` variables
 - **THEN** no `*_CONNECTOR` Vercel Connect UID is required for ClickUp, Slack, Asana, or Gmail
+
+### Requirement: dFlow MCP connection with dynamic client registration
+The system MUST provide a dFlow MCP connection using the official dFlow Cloud MCP endpoint and OAuth with dynamic client registration. dFlow MUST NOT require static client id/secret env vars.
+
+#### Scenario: dFlow connection is defined
+- **WHEN** the agent loads connections
+- **THEN** a dFlow MCP connection is available for applications, environments, services, deployments, logs, templates, registries, and GitHub provider tools via interactive OAuth / DCR
+
+#### Scenario: dFlow read tools do not require approval
+- **WHEN** the model calls a reviewed dFlow list/get tool
+- **THEN** the connection approval policy treats that tool as not requiring user approval
+
+#### Scenario: dFlow write tools require approval
+- **WHEN** the model calls a dFlow create/update or GitHub setup tool
+- **THEN** the connection approval policy requires user approval
+
