@@ -33,7 +33,6 @@ export type ScheduledBriefUpdate = {
 const scheduleResponseSchema = z.object({
   schedule: scheduleSchema,
   due: z.boolean(),
-  hostCron: z.string(),
 });
 
 const chatRecordSchema = z.object({
@@ -68,7 +67,6 @@ async function readBody(response: Response): Promise<unknown> {
 export type ScheduleApiResponse = {
   readonly schedule: ScheduledBriefConfig;
   readonly due: boolean;
-  readonly hostCron: string;
 };
 
 export async function fetchScheduledBrief(): Promise<ScheduleApiResponse> {

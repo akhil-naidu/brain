@@ -1,8 +1,8 @@
 import { defineSchedule } from "eve/schedules";
 
 /**
- * Production-only minute tick. `eve` / Next `pnpm dev` do not fire cron cadence;
- * use the chat UI “Run now” or host crontab against POST /api/briefs/run.
+ * Production-only minute tick. Dev `pnpm dev` does not fire this cadence;
+ * use the chat UI “Run now” instead.
  *
  * Posts to the Next app (not this Nitro PORT). Override with BRAIN_INTERNAL_URL
  * when Next is not on http://127.0.0.1:3000.

@@ -219,17 +219,6 @@ export function morningBriefChatTitle(date: Date, timeZone: string): string {
   return `Morning brief — ${formatted}`;
 }
 
-export function hostCronExample(
-  config: ScheduledBriefConfig,
-  origin = "http://localhost:3000",
-): string {
-  const minute = String(config.minute);
-  const hour = String(config.hour);
-  const dow = config.weekdaysOnly ? "1-5" : "*";
-  const url = `${origin.replace(/\/$/, "")}/api/briefs/run`;
-  return `${minute} ${hour} * * ${dow} curl -fsS -X POST ${url} -H 'content-type: application/json' -d '{"force":true}'`;
-}
-
 export async function readScheduledBriefConfig(
   filePath: string = resolveScheduledBriefPath(),
 ): Promise<ScheduledBriefConfig> {

@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckIcon, CopyIcon, LoaderCircleIcon } from "lucide-react";
+import { LoaderCircleIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,14 +53,12 @@ export function ScheduledBriefPanel({
 }) {
   const fieldId = (name: string) => `${idPrefix}${name}`;
   const [schedule, setSchedule] = useState<ScheduledBriefConfig | null>(null);
-  const [hostCron, setHostCron] = useState("");
   const [timeValue, setTimeValue] = useState("09:00");
   const [slackChannelDraft, setSlackChannelDraft] = useState("");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -80,7 +78,6 @@ export function ScheduledBriefPanel({
         setSchedule(next);
         setTimeValue(formatTimeValue(next.hour, next.minute));
         setSlackChannelDraft(next.slackChannel ?? "");
-        setHostCron(result.hostCron);
       } catch {
         if (!cancelled) {
           setLoadError("Unable to load morning brief schedule.");
@@ -106,7 +103,6 @@ export function ScheduledBriefPanel({
       setSchedule(result.schedule);
       setTimeValue(formatTimeValue(result.schedule.hour, result.schedule.minute));
       setSlackChannelDraft(result.schedule.slackChannel ?? "");
-      setHostCron(result.hostCron);
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Unable to save schedule.");
     } finally {
@@ -221,9 +217,8 @@ export function ScheduledBriefPanel({
         </div>
 
         <p className="text-muted-foreground text-xs leading-relaxed">
-          Uses {schedule.timezone}. Automatic runs need Brain running in production (`pnpm start`);
-          while developing, use Run now or host cron. Slack posting uses your connected Slack
-          account.
+          Runs in your local time ({schedule.timezone}). Use Run now anytime. Optional Slack posts
+          use your connected Slack account.
         </p>
 
         {schedule.lastSlackError ? (
@@ -250,7 +245,6 @@ export function ScheduledBriefPanel({
                     const latest = await fetchScheduledBrief();
                     setSchedule(latest.schedule);
                     setSlackChannelDraft(latest.schedule.slackChannel ?? "");
-                    setHostCron(latest.hostCron);
                   } catch {
                     // Opening the chat still succeeds if refresh fails.
                   }
@@ -288,30 +282,6 @@ export function ScheduledBriefPanel({
               Open last brief
             </Button>
           ) : null}
-        </div>
-
-        <div className="flex items-start gap-2">
-          <code className="bg-background text-muted-foreground block max-h-16 flex-1 overflow-auto rounded px-2 py-1.5 text-[11px] leading-relaxed break-all">
-            {hostCron}
-          </code>
-          <Button
-            aria-label="Copy host cron"
-            disabled={!hostCron}
-            onClick={() => {
-              void (async () => {
-                await navigator.clipboard.writeText(hostCron);
-                setCopied(true);
-                window.setTimeout(() => {
-                  setCopied(false);
-                }, 1500);
-              })();
-            }}
-            size="icon-sm"
-            type="button"
-            variant="ghost"
-          >
-            {copied ? <CheckIcon className="size-3.5" /> : <CopyIcon className="size-3.5" />}
-          </Button>
         </div>
 
         {actionError ? <p className="text-destructive text-xs">{actionError}</p> : null}

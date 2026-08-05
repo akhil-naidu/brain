@@ -52,7 +52,7 @@ export function SchedulesMenu({
           <DialogHeader className="pb-2">
             <DialogTitle>Schedules</DialogTitle>
             <DialogDescription>
-              Morning brief and playbook runs that create chats while Brain is running.
+              Set when Brain should run your morning brief or saved playbooks.
             </DialogDescription>
           </DialogHeader>
           {open ? (

@@ -4,7 +4,6 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   defaultScheduledBriefConfig,
-  hostCronExample,
   isScheduledBriefDue,
   isScheduledBriefRunning,
   localDateKey,
@@ -141,18 +140,6 @@ describe("scheduled brief persistence", () => {
 });
 
 describe("scheduled brief helpers", () => {
-  it("builds a host cron example with force", () => {
-    const config = {
-      ...defaultScheduledBriefConfig(),
-      hour: 9,
-      minute: 0,
-      weekdaysOnly: true,
-    };
-    expect(hostCronExample(config, "http://localhost:3000")).toBe(
-      "0 9 * * 1-5 curl -fsS -X POST http://localhost:3000/api/briefs/run -H 'content-type: application/json' -d '{\"force\":true}'",
-    );
-  });
-
   it("titles the brief chat with a local date", () => {
     const title = morningBriefChatTitle(new Date("2026-08-03T12:00:00.000Z"), "UTC");
     expect(title).toContain("Morning brief");

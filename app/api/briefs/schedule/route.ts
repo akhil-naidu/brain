@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import {
-  hostCronExample,
   isScheduledBriefDue,
   readScheduledBriefConfig,
   updateScheduledBriefBodySchema,
@@ -9,21 +8,11 @@ import {
 
 export const runtime = "nodejs";
 
-function publicOrigin(request: Request): string {
-  const configured = process.env.BRAIN_PUBLIC_URL?.trim();
-  if (configured) {
-    return configured.replace(/\/$/, "");
-  }
-  return new URL(request.url).origin;
-}
-
-export async function GET(request: Request) {
+export async function GET() {
   const config = await readScheduledBriefConfig();
-  const origin = publicOrigin(request);
   return NextResponse.json({
     schedule: config,
     due: isScheduledBriefDue(config),
-    hostCron: hostCronExample(config, origin),
   });
 }
 
@@ -42,11 +31,9 @@ export async function PUT(request: Request) {
 
   try {
     const schedule = await writeScheduledBriefConfig(parsed.data);
-    const origin = publicOrigin(request);
     return NextResponse.json({
       schedule,
       due: isScheduledBriefDue(schedule),
-      hostCron: hostCronExample(schedule, origin),
     });
   } catch (error) {
     return NextResponse.json(
