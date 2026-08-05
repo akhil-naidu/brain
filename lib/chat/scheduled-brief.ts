@@ -16,12 +16,32 @@ const scheduleSchema = z
     minute: z.number().int().min(0).max(59),
     timezone: z.string().min(1),
     weekdaysOnly: z.boolean(),
+    slackDeliveryEnabled: z.boolean().optional(),
+    slackChannel: z.string().nullable().optional(),
+    lastSlackError: z.string().nullable().optional(),
     lastRunDateKey: z.string().nullable(),
     lastChatId: z.string().nullable(),
     lastRunAt: z.string().nullable(),
     runningSince: z.string().nullable(),
   })
-  .strict();
+  .strict()
+  .transform((value) => {
+    const channel = value.slackChannel?.trim() || null;
+    return {
+      enabled: value.enabled,
+      hour: value.hour,
+      minute: value.minute,
+      timezone: value.timezone,
+      weekdaysOnly: value.weekdaysOnly,
+      slackDeliveryEnabled: value.slackDeliveryEnabled ?? false,
+      slackChannel: channel,
+      lastSlackError: value.lastSlackError ?? null,
+      lastRunDateKey: value.lastRunDateKey,
+      lastChatId: value.lastChatId,
+      lastRunAt: value.lastRunAt,
+      runningSince: value.runningSince,
+    };
+  });
 
 export type ScheduledBriefConfig = z.infer<typeof scheduleSchema>;
 
@@ -31,6 +51,8 @@ export type ScheduledBriefUpdate = {
   readonly minute?: number;
   readonly timezone?: string;
   readonly weekdaysOnly?: boolean;
+  readonly slackDeliveryEnabled?: boolean;
+  readonly slackChannel?: string | null;
 };
 
 export function defaultScheduledBriefConfig(): ScheduledBriefConfig {
@@ -40,6 +62,9 @@ export function defaultScheduledBriefConfig(): ScheduledBriefConfig {
     minute: DEFAULT_SCHEDULED_BRIEF_MINUTE,
     timezone: DEFAULT_SCHEDULED_BRIEF_TIMEZONE,
     weekdaysOnly: true,
+    slackDeliveryEnabled: false,
+    slackChannel: null,
+    lastSlackError: null,
     lastRunDateKey: null,
     lastChatId: null,
     lastRunAt: null,
@@ -276,6 +301,8 @@ export const updateScheduledBriefBodySchema = z
     minute: z.number().int().min(0).max(59).optional(),
     timezone: z.string().min(1).optional(),
     weekdaysOnly: z.boolean().optional(),
+    slackDeliveryEnabled: z.boolean().optional(),
+    slackChannel: z.string().nullable().optional(),
   })
   .strict();
 

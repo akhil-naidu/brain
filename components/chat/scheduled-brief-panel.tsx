@@ -52,6 +52,7 @@ export function ScheduledBriefPanel({
   const [schedule, setSchedule] = useState<ScheduledBriefConfig | null>(null);
   const [hostCron, setHostCron] = useState("");
   const [timeValue, setTimeValue] = useState("09:00");
+  const [slackChannelDraft, setSlackChannelDraft] = useState("");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -75,6 +76,7 @@ export function ScheduledBriefPanel({
         };
         setSchedule(next);
         setTimeValue(formatTimeValue(next.hour, next.minute));
+        setSlackChannelDraft(next.slackChannel ?? "");
         setHostCron(result.hostCron);
       } catch {
         if (!cancelled) {
@@ -100,6 +102,7 @@ export function ScheduledBriefPanel({
       });
       setSchedule(result.schedule);
       setTimeValue(formatTimeValue(result.schedule.hour, result.schedule.minute));
+      setSlackChannelDraft(result.schedule.slackChannel ?? "");
       setHostCron(result.hostCron);
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Unable to save schedule.");
@@ -181,10 +184,48 @@ export function ScheduledBriefPanel({
           />
         </div>
 
+        <div className="flex items-center justify-between gap-3 text-sm">
+          <label htmlFor="scheduled-brief-slack">Also post to Slack</label>
+          <input
+            checked={schedule.slackDeliveryEnabled}
+            disabled={disabled || saving || running}
+            id="scheduled-brief-slack"
+            onChange={(event) => {
+              void persist({ slackDeliveryEnabled: event.target.checked });
+            }}
+            type="checkbox"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5 text-sm">
+          <label htmlFor="scheduled-brief-slack-channel">Slack channel</label>
+          <Input
+            disabled={disabled || saving || running || !schedule.slackDeliveryEnabled}
+            id="scheduled-brief-slack-channel"
+            onBlur={() => {
+              const next = slackChannelDraft.trim() || null;
+              if (next === (schedule.slackChannel ?? null)) {
+                return;
+              }
+              void persist({ slackChannel: next });
+            }}
+            onChange={(event) => {
+              setSlackChannelDraft(event.target.value);
+            }}
+            placeholder="#alerts or C0123ABC"
+            value={slackChannelDraft}
+          />
+        </div>
+
         <p className="text-muted-foreground text-xs leading-relaxed">
           Uses {schedule.timezone}. Automatic runs need Brain running in production (`pnpm start`);
-          while developing, use Run now or host cron.
+          while developing, use Run now or host cron. Slack posting uses your connected Slack
+          account.
         </p>
+
+        {schedule.lastSlackError ? (
+          <p className="text-destructive text-xs leading-relaxed">{schedule.lastSlackError}</p>
+        ) : null}
 
         <div className="flex flex-wrap items-center gap-2">
           <Button
@@ -194,12 +235,23 @@ export function ScheduledBriefPanel({
                 setRunning(true);
                 setActionError(null);
                 try {
-                  const result = await runScheduledBriefNow(true);
-                  if (result.skipped) {
+                  const brief = await runScheduledBriefNow(true);
+                  if (brief.skipped) {
                     setActionError("Brief did not run.");
                     return;
                   }
-                  onOpenChat(result.chat.id);
+                  if (brief.slack.attempted && !brief.slack.ok) {
+                    setActionError(brief.slack.error);
+                  }
+                  try {
+                    const latest = await fetchScheduledBrief();
+                    setSchedule(latest.schedule);
+                    setSlackChannelDraft(latest.schedule.slackChannel ?? "");
+                    setHostCron(latest.hostCron);
+                  } catch {
+                    // Opening the chat still succeeds if refresh fails.
+                  }
+                  onOpenChat(brief.chat.id);
                 } catch (error) {
                   setActionError(
                     error instanceof Error ? error.message : "Unable to run morning brief.",

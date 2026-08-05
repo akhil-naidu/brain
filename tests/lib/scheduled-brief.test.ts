@@ -104,18 +104,39 @@ describe("scheduled brief persistence", () => {
         minute: 15,
         timezone: "America/New_York",
         weekdaysOnly: false,
+        slackDeliveryEnabled: true,
+        slackChannel: "#alerts",
       },
       filePath,
     );
     expect(written.enabled).toBe(true);
     expect(written.hour).toBe(8);
     expect(written.minute).toBe(15);
+    expect(written.slackDeliveryEnabled).toBe(true);
+    expect(written.slackChannel).toBe("#alerts");
 
     const raw = await readFile(filePath, "utf8");
     expect(parseScheduledBriefConfig(JSON.parse(raw) as unknown)).toEqual(written);
 
     const read = await readScheduledBriefConfig(filePath);
     expect(read).toEqual(written);
+  });
+
+  it("defaults missing Slack fields on older config files", () => {
+    const parsed = parseScheduledBriefConfig({
+      enabled: false,
+      hour: 9,
+      minute: 0,
+      timezone: "UTC",
+      weekdaysOnly: true,
+      lastRunDateKey: null,
+      lastChatId: null,
+      lastRunAt: null,
+      runningSince: null,
+    });
+    expect(parsed?.slackDeliveryEnabled).toBe(false);
+    expect(parsed?.slackChannel).toBeNull();
+    expect(parsed?.lastSlackError).toBeNull();
   });
 });
 

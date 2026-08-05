@@ -1,8 +1,4 @@
-## Purpose
-
-Deliver Brain’s morning brief into a persisted chat on a local schedule while the host is running, with optional Slack delivery.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Local schedule configuration
 
@@ -18,19 +14,7 @@ Brain SHALL persist a morning-brief schedule under `.eve/scheduled-brief.json` w
 - **WHEN** a client enables Slack delivery with a non-empty channel target
 - **THEN** Brain persists `slackDeliveryEnabled` and `slackChannel`
 
-### Requirement: Deliver brief into a chat
-
-When a brief run is executed, Brain SHALL create a new persisted chat titled for that morning brief, start an eve session using the morning-brief prompt, and store the session plus stream events on that chat.
-
-#### Scenario: Forced run creates a chat
-
-- **WHEN** a client requests a forced brief run
-- **THEN** Brain creates a chat, runs the morning-brief prompt, and returns the chat id
-
-#### Scenario: Due run skips after success the same local day
-
-- **WHEN** a non-forced run is requested after a successful run already recorded for the schedule’s local calendar day
-- **THEN** Brain skips starting another brief and reports that it was not due
+## ADDED Requirements
 
 ### Requirement: Optional Slack delivery after brief
 
@@ -45,15 +29,6 @@ When Slack delivery is enabled and a channel target is configured, Brain SHALL a
 
 - **WHEN** Slack delivery is enabled but Slack is not signed in or the channel cannot be resolved
 - **THEN** Brain still persists the brief chat and records a Slack delivery error
-
-### Requirement: Automatic dispatch while production eve runs
-
-Brain SHALL define an eve schedule that checks approximately every minute and triggers a non-forced brief run against the Next API when the configured schedule is enabled and due.
-
-#### Scenario: Production tick when due
-
-- **WHEN** production eve is running, the schedule is enabled, and the local time matches the configured minute
-- **THEN** Brain starts at most one brief chat for that local calendar day
 
 ### Requirement: Empty-state schedule controls
 

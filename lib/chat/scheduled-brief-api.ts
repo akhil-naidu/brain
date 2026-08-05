@@ -9,6 +9,9 @@ const scheduleSchema = z.object({
   minute: z.number(),
   timezone: z.string(),
   weekdaysOnly: z.boolean(),
+  slackDeliveryEnabled: z.boolean(),
+  slackChannel: z.string().nullable(),
+  lastSlackError: z.string().nullable(),
   lastRunDateKey: z.string().nullable(),
   lastChatId: z.string().nullable(),
   lastRunAt: z.string().nullable(),
@@ -74,8 +77,26 @@ export async function updateScheduledBrief(
   return scheduleResponseSchema.parse(data);
 }
 
+const slackResultSchema = z.union([
+  z.object({ attempted: z.literal(false) }),
+  z.object({
+    attempted: z.literal(true),
+    ok: z.literal(true),
+    channelId: z.string(),
+  }),
+  z.object({
+    attempted: z.literal(true),
+    ok: z.literal(false),
+    error: z.string(),
+  }),
+]);
+
 export type RunBriefApiResult =
-  | { readonly skipped: false; readonly chat: ChatRecord }
+  | {
+      readonly skipped: false;
+      readonly chat: ChatRecord;
+      readonly slack: z.infer<typeof slackResultSchema>;
+    }
   | {
       readonly skipped: true;
       readonly reason: "disabled" | "not_due" | "already_running";
@@ -94,6 +115,7 @@ export async function runScheduledBriefNow(force = true): Promise<RunBriefApiRes
       skipped: z.boolean(),
       reason: z.enum(["disabled", "not_due", "already_running"]).optional(),
       chat: z.unknown().optional(),
+      slack: slackResultSchema.optional(),
     })
     .parse(data);
 
@@ -107,5 +129,6 @@ export async function runScheduledBriefNow(force = true): Promise<RunBriefApiRes
   return {
     skipped: false,
     chat: toChatRecord(parsed.chat),
+    slack: parsed.slack ?? { attempted: false },
   };
 }
