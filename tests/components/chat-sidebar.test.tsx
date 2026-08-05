@@ -124,11 +124,15 @@ describe("ChatSidebar rename", () => {
 });
 
 describe("ChatSidebar mini lists", () => {
-  it("shows playbook and schedule previews with section page links", async () => {
+  it("shows playbook and schedule previews with open-page actions", async () => {
     renderSidebar();
     expect(await screen.findByRole("button", { name: "Triage inbox" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Playbooks" }).getAttribute("href")).toBe("/playbooks");
-    expect(screen.getByRole("link", { name: "Schedules" }).getAttribute("href")).toBe("/schedules");
+    expect(screen.getByRole("link", { name: "Open playbooks" }).getAttribute("href")).toBe(
+      "/playbooks",
+    );
+    expect(screen.getByRole("link", { name: "Open schedules" }).getAttribute("href")).toBe(
+      "/schedules",
+    );
     expect(screen.getByRole("link", { name: /Morning brief/i }).getAttribute("href")).toBe(
       "/schedules",
     );
@@ -144,7 +148,7 @@ describe("ChatSidebar new chat shortcut hint", () => {
 
     const button = screen.getByRole("button", { name: /New chat/i });
     expect(button.getAttribute("title")).toMatch(/New chat \(.+\)/);
-    expect(button.textContent).toMatch(/⌘⇧O|Ctrl\+Shift\+O/);
+    expect(button.getAttribute("aria-label")).toMatch(/New chat \(.+\)/);
   });
 });
 

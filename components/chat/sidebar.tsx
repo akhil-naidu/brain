@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowUpRightIcon,
   BookmarkIcon,
   CalendarClockIcon,
   ChevronDownIcon,
@@ -31,6 +32,50 @@ import type { ChatSummary } from "@/lib/chat/store/types";
 import { cn } from "@/lib/utils";
 
 const SIDEBAR_LIST_PREVIEW = 3;
+
+function SidebarSection({
+  actions,
+  children,
+  className,
+  contentClassName,
+  onOpenChange,
+  open,
+  title,
+}: {
+  readonly actions?: ReactNode;
+  readonly children: ReactNode;
+  readonly className?: string;
+  readonly contentClassName?: string;
+  readonly onOpenChange: (open: boolean) => void;
+  readonly open: boolean;
+  readonly title: string;
+}) {
+  return (
+    <Collapsible
+      className={cn("border-border/70 flex min-h-0 flex-col border-b", className)}
+      onOpenChange={onOpenChange}
+      open={open}
+    >
+      <div className="bg-muted/25 flex h-7 shrink-0 items-center gap-0.5 px-0.5">
+        <CollapsibleTrigger className="text-muted-foreground hover:text-foreground flex min-w-0 flex-1 cursor-pointer items-center gap-1 rounded-sm px-1.5 py-1 text-left text-[11px] font-semibold tracking-wide uppercase">
+          <ChevronDownIcon
+            className={cn(
+              "size-3.5 shrink-0 opacity-70 transition-transform",
+              open ? "rotate-0" : "-rotate-90",
+            )}
+          />
+          <span className="truncate">{title}</span>
+        </CollapsibleTrigger>
+        {actions ? (
+          <div className="flex shrink-0 items-center gap-0.5 pr-0.5">{actions}</div>
+        ) : null}
+      </div>
+      <CollapsibleContent className={cn("min-h-0 data-[state=closed]:hidden", contentClassName)}>
+        {children}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
 
 export function ChatSidebar({
   brand,
@@ -80,6 +125,7 @@ export function ChatSidebar({
   const { playbooks } = usePlaybooks();
   const [schedules, setSchedules] = useState<readonly ScheduledPlaybook[]>([]);
   const [morningBriefEnabled, setMorningBriefEnabled] = useState(false);
+  const [chatsOpen, setChatsOpen] = useState(true);
   const [playbooksOpen, setPlaybooksOpen] = useState(true);
   const [schedulesOpen, setSchedulesOpen] = useState(true);
 
@@ -120,6 +166,7 @@ export function ChatSidebar({
     if (searchFocusRequest <= 0) {
       return undefined;
     }
+    setChatsOpen(true);
     const frame = window.requestAnimationFrame(() => {
       searchInputRef.current?.focus();
       searchInputRef.current?.select();
@@ -240,245 +287,243 @@ export function ChatSidebar({
         className,
       )}
     >
-      <div className="flex flex-col gap-1 px-2 pt-2 pb-2">
-        <div className="flex items-center justify-between gap-2 px-1">
-          <div className="text-foreground flex min-w-0 items-center gap-2 text-sm font-medium">
-            {brand}
-          </div>
-          {onToggleSidebar ? (
+      <div className="border-border/70 flex shrink-0 items-center justify-between gap-2 border-b px-2 py-1.5">
+        <div className="text-foreground flex min-w-0 items-center gap-2 text-sm font-medium">
+          {brand}
+        </div>
+        {onToggleSidebar ? (
+          <Button
+            aria-label={`Collapse sidebar (${sidebarShortcutLabel})`}
+            className="text-muted-foreground/55 hover:text-muted-foreground"
+            onClick={onToggleSidebar}
+            size="icon-sm"
+            title={`Collapse sidebar (${sidebarShortcutLabel})`}
+            type="button"
+            variant="ghost"
+          >
+            <PanelLeftIcon className="size-4" />
+          </Button>
+        ) : null}
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col">
+        <SidebarSection
+          actions={
             <Button
-              aria-label={`Collapse sidebar (${sidebarShortcutLabel})`}
-              className="text-muted-foreground/55 hover:text-muted-foreground"
-              onClick={onToggleSidebar}
+              aria-label={`New chat (${shortcutLabel})`}
+              className="text-muted-foreground/70 hover:text-foreground size-6"
+              onClick={onNewChat}
               size="icon-sm"
-              title={`Collapse sidebar (${sidebarShortcutLabel})`}
+              title={`New chat (${shortcutLabel})`}
               type="button"
               variant="ghost"
             >
-              <PanelLeftIcon className="size-4" />
+              <PlusIcon className="size-3.5" />
             </Button>
-          ) : null}
-        </div>
-        <button
-          className="text-muted-foreground hover:bg-muted/50 hover:text-foreground flex h-9 w-full cursor-pointer items-center gap-2 rounded-md px-2 text-sm transition-colors"
-          onClick={onNewChat}
-          title={`New chat (${shortcutLabel})`}
-          type="button"
+          }
+          className={cn(chatsOpen && "min-h-0 flex-1")}
+          contentClassName="flex min-h-0 flex-1 flex-col"
+          onOpenChange={setChatsOpen}
+          open={chatsOpen}
+          title="Chats"
         >
-          <PlusIcon className="size-4 shrink-0" />
-          <span className="min-w-0 flex-1 text-left">New chat</span>
-          <span className="text-muted-foreground/55 shrink-0 text-[11px] tracking-wide">
-            {shortcutLabel}
-          </span>
-        </button>
-      </div>
-
-      <div className="flex min-h-0 flex-1 flex-col px-2">
-        <div className="relative mb-2 shrink-0 px-0.5">
-          <SearchIcon className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
-          <Input
-            aria-label="Search chats"
-            className="h-8 bg-transparent pr-12 pl-8 text-sm shadow-none"
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search chats"
-            ref={searchInputRef}
-            title={`Search chats (${searchShortcutLabel})`}
-            type="search"
-            value={query}
-          />
-          <span className="text-muted-foreground/55 pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-[11px] tracking-wide">
-            {searchShortcutLabel}
-          </span>
-        </div>
-        <p className="text-muted-foreground/70 shrink-0 px-2 pb-1 text-[11px] font-medium tracking-wide uppercase">
-          Chats
-        </p>
-        <div className="min-h-0 flex-1 overflow-y-auto pb-2">
-          {showDraftRow ? (
-            <div
-              aria-current="page"
-              className="bg-muted/50 text-foreground mb-1 rounded-md px-2 py-2 text-sm"
-            >
-              <span className="line-clamp-2">{draftTitle}</span>
-            </div>
-          ) : null}
-          {chats.length === 0 && !showDraftRow && !hasActiveQuery ? (
-            <p className="text-muted-foreground/70 px-2 py-2 text-sm">No chats yet</p>
-          ) : null}
-          {hasActiveQuery && filteredChats.length === 0 ? (
-            <p className="text-muted-foreground/70 px-2 py-2 text-sm">No chats match</p>
-          ) : null}
-          <ul className="flex flex-col gap-0.5">
-            {filteredChats.map((chat) => {
-              const selected = chat.id === activeChatId;
-              const editing = editingId === chat.id;
-              return (
-                <li key={chat.id}>
-                  <div
-                    className={cn(
-                      "group flex items-start gap-0.5 rounded-md",
-                      selected ? "bg-muted/50" : "hover:bg-muted/40",
-                    )}
-                  >
-                    {editing ? (
-                      <input
-                        aria-label={`Rename ${chat.title}`}
-                        className="border-border bg-background text-foreground focus-visible:ring-ring/50 mx-1 my-1 min-w-0 flex-1 rounded-md border px-2 py-1 text-sm outline-none focus-visible:ring-2"
-                        onBlur={() => commitRename(chat.id)}
-                        onChange={(event) => setEditValue(event.target.value)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter") {
-                            event.preventDefault();
-                            commitRename(chat.id);
-                          } else if (event.key === "Escape") {
-                            event.preventDefault();
-                            cancelRename();
-                          }
-                        }}
-                        ref={renameInputRef}
-                        value={editValue}
-                      />
-                    ) : (
-                      <button
-                        aria-current={selected ? "page" : undefined}
-                        className={cn(
-                          "min-w-0 flex-1 cursor-pointer px-2 py-2 text-left text-sm",
-                          selected
-                            ? "text-foreground"
-                            : "text-muted-foreground hover:text-foreground",
-                        )}
-                        onClick={() => onSelectChat(chat.id)}
-                        type="button"
-                      >
-                        <span className="line-clamp-2">{chat.title}</span>
-                      </button>
-                    )}
-                    {!editing ? (
-                      <>
-                        <Button
-                          aria-label={`Rename ${chat.title}`}
-                          className="text-muted-foreground/50 hover:text-foreground mt-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                          onClick={() => beginRename(chat)}
-                          size="icon-sm"
-                          type="button"
-                          variant="ghost"
-                        >
-                          <PencilIcon className="size-3.5" />
-                        </Button>
-                        <Button
-                          aria-label={`Delete ${chat.title}`}
-                          className="text-muted-foreground/50 hover:text-foreground mt-1 mr-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                          onClick={() => onDeleteChat(chat.id)}
-                          size="icon-sm"
-                          type="button"
-                          variant="ghost"
-                        >
-                          <Trash2Icon className="size-3.5" />
-                        </Button>
-                      </>
-                    ) : null}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      </div>
-
-      <div className="border-border shrink-0 border-t px-2 pt-2">
-        <Collapsible onOpenChange={setPlaybooksOpen} open={playbooksOpen}>
-          <div className="flex items-center gap-0.5 px-1 pb-1">
-            <CollapsibleTrigger
-              aria-label={playbooksOpen ? "Collapse playbooks" : "Expand playbooks"}
-              className="text-muted-foreground/70 hover:text-muted-foreground inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md"
-            >
-              <ChevronDownIcon
-                className={cn(
-                  "size-3.5 transition-transform",
-                  playbooksOpen ? "rotate-0" : "-rotate-90",
-                )}
-              />
-            </CollapsibleTrigger>
-            <Link
-              className="text-muted-foreground/70 hover:text-foreground min-w-0 flex-1 truncate text-[11px] font-medium tracking-wide uppercase transition-colors"
-              href="/playbooks"
-              title="Open playbooks"
-            >
-              Playbooks
-            </Link>
+          <div className="relative shrink-0 px-2 pt-2 pb-1.5">
+            <SearchIcon className="text-muted-foreground pointer-events-none absolute top-1/2 left-4 size-3.5 -translate-y-1/2" />
+            <Input
+              aria-label="Search chats"
+              className="border-border/60 bg-background/50 h-7 pr-11 pl-8 text-xs shadow-none"
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search"
+              ref={searchInputRef}
+              title={`Search chats (${searchShortcutLabel})`}
+              type="search"
+              value={query}
+            />
+            <span className="text-muted-foreground/50 pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-[10px] tracking-wide">
+              {searchShortcutLabel}
+            </span>
           </div>
-          <CollapsibleContent>
-            {previewPlaybooks.length === 0 ? (
-              <p className="text-muted-foreground/70 px-2 py-1.5 text-sm">None yet</p>
-            ) : (
-              <ul className="flex flex-col gap-0.5">
-                {previewPlaybooks.map((item) => (
-                  <li key={item.id}>
-                    <button
-                      className="text-muted-foreground hover:bg-muted/40 hover:text-foreground w-full cursor-pointer rounded-md px-2 py-1.5 text-left text-sm"
-                      onClick={() => onRunPlaybook?.(item.prompt)}
-                      type="button"
+          <div className="min-h-0 flex-1 overflow-y-auto px-1 pb-1">
+            {showDraftRow ? (
+              <div
+                aria-current="page"
+                className="bg-muted/60 text-foreground mb-0.5 rounded-sm px-2 py-1.5 text-[13px]"
+              >
+                <span className="line-clamp-1">{draftTitle}</span>
+              </div>
+            ) : null}
+            {chats.length === 0 && !showDraftRow && !hasActiveQuery ? (
+              <p className="text-muted-foreground/70 px-2 py-2 text-xs">No chats yet</p>
+            ) : null}
+            {hasActiveQuery && filteredChats.length === 0 ? (
+              <p className="text-muted-foreground/70 px-2 py-2 text-xs">No chats match</p>
+            ) : null}
+            <ul className="flex flex-col">
+              {filteredChats.map((chat) => {
+                const selected = chat.id === activeChatId;
+                const editing = editingId === chat.id;
+                return (
+                  <li key={chat.id}>
+                    <div
+                      className={cn(
+                        "group flex items-center gap-0.5 rounded-sm",
+                        selected ? "bg-muted/70" : "hover:bg-muted/40",
+                      )}
                     >
-                      <span className="line-clamp-1">{item.label}</span>
-                    </button>
+                      {editing ? (
+                        <input
+                          aria-label={`Rename ${chat.title}`}
+                          className="border-border bg-background text-foreground focus-visible:ring-ring/50 mx-1 my-0.5 min-w-0 flex-1 rounded-sm border px-1.5 py-1 text-[13px] outline-none focus-visible:ring-2"
+                          onBlur={() => commitRename(chat.id)}
+                          onChange={(event) => setEditValue(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              commitRename(chat.id);
+                            } else if (event.key === "Escape") {
+                              event.preventDefault();
+                              cancelRename();
+                            }
+                          }}
+                          ref={renameInputRef}
+                          value={editValue}
+                        />
+                      ) : (
+                        <button
+                          aria-current={selected ? "page" : undefined}
+                          className={cn(
+                            "min-w-0 flex-1 cursor-pointer px-2 py-1.5 text-left text-[13px]",
+                            selected
+                              ? "text-foreground"
+                              : "text-muted-foreground hover:text-foreground",
+                          )}
+                          onClick={() => onSelectChat(chat.id)}
+                          type="button"
+                        >
+                          <span className="line-clamp-1">{chat.title}</span>
+                        </button>
+                      )}
+                      {!editing ? (
+                        <>
+                          <Button
+                            aria-label={`Rename ${chat.title}`}
+                            className="text-muted-foreground/50 hover:text-foreground size-6 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                            onClick={() => beginRename(chat)}
+                            size="icon-sm"
+                            type="button"
+                            variant="ghost"
+                          >
+                            <PencilIcon className="size-3" />
+                          </Button>
+                          <Button
+                            aria-label={`Delete ${chat.title}`}
+                            className="text-muted-foreground/50 hover:text-foreground mr-0.5 size-6 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                            onClick={() => onDeleteChat(chat.id)}
+                            size="icon-sm"
+                            type="button"
+                            variant="ghost"
+                          >
+                            <Trash2Icon className="size-3" />
+                          </Button>
+                        </>
+                      ) : null}
+                    </div>
                   </li>
-                ))}
-              </ul>
-            )}
-          </CollapsibleContent>
-        </Collapsible>
-
-        <Collapsible className="mt-2" onOpenChange={setSchedulesOpen} open={schedulesOpen}>
-          <div className="flex items-center gap-0.5 px-1 pb-1">
-            <CollapsibleTrigger
-              aria-label={schedulesOpen ? "Collapse schedules" : "Expand schedules"}
-              className="text-muted-foreground/70 hover:text-muted-foreground inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md"
-            >
-              <ChevronDownIcon
-                className={cn(
-                  "size-3.5 transition-transform",
-                  schedulesOpen ? "rotate-0" : "-rotate-90",
-                )}
-              />
-            </CollapsibleTrigger>
-            <Link
-              className="text-muted-foreground/70 hover:text-foreground min-w-0 flex-1 truncate text-[11px] font-medium tracking-wide uppercase transition-colors"
-              href="/schedules"
-              title="Open schedules"
-            >
-              Schedules
-            </Link>
+                );
+              })}
+            </ul>
           </div>
-          <CollapsibleContent>
-            <ul className="flex flex-col gap-0.5">
-              <li>
-                <Link
-                  className="text-muted-foreground hover:bg-muted/40 hover:text-foreground block rounded-md px-2 py-1.5 text-sm transition-colors"
-                  href="/schedules"
-                >
-                  <span className="line-clamp-1">
-                    Morning brief · {morningBriefEnabled ? "On" : "Off"}
-                  </span>
-                </Link>
-              </li>
-              {previewSchedules.map((schedule) => (
-                <li key={schedule.id}>
-                  <Link
-                    className="text-muted-foreground hover:bg-muted/40 hover:text-foreground block rounded-md px-2 py-1.5 text-sm transition-colors"
-                    href="/schedules"
+        </SidebarSection>
+
+        <SidebarSection
+          actions={
+            <Button
+              aria-label="Open playbooks"
+              asChild
+              className="text-muted-foreground/70 hover:text-foreground size-6"
+              size="icon-sm"
+              title="Open playbooks"
+              variant="ghost"
+            >
+              <Link href="/playbooks">
+                <ArrowUpRightIcon className="size-3.5" />
+              </Link>
+            </Button>
+          }
+          className="shrink-0"
+          contentClassName="max-h-36 overflow-y-auto"
+          onOpenChange={setPlaybooksOpen}
+          open={playbooksOpen}
+          title="Playbooks"
+        >
+          {previewPlaybooks.length === 0 ? (
+            <p className="text-muted-foreground/70 px-2.5 py-2 text-xs">None yet</p>
+          ) : (
+            <ul className="flex flex-col px-1 py-0.5">
+              {previewPlaybooks.map((item) => (
+                <li key={item.id}>
+                  <button
+                    className="text-muted-foreground hover:bg-muted/40 hover:text-foreground w-full cursor-pointer rounded-sm px-2 py-1.5 text-left text-[13px]"
+                    onClick={() => onRunPlaybook?.(item.prompt)}
+                    type="button"
                   >
-                    <span className="line-clamp-1">
-                      {schedule.label}
-                      {" · "}
-                      {formatScheduleTimeValue(schedule.hour, schedule.minute)}
-                      {schedule.enabled ? "" : " · Off"}
-                    </span>
-                  </Link>
+                    <span className="line-clamp-1">{item.label}</span>
+                  </button>
                 </li>
               ))}
             </ul>
-          </CollapsibleContent>
-        </Collapsible>
+          )}
+        </SidebarSection>
+
+        <SidebarSection
+          actions={
+            <Button
+              aria-label="Open schedules"
+              asChild
+              className="text-muted-foreground/70 hover:text-foreground size-6"
+              size="icon-sm"
+              title="Open schedules"
+              variant="ghost"
+            >
+              <Link href="/schedules">
+                <ArrowUpRightIcon className="size-3.5" />
+              </Link>
+            </Button>
+          }
+          className="shrink-0 border-b-0"
+          contentClassName="max-h-40 overflow-y-auto"
+          onOpenChange={setSchedulesOpen}
+          open={schedulesOpen}
+          title="Schedules"
+        >
+          <ul className="flex flex-col px-1 py-0.5">
+            <li>
+              <Link
+                className="text-muted-foreground hover:bg-muted/40 hover:text-foreground block rounded-sm px-2 py-1.5 text-[13px] transition-colors"
+                href="/schedules"
+              >
+                <span className="line-clamp-1">
+                  Morning brief · {morningBriefEnabled ? "On" : "Off"}
+                </span>
+              </Link>
+            </li>
+            {previewSchedules.map((schedule) => (
+              <li key={schedule.id}>
+                <Link
+                  className="text-muted-foreground hover:bg-muted/40 hover:text-foreground block rounded-sm px-2 py-1.5 text-[13px] transition-colors"
+                  href="/schedules"
+                >
+                  <span className="line-clamp-1">
+                    {schedule.label}
+                    {" · "}
+                    {formatScheduleTimeValue(schedule.hour, schedule.minute)}
+                    {schedule.enabled ? "" : " · Off"}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </SidebarSection>
       </div>
     </aside>
   );
