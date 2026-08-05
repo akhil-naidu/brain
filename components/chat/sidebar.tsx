@@ -229,20 +229,6 @@ export function ChatSidebar({
             <CalendarClockIcon className="size-4" />
           </Link>
         </Button>
-        <div className="mt-auto pb-1">
-          <Button
-            aria-label="Home"
-            asChild
-            className="text-muted-foreground"
-            size="icon-sm"
-            title="Home"
-            variant="ghost"
-          >
-            <Link href="/">
-              <span className="text-[10px] font-medium">Home</span>
-            </Link>
-          </Button>
-        </div>
       </aside>
     );
   }
@@ -493,15 +479,6 @@ export function ChatSidebar({
             </ul>
           </CollapsibleContent>
         </Collapsible>
-      </div>
-
-      <div className="border-border shrink-0 border-t px-3 py-3">
-        <Link
-          className="text-muted-foreground hover:text-foreground text-xs transition-colors"
-          href="/"
-        >
-          Home
-        </Link>
       </div>
     </aside>
   );

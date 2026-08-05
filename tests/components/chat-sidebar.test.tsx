@@ -135,7 +135,6 @@ describe("ChatSidebar mini lists", () => {
     expect(screen.getByRole("link", { name: /Daily standup/i }).getAttribute("href")).toBe(
       "/schedules",
     );
-    expect(screen.getByRole("link", { name: "Home" }).getAttribute("href")).toBe("/");
   });
 });
 
