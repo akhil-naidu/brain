@@ -122,11 +122,11 @@ export function ScheduledPlaybooksPanel({
   return (
     <section
       className={cn(
-        "border-border/60 bg-card mx-auto mt-6 w-full max-w-md overflow-hidden rounded-lg border text-left",
+        "border-border/60 bg-card mx-auto mt-6 w-full max-w-md overflow-hidden rounded-xl border text-left",
         className,
       )}
     >
-      <div className="flex items-center justify-between gap-2 px-3 py-3">
+      <div className="flex items-center justify-between gap-2 px-4 py-3.5">
         <p className="text-sm font-medium">Playbooks</p>
         <Button
           className="h-7 px-2 text-xs"
@@ -152,7 +152,7 @@ export function ScheduledPlaybooksPanel({
       </div>
 
       {adding ? (
-        <div className="border-border/60 flex flex-col gap-2 border-t px-3 py-3">
+        <div className="border-border/60 flex flex-col gap-3 border-t px-4 py-3.5">
           <label
             className="flex flex-col gap-1 text-sm"
             htmlFor={fieldId("schedule-playbook-select")}
@@ -268,7 +268,7 @@ export function ScheduledPlaybooksPanel({
       ) : null}
 
       {schedules.length === 0 ? (
-        <p className="text-muted-foreground border-border/60 border-t px-3 py-3 text-sm">
+        <p className="text-muted-foreground border-border/60 border-t px-4 py-4 text-sm">
           None yet.
         </p>
       ) : (
@@ -277,7 +277,7 @@ export function ScheduledPlaybooksPanel({
             const timeValue = formatTimeValue(schedule.hour, schedule.minute);
             const busy = busyId === schedule.id;
             return (
-              <li className="flex flex-col gap-2 px-3 py-3" key={schedule.id}>
+              <li className="flex flex-col gap-3 px-4 py-3.5" key={schedule.id}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{schedule.label}</p>
@@ -440,7 +440,7 @@ export function ScheduledPlaybooksPanel({
       )}
 
       {actionError ? (
-        <p className="text-destructive border-border/60 border-t px-3 py-2 text-xs">
+        <p className="text-destructive border-border/60 border-t px-4 py-2.5 text-xs">
           {actionError}
         </p>
       ) : null}

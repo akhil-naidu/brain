@@ -155,11 +155,11 @@ export function ScheduledBriefPanel({
   return (
     <section
       className={cn(
-        "border-border/60 bg-card mx-auto mt-6 w-full max-w-md overflow-hidden rounded-lg border text-left",
+        "border-border/60 bg-card mx-auto mt-6 w-full max-w-md overflow-hidden rounded-xl border text-left",
         className,
       )}
     >
-      <div className="flex items-center justify-between gap-3 px-3 py-3">
+      <div className="flex items-center justify-between gap-3 px-4 py-3.5">
         <div className="min-w-0">
           <label className="text-sm font-medium" htmlFor={fieldId("scheduled-brief-enabled")}>
             Morning brief
@@ -194,7 +194,7 @@ export function ScheduledBriefPanel({
       </div>
 
       {schedule.enabled ? (
-        <div className="border-border/60 flex flex-col gap-3 border-t px-3 py-3">
+        <div className="border-border/60 flex flex-col gap-3.5 border-t px-4 py-3.5">
           <div className="flex items-center justify-between gap-3 text-sm">
             <label htmlFor={fieldId("scheduled-brief-time")}>Time</label>
             <Input
@@ -269,12 +269,12 @@ export function ScheduledBriefPanel({
       ) : null}
 
       {schedule.lastSlackError ? (
-        <p className="text-destructive border-border/60 border-t px-3 py-2 text-xs leading-relaxed">
+        <p className="text-destructive border-border/60 border-t px-4 py-2.5 text-xs leading-relaxed">
           {schedule.lastSlackError}
         </p>
       ) : null}
 
-      <div className="border-border/60 flex flex-wrap items-center gap-2 border-t px-3 py-2.5">
+      <div className="border-border/60 flex flex-wrap items-center gap-2 border-t px-4 py-3">
         <Button
           disabled={busy}
           onClick={() => {
@@ -334,7 +334,7 @@ export function ScheduledBriefPanel({
       </div>
 
       {actionError ? (
-        <p className="text-destructive border-border/60 border-t px-3 py-2 text-xs">
+        <p className="text-destructive border-border/60 border-t px-4 py-2.5 text-xs">
           {actionError}
         </p>
       ) : null}

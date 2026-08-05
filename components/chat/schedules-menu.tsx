@@ -96,13 +96,13 @@ export function SchedulesMenu({
 
       <PopoverContent
         align="start"
-        className="max-h-[min(85vh,36rem)] w-[min(22.5rem,calc(100vw-1.5rem))] gap-0 overflow-y-auto p-3"
+        className="max-h-[min(85vh,40rem)] w-[min(32rem,calc(100vw-1.5rem))] gap-0 overflow-y-auto p-4"
         collisionPadding={12}
         side="top"
         sideOffset={8}
       >
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-medium">Schedules</p>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-base font-medium">Schedules</p>
           <div className="flex shrink-0 gap-1">
             {canResume ? (
               <Button
@@ -162,7 +162,7 @@ export function SchedulesMenu({
         </div>
         {pauseError ? <p className="text-destructive mb-2 text-xs">{pauseError}</p> : null}
         {open ? (
-          <div className="flex flex-col gap-3" key={`${refreshKey}-${panelKey}`}>
+          <div className="flex flex-col gap-4" key={`${refreshKey}-${panelKey}`}>
             <ScheduledBriefPanel
               className="mx-0 mt-0 max-w-none"
               disabled={disabled || pauseBusy}
