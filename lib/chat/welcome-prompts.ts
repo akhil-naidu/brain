@@ -17,6 +17,7 @@ Cover what you can with tools:
 2. Important Slack threads or DMs I should see
 3. Email that likely needs a reply (Gmail)
 4. Any dFlow deploy or app health issues
+5. Open GitHub pull requests that need my review or response
 
 Format as a tight brief with clear sections and concrete next actions. Ask before creating, updating, or sending anything.`;
 
@@ -47,5 +48,10 @@ export const WELCOME_PROMPTS: readonly WelcomePrompt[] = [
     id: "dflow-status",
     label: "Check dFlow deploys",
     prompt: "List my dFlow applications and flag any recent failed deployments.",
+  },
+  {
+    id: "github-prs",
+    label: "Review my GitHub PRs",
+    prompt: "List my open GitHub pull requests and summarize what needs attention first.",
   },
 ];

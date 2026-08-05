@@ -22,7 +22,7 @@ export const HOME_TOUR_SCENES: readonly HomeTourScene[] = [
     id: "connections",
     title: "Connect the apps you already use",
     summary:
-      "ClickUp, Slack, Asana, Gmail, and dFlow — set up once, sign in from the menu, then turn tools on when you need them.",
+      "ClickUp, Slack, Asana, Gmail, dFlow, and GitHub — set up once, sign in from the menu, then turn tools on when you need them.",
     points: [
       "See Connected, Sign in, or Set up needed at a glance",
       "Connect or Disconnect without leaving chat",

@@ -89,6 +89,12 @@ export type McpOAuthProvider = {
   tokenAuthMethod: "none" | "client_secret_post";
   /** Extra authorize query params (e.g. Google access_type=offline). */
   authorizeExtraParams?: Record<string, string>;
+  /**
+   * When false, omit RFC 8707 `resource` on authorize/token requests.
+   * Classic GitHub OAuth apps do not accept that parameter.
+   * Defaults to true.
+   */
+  includeResourceIndicator?: boolean;
   /** Providers like Slack wrap tokens in a proprietary JSON envelope. */
   parseTokenResponse?: (json: unknown) => ParsedOAuthToken;
   /** Exact remote tool names reviewed as read-only. Unknown tools require approval. */
@@ -404,8 +410,10 @@ async function refreshStoredToken(
     grant_type: "refresh_token",
     refresh_token: entry.refreshToken,
     client_id: entry.clientId,
-    resource: provider.resource ?? provider.mcpUrl,
   });
+  if (provider.includeResourceIndicator !== false) {
+    body.set("resource", provider.resource ?? provider.mcpUrl);
+  }
   if (provider.tokenAuthMethod === "client_secret_post") {
     body.set("client_secret", entry.clientSecret ?? "");
   }
@@ -508,7 +516,9 @@ export async function buildAuthorizeUrl(
   if (provider.scope !== null) {
     url.searchParams.set("scope", provider.scope);
   }
-  url.searchParams.set("resource", provider.resource ?? provider.mcpUrl);
+  if (provider.includeResourceIndicator !== false) {
+    url.searchParams.set("resource", provider.resource ?? provider.mcpUrl);
+  }
   url.searchParams.set("state", opts.state);
   for (const [key, value] of Object.entries(provider.authorizeExtraParams ?? {})) {
     url.searchParams.set(key, value);
@@ -532,8 +542,10 @@ export async function exchangeAuthorizationCode(
     redirect_uri: opts.callbackUrl,
     client_id: opts.clientId,
     code_verifier: opts.codeVerifier,
-    resource: provider.resource ?? provider.mcpUrl,
   });
+  if (provider.includeResourceIndicator !== false) {
+    body.set("resource", provider.resource ?? provider.mcpUrl);
+  }
   if (provider.tokenAuthMethod === "client_secret_post") {
     body.set("client_secret", opts.clientSecret ?? "");
   }

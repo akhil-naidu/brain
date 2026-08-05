@@ -21,6 +21,7 @@ export type EnabledConnections = {
   readonly asana: boolean;
   readonly gmail: boolean;
   readonly dflow: boolean;
+  readonly github: boolean;
 };
 
 type ChatShellValue = {
@@ -51,6 +52,7 @@ export function ChatShellProvider({ children }: { readonly children: ReactNode }
     asana: false,
     gmail: false,
     dflow: false,
+    github: false,
   });
   const [selectedModelId, setSelectedModelIdState] = useState(DEFAULT_BRAIN_CHAT_MODEL_ID);
   const [preferenceReady, setPreferenceReady] = useState(false);

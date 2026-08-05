@@ -14,6 +14,7 @@ const SCHEDULED_CONNECTIONS = {
   asana: true,
   clickup: true,
   dflow: true,
+  github: true,
   gmail: true,
   slack: true,
 } as const;

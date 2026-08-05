@@ -2,7 +2,14 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Space_Grotesk } from "next/font/google";
-import { AsanaIcon, ClickUpIcon, DflowIcon, GmailIcon, SlackIcon } from "@/components/icons";
+import {
+  AsanaIcon,
+  ClickUpIcon,
+  DflowIcon,
+  GitHubIcon,
+  GmailIcon,
+  SlackIcon,
+} from "@/components/icons";
 import {
   ChatTourMock,
   ConnectionsTourMock,
@@ -23,6 +30,7 @@ const CONNECTION_MARKS = [
   { id: "asana", label: "Asana", Icon: AsanaIcon },
   { id: "gmail", label: "Gmail", Icon: GmailIcon },
   { id: "dflow", label: "dFlow", Icon: DflowIcon },
+  { id: "github", label: "GitHub", Icon: GitHubIcon },
 ] as const;
 
 const SCENE_MOCKS: Record<(typeof HOME_TOUR_SCENES)[number]["id"], ReactNode> = {

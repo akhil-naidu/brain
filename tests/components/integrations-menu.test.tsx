@@ -16,6 +16,7 @@ const fetchConnectionStatuses = vi.hoisted(() =>
     { id: "asana", displayName: "Asana", status: "needs_setup" as const, detail: "Set ASANA" },
     { id: "gmail", displayName: "Gmail", status: "needs_sign_in" as const },
     { id: "dflow", displayName: "dFlow", status: "needs_sign_in" as const },
+    { id: "github", displayName: "GitHub", status: "needs_setup" as const, detail: "Set GITHUB" },
   ]),
 );
 
@@ -170,6 +171,7 @@ describe("IntegrationsMenu status", () => {
           asana: true,
           clickup: true,
           dflow: true,
+          github: false,
           gmail: true,
           slack: true,
         }}

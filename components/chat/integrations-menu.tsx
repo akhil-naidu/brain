@@ -3,7 +3,14 @@
 import type { ComponentType } from "react";
 import { useEffect, useState } from "react";
 import { HammerIcon } from "lucide-react";
-import { AsanaIcon, ClickUpIcon, DflowIcon, GmailIcon, SlackIcon } from "@/components/icons";
+import {
+  AsanaIcon,
+  ClickUpIcon,
+  DflowIcon,
+  GitHubIcon,
+  GmailIcon,
+  SlackIcon,
+} from "@/components/icons";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,6 +41,7 @@ const CONNECTION_ITEMS: readonly ConnectionItem[] = [
   { key: "asana", label: "Asana", Icon: AsanaIcon },
   { key: "gmail", label: "Gmail", Icon: GmailIcon },
   { key: "dflow", label: "dFlow", Icon: DflowIcon },
+  { key: "github", label: "GitHub", Icon: GitHubIcon },
 ];
 
 export function integrationStatusText(input: {

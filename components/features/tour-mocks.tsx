@@ -1,5 +1,12 @@
 import type { ComponentType, ReactNode } from "react";
-import { AsanaIcon, ClickUpIcon, DflowIcon, GmailIcon, SlackIcon } from "@/components/icons";
+import {
+  AsanaIcon,
+  ClickUpIcon,
+  DflowIcon,
+  GitHubIcon,
+  GmailIcon,
+  SlackIcon,
+} from "@/components/icons";
 import { cn } from "@/lib/utils";
 
 function MockChrome({
@@ -90,6 +97,7 @@ const CONNECTION_ROWS: readonly ConnectionRow[] = [
   { id: "gmail", label: "Gmail", status: "Sign in", action: "Connect", Icon: GmailIcon },
   { id: "asana", label: "Asana", status: "Connected", tone: "ok", Icon: AsanaIcon },
   { id: "dflow", label: "dFlow", status: "Sign in", action: "Connect", Icon: DflowIcon },
+  { id: "github", label: "GitHub", status: "Set up needed", action: "Set up", Icon: GitHubIcon },
 ];
 
 export function ConnectionsTourMock() {
