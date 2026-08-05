@@ -9,7 +9,7 @@ import {
   runScheduledBriefNow,
   updateScheduledBrief,
 } from "@/lib/chat/scheduled-brief-api";
-import type { ScheduledBriefConfig } from "@/lib/chat/scheduled-brief";
+import type { ScheduledBriefConfig } from "@/lib/chat/scheduled-brief-api";
 import { cn } from "@/lib/utils";
 
 function browserTimeZone(): string {

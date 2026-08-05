@@ -1,11 +1,9 @@
 import { z } from "zod";
-import type {
-  ScheduledPlaybook,
-  ScheduledPlaybookCreate,
-  ScheduledPlaybookUpdate,
-} from "@/lib/chat/scheduled-playbooks";
+import { MAX_SCHEDULED_PLAYBOOKS } from "@/lib/chat/scheduled-playbooks-limits";
 import type { ChatRecord } from "@/lib/chat/store/types";
 import { parseSessionState, parseStreamEvent, sessionStateSchema } from "@/lib/chat/store/parse";
+
+export { MAX_SCHEDULED_PLAYBOOKS };
 
 const scheduleSchema = z.object({
   id: z.string(),
@@ -25,6 +23,33 @@ const scheduleSchema = z.object({
   lastRunAt: z.string().nullable(),
   runningSince: z.string().nullable(),
 });
+
+export type ScheduledPlaybook = z.infer<typeof scheduleSchema>;
+
+export type ScheduledPlaybookCreate = {
+  readonly label: string;
+  readonly prompt: string;
+  readonly sourcePlaybookId?: string | null;
+  readonly enabled?: boolean;
+  readonly hour?: number;
+  readonly minute?: number;
+  readonly timezone?: string;
+  readonly weekdaysOnly?: boolean;
+  readonly slackDeliveryEnabled?: boolean;
+  readonly slackChannel?: string | null;
+};
+
+export type ScheduledPlaybookUpdate = {
+  readonly label?: string;
+  readonly prompt?: string;
+  readonly enabled?: boolean;
+  readonly hour?: number;
+  readonly minute?: number;
+  readonly timezone?: string;
+  readonly weekdaysOnly?: boolean;
+  readonly slackDeliveryEnabled?: boolean;
+  readonly slackChannel?: string | null;
+};
 
 const chatRecordSchema = z.object({
   id: z.string(),

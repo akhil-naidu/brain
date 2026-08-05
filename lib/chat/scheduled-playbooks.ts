@@ -17,9 +17,10 @@ import {
   normalizePlaybookLabel,
   normalizePlaybookPrompt,
 } from "@/lib/chat/playbooks";
+import { MAX_SCHEDULED_PLAYBOOKS } from "@/lib/chat/scheduled-playbooks-limits";
 
 export const SCHEDULED_PLAYBOOKS_FILENAME = "scheduled-playbooks.json";
-export const MAX_SCHEDULED_PLAYBOOKS = 6;
+export { MAX_SCHEDULED_PLAYBOOKS };
 
 const scheduleItemSchema = z
   .object({

@@ -1,8 +1,8 @@
 import { z } from "zod";
-import type { ScheduledBriefConfig, ScheduledBriefUpdate } from "@/lib/chat/scheduled-brief";
 import type { ChatRecord } from "@/lib/chat/store/types";
 import { parseSessionState, parseStreamEvent, sessionStateSchema } from "@/lib/chat/store/parse";
 
+/** Client-safe types — do not import the Node store module from client components. */
 const scheduleSchema = z.object({
   enabled: z.boolean(),
   hour: z.number(),
@@ -17,6 +17,18 @@ const scheduleSchema = z.object({
   lastRunAt: z.string().nullable(),
   runningSince: z.string().nullable(),
 });
+
+export type ScheduledBriefConfig = z.infer<typeof scheduleSchema>;
+
+export type ScheduledBriefUpdate = {
+  readonly enabled?: boolean;
+  readonly hour?: number;
+  readonly minute?: number;
+  readonly timezone?: string;
+  readonly weekdaysOnly?: boolean;
+  readonly slackDeliveryEnabled?: boolean;
+  readonly slackChannel?: string | null;
+};
 
 const scheduleResponseSchema = z.object({
   schedule: scheduleSchema,

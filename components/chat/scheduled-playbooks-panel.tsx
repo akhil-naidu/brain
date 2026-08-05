@@ -9,10 +9,11 @@ import {
   createScheduledPlaybookApi,
   deleteScheduledPlaybookApi,
   listScheduledPlaybooks,
+  MAX_SCHEDULED_PLAYBOOKS,
   runScheduledPlaybookNow,
   updateScheduledPlaybookApi,
+  type ScheduledPlaybook,
 } from "@/lib/chat/scheduled-playbooks-api";
-import { MAX_SCHEDULED_PLAYBOOKS, type ScheduledPlaybook } from "@/lib/chat/scheduled-playbooks";
 import { cn } from "@/lib/utils";
 
 function browserTimeZone(): string {
