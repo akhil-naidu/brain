@@ -1,8 +1,5 @@
-# connection-status-menu Specification
+## MODIFIED Requirements
 
-## Purpose
-Shows whether each MCP connection is ready, needs sign-in, or needs local setup.
-## Requirements
 ### Requirement: Connection status API
 The host MUST expose a status endpoint that reports each supported connection’s setup/auth state for the local chat principal without requiring a chat turn.
 
@@ -21,11 +18,3 @@ The host MUST expose a status endpoint that reports each supported connection’
 #### Scenario: Needs sign-in after UI credentials are saved
 - **WHEN** a static-credential connection has UI-stored app credentials and no token
 - **THEN** the status endpoint reports needs sign-in (not needs setup)
-
-### Requirement: Status visible in the integrations menu
-The integrations menu MUST show each connection’s status alongside the enable toggle.
-
-#### Scenario: Menu shows status labels
-- **WHEN** the user opens the integrations menu
-- **THEN** each connection row indicates Connected, Sign in, or Needs setup according to the status API
-

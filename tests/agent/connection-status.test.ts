@@ -41,12 +41,24 @@ afterEach(async () => {
 
 describe("resolveConnectionAuthStatus", () => {
   it("reports needs_setup when client credentials are missing", async () => {
+    await useTemporaryWorkingDirectory();
     const status = await resolveConnectionAuthStatus(provider, ANONYMOUS_CHAT_PRINCIPAL, {});
     expect(status).toMatchObject({
       id: "status-test",
       status: "needs_setup",
-      detail: "Set STATUS_TEST_CLIENT_ID",
+      detail: "Add Status Test app credentials",
     });
+  });
+
+  it("reports needs_sign_in when UI-stored credentials exist without env", async () => {
+    await useTemporaryWorkingDirectory();
+    const { writeStoredAppCredentials } = await import("@/agent/lib/connection-credentials");
+    await writeStoredAppCredentials(provider.name, {
+      clientId: "stored-id",
+      clientSecret: "stored-secret",
+    });
+    const status = await resolveConnectionAuthStatus(provider, ANONYMOUS_CHAT_PRINCIPAL, {});
+    expect(status.status).toBe("needs_sign_in");
   });
 
   it("reports needs_sign_in when setup is complete but no token exists", async () => {

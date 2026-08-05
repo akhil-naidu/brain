@@ -4,11 +4,8 @@ import { clickupProvider } from "../connections/clickup";
 import { dflowProvider } from "../connections/dflow";
 import { gmailProvider } from "../connections/gmail";
 import { slackProvider } from "../connections/slack";
-import {
-  getProviderCredentialSetupError,
-  getStoredTokenAuthState,
-  type McpOAuthProvider,
-} from "./mcp-oauth";
+import { getProviderCredentialSetupError } from "./connection-credentials";
+import { getStoredTokenAuthState, type McpOAuthProvider } from "./mcp-oauth";
 
 /** Matches the anonymous chat channel principal in `agent/channels/eve.ts`. */
 export const ANONYMOUS_CHAT_PRINCIPAL: ConnectionPrincipal = {
@@ -43,7 +40,7 @@ export async function resolveConnectionAuthStatus(
   principal: ConnectionPrincipal = ANONYMOUS_CHAT_PRINCIPAL,
   env: { readonly [key: string]: string | undefined } = process.env,
 ): Promise<ConnectionStatusItem> {
-  const setupError = getProviderCredentialSetupError(provider, env);
+  const setupError = await getProviderCredentialSetupError(provider, env);
   if (setupError) {
     return {
       id: provider.name,

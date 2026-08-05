@@ -84,3 +84,70 @@ export async function disconnectConnection(
   const parsed = z.object({ displayName: z.string() }).parse(data);
   return { displayName: parsed.displayName };
 }
+
+const connectionSetupSchema = z.object({
+  id: z.string(),
+  displayName: z.string(),
+  requiresClientSecret: z.boolean(),
+  hasStoredCredentials: z.boolean(),
+  hasCredentials: z.boolean(),
+  credentialSource: z.enum(["stored", "env"]).nullable(),
+  clientIdEnv: z.string().optional(),
+  clientSecretEnv: z.string().optional(),
+  callbackPath: z.string(),
+  callbackUrl: z.string().url(),
+});
+
+export type ConnectionSetupInfo = z.infer<typeof connectionSetupSchema>;
+
+export async function fetchConnectionSetup(connectionId: string): Promise<ConnectionSetupInfo> {
+  const response = await fetch(`/api/connections/${connectionId}/setup`, { cache: "no-store" });
+  const data: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const error =
+      typeof data === "object" && data !== null && "error" in data && typeof data.error === "string"
+        ? data.error
+        : `Connection setup request failed (${response.status})`;
+    throw new Error(error);
+  }
+  return connectionSetupSchema.parse(data);
+}
+
+export async function saveConnectionSetup(
+  connectionId: string,
+  input: { readonly clientId: string; readonly clientSecret?: string },
+): Promise<{ readonly displayName: string }> {
+  const response = await fetch(`/api/connections/${connectionId}/setup`, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input),
+    cache: "no-store",
+  });
+  const data: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const error =
+      typeof data === "object" && data !== null && "error" in data && typeof data.error === "string"
+        ? data.error
+        : `Unable to save credentials (${response.status})`;
+    throw new Error(error);
+  }
+  return z.object({ displayName: z.string() }).parse(data);
+}
+
+export async function clearConnectionSetup(
+  connectionId: string,
+): Promise<{ readonly displayName: string }> {
+  const response = await fetch(`/api/connections/${connectionId}/setup`, {
+    method: "DELETE",
+    cache: "no-store",
+  });
+  const data: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const error =
+      typeof data === "object" && data !== null && "error" in data && typeof data.error === "string"
+        ? data.error
+        : `Unable to clear credentials (${response.status})`;
+    throw new Error(error);
+  }
+  return z.object({ displayName: z.string() }).parse(data);
+}

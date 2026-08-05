@@ -25,7 +25,7 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to start sign-in.";
-    const needsSetup = message.startsWith("Set ");
+    const needsSetup = message.startsWith("Set ") || message.startsWith("Add ");
     return NextResponse.json({ error: message }, { status: needsSetup ? 400 : 500 });
   }
 }

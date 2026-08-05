@@ -3,13 +3,13 @@ import path from "node:path";
 import type { ConnectionPrincipal } from "eve/connections";
 import { z } from "zod";
 import { ANONYMOUS_CHAT_PRINCIPAL } from "./connection-status";
+import { getProviderCredentialSetupError } from "./connection-credentials";
 import {
   authorizeUrlPath,
   buildAuthorizeUrl,
   deleteStoredToken,
   exchangeAuthorizationCode,
   generateOAuthState,
-  getProviderCredentialSetupError,
   makePkce,
   storeAccessToken,
   verifyOAuthState,
@@ -90,7 +90,7 @@ export async function startMenuConnectionAuthorization(
   callbackUrl: string,
   env: { readonly [key: string]: string | undefined } = process.env,
 ): Promise<MenuAuthorizeStartResult> {
-  const setupError = getProviderCredentialSetupError(provider, env);
+  const setupError = await getProviderCredentialSetupError(provider, env);
   if (setupError) {
     throw new Error(setupError);
   }

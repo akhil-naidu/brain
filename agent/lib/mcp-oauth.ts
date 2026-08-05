@@ -3,6 +3,7 @@ import { chmod, mkdir, open, readFile, rename, rm, writeFile } from "node:fs/pro
 import path from "node:path";
 import type { ConnectionPrincipal } from "eve/connections";
 import { z } from "zod";
+import { resolveProviderAppCredentials } from "./connection-credentials";
 
 const EXPIRY_SKEW_MS = 60_000;
 const OAUTH_FETCH_TIMEOUT_MS = 15_000;
@@ -251,19 +252,6 @@ export async function getStoredTokenAuthState(
   return "needs_sign_in";
 }
 
-export function getProviderCredentialSetupError(
-  provider: Pick<McpOAuthProvider, "clientIdEnv" | "clientSecretEnv">,
-  env: { readonly [key: string]: string | undefined } = process.env,
-): string | null {
-  if (provider.clientIdEnv && !env[provider.clientIdEnv]?.trim()) {
-    return `Set ${provider.clientIdEnv}`;
-  }
-  if (provider.clientSecretEnv && !env[provider.clientSecretEnv]?.trim()) {
-    return `Set ${provider.clientSecretEnv}`;
-  }
-  return null;
-}
-
 export async function getStoredAccessToken(
   provider: McpOAuthProvider,
   principal: ConnectionPrincipal,
@@ -459,18 +447,17 @@ async function resolveClient(
   provider: McpOAuthProvider,
   redirectUri: string,
 ): Promise<{ clientId: string; clientSecret?: string }> {
-  const envClientId = provider.clientIdEnv ? process.env[provider.clientIdEnv]?.trim() : undefined;
-  const envClientSecret = provider.clientSecretEnv
-    ? process.env[provider.clientSecretEnv]?.trim()
-    : undefined;
-
-  if (envClientId) {
-    return { clientId: envClientId, clientSecret: envClientSecret || undefined };
+  const appCredentials = await resolveProviderAppCredentials(provider);
+  if (appCredentials?.clientId) {
+    return {
+      clientId: appCredentials.clientId,
+      clientSecret: appCredentials.clientSecret,
+    };
   }
 
   if (!provider.registrationEndpoint) {
     throw new Error(
-      `${provider.displayName} requires ${provider.clientIdEnv} in .env (no dynamic client registration).`,
+      `${provider.displayName} requires app credentials (Configure in the connections menu or set ${provider.clientIdEnv} in .env).`,
     );
   }
 

@@ -63,7 +63,7 @@ describe("startMenuConnectionAuthorization", () => {
         "http://localhost:3000/api/connections/authorize-test/callback",
         {},
       ),
-    ).rejects.toThrow("Set AUTHORIZE_TEST_CLIENT_ID");
+    ).rejects.toThrow("Add Authorize Test app credentials");
   });
 
   it("returns an authorize URL and stores pending state", async () => {

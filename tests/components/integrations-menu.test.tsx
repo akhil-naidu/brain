@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   integrationStatusText,
   IntegrationsMenu,
+  shouldOfferConnectionConfigure,
   shouldOfferConnectionConnect,
   shouldOfferConnectionDisconnect,
 } from "@/components/chat/integrations-menu";
@@ -103,6 +104,33 @@ describe("shouldOfferConnectionDisconnect", () => {
       }),
     ).toBe(false);
     expect(shouldOfferConnectionDisconnect(undefined)).toBe(false);
+  });
+});
+
+describe("shouldOfferConnectionConfigure", () => {
+  it("offers Configure only when setup is needed", () => {
+    expect(
+      shouldOfferConnectionConfigure({
+        id: "asana",
+        displayName: "Asana",
+        status: "needs_setup",
+      }),
+    ).toBe(true);
+    expect(
+      shouldOfferConnectionConfigure({
+        id: "slack",
+        displayName: "Slack",
+        status: "needs_sign_in",
+      }),
+    ).toBe(false);
+    expect(
+      shouldOfferConnectionConfigure({
+        id: "clickup",
+        displayName: "ClickUp",
+        status: "connected",
+      }),
+    ).toBe(false);
+    expect(shouldOfferConnectionConfigure(undefined)).toBe(false);
   });
 });
 

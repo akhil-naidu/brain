@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { EnabledConnections } from "@/app/_components/chat-shell-context";
+import { ConnectionSetupDialog } from "@/components/chat/connection-setup-dialog";
 import {
   connectionStatusLabel,
   disconnectConnection,
@@ -60,6 +61,10 @@ export function shouldOfferConnectionDisconnect(status: ConnectionStatus | undef
   return status?.status === "connected";
 }
 
+export function shouldOfferConnectionConfigure(status: ConnectionStatus | undefined): boolean {
+  return status?.status === "needs_setup";
+}
+
 export function IntegrationsMenu({
   enabledConnections,
   onConnectionEnabledChange,
@@ -77,6 +82,7 @@ export function IntegrationsMenu({
   const [connectingId, setConnectingId] = useState<string | null>(null);
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
   const [connectError, setConnectError] = useState<string | null>(null);
+  const [configureId, setConfigureId] = useState<string | null>(null);
 
   const loadStatus = () => {
     setLoadingStatus(true);
@@ -211,6 +217,7 @@ export function IntegrationsMenu({
           });
           const showConnect = shouldOfferConnectionConnect(status);
           const showDisconnect = shouldOfferConnectionDisconnect(status);
+          const showConfigure = shouldOfferConnectionConfigure(status);
           const isConnecting = connectingId === key;
           const isDisconnecting = disconnectingId === key;
 
@@ -224,7 +231,9 @@ export function IntegrationsMenu({
                 const target = event.target;
                 if (
                   target instanceof Element &&
-                  target.closest("[data-connection-connect], [data-connection-disconnect]")
+                  target.closest(
+                    "[data-connection-connect], [data-connection-disconnect], [data-connection-configure]",
+                  )
                 ) {
                   return;
                 }
@@ -255,6 +264,26 @@ export function IntegrationsMenu({
                       : statusText}
                 </span>
               </span>
+              {showConfigure ? (
+                <button
+                  className="border-border bg-background text-foreground hover:bg-muted inline-flex h-6 shrink-0 items-center rounded-md border px-1.5 text-[11px] font-medium"
+                  data-connection-configure
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setConnectError(null);
+                    setMenuOpen(false);
+                    setConfigureId(key);
+                  }}
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                  }}
+                  type="button"
+                >
+                  Configure
+                </button>
+              ) : null}
               {showConnect ? (
                 <button
                   className="border-border bg-background text-foreground hover:bg-muted inline-flex h-6 shrink-0 items-center rounded-md border px-1.5 text-[11px] font-medium"
@@ -311,6 +340,18 @@ export function IntegrationsMenu({
           );
         })}
       </DropdownMenuContent>
+      <ConnectionSetupDialog
+        connectionId={configureId}
+        onOpenChange={(next) => {
+          if (!next) {
+            setConfigureId(null);
+          }
+        }}
+        onSaved={() => {
+          loadStatus();
+        }}
+        open={configureId !== null}
+      />
     </DropdownMenu>
   );
 }
