@@ -46,6 +46,7 @@ import type { ChatRecord, ChatSummary } from "@/lib/chat/store/types";
 import { useSubagentChildFailures } from "@/lib/chat/subagent-child-failures";
 import { createFallbackTitle } from "@/lib/chat/title";
 import { copyTextToClipboard, messagesToMarkdown } from "@/lib/chat/export-markdown";
+import { takePendingPlaybookRun } from "@/lib/chat/pending-playbook-run";
 import { canOfferRetry, getLastUserMessage, getRetryableUserPrompt } from "@/lib/chat/retry-prompt";
 import { createTurnClientContext } from "@/lib/chat/turn-client-context";
 
@@ -624,6 +625,19 @@ export function EphemeralAgentChat({
     }
     void handleSubmit(retryableText);
   }, [handleSubmit, retryableText, showRetry]);
+
+  const pendingPlaybookRunTriedRef = useRef(false);
+  useEffect(() => {
+    if (pendingPlaybookRunTriedRef.current || missingApiKey || isBusy || messages.length > 0) {
+      return;
+    }
+    const prompt = takePendingPlaybookRun();
+    pendingPlaybookRunTriedRef.current = true;
+    if (!prompt) {
+      return;
+    }
+    void handleSubmit(prompt);
+  }, [handleSubmit, isBusy, messages.length, missingApiKey]);
 
   const lastUserMessage = useMemo(() => getLastUserMessage(messages), [messages]);
   const editableUserMessageId =

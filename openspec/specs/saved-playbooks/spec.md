@@ -27,11 +27,19 @@ Activating a playbook MUST send its prompt through the same path as a normal com
 - **THEN** the system sends that playbook’s prompt as a new turn
 
 ### Requirement: Manage playbooks from chat chrome
-The empty chat state and composer MUST provide ways to add and edit playbooks. The empty state MUST show saved playbooks separately from built-in welcome suggestions.
+The empty chat state and composer MUST provide ways to add and edit playbooks. The empty state MUST show saved playbooks separately from built-in welcome suggestions. The composer playbooks menu and empty-state playbooks section MUST offer a Manage control that opens a dedicated `/playbooks` page for roomier add/edit/delete. Running a playbook from that page MUST continue in chat.
 
 #### Scenario: Empty state shows personal playbooks
 - **WHEN** the thread is empty and chat send is available
 - **THEN** the UI shows a Your playbooks section distinct from Try asking suggestions
+
+#### Scenario: Open manage page from composer menu
+- **WHEN** the user chooses Manage from the composer playbooks menu
+- **THEN** the UI opens the `/playbooks` page
+
+#### Scenario: Run from manage page
+- **WHEN** the user runs a playbook from `/playbooks`
+- **THEN** Brain opens chat and sends that playbook’s prompt as a new turn
 
 ### Requirement: Schedule a playbook in one step
 When schedules are available, the playbooks list and composer playbooks menu MUST let the user schedule a saved playbook with one action. That action MUST ask for a local time (remembering the last chosen time), then create an enabled weekday schedule from the playbook prompt (or open Schedules if that playbook is already scheduled), without requiring the Schedules add form first.

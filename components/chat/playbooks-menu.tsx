@@ -1,6 +1,14 @@
 "use client";
 
-import { BookmarkIcon, CalendarClockIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import Link from "next/link";
+import {
+  BookmarkIcon,
+  CalendarClockIcon,
+  PencilIcon,
+  PlusIcon,
+  Settings2Icon,
+  Trash2Icon,
+} from "lucide-react";
 import { useState } from "react";
 import { PlaybookEditorDialog } from "@/components/chat/playbook-editor-dialog";
 import { SchedulePlaybookDialog } from "@/components/chat/schedule-playbook-dialog";
@@ -184,6 +192,12 @@ export function PlaybooksMenu({
           >
             <PlusIcon className="size-3.5" />
             New playbook
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild className="cursor-pointer gap-2">
+            <Link href="/playbooks" onClick={() => setMenuOpen(false)}>
+              <Settings2Icon className="size-3.5" />
+              Manage
+            </Link>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

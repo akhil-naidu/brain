@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { CalendarClockIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 import { PlaybookEditorDialog } from "@/components/chat/playbook-editor-dialog";
@@ -16,6 +17,7 @@ export function PlaybooksPanel({
   onRun,
   onSave,
   onScheduled,
+  variant = "empty",
 }: {
   readonly className?: string;
   readonly playbooks: readonly Playbook[];
@@ -27,6 +29,7 @@ export function PlaybooksPanel({
     readonly prompt: string;
   }) => void;
   readonly onScheduled?: () => void;
+  readonly variant?: "empty" | "page";
 }) {
   const [editorOpen, setEditorOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
@@ -34,44 +37,82 @@ export function PlaybooksPanel({
   const [scheduling, setScheduling] = useState<Playbook | null>(null);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   const atLimit = playbooks.length >= MAX_PLAYBOOKS;
+  const isPage = variant === "page";
 
   return (
     <div className={cn("mx-auto mt-6 w-full max-w-md text-left", className)}>
       <div className="mb-2 flex items-center justify-between gap-2">
-        <p className="text-muted-foreground/80 text-xs font-medium tracking-wide uppercase">
-          Your playbooks
-        </p>
-        <Button
-          className="text-muted-foreground h-7 px-2 text-xs"
-          disabled={atLimit}
-          onClick={() => {
-            setEditing(null);
-            setEditorOpen(true);
-          }}
-          size="sm"
-          title={atLimit ? `You can save up to ${MAX_PLAYBOOKS} playbooks.` : "Add playbook"}
-          type="button"
-          variant="ghost"
-        >
-          <PlusIcon className="size-3.5" />
-          Add
-        </Button>
+        {isPage ? (
+          <p className="text-sm font-medium">Saved playbooks</p>
+        ) : (
+          <p className="text-muted-foreground/80 text-xs font-medium tracking-wide uppercase">
+            Your playbooks
+          </p>
+        )}
+        <div className="flex shrink-0 items-center gap-1">
+          {!isPage ? (
+            <Button
+              asChild
+              className="text-muted-foreground h-7 px-2 text-xs"
+              size="sm"
+              variant="ghost"
+            >
+              <Link href="/playbooks">Manage</Link>
+            </Button>
+          ) : null}
+          <Button
+            className="text-muted-foreground h-7 px-2 text-xs"
+            disabled={atLimit}
+            onClick={() => {
+              setEditing(null);
+              setEditorOpen(true);
+            }}
+            size="sm"
+            title={atLimit ? `You can save up to ${MAX_PLAYBOOKS} playbooks.` : "Add playbook"}
+            type="button"
+            variant="ghost"
+          >
+            <PlusIcon className="size-3.5" />
+            Add
+          </Button>
+        </div>
       </div>
 
       {playbooks.length === 0 ? (
-        <p className="text-muted-foreground px-3 py-2 text-sm leading-relaxed">
-          Save prompts you reuse — like “Triage inbox” or “Sprint risks”.
+        <p
+          className={cn(
+            "text-muted-foreground text-sm leading-relaxed",
+            isPage ? "border-border/60 bg-card rounded-xl border px-4 py-4" : "px-3 py-2",
+          )}
+        >
+          {isPage
+            ? "None yet. Add a prompt you reuse often."
+            : "Save prompts you reuse — like “Triage inbox” or “Sprint risks”."}
         </p>
       ) : (
-        <ul className="flex flex-col gap-0.5">
+        <ul
+          className={cn(
+            isPage
+              ? "border-border/60 bg-card divide-border/60 divide-y overflow-hidden rounded-xl border"
+              : "flex flex-col gap-0.5",
+          )}
+        >
           {playbooks.map((item) => (
-            <li className="group flex items-stretch gap-1" key={item.id}>
+            <li
+              className={cn("group flex items-stretch gap-1", isPage ? "px-2 py-1.5" : null)}
+              key={item.id}
+            >
               <button
                 className="text-foreground hover:bg-muted/70 focus-visible:ring-ring/50 min-w-0 flex-1 cursor-pointer rounded-lg px-3 py-2.5 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
                 onClick={() => onRun(item.prompt)}
                 type="button"
               >
-                {item.label}
+                <span className="block truncate font-medium">{item.label}</span>
+                {isPage ? (
+                  <span className="text-muted-foreground mt-0.5 line-clamp-2 block text-xs leading-relaxed">
+                    {item.prompt}
+                  </span>
+                ) : null}
               </button>
               {onScheduled ? (
                 <button
