@@ -3,6 +3,7 @@
 import { PanelLeftIcon, PencilIcon, PlusIcon, SearchIcon, Trash2Icon } from "lucide-react";
 import Link from "next/link";
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { usePlaybooks } from "@/components/chat/use-playbooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { filterChatsByTitle } from "@/lib/chat/filter-chats";
@@ -11,9 +12,14 @@ import {
   newChatShortcutLabel,
   toggleSidebarShortcutLabel,
 } from "@/lib/chat/keyboard";
+import { formatScheduleTimeValue } from "@/lib/chat/schedule-defaults";
+import { fetchScheduledBrief } from "@/lib/chat/scheduled-brief-api";
+import { listScheduledPlaybooks, type ScheduledPlaybook } from "@/lib/chat/scheduled-playbooks-api";
 import { DEFAULT_CHAT_TITLE } from "@/lib/chat/title";
 import type { ChatSummary } from "@/lib/chat/store/types";
 import { cn } from "@/lib/utils";
+
+const SIDEBAR_LIST_PREVIEW = 3;
 
 export function ChatSidebar({
   brand,
@@ -24,6 +30,7 @@ export function ChatSidebar({
   onDeleteChat,
   onNewChat,
   onRenameChat,
+  onRunPlaybook,
   onSelectChat,
   onToggleSidebar,
   searchFocusRequest = 0,
@@ -36,6 +43,7 @@ export function ChatSidebar({
   readonly onDeleteChat: (chatId: string) => void;
   readonly onNewChat: () => void;
   readonly onRenameChat: (chatId: string, title: string) => void | Promise<void>;
+  readonly onRunPlaybook?: (prompt: string) => void;
   readonly onSelectChat: (chatId: string) => void;
   readonly onToggleSidebar?: () => void;
   readonly searchFocusRequest?: number;
@@ -53,6 +61,34 @@ export function ChatSidebar({
   const searchInputRef = useRef<HTMLInputElement>(null);
   const filteredChats = filterChatsByTitle(chats, query);
   const hasActiveQuery = query.trim().length > 0;
+  const { playbooks } = usePlaybooks();
+  const [schedules, setSchedules] = useState<readonly ScheduledPlaybook[]>([]);
+  const [morningBriefEnabled, setMorningBriefEnabled] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const [listed, brief] = await Promise.all([
+          listScheduledPlaybooks(),
+          fetchScheduledBrief(),
+        ]);
+        if (cancelled) {
+          return;
+        }
+        setSchedules(listed);
+        setMorningBriefEnabled(brief.schedule.enabled);
+      } catch {
+        if (!cancelled) {
+          setSchedules([]);
+          setMorningBriefEnabled(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!editingId) {
@@ -95,6 +131,9 @@ export function ChatSidebar({
     cancelRename();
     void onRenameChat(chatId, next);
   };
+
+  const previewPlaybooks = playbooks.slice(0, SIDEBAR_LIST_PREVIEW);
+  const previewSchedules = schedules.slice(0, SIDEBAR_LIST_PREVIEW);
 
   return (
     <aside
@@ -244,21 +283,77 @@ export function ChatSidebar({
             );
           })}
         </ul>
+
+        <div className="mt-4">
+          <p className="text-muted-foreground/70 px-2 pb-1 text-[11px] font-medium tracking-wide uppercase">
+            Playbooks
+          </p>
+          {previewPlaybooks.length === 0 ? (
+            <p className="text-muted-foreground/70 px-2 py-1.5 text-sm">None yet</p>
+          ) : (
+            <ul className="flex flex-col gap-0.5">
+              {previewPlaybooks.map((item) => (
+                <li key={item.id}>
+                  <button
+                    className="text-muted-foreground hover:bg-muted/40 hover:text-foreground w-full cursor-pointer rounded-md px-2 py-1.5 text-left text-sm"
+                    onClick={() => onRunPlaybook?.(item.prompt)}
+                    type="button"
+                  >
+                    <span className="line-clamp-1">{item.label}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <Link
+            className="text-muted-foreground hover:text-foreground mt-0.5 block px-2 py-1.5 text-xs transition-colors"
+            href="/playbooks"
+          >
+            {playbooks.length > SIDEBAR_LIST_PREVIEW ? "View more" : "Manage"}
+          </Link>
+        </div>
+
+        <div className="mt-3">
+          <p className="text-muted-foreground/70 px-2 pb-1 text-[11px] font-medium tracking-wide uppercase">
+            Schedules
+          </p>
+          <ul className="flex flex-col gap-0.5">
+            <li>
+              <Link
+                className="text-muted-foreground hover:bg-muted/40 hover:text-foreground block rounded-md px-2 py-1.5 text-sm transition-colors"
+                href="/schedules"
+              >
+                <span className="line-clamp-1">
+                  Morning brief · {morningBriefEnabled ? "On" : "Off"}
+                </span>
+              </Link>
+            </li>
+            {previewSchedules.map((schedule) => (
+              <li key={schedule.id}>
+                <Link
+                  className="text-muted-foreground hover:bg-muted/40 hover:text-foreground block rounded-md px-2 py-1.5 text-sm transition-colors"
+                  href="/schedules"
+                >
+                  <span className="line-clamp-1">
+                    {schedule.label}
+                    {" · "}
+                    {formatScheduleTimeValue(schedule.hour, schedule.minute)}
+                    {schedule.enabled ? "" : " · Off"}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <Link
+            className="text-muted-foreground hover:text-foreground mt-0.5 block px-2 py-1.5 text-xs transition-colors"
+            href="/schedules"
+          >
+            {schedules.length > SIDEBAR_LIST_PREVIEW ? "View more" : "Manage"}
+          </Link>
+        </div>
       </div>
 
-      <div className="border-border mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 border-t px-3 py-3">
-        <Link
-          className="text-muted-foreground hover:text-foreground text-xs transition-colors"
-          href="/playbooks"
-        >
-          Playbooks
-        </Link>
-        <Link
-          className="text-muted-foreground hover:text-foreground text-xs transition-colors"
-          href="/schedules"
-        >
-          Schedules
-        </Link>
+      <div className="border-border mt-auto border-t px-3 py-3">
         <Link
           className="text-muted-foreground hover:text-foreground text-xs transition-colors"
           href="/"

@@ -3,6 +3,64 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ChatSidebar } from "@/components/chat/sidebar";
 import type { ChatSummary } from "@/lib/chat/store/types";
 
+vi.mock("@/components/chat/use-playbooks", () => ({
+  usePlaybooks: () => ({
+    playbooks: [
+      {
+        id: "pb-1",
+        label: "Triage inbox",
+        prompt: "Triage my inbox",
+        updatedAt: 1,
+      },
+    ],
+    ready: true,
+    savePlaybook: vi.fn(),
+    deletePlaybook: vi.fn(),
+  }),
+}));
+
+vi.mock("@/lib/chat/scheduled-playbooks-api", () => ({
+  listScheduledPlaybooks: vi.fn(async () => [
+    {
+      id: "sch-1",
+      label: "Daily standup",
+      prompt: "Standup",
+      sourcePlaybookId: null,
+      enabled: true,
+      hour: 9,
+      minute: 0,
+      timezone: "UTC",
+      weekdaysOnly: true,
+      slackDeliveryEnabled: false,
+      slackChannel: null,
+      lastSlackError: null,
+      lastRunDateKey: null,
+      lastChatId: null,
+      lastRunAt: null,
+      runningSince: null,
+    },
+  ]),
+}));
+
+vi.mock("@/lib/chat/scheduled-brief-api", () => ({
+  fetchScheduledBrief: vi.fn(async () => ({
+    schedule: {
+      enabled: false,
+      hour: 9,
+      minute: 0,
+      timezone: "UTC",
+      weekdaysOnly: true,
+      slackDeliveryEnabled: false,
+      slackChannel: null,
+      lastSlackError: null,
+      lastRunDateKey: null,
+      lastChatId: null,
+      lastRunAt: null,
+      runningSince: null,
+    },
+  })),
+}));
+
 afterEach(cleanup);
 
 const chats: readonly ChatSummary[] = [
@@ -65,11 +123,19 @@ describe("ChatSidebar rename", () => {
   });
 });
 
-describe("ChatSidebar footer nav", () => {
-  it("links to playbooks, schedules, and home", () => {
+describe("ChatSidebar mini lists", () => {
+  it("shows playbook and schedule previews with manage links", async () => {
     renderSidebar();
-    expect(screen.getByRole("link", { name: "Playbooks" }).getAttribute("href")).toBe("/playbooks");
-    expect(screen.getByRole("link", { name: "Schedules" }).getAttribute("href")).toBe("/schedules");
+    expect(await screen.findByRole("button", { name: "Triage inbox" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Morning brief/i }).getAttribute("href")).toBe(
+      "/schedules",
+    );
+    expect(screen.getByRole("link", { name: /Daily standup/i }).getAttribute("href")).toBe(
+      "/schedules",
+    );
+    const manageLinks = screen.getAllByRole("link", { name: "Manage" });
+    expect(manageLinks.some((link) => link.getAttribute("href") === "/playbooks")).toBe(true);
+    expect(manageLinks.some((link) => link.getAttribute("href") === "/schedules")).toBe(true);
     expect(screen.getByRole("link", { name: "Home" }).getAttribute("href")).toBe("/");
   });
 });

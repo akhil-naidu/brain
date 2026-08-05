@@ -27,7 +27,7 @@ Activating a playbook MUST send its prompt through the same path as a normal com
 - **THEN** the system sends that playbook’s prompt as a new turn
 
 ### Requirement: Manage playbooks from chat chrome
-The empty chat state and composer MUST provide ways to add and edit playbooks. The empty state MUST show saved playbooks separately from built-in welcome suggestions. The composer playbooks menu and empty-state playbooks section MUST offer a Manage control that opens a dedicated `/playbooks` page for roomier add/edit/delete. The chat sidebar MUST also link to `/playbooks`. Running a playbook from that page MUST continue in chat.
+The empty chat state and composer MUST provide ways to add and edit playbooks. The empty state MUST show saved playbooks separately from built-in welcome suggestions. The composer playbooks menu and empty-state playbooks section MUST offer a Manage control that opens a dedicated `/playbooks` page for roomier add/edit/delete. The chat sidebar MUST show a short playbooks preview list and a Manage/View more control that opens `/playbooks`. Running a playbook from the sidebar or manage page MUST continue in chat.
 
 #### Scenario: Empty state shows personal playbooks
 - **WHEN** the thread is empty and chat send is available

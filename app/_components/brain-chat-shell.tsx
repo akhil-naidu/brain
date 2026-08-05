@@ -28,6 +28,7 @@ import {
   isToggleSidebarShortcutEvent,
   toggleSidebarShortcutLabel,
 } from "@/lib/chat/keyboard";
+import { stashPendingPlaybookRun } from "@/lib/chat/pending-playbook-run";
 import { createFallbackTitle, normalizeChatTitle } from "@/lib/chat/title";
 import { cn } from "@/lib/utils";
 
@@ -197,6 +198,14 @@ export function BrainChatShell() {
     });
   }, [runWithDisposal]);
 
+  const handleRunPlaybook = useCallback(
+    (prompt: string) => {
+      stashPendingPlaybookRun(prompt);
+      handleNewChat();
+    },
+    [handleNewChat],
+  );
+
   const focusChatSearch = useCallback(() => {
     setSidebarOpen(true);
     setSearchFocusRequest((current) => current + 1);
@@ -340,6 +349,7 @@ export function BrainChatShell() {
             onDeleteChat={handleDeleteChat}
             onNewChat={handleNewChat}
             onRenameChat={handleRenameChat}
+            onRunPlaybook={handleRunPlaybook}
             onSelectChat={handleSelectChat}
             onToggleSidebar={() => setSidebarOpen(false)}
             searchFocusRequest={searchFocusRequest}
@@ -363,6 +373,7 @@ export function BrainChatShell() {
                 onDeleteChat={handleDeleteChat}
                 onNewChat={handleMobileNewChat}
                 onRenameChat={handleRenameChat}
+                onRunPlaybook={handleRunPlaybook}
                 onSelectChat={handleMobileSelectChat}
                 onToggleSidebar={() => setSidebarOpen(false)}
                 searchFocusRequest={searchFocusRequest}
