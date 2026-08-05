@@ -28,8 +28,15 @@ dokku ports:set brain http:80:3000
 # Runtime secrets (set whatever you use locally)
 dokku config:set brain \
   COMMAND_CODE_API_KEY="..." \
+  BRAIN_PUBLIC_URL="https://<your-host>" \
   NODE_ENV=production
 ```
+
+`BRAIN_PUBLIC_URL` is the public site origin used for Menu Connect OAuth
+`redirect_uri` values (ClickUp, Slack, …). Without it, Brain falls back to the
+browser `Origin` / `X-Forwarded-*` headers; set the env explicitly on Dokku so
+callbacks never collapse to `http://localhost:3000`.
+
 
 Redeploy from GitHub / dflow after the `Dockerfile` is on `main`.
 

@@ -4,6 +4,7 @@ import {
   startMenuConnectionAuthorization,
 } from "@/agent/lib/connection-authorize";
 import { getChatConnectionProvider } from "@/agent/lib/connection-status";
+import { resolvePublicOrigin } from "@/lib/http/public-origin";
 
 export const runtime = "nodejs";
 
@@ -18,7 +19,7 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Unknown connection." }, { status: 404 });
   }
 
-  const callbackUrl = menuConnectionCallbackUrl(new URL(request.url).origin, id);
+  const callbackUrl = menuConnectionCallbackUrl(resolvePublicOrigin(request), id);
   try {
     const result = await startMenuConnectionAuthorization(provider, callbackUrl);
     return NextResponse.json(result);

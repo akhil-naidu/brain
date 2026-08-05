@@ -14,6 +14,13 @@ The host MUST expose an authorize endpoint that starts MCP OAuth for a supported
 - **WHEN** a connection requires client credentials that are not configured
 - **THEN** the authorize endpoint fails with a clear needs-setup error and does not return an authorize URL
 
+### Requirement: Menu OAuth callback uses the public origin
+The authorize endpoint MUST build `redirect_uri` from the public Brain origin, not the internal listen address. Resolution MUST prefer `BRAIN_PUBLIC_URL` / `BRAIN_PUBLIC_ORIGIN` when set, then the request `Origin`/`Referer`, then forwarded host/proto headers, and only then the internal request URL origin.
+
+#### Scenario: Proxied host does not collapse to localhost
+- **WHEN** the browser originates Menu Connect from `https://brain.example.com` while the Node server listens on `localhost:3000`
+- **THEN** the OAuth `redirect_uri` uses `https://brain.example.com/api/connections/{id}/callback`
+
 ### Requirement: Menu OAuth callback stores the token
 The host MUST complete the OAuth code exchange on the Brain callback route and store the access token for the local chat principal.
 
