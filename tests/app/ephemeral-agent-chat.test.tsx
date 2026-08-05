@@ -71,6 +71,10 @@ vi.mock("@/components/chat/model-picker", () => ({
   ModelPicker: () => null,
 }));
 
+vi.mock("@/components/chat/scheduled-brief-panel", () => ({
+  ScheduledBriefPanel: () => null,
+}));
+
 vi.mock("@/lib/chat/setup-api", () => ({
   fetchSetupStatus: async () => ({ commandCodeApiKeyConfigured: true }),
 }));

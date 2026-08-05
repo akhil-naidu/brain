@@ -447,6 +447,7 @@ export function BrainChatShell() {
               initialEvents={active.initialEvents}
               initialSession={active.initialSession}
               onChatCreated={handleChatCreated}
+              onOpenChat={handleSelectChat}
               onChatUpdated={handleChatUpdated}
               onDisposeReady={handleDisposeReady}
               onDraftChange={setDraft}

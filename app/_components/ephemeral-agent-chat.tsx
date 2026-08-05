@@ -23,6 +23,7 @@ import { ModelPicker } from "@/components/chat/model-picker";
 import { PlaybooksMenu } from "@/components/chat/playbooks-menu";
 import { PlaybooksPanel } from "@/components/chat/playbooks-panel";
 import { usePlaybooks } from "@/components/chat/use-playbooks";
+import { ScheduledBriefPanel } from "@/components/chat/scheduled-brief-panel";
 import { WelcomePrompts } from "@/components/chat/welcome-prompts";
 import {
   buildUserContentMessage,
@@ -97,6 +98,7 @@ export function EphemeralAgentChat({
   onChatUpdated,
   onDisposeReady,
   onDraftChange,
+  onOpenChat,
   onThreadActionsReady,
   onUserMessage,
 }: {
@@ -108,6 +110,7 @@ export function EphemeralAgentChat({
   readonly onChatUpdated?: (chat: ChatSummary) => void;
   readonly onDisposeReady?: (dispose: DisposeEphemeralChat | null) => void;
   readonly onDraftChange: (value: string) => void;
+  readonly onOpenChat?: (chatId: string) => void;
   readonly onThreadActionsReady?: (actions: ChatThreadActions | null) => void;
   readonly onUserMessage?: (text: string) => void;
 }) {
@@ -717,6 +720,9 @@ export function EphemeralAgentChat({
                       onSave={savePlaybook}
                       playbooks={playbooks}
                     />
+                    {onOpenChat ? (
+                      <ScheduledBriefPanel disabled={missingApiKey} onOpenChat={onOpenChat} />
+                    ) : null}
                   </>
                 )}
               </div>
