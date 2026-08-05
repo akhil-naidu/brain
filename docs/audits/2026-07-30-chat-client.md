@@ -142,7 +142,9 @@ eve documents that assistant parts stream into the hook state as events arrive (
 
 ### P2 Undefined Geist variables invalidate the global font declarations
 
-**Location:** `app/globals.css:94`; `app/globals.css:101`
+**Status:** Fixed (`font-family` uses `var(--font-sans)` / `var(--font-mono)`).
+
+**Location:** `app/globals.css`
 
 **Problem:** `--font-geist-sans` and `--font-geist-mono` are never defined anywhere in the repository. A missing custom property without a fallback makes the entire declaration invalid at computed-value time; the comma after `var(--font-geist-*)` does not rescue the declaration. Consequently the body and code-element declarations fall back to browser defaults instead of the intended `--font-sans` and `--font-mono` stacks.
 
@@ -168,7 +170,9 @@ A repository-wide search finds these two references and no definitions. The actu
 
 ### P3 Dark mode flashes the light theme during startup
 
-**Location:** `app/layout.tsx:19-20`; `components/theme-provider.tsx:8-23`
+**Status:** Fixed (CSS `@media (prefers-color-scheme: dark)` token fallback + blocking `THEME_BOOTSTRAP_SCRIPT` before paint; `ThemeProvider` only keeps the preference in sync).
+
+**Location:** `app/layout.tsx`; `app/globals.css`; `lib/theme/bootstrap.ts`; `components/theme-provider.tsx`
 
 **Problem:** Server-rendered HTML is explicitly light, and the system dark preference is applied only in `useEffect`, which runs after the first paint. Dark-mode users therefore see a light flash on every initial navigation/reload. `suppressHydrationWarning` hides mismatch diagnostics but does not prevent the incorrect first paint.
 

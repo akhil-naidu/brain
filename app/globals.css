@@ -80,6 +80,32 @@
   --ring: oklch(0.72 0.09 230);
 }
 
+/* Pre-JS / no-class paint: match system dark so CSS tokens are correct before the
+   bootstrap script adds `.dark` for Tailwind `dark:` utilities. Keep in sync with `.dark`. */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    color-scheme: dark;
+    --background: #0d1117;
+    --foreground: #e6edf3;
+    --card: #161b22;
+    --card-foreground: #e6edf3;
+    --popover: #161b22;
+    --popover-foreground: #e6edf3;
+    --primary: oklch(0.72 0.09 230);
+    --primary-foreground: #0d1117;
+    --secondary: #21262d;
+    --secondary-foreground: #e6edf3;
+    --muted: #21262d;
+    --muted-foreground: #9198a1;
+    --accent: #21262d;
+    --accent-foreground: #e6edf3;
+    --destructive: #f85149;
+    --border: #30363d;
+    --input: #30363d;
+    --ring: oklch(0.72 0.09 230);
+  }
+}
+
 * {
   border-color: var(--border);
 }

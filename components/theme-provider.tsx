@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
-
-type Theme = "dark" | "light";
+import { applyTheme, resolveSystemTheme } from "@/lib/theme/bootstrap";
 
 export function ThemeProvider({ children }: { readonly children: ReactNode }) {
   useEffect(() => {
@@ -12,8 +11,7 @@ export function ThemeProvider({ children }: { readonly children: ReactNode }) {
         : null;
 
     const syncTheme = () => {
-      // System preference when available; light is the fallback default.
-      applyTheme(media?.matches ? "dark" : "light");
+      applyTheme(resolveSystemTheme());
     };
 
     syncTheme();
@@ -23,11 +21,4 @@ export function ThemeProvider({ children }: { readonly children: ReactNode }) {
   }, []);
 
   return children;
-}
-
-function applyTheme(theme: Theme) {
-  const root = document.documentElement;
-  root.classList.remove("dark", "light");
-  root.classList.add(theme);
-  root.style.colorScheme = theme;
 }
