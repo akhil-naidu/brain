@@ -55,11 +55,16 @@ Brain SHALL define an eve schedule that checks approximately every minute and tr
 - **WHEN** production eve is running, the schedule is enabled, and the local time matches the configured minute
 - **THEN** Brain starts at most one brief chat for that local calendar day
 
-### Requirement: Empty-state schedule controls
+### Requirement: Schedule controls in chat chrome
 
-The empty chat state SHALL expose controls to enable the schedule, set local time, optionally enable Slack delivery with a channel target, run a brief now, and show a host-crontab example that posts a forced run.
+The chat UI SHALL expose morning-brief schedule controls from both the empty chat state and a composer Schedules control available during any chat. Those controls SHALL let the user enable the schedule, set local time, optionally enable Slack delivery with a channel target, run a brief now, and show a host-crontab example that posts a forced run.
 
 #### Scenario: Run now from empty state
 
-- **WHEN** the user chooses Run now from the schedule panel
+- **WHEN** the user chooses Run now from the empty-state schedule panel
 - **THEN** Brain performs a forced brief run and the UI can open the resulting chat
+
+#### Scenario: Open schedules from an active chat
+
+- **WHEN** the user opens Schedules from the composer during a chat that already has messages
+- **THEN** the UI shows the morning-brief schedule controls without requiring a new chat

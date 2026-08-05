@@ -25,6 +25,7 @@ import { PlaybooksPanel } from "@/components/chat/playbooks-panel";
 import { usePlaybooks } from "@/components/chat/use-playbooks";
 import { ScheduledBriefPanel } from "@/components/chat/scheduled-brief-panel";
 import { ScheduledPlaybooksPanel } from "@/components/chat/scheduled-playbooks-panel";
+import { SchedulesMenu } from "@/components/chat/schedules-menu";
 import { WelcomePrompts } from "@/components/chat/welcome-prompts";
 import {
   buildUserContentMessage,
@@ -793,6 +794,13 @@ export function EphemeralAgentChat({
                   onSave={savePlaybook}
                   playbooks={playbooks}
                 />
+                {onOpenChat ? (
+                  <SchedulesMenu
+                    disabled={missingApiKey}
+                    onOpenChat={onOpenChat}
+                    playbooks={playbooks}
+                  />
+                ) : null}
                 <ModelPicker
                   disabled={isBusy || missingApiKey}
                   onModelIdChange={setSelectedModelId}

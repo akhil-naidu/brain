@@ -27,11 +27,16 @@ When a playbook schedule runs, Brain SHALL create a new persisted chat titled fr
 - **WHEN** a non-forced due check finds an enabled schedule whose local time matches and that has not already succeeded that local day
 - **THEN** Brain runs that schedule at most once for that local day
 
-### Requirement: Empty-state schedule controls
+### Requirement: Schedule controls in chat chrome
 
-The empty chat state SHALL let the user add a schedule from a saved playbook, enable/disable it, set time and optional Slack channel, run it now, and open the last chat for that schedule.
+The chat UI SHALL let the user manage playbook schedules from both the empty chat state and a composer Schedules control available during any chat. Those controls SHALL let the user add a schedule from a saved playbook, enable/disable it, set time and optional Slack channel, run it now, and open the last chat for that schedule.
 
 #### Scenario: Run now from empty state
 
-- **WHEN** the user chooses Run now for a playbook schedule
+- **WHEN** the user chooses Run now for a playbook schedule from the empty-state panel
 - **THEN** Brain performs a forced run and the UI can open the resulting chat
+
+#### Scenario: Manage playbook schedules from an active chat
+
+- **WHEN** the user opens Schedules from the composer during a chat that already has messages
+- **THEN** the UI shows playbook schedule controls without requiring a new chat

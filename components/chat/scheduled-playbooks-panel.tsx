@@ -47,14 +47,17 @@ function parseTimeValue(value: string): { hour: number; minute: number } | null 
 export function ScheduledPlaybooksPanel({
   className,
   disabled = false,
+  idPrefix = "",
   onOpenChat,
   playbooks,
 }: {
   readonly className?: string;
   readonly disabled?: boolean;
+  readonly idPrefix?: string;
   readonly onOpenChat: (chatId: string) => void;
   readonly playbooks: readonly Playbook[];
 }) {
+  const fieldId = (name: string) => `${idPrefix}${name}`;
   const [schedules, setSchedules] = useState<readonly ScheduledPlaybook[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -145,12 +148,15 @@ export function ScheduledPlaybooksPanel({
 
       {adding ? (
         <div className="border-border/60 bg-muted/20 mb-3 flex flex-col gap-2 rounded-lg border px-3 py-3">
-          <label className="flex flex-col gap-1 text-sm" htmlFor="schedule-playbook-select">
+          <label
+            className="flex flex-col gap-1 text-sm"
+            htmlFor={fieldId("schedule-playbook-select")}
+          >
             Playbook
             <select
               className="border-input bg-background h-9 rounded-md border px-2 text-sm"
               disabled={disabled || creating}
-              id="schedule-playbook-select"
+              id={fieldId("schedule-playbook-select")}
               onChange={(event) => {
                 setSelectedPlaybookId(event.target.value);
               }}
@@ -164,11 +170,11 @@ export function ScheduledPlaybooksPanel({
             </select>
           </label>
           <div className="flex items-center justify-between gap-3 text-sm">
-            <label htmlFor="schedule-playbook-time">Local time</label>
+            <label htmlFor={fieldId("schedule-playbook-time")}>Local time</label>
             <Input
               className="h-8 w-[7.5rem]"
               disabled={disabled || creating}
-              id="schedule-playbook-time"
+              id={fieldId("schedule-playbook-time")}
               onChange={(event) => {
                 setNewTime(event.target.value);
               }}
@@ -177,11 +183,11 @@ export function ScheduledPlaybooksPanel({
             />
           </div>
           <div className="flex items-center justify-between gap-3 text-sm">
-            <label htmlFor="schedule-playbook-slack">Also post to Slack</label>
+            <label htmlFor={fieldId("schedule-playbook-slack")}>Also post to Slack</label>
             <input
               checked={newSlack}
               disabled={disabled || creating}
-              id="schedule-playbook-slack"
+              id={fieldId("schedule-playbook-slack")}
               onChange={(event) => {
                 setNewSlack(event.target.checked);
               }}
@@ -191,7 +197,7 @@ export function ScheduledPlaybooksPanel({
           {newSlack ? (
             <Input
               disabled={disabled || creating}
-              id="schedule-playbook-slack-channel"
+              id={fieldId("schedule-playbook-slack-channel")}
               onChange={(event) => {
                 setNewSlackChannel(event.target.value);
               }}
@@ -309,11 +315,11 @@ export function ScheduledPlaybooksPanel({
                 </div>
 
                 <div className="flex items-center justify-between gap-3 text-sm">
-                  <label htmlFor={`schedule-enabled-${schedule.id}`}>Enabled</label>
+                  <label htmlFor={fieldId(`schedule-enabled-${schedule.id}`)}>Enabled</label>
                   <input
                     checked={schedule.enabled}
                     disabled={disabled || busy}
-                    id={`schedule-enabled-${schedule.id}`}
+                    id={fieldId(`schedule-enabled-${schedule.id}`)}
                     onChange={(event) => {
                       void (async () => {
                         setBusyId(schedule.id);
@@ -336,12 +342,12 @@ export function ScheduledPlaybooksPanel({
                 </div>
 
                 <div className="flex items-center justify-between gap-3 text-sm">
-                  <label htmlFor={`schedule-time-${schedule.id}`}>Local time</label>
+                  <label htmlFor={fieldId(`schedule-time-${schedule.id}`)}>Local time</label>
                   <Input
                     className="h-8 w-[7.5rem]"
                     defaultValue={timeValue}
                     disabled={disabled || busy}
-                    id={`schedule-time-${schedule.id}`}
+                    id={fieldId(`schedule-time-${schedule.id}`)}
                     key={`${schedule.id}-${timeValue}`}
                     onBlur={(event) => {
                       const parsed = parseTimeValue(event.target.value);

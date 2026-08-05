@@ -43,12 +43,15 @@ function parseTimeValue(value: string): { hour: number; minute: number } | null 
 export function ScheduledBriefPanel({
   className,
   disabled = false,
+  idPrefix = "",
   onOpenChat,
 }: {
   readonly className?: string;
   readonly disabled?: boolean;
+  readonly idPrefix?: string;
   readonly onOpenChat: (chatId: string) => void;
 }) {
+  const fieldId = (name: string) => `${idPrefix}${name}`;
   const [schedule, setSchedule] = useState<ScheduledBriefConfig | null>(null);
   const [hostCron, setHostCron] = useState("");
   const [timeValue, setTimeValue] = useState("09:00");
@@ -134,11 +137,11 @@ export function ScheduledBriefPanel({
       </p>
       <div className="border-border/60 bg-muted/20 flex flex-col gap-3 rounded-lg border px-3 py-3">
         <div className="flex items-center justify-between gap-3 text-sm">
-          <label htmlFor="scheduled-brief-enabled">Run automatically</label>
+          <label htmlFor={fieldId("scheduled-brief-enabled")}>Run automatically</label>
           <input
             checked={schedule.enabled}
             disabled={disabled || saving || running}
-            id="scheduled-brief-enabled"
+            id={fieldId("scheduled-brief-enabled")}
             onChange={(event) => {
               void persist({ enabled: event.target.checked });
             }}
@@ -147,11 +150,11 @@ export function ScheduledBriefPanel({
         </div>
 
         <div className="flex items-center justify-between gap-3 text-sm">
-          <label htmlFor="scheduled-brief-time">Local time</label>
+          <label htmlFor={fieldId("scheduled-brief-time")}>Local time</label>
           <Input
             className="h-8 w-[7.5rem]"
             disabled={disabled || saving || running}
-            id="scheduled-brief-time"
+            id={fieldId("scheduled-brief-time")}
             onBlur={() => {
               const parsed = parseTimeValue(timeValue);
               if (!parsed) {
@@ -172,11 +175,11 @@ export function ScheduledBriefPanel({
         </div>
 
         <div className="flex items-center justify-between gap-3 text-sm">
-          <label htmlFor="scheduled-brief-weekdays">Weekdays only</label>
+          <label htmlFor={fieldId("scheduled-brief-weekdays")}>Weekdays only</label>
           <input
             checked={schedule.weekdaysOnly}
             disabled={disabled || saving || running}
-            id="scheduled-brief-weekdays"
+            id={fieldId("scheduled-brief-weekdays")}
             onChange={(event) => {
               void persist({ weekdaysOnly: event.target.checked });
             }}
@@ -185,11 +188,11 @@ export function ScheduledBriefPanel({
         </div>
 
         <div className="flex items-center justify-between gap-3 text-sm">
-          <label htmlFor="scheduled-brief-slack">Also post to Slack</label>
+          <label htmlFor={fieldId("scheduled-brief-slack")}>Also post to Slack</label>
           <input
             checked={schedule.slackDeliveryEnabled}
             disabled={disabled || saving || running}
-            id="scheduled-brief-slack"
+            id={fieldId("scheduled-brief-slack")}
             onChange={(event) => {
               void persist({ slackDeliveryEnabled: event.target.checked });
             }}
@@ -198,10 +201,10 @@ export function ScheduledBriefPanel({
         </div>
 
         <div className="flex flex-col gap-1.5 text-sm">
-          <label htmlFor="scheduled-brief-slack-channel">Slack channel</label>
+          <label htmlFor={fieldId("scheduled-brief-slack-channel")}>Slack channel</label>
           <Input
             disabled={disabled || saving || running || !schedule.slackDeliveryEnabled}
-            id="scheduled-brief-slack-channel"
+            id={fieldId("scheduled-brief-slack-channel")}
             onBlur={() => {
               const next = slackChannelDraft.trim() || null;
               if (next === (schedule.slackChannel ?? null)) {
