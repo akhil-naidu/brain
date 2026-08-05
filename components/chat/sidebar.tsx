@@ -28,6 +28,12 @@ import {
 import { formatScheduleTimeValue } from "@/lib/chat/schedule-defaults";
 import { fetchScheduledBrief } from "@/lib/chat/scheduled-brief-api";
 import { listScheduledPlaybooks, type ScheduledPlaybook } from "@/lib/chat/scheduled-playbooks-api";
+import {
+  DEFAULT_SIDEBAR_SECTIONS,
+  readSidebarSections,
+  writeSidebarSections,
+  type SidebarSectionsState,
+} from "@/lib/chat/sidebar-sections";
 import { DEFAULT_CHAT_TITLE } from "@/lib/chat/title";
 import type { ChatSummary } from "@/lib/chat/store/types";
 import { cn } from "@/lib/utils";
@@ -55,7 +61,7 @@ function SidebarSection({
 }) {
   return (
     <Collapsible
-      className={cn("border-border/70 flex min-h-0 flex-col border-b", className)}
+      className={cn("border-border/50 flex min-h-0 flex-col border-b", className)}
       onOpenChange={onOpenChange}
       open={open}
     >
@@ -151,9 +157,19 @@ export function ChatSidebar({
   const { playbooks } = usePlaybooks();
   const [schedules, setSchedules] = useState<readonly ScheduledPlaybook[]>([]);
   const [morningBriefEnabled, setMorningBriefEnabled] = useState(false);
-  const [chatsOpen, setChatsOpen] = useState(true);
-  const [playbooksOpen, setPlaybooksOpen] = useState(true);
-  const [schedulesOpen, setSchedulesOpen] = useState(true);
+  const [sections, setSections] = useState<SidebarSectionsState>(DEFAULT_SIDEBAR_SECTIONS);
+
+  useEffect(() => {
+    setSections(readSidebarSections());
+  }, []);
+
+  const setSectionOpen = (key: keyof SidebarSectionsState, open: boolean) => {
+    setSections((previous) => {
+      const next = { ...previous, [key]: open };
+      writeSidebarSections(next);
+      return next;
+    });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -192,7 +208,7 @@ export function ChatSidebar({
     if (searchFocusRequest <= 0) {
       return undefined;
     }
-    setChatsOpen(true);
+    setSectionOpen("chats", true);
     const frame = window.requestAnimationFrame(() => {
       searchInputRef.current?.focus();
       searchInputRef.current?.select();
@@ -355,10 +371,10 @@ export function ChatSidebar({
             </Button>
           }
           active={chatsActive}
-          className={cn(chatsOpen && "min-h-0 flex-1")}
+          className={cn(sections.chats && "min-h-0 flex-1")}
           contentClassName="flex min-h-0 flex-1 flex-col"
-          onOpenChange={setChatsOpen}
-          open={chatsOpen}
+          onOpenChange={(open) => setSectionOpen("chats", open)}
+          open={sections.chats}
           title="Chats"
         >
           <div className="relative shrink-0 px-2 pt-2 pb-1.5">
@@ -492,8 +508,8 @@ export function ChatSidebar({
           active={playbooksActive}
           className="shrink-0"
           contentClassName="max-h-36 overflow-y-auto"
-          onOpenChange={setPlaybooksOpen}
-          open={playbooksOpen}
+          onOpenChange={(open) => setSectionOpen("playbooks", open)}
+          open={sections.playbooks}
           title="Playbooks"
         >
           {previewPlaybooks.length === 0 ? (
@@ -538,8 +554,8 @@ export function ChatSidebar({
           active={schedulesActive}
           className="shrink-0 border-b-0"
           contentClassName="max-h-40 overflow-y-auto"
-          onOpenChange={setSchedulesOpen}
-          open={schedulesOpen}
+          onOpenChange={(open) => setSectionOpen("schedules", open)}
+          open={sections.schedules}
           title="Schedules"
         >
           <ul className="flex flex-col px-1 py-0.5">

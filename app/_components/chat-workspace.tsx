@@ -263,16 +263,16 @@ export function ChatWorkspace() {
 
   if (!bootstrapped) {
     return (
-      <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
-        Loading chats…
+      <div className="flex h-full items-center justify-center px-4 sm:px-6">
+        <p className="text-muted-foreground w-full max-w-3xl text-sm">Loading chats…</p>
       </div>
     );
   }
 
   if (loadError) {
     return (
-      <div className="text-destructive flex h-full items-center justify-center px-4 text-center text-sm">
-        {loadError}
+      <div className="flex h-full items-center justify-center px-4 sm:px-6">
+        <p className="text-destructive w-full max-w-3xl text-sm">{loadError}</p>
       </div>
     );
   }

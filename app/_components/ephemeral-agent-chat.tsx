@@ -766,7 +766,7 @@ export function EphemeralAgentChat({
             );
           })}
           {showThinking ? (
-            <output aria-live="polite" className="block px-3">
+            <output aria-live="polite" className="block">
               <div className="text-muted-foreground text-[15px] leading-6 font-medium">
                 <span className="shimmer-text">Thinking...</span>
               </div>
