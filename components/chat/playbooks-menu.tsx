@@ -1,6 +1,6 @@
 "use client";
 
-import { BookmarkIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { BookmarkIcon, CalendarClockIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 import { PlaybookEditorDialog } from "@/components/chat/playbook-editor-dialog";
 import {
@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MAX_PLAYBOOKS, type Playbook } from "@/lib/chat/playbooks";
+import { schedulePlaybookQuick } from "@/lib/chat/schedule-from-playbook";
 import { cn } from "@/lib/utils";
 
 export function PlaybooksMenu({
@@ -19,6 +20,7 @@ export function PlaybooksMenu({
   onDelete,
   onRun,
   onSave,
+  onScheduled,
 }: {
   readonly disabled?: boolean;
   readonly playbooks: readonly Playbook[];
@@ -29,10 +31,13 @@ export function PlaybooksMenu({
     readonly label: string;
     readonly prompt: string;
   }) => void;
+  readonly onScheduled?: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<Playbook | null>(null);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [schedulingId, setSchedulingId] = useState<string | null>(null);
   const atLimit = playbooks.length >= MAX_PLAYBOOKS;
 
   return (
@@ -71,7 +76,9 @@ export function PlaybooksMenu({
                   const target = event.target;
                   if (
                     target instanceof Element &&
-                    target.closest("[data-playbook-edit], [data-playbook-delete]")
+                    target.closest(
+                      "[data-playbook-edit], [data-playbook-delete], [data-playbook-schedule]",
+                    )
                   ) {
                     return;
                   }
@@ -80,6 +87,45 @@ export function PlaybooksMenu({
                 }}
               >
                 <span className="min-w-0 flex-1 truncate text-sm">{item.label}</span>
+                {onScheduled ? (
+                  <button
+                    aria-label={`Schedule ${item.label}`}
+                    className="text-muted-foreground hover:text-foreground inline-flex size-6 shrink-0 items-center justify-center rounded-md disabled:opacity-50"
+                    data-playbook-schedule
+                    disabled={schedulingId !== null}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      void (async () => {
+                        setSchedulingId(item.id);
+                        setScheduleError(null);
+                        try {
+                          const result = await schedulePlaybookQuick(item);
+                          if (result.status === "at_limit") {
+                            setScheduleError("You already have the maximum number of schedules.");
+                            return;
+                          }
+                          setMenuOpen(false);
+                          onScheduled();
+                        } catch (error) {
+                          setScheduleError(
+                            error instanceof Error ? error.message : "Unable to schedule playbook.",
+                          );
+                        } finally {
+                          setSchedulingId(null);
+                        }
+                      })();
+                    }}
+                    onPointerDown={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }}
+                    title="Schedule"
+                    type="button"
+                  >
+                    <CalendarClockIcon className="size-3.5" />
+                  </button>
+                ) : null}
                 <button
                   aria-label={`Edit ${item.label}`}
                   className="text-muted-foreground hover:text-foreground inline-flex size-6 shrink-0 items-center justify-center rounded-md"
@@ -119,6 +165,9 @@ export function PlaybooksMenu({
               </DropdownMenuItem>
             ))
           )}
+          {scheduleError ? (
+            <p className="text-destructive px-2 py-1 text-xs leading-relaxed">{scheduleError}</p>
+          ) : null}
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="cursor-pointer gap-2"

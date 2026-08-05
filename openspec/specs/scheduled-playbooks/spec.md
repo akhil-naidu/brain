@@ -40,3 +40,17 @@ The chat UI SHALL let the user manage playbook schedules from a composer Schedul
 
 - **WHEN** the user chooses Run now for a playbook schedule from Schedules
 - **THEN** Brain performs a forced run and the UI can open the resulting chat
+
+### Requirement: Pause and resume all schedules
+
+Schedules MUST offer Pause all, which disables the morning brief and every playbook schedule that is currently enabled, and remembers those choices for Resume. Resume MUST restore only the schedules that were enabled when Pause all was used.
+
+#### Scenario: Pause all automatic runs
+
+- **WHEN** the user chooses Pause all while at least one schedule is enabled
+- **THEN** those schedules become disabled and automatic runs stop until the user enables them again or chooses Resume
+
+#### Scenario: Resume after pause
+
+- **WHEN** the user chooses Resume after Pause all
+- **THEN** the schedules that were enabled at pause time become enabled again

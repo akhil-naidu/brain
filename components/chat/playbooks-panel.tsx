@@ -1,10 +1,11 @@
 "use client";
 
-import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { CalendarClockIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 import { PlaybookEditorDialog } from "@/components/chat/playbook-editor-dialog";
 import { Button } from "@/components/ui/button";
 import { MAX_PLAYBOOKS, type Playbook } from "@/lib/chat/playbooks";
+import { schedulePlaybookQuick } from "@/lib/chat/schedule-from-playbook";
 import { cn } from "@/lib/utils";
 
 export function PlaybooksPanel({
@@ -13,6 +14,7 @@ export function PlaybooksPanel({
   onDelete,
   onRun,
   onSave,
+  onScheduled,
 }: {
   readonly className?: string;
   readonly playbooks: readonly Playbook[];
@@ -23,9 +25,12 @@ export function PlaybooksPanel({
     readonly label: string;
     readonly prompt: string;
   }) => void;
+  readonly onScheduled?: () => void;
 }) {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<Playbook | null>(null);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [schedulingId, setSchedulingId] = useState<string | null>(null);
   const atLimit = playbooks.length >= MAX_PLAYBOOKS;
 
   return (
@@ -66,6 +71,37 @@ export function PlaybooksPanel({
               >
                 {item.label}
               </button>
+              {onScheduled ? (
+                <button
+                  aria-label={`Schedule ${item.label}`}
+                  className="text-muted-foreground hover:bg-muted/70 hover:text-foreground inline-flex size-9 shrink-0 items-center justify-center rounded-lg opacity-100 disabled:opacity-50 sm:opacity-0 sm:group-hover:opacity-100"
+                  disabled={schedulingId !== null}
+                  onClick={() => {
+                    void (async () => {
+                      setSchedulingId(item.id);
+                      setScheduleError(null);
+                      try {
+                        const result = await schedulePlaybookQuick(item);
+                        if (result.status === "at_limit") {
+                          setScheduleError("You already have the maximum number of schedules.");
+                          return;
+                        }
+                        onScheduled();
+                      } catch (error) {
+                        setScheduleError(
+                          error instanceof Error ? error.message : "Unable to schedule playbook.",
+                        );
+                      } finally {
+                        setSchedulingId(null);
+                      }
+                    })();
+                  }}
+                  title="Schedule"
+                  type="button"
+                >
+                  <CalendarClockIcon className="size-3.5" />
+                </button>
+              ) : null}
               <button
                 aria-label={`Edit ${item.label}`}
                 className="text-muted-foreground hover:bg-muted/70 hover:text-foreground inline-flex size-9 shrink-0 items-center justify-center rounded-lg opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
@@ -89,6 +125,10 @@ export function PlaybooksPanel({
           ))}
         </ul>
       )}
+
+      {scheduleError ? (
+        <p className="text-destructive mt-2 px-3 text-xs leading-relaxed">{scheduleError}</p>
+      ) : null}
 
       <PlaybookEditorDialog
         onOpenChange={setEditorOpen}

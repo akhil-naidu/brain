@@ -68,3 +68,12 @@ The chat UI SHALL expose morning-brief schedule controls from a composer Schedul
 
 - **WHEN** the user chooses Run now from Schedules
 - **THEN** Brain performs a forced brief run and the UI can open the resulting chat
+
+### Requirement: Included in Pause all
+
+Pause all in Schedules MUST disable the morning brief when it is enabled, and Resume MUST restore it when it was enabled at pause time.
+
+#### Scenario: Pause disables morning brief
+
+- **WHEN** the morning brief schedule is enabled and the user chooses Pause all
+- **THEN** the morning brief schedule becomes disabled

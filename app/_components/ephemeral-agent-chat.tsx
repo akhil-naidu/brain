@@ -117,6 +117,8 @@ export function EphemeralAgentChat({
   const { enabledConnections, selectedModelId, setConnectionEnabled, setSelectedModelId } =
     useChatShell();
   const { playbooks, savePlaybook, deletePlaybook } = usePlaybooks();
+  const [schedulesOpen, setSchedulesOpen] = useState(false);
+  const [schedulesRefreshKey, setSchedulesRefreshKey] = useState(0);
   const [attachments, setAttachments] = useState<readonly PendingAttachment[]>([]);
   const seedEvents = initialEvents ?? EMPTY_EVENTS;
   const [session] = useState(() =>
@@ -718,6 +720,14 @@ export function EphemeralAgentChat({
                         void handleSubmit(prompt);
                       }}
                       onSave={savePlaybook}
+                      onScheduled={
+                        onOpenChat
+                          ? () => {
+                              setSchedulesRefreshKey((value) => value + 1);
+                              setSchedulesOpen(true);
+                            }
+                          : undefined
+                      }
                       playbooks={playbooks}
                     />
                   </>
@@ -780,13 +790,24 @@ export function EphemeralAgentChat({
                     void handleSubmit(prompt);
                   }}
                   onSave={savePlaybook}
+                  onScheduled={
+                    onOpenChat
+                      ? () => {
+                          setSchedulesRefreshKey((value) => value + 1);
+                          setSchedulesOpen(true);
+                        }
+                      : undefined
+                  }
                   playbooks={playbooks}
                 />
                 {onOpenChat ? (
                   <SchedulesMenu
                     disabled={missingApiKey}
+                    onOpenChange={setSchedulesOpen}
                     onOpenChat={onOpenChat}
+                    open={schedulesOpen}
                     playbooks={playbooks}
+                    refreshKey={schedulesRefreshKey}
                   />
                 ) : null}
                 <ModelPicker
