@@ -1,12 +1,20 @@
 "use client";
 
 import type { EveMessage } from "eve/react";
-import { CheckIcon, CopyIcon, PencilIcon, RefreshCwIcon } from "lucide-react";
+import {
+  CheckIcon,
+  CopyIcon,
+  PencilIcon,
+  RefreshCwIcon,
+  Volume2Icon,
+  VolumeXIcon,
+} from "lucide-react";
 import { memo, useEffect, useRef, useState } from "react";
 
 import { AgentMessageParts } from "@/components/chat/message-parts/message-parts";
 import { Button } from "@/components/ui/button";
 import { copyTextToClipboard, messageToMarkdown } from "@/lib/chat/export-markdown";
+import { canUseSpeechSynthesis, speakText } from "@/lib/chat/read-aloud";
 import type { SubagentChildFailure } from "@/lib/chat/subagent-child-failures";
 import { cn } from "@/lib/utils";
 
@@ -59,16 +67,29 @@ function AgentMessageView({
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(originalText);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const copyResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const speechStopRef = useRef<(() => void) | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const speechSupported = !isUser && canUseSpeechSynthesis();
+  const spokenText = originalText.trim();
 
   useEffect(() => {
     return () => {
       if (copyResetRef.current) {
         clearTimeout(copyResetRef.current);
       }
+      speechStopRef.current?.();
+      speechStopRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    // Stop playback when this message's text changes or streaming resumes.
+    speechStopRef.current?.();
+    speechStopRef.current = null;
+    setIsSpeaking(false);
+  }, [spokenText, isStreaming]);
 
   useEffect(() => {
     if (!canEdit && editing) {
@@ -125,11 +146,45 @@ function AgentMessageView({
     })();
   };
 
+  const stopSpeech = () => {
+    speechStopRef.current?.();
+    speechStopRef.current = null;
+    setIsSpeaking(false);
+  };
+
+  const handleReadAloud = () => {
+    if (!speechSupported || spokenText.length === 0) {
+      return;
+    }
+    if (isSpeaking) {
+      stopSpeech();
+      return;
+    }
+    const handle = speakText(spokenText, {
+      onEnd: () => {
+        speechStopRef.current = null;
+        setIsSpeaking(false);
+      },
+      onError: () => {
+        speechStopRef.current = null;
+        setIsSpeaking(false);
+      },
+    });
+    if (!handle) {
+      return;
+    }
+    speechStopRef.current = handle.stop;
+    setIsSpeaking(true);
+  };
+
   const canRegenerate = !isUser && Boolean(onRegenerate);
+  const canReadAloud = speechSupported && spokenText.length > 0;
 
   // Wait until the assistant turn finishes so actions aren't offered mid-stream.
   const showActions =
-    !editing && !isStreaming && (canCopy || (canEdit && onEditResend) || canRegenerate);
+    !editing &&
+    !isStreaming &&
+    (canCopy || (canEdit && onEditResend) || canRegenerate || canReadAloud);
 
   return (
     <article
@@ -257,6 +312,23 @@ function AgentMessageView({
                 variant="ghost"
               >
                 <RefreshCwIcon className="size-3.5" />
+              </Button>
+            ) : null}
+            {canReadAloud ? (
+              <Button
+                aria-label={isSpeaking ? "Stop reading aloud" : "Read aloud"}
+                className={actionButtonClass}
+                onClick={handleReadAloud}
+                size="icon-xs"
+                title={isSpeaking ? "Stop" : "Read aloud"}
+                type="button"
+                variant="ghost"
+              >
+                {isSpeaking ? (
+                  <VolumeXIcon className="size-3.5" />
+                ) : (
+                  <Volume2Icon className="size-3.5" />
+                )}
               </Button>
             ) : null}
             {canEdit && onEditResend ? (

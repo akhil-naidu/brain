@@ -67,15 +67,16 @@ describe("AgentMessage edit", () => {
   });
 });
 
+const assistantMessage = {
+  id: "assistant-1",
+  parts: [{ type: "text" as const, text: "Hello from Brain", state: "done" as const }],
+  role: "assistant" as const,
+  metadata: { status: "complete" as const },
+} as EveMessage;
+
 describe("AgentMessage regenerate", () => {
   it("calls onRegenerate for an assistant message", () => {
     const onRegenerate = vi.fn();
-    const assistantMessage = {
-      id: "assistant-1",
-      parts: [{ type: "text" as const, text: "Hello", state: "done" as const }],
-      role: "assistant" as const,
-      metadata: { status: "complete" as const },
-    } as EveMessage;
 
     render(
       <AgentMessage
@@ -89,6 +90,45 @@ describe("AgentMessage regenerate", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Regenerate response" }));
     expect(onRegenerate).toHaveBeenCalledOnce();
+  });
+});
+
+describe("AgentMessage read aloud", () => {
+  it("starts and stops speech for an assistant message", () => {
+    const speak = vi.fn();
+    const cancel = vi.fn();
+    Object.defineProperty(window, "speechSynthesis", {
+      configurable: true,
+      value: { cancel, speak },
+    });
+    class FakeUtterance {
+      text: string;
+      addEventListener = vi.fn();
+      constructor(text: string) {
+        this.text = text;
+      }
+    }
+    Object.defineProperty(window, "SpeechSynthesisUtterance", {
+      configurable: true,
+      value: FakeUtterance,
+    });
+
+    render(
+      <AgentMessage
+        canRespond={false}
+        isStreaming={false}
+        message={assistantMessage}
+        onInputResponses={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Read aloud" }));
+    expect(speak).toHaveBeenCalledOnce();
+    expect(screen.getByRole("button", { name: "Stop reading aloud" })).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: "Stop reading aloud" }));
+    expect(cancel).toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Read aloud" })).toBeDefined();
   });
 });
 
