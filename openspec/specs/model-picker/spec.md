@@ -4,11 +4,15 @@
 Lets Brain users choose among curated Command Code chat models from the chat UI so each turn can use a faster or stronger model without redeploying the agent.
 ## Requirements
 ### Requirement: Curated model catalog
-The system MUST expose a curated allowlist of OpenAI-compatible Command Code chat model ids suitable for Brain’s chat-completions provider path. The catalog MUST include a default model that matches the agent fallback.
+The system MUST expose a curated allowlist of OpenAI-compatible Command Code chat model ids suitable for Brain’s chat-completions provider path. The catalog MUST include a default model that matches the agent fallback. The catalog MUST NOT include Anthropic Messages-only model ids (for example Claude), because those require a different provider endpoint than Brain’s chat path.
 
 #### Scenario: Default model is available
 - **WHEN** the chat UI loads the model catalog
 - **THEN** it includes a default model id and at least one additional selectable model
+
+#### Scenario: Catalog stays on chat completions
+- **WHEN** the curated catalog is loaded
+- **THEN** every listed model id is intended for Command Code `/chat/completions` (not Anthropic `/messages` only)
 
 ### Requirement: Composer model picker
 The chat UI MUST provide a control to select the active model from the curated catalog. The selection MUST persist across page reloads for that browser (local preference storage).

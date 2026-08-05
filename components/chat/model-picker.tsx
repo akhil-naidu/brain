@@ -25,12 +25,12 @@ export function ModelPicker({
     <Select disabled={disabled} onValueChange={onModelIdChange} value={selected.id}>
       <SelectTrigger
         aria-label="Model"
-        className="text-muted-foreground hover:text-foreground h-8 max-w-[11rem] border-0 bg-transparent px-2 shadow-none focus-visible:ring-0"
+        className="text-muted-foreground hover:text-foreground h-8 max-w-[13.5rem] border-0 bg-transparent px-2 shadow-none focus-visible:ring-0"
         size="sm"
       >
         <SelectValue placeholder={selected.label} />
       </SelectTrigger>
-      <SelectContent align="start" className="min-w-[14rem]">
+      <SelectContent align="start" className="min-w-[16.5rem]">
         {BRAIN_CHAT_MODELS.map((model) => (
           <SelectItem className="items-start py-2" key={model.id} value={model.id}>
             <div className="flex min-w-0 flex-col gap-0.5">

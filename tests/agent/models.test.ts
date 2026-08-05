@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  BRAIN_CHAT_MODELS,
   DEFAULT_BRAIN_CHAT_MODEL_ID,
   getBrainChatModel,
   isBrainChatModelId,
@@ -8,6 +9,16 @@ import {
 import { extractSelectedModelIdFromMessages } from "@/agent/lib/client-context-model";
 
 describe("brain chat models", () => {
+  it("curates chat-completions models with clearer labels", () => {
+    expect(BRAIN_CHAT_MODELS.length).toBeGreaterThanOrEqual(6);
+    expect(BRAIN_CHAT_MODELS.every((model) => !model.id.startsWith("claude"))).toBe(true);
+    expect(isBrainChatModelId("gpt-5.6-terra")).toBe(true);
+    expect(isBrainChatModelId("google/gemini-3.6-flash")).toBe(true);
+    expect(isBrainChatModelId("moonshotai/Kimi-K3")).toBe(true);
+    expect(getBrainChatModel("deepseek/deepseek-v4-pro").description).toMatch(/Default/i);
+    expect(getBrainChatModel("gpt-5.6-luna").label).toBe("GPT-5.6 Luna");
+  });
+
   it("resolves known and unknown ids", () => {
     expect(DEFAULT_BRAIN_CHAT_MODEL_ID).toBe("deepseek/deepseek-v4-pro");
     expect(isBrainChatModelId("deepseek/deepseek-v4-flash")).toBe(true);
