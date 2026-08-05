@@ -29,7 +29,7 @@ When a playbook schedule runs, Brain SHALL create a new persisted chat titled fr
 
 ### Requirement: Schedule controls in chat chrome
 
-The chat UI SHALL let the user manage playbook schedules from a composer Schedules control available during any chat (including empty chat). Schedules SHALL open as an inline panel above the composer, with a Manage control that opens a dedicated `/schedules` page. Those controls SHALL let the user add a schedule from a saved playbook, enable/disable it, set time and optional Slack channel, run it now, and open the last chat for that schedule. The empty chat state MUST NOT duplicate the full playbook schedules panel.
+The chat UI SHALL let the user manage playbook schedules from a composer Schedules control available during any chat (including empty chat). Schedules SHALL open as an inline panel above the composer, with a Manage control that opens a dedicated `/schedules` page. The chat sidebar MUST also link to `/schedules`. Those controls SHALL let the user add a schedule from a saved playbook, enable/disable it, set time and optional Slack channel, run it now, and open the last chat for that schedule. The empty chat state MUST NOT duplicate the full playbook schedules panel.
 
 #### Scenario: Open playbook schedules from the composer
 

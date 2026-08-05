@@ -65,6 +65,15 @@ describe("ChatSidebar rename", () => {
   });
 });
 
+describe("ChatSidebar footer nav", () => {
+  it("links to playbooks, schedules, and home", () => {
+    renderSidebar();
+    expect(screen.getByRole("link", { name: "Playbooks" }).getAttribute("href")).toBe("/playbooks");
+    expect(screen.getByRole("link", { name: "Schedules" }).getAttribute("href")).toBe("/schedules");
+    expect(screen.getByRole("link", { name: "Home" }).getAttribute("href")).toBe("/");
+  });
+});
+
 describe("ChatSidebar new chat shortcut hint", () => {
   it("exposes the new chat shortcut on the New chat control", () => {
     renderSidebar();

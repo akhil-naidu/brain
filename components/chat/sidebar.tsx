@@ -246,7 +246,19 @@ export function ChatSidebar({
         </ul>
       </div>
 
-      <div className="border-border mt-auto border-t px-3 py-3">
+      <div className="border-border mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 border-t px-3 py-3">
+        <Link
+          className="text-muted-foreground hover:text-foreground text-xs transition-colors"
+          href="/playbooks"
+        >
+          Playbooks
+        </Link>
+        <Link
+          className="text-muted-foreground hover:text-foreground text-xs transition-colors"
+          href="/schedules"
+        >
+          Schedules
+        </Link>
         <Link
           className="text-muted-foreground hover:text-foreground text-xs transition-colors"
           href="/"
