@@ -1,3 +1,7 @@
+import Image from "next/image";
+
+import { cn } from "@/lib/utils";
+
 export function ClickUpIcon({ className }: { readonly className?: string }) {
   return (
     <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
@@ -54,6 +58,31 @@ export function GmailIcon({ className }: { readonly className?: string }) {
       <path d="M120 48v26l20-15v-8c0-7.42-8.47-11.65-14.4-7.2" fill="#FBBC04" />
       <path d="M72 74V48l24 18 24-18v26L96 92" fill="#EA4335" />
       <path d="M52 51v8l20 15V48l-5.6-4.2c-5.94-4.45-14.4-.22-14.4 7.2" fill="#C5221F" />
+    </svg>
+  );
+}
+
+/** Official dFlow mark (transparent PNG). */
+const DFLOW_MARK_SRC = "/images/dflow-no-bg.png?v=1";
+
+export function DflowIcon({ className }: { readonly className?: string }) {
+  return (
+    <Image
+      alt=""
+      aria-hidden="true"
+      className={cn("size-[18px] object-contain", className)}
+      height={64}
+      src={DFLOW_MARK_SRC}
+      unoptimized
+      width={64}
+    />
+  );
+}
+
+export function GitHubIcon({ className }: { readonly className?: string }) {
+  return (
+    <svg aria-hidden="true" className={className} fill="currentColor" viewBox="0 0 24 24">
+      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.207 11.387.6.113.793-.26.793-.577 0-.285-.01-1.04-.016-2.04-3.338.726-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.73.083-.73 1.205.085 1.84 1.237 1.84 1.237 1.07 1.834 2.809 1.304 3.495.997.108-.775.418-1.305.76-1.605-2.665-.304-5.467-1.332-5.467-5.93 0-1.31.468-2.382 1.236-3.222-.124-.303-.536-1.524.117-3.176 0 0 1.008-.322 3.3 1.23a11.5 11.5 0 0 1 3.003-.404c1.02.005 2.047.138 3.003.404 2.29-1.552 3.297-1.23 3.297-1.23.655 1.652.243 2.873.12 3.176.77.84 1.235 1.912 1.235 3.222 0 4.61-2.807 5.624-5.48 5.92.43.372.813 1.102.813 2.222 0 1.606-.014 2.902-.014 3.296 0 .32.192.694.8.576C20.565 21.796 24 17.3 24 12 24 5.37 18.63 0 12 0z" />
     </svg>
   );
 }

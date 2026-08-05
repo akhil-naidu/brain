@@ -113,9 +113,13 @@ function SelectItem({
           <CheckIcon className="size-4" />
         </SelectPrimitive.ItemIndicator>
       </span>
-      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+      {children}
     </SelectPrimitive.Item>
   );
+}
+
+function SelectItemText({ ...props }: React.ComponentProps<typeof SelectPrimitive.ItemText>) {
+  return <SelectPrimitive.ItemText data-slot="select-item-text" {...props} />;
 }
 
 function SelectSeparator({
@@ -166,6 +170,7 @@ export {
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectItemText,
   SelectLabel,
   SelectScrollDownButton,
   SelectScrollUpButton,

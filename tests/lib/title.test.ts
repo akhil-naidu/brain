@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { countGraphemes } from "@/lib/text";
-import { createFallbackTitle, DEFAULT_CHAT_TITLE } from "@/lib/chat/title";
+import { createFallbackTitle, DEFAULT_CHAT_TITLE, normalizeChatTitle } from "@/lib/chat/title";
 
 describe("createFallbackTitle", () => {
   it("uses the message text as the title", () => {
@@ -53,5 +53,22 @@ describe("createFallbackTitle", () => {
 
     expect(title).not.toContain("\uFFFD");
     expect(countGraphemes(title)).toBeLessThanOrEqual(72);
+  });
+});
+
+describe("normalizeChatTitle", () => {
+  it("trims and collapses whitespace", () => {
+    expect(normalizeChatTitle("  Hello   world  ")).toBe("Hello world");
+  });
+
+  it("falls back to the default for blank input", () => {
+    expect(normalizeChatTitle("")).toBe(DEFAULT_CHAT_TITLE);
+    expect(normalizeChatTitle("   ")).toBe(DEFAULT_CHAT_TITLE);
+  });
+
+  it("truncates long titles", () => {
+    const title = normalizeChatTitle("a".repeat(200));
+    expect(countGraphemes(title)).toBeLessThanOrEqual(72);
+    expect(title.endsWith("...")).toBe(true);
   });
 });

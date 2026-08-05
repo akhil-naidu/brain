@@ -3,6 +3,7 @@ import { chmod, mkdir, open, readFile, rename, rm, writeFile } from "node:fs/pro
 import path from "node:path";
 import type { ConnectionPrincipal } from "eve/connections";
 import { z } from "zod";
+import { resolveProviderAppCredentials } from "./connection-credentials";
 
 const EXPIRY_SKEW_MS = 60_000;
 const OAUTH_FETCH_TIMEOUT_MS = 15_000;
@@ -88,6 +89,12 @@ export type McpOAuthProvider = {
   tokenAuthMethod: "none" | "client_secret_post";
   /** Extra authorize query params (e.g. Google access_type=offline). */
   authorizeExtraParams?: Record<string, string>;
+  /**
+   * When false, omit RFC 8707 `resource` on authorize/token requests.
+   * Classic GitHub OAuth apps do not accept that parameter.
+   * Defaults to true.
+   */
+  includeResourceIndicator?: boolean;
   /** Providers like Slack wrap tokens in a proprietary JSON envelope. */
   parseTokenResponse?: (json: unknown) => ParsedOAuthToken;
   /** Exact remote tool names reviewed as read-only. Unknown tools require approval. */
@@ -225,6 +232,30 @@ export function isTokenUsable(token: StoredToken, now = Date.now()): boolean {
 
 function tokenResult(token: StoredToken): { token: string; expiresAt?: number } {
   return { token: token.accessToken, expiresAt: token.expiresAt };
+}
+
+export type StoredTokenAuthState = "connected" | "needs_sign_in";
+
+/**
+ * Read-only peek of stored auth state. Does not refresh tokens over the network.
+ * Refreshable-but-expired tokens count as connected.
+ */
+export async function getStoredTokenAuthState(
+  provider: Pick<McpOAuthProvider, "name">,
+  principal: ConnectionPrincipal,
+): Promise<StoredTokenAuthState> {
+  const store = await readStore(provider.name);
+  const entry = store.tokens[principalKey(principal)];
+  if (!entry) {
+    return "needs_sign_in";
+  }
+  if (isTokenUsable(entry)) {
+    return "connected";
+  }
+  if (entry.refreshToken && entry.clientId) {
+    return "connected";
+  }
+  return "needs_sign_in";
 }
 
 export async function getStoredAccessToken(
@@ -379,8 +410,10 @@ async function refreshStoredToken(
     grant_type: "refresh_token",
     refresh_token: entry.refreshToken,
     client_id: entry.clientId,
-    resource: provider.resource ?? provider.mcpUrl,
   });
+  if (provider.includeResourceIndicator !== false) {
+    body.set("resource", provider.resource ?? provider.mcpUrl);
+  }
   if (provider.tokenAuthMethod === "client_secret_post") {
     body.set("client_secret", entry.clientSecret ?? "");
   }
@@ -422,19 +455,16 @@ async function resolveClient(
   provider: McpOAuthProvider,
   redirectUri: string,
 ): Promise<{ clientId: string; clientSecret?: string }> {
-  const envClientId = provider.clientIdEnv ? process.env[provider.clientIdEnv]?.trim() : undefined;
-  const envClientSecret = provider.clientSecretEnv
-    ? process.env[provider.clientSecretEnv]?.trim()
-    : undefined;
-
-  if (envClientId) {
-    return { clientId: envClientId, clientSecret: envClientSecret || undefined };
+  const appCredentials = await resolveProviderAppCredentials(provider);
+  if (appCredentials?.clientId) {
+    return {
+      clientId: appCredentials.clientId,
+      clientSecret: appCredentials.clientSecret,
+    };
   }
 
   if (!provider.registrationEndpoint) {
-    throw new Error(
-      `${provider.displayName} requires ${provider.clientIdEnv} in .env (no dynamic client registration).`,
-    );
+    throw new Error(`${provider.displayName} needs to be set up in the connections menu first.`);
   }
 
   const store = await readStore(provider.name);
@@ -486,7 +516,9 @@ export async function buildAuthorizeUrl(
   if (provider.scope !== null) {
     url.searchParams.set("scope", provider.scope);
   }
-  url.searchParams.set("resource", provider.resource ?? provider.mcpUrl);
+  if (provider.includeResourceIndicator !== false) {
+    url.searchParams.set("resource", provider.resource ?? provider.mcpUrl);
+  }
   url.searchParams.set("state", opts.state);
   for (const [key, value] of Object.entries(provider.authorizeExtraParams ?? {})) {
     url.searchParams.set(key, value);
@@ -510,8 +542,10 @@ export async function exchangeAuthorizationCode(
     redirect_uri: opts.callbackUrl,
     client_id: opts.clientId,
     code_verifier: opts.codeVerifier,
-    resource: provider.resource ?? provider.mcpUrl,
   });
+  if (provider.includeResourceIndicator !== false) {
+    body.set("resource", provider.resource ?? provider.mcpUrl);
+  }
   if (provider.tokenAuthMethod === "client_secret_post") {
     body.set("client_secret", opts.clientSecret ?? "");
   }

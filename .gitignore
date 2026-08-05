@@ -1,5 +1,6 @@
 # Dependencies
 node_modules
+.pnpm-store
 
 # Secrets — .env.example is the tracked template
 .env*

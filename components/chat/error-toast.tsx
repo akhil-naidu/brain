@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 export function ErrorToast({
   message,
   onDismiss,
+  onRetry,
 }: {
   readonly message: string;
   readonly onDismiss: () => void;
+  readonly onRetry?: () => void;
 }) {
   return (
     <div
@@ -20,6 +22,13 @@ export function ErrorToast({
       <div className="min-w-0 flex-1">
         <p className="font-medium">Request failed</p>
         <p className="text-muted-foreground mt-0.5">{message}</p>
+        {onRetry ? (
+          <div className="mt-2">
+            <Button onClick={onRetry} size="xs" type="button" variant="outline">
+              Retry
+            </Button>
+          </div>
+        ) : null}
       </div>
       <Button
         aria-label="Dismiss error"
