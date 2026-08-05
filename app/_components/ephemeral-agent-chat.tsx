@@ -784,7 +784,6 @@ export function EphemeralAgentChat({
           {onOpenChat && schedulesOpen ? (
             <SchedulesPanel
               className="mb-3"
-              disabled={missingApiKey}
               manageHref="/schedules"
               onClose={() => {
                 setSchedulesOpen(false);

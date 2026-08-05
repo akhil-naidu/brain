@@ -1,6 +1,7 @@
 "use client";
 
 import { LoaderCircleIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -118,6 +119,7 @@ export function ScheduledPlaybooksPanel({
   }
 
   const atLimit = schedules.length >= MAX_SCHEDULED_PLAYBOOKS;
+  const noPlaybooks = playbooks.length === 0;
 
   return (
     <section
@@ -128,27 +130,34 @@ export function ScheduledPlaybooksPanel({
     >
       <div className="flex items-center justify-between gap-2 px-4 py-3.5">
         <p className="text-sm font-medium">Playbooks</p>
-        <Button
-          className="h-7 px-2 text-xs"
-          disabled={disabled || atLimit || playbooks.length === 0}
-          onClick={() => {
-            setAdding((open) => !open);
-            setActionError(null);
-          }}
-          size="sm"
-          title={
-            playbooks.length === 0
-              ? "Save a playbook first."
-              : atLimit
+        {noPlaybooks ? (
+          <Button asChild className="h-7 px-2 text-xs" size="sm" variant="ghost">
+            <Link href="/playbooks" title="Save a playbook first, then schedule it">
+              <PlusIcon className="size-3.5" />
+              Create
+            </Link>
+          </Button>
+        ) : (
+          <Button
+            className="h-7 px-2 text-xs"
+            disabled={disabled || atLimit}
+            onClick={() => {
+              setAdding((open) => !open);
+              setActionError(null);
+            }}
+            size="sm"
+            title={
+              atLimit
                 ? `You can schedule up to ${MAX_SCHEDULED_PLAYBOOKS} playbooks.`
                 : "Add a playbook schedule"
-          }
-          type="button"
-          variant="ghost"
-        >
-          <PlusIcon className="size-3.5" />
-          Add
-        </Button>
+            }
+            type="button"
+            variant="ghost"
+          >
+            <PlusIcon className="size-3.5" />
+            Add
+          </Button>
+        )}
       </div>
 
       {adding ? (
@@ -269,7 +278,16 @@ export function ScheduledPlaybooksPanel({
 
       {schedules.length === 0 ? (
         <p className="text-muted-foreground border-border/60 border-t px-4 py-4 text-sm">
-          None yet.
+          {noPlaybooks ? (
+            <>
+              Save a playbook first, then come back to schedule it.{" "}
+              <Link className="text-foreground underline underline-offset-2" href="/playbooks">
+                Open playbooks
+              </Link>
+            </>
+          ) : (
+            "None yet — use Add to schedule one."
+          )}
         </p>
       ) : (
         <ul className="border-border/60 divide-border/60 divide-y border-t">
