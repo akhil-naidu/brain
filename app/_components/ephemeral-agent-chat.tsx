@@ -24,6 +24,7 @@ import { PlaybooksMenu } from "@/components/chat/playbooks-menu";
 import { PlaybooksPanel } from "@/components/chat/playbooks-panel";
 import { usePlaybooks } from "@/components/chat/use-playbooks";
 import { SchedulesMenu } from "@/components/chat/schedules-menu";
+import { SchedulesPanel } from "@/components/chat/schedules-panel";
 import { WelcomePrompts } from "@/components/chat/welcome-prompts";
 import {
   buildUserContentMessage,
@@ -766,6 +767,20 @@ export function EphemeralAgentChat({
           className="from-background pointer-events-none absolute inset-x-0 -top-10 h-10 bg-gradient-to-t to-transparent"
         />
         <div className="mx-auto w-full max-w-3xl">
+          {onOpenChat && schedulesOpen ? (
+            <SchedulesPanel
+              className="mb-3"
+              disabled={missingApiKey}
+              manageHref="/schedules"
+              onClose={() => {
+                setSchedulesOpen(false);
+              }}
+              onOpenChat={onOpenChat}
+              playbooks={playbooks}
+              refreshKey={schedulesRefreshKey}
+              variant="inline"
+            />
+          ) : null}
           <ChatComposer
             attachments={attachments}
             disabled={missingApiKey}
@@ -804,10 +819,7 @@ export function EphemeralAgentChat({
                   <SchedulesMenu
                     disabled={missingApiKey}
                     onOpenChange={setSchedulesOpen}
-                    onOpenChat={onOpenChat}
                     open={schedulesOpen}
-                    playbooks={playbooks}
-                    refreshKey={schedulesRefreshKey}
                   />
                 ) : null}
                 <ModelPicker
