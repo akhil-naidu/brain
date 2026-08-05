@@ -17,7 +17,7 @@ The system MUST provide a Slack MCP connection using official Slack MCP. App cre
 - **THEN** the system produces an authorize URL / redirect URI the operator can register on the Slack app
 
 #### Scenario: Slack accepts UI-stored app credentials
-- **WHEN** Slack client id and secret are saved via Configure and env vars are unset
+- **WHEN** Slack app id and secret are saved via Set up and env vars are unset
 - **THEN** Menu Connect and mid-turn OAuth can authorize Slack without requiring those env vars
 
 ### Requirement: Asana MCP connection with env client credentials

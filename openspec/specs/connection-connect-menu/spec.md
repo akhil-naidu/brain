@@ -85,13 +85,24 @@ The host MUST expose a setup endpoint for static-credential MCP connections that
 - **THEN** the endpoint fails with a clear error
 
 ### Requirement: Configure control in the integrations menu
-The integrations menu MUST offer Configure for connections that need setup.
+The integrations menu MUST offer Set up for connections that need setup.
 
-#### Scenario: Configure shown when setup is needed
+#### Scenario: Set up shown when setup is needed
 - **WHEN** the integrations menu loads status and a connection is needs_setup
-- **THEN** that row shows a Configure control that opens a dialog to enter client id/secret and copy the redirect URI
+- **THEN** that row shows a Set up control that opens a dialog to enter app id/secret and copy the return link
 
-#### Scenario: Configure hidden when setup is complete
+#### Scenario: Set up hidden when setup is complete
 - **WHEN** a connection is needs_sign_in or connected
-- **THEN** the menu does not offer Configure for that row
+- **THEN** the menu does not offer Set up for that row
+
+### Requirement: Enable toggle requires a connected app
+The integrations menu MUST only allow turning a connection on when that connection is connected. Turning off remains allowed anytime.
+
+#### Scenario: Toggle on blocked before connect
+- **WHEN** a connection is needs_setup or needs_sign_in
+- **THEN** the user cannot turn that connection on, and the menu explains they must set up or connect first
+
+#### Scenario: Toggle on allowed when connected
+- **WHEN** a connection is connected
+- **THEN** the user can turn that connection on for the current chat
 

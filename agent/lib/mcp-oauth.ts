@@ -456,9 +456,7 @@ async function resolveClient(
   }
 
   if (!provider.registrationEndpoint) {
-    throw new Error(
-      `${provider.displayName} requires app credentials (Configure in the connections menu or set ${provider.clientIdEnv} in .env).`,
-    );
+    throw new Error(`${provider.displayName} needs to be set up in the connections menu first.`);
   }
 
   const store = await readStore(provider.name);

@@ -124,7 +124,7 @@ describe("getProviderCredentialSetupError", () => {
   it("asks for credentials when none are configured", async () => {
     await useTemporaryWorkingDirectory();
     await expect(getProviderCredentialSetupError(staticProvider, {})).resolves.toBe(
-      "Add Slack app credentials",
+      "Set up Slack to continue",
     );
   });
 
@@ -132,7 +132,7 @@ describe("getProviderCredentialSetupError", () => {
     await useTemporaryWorkingDirectory();
     await writeStoredAppCredentials("slack", { clientId: "id" });
     await expect(getProviderCredentialSetupError(staticProvider, {})).resolves.toBe(
-      "Add Slack client secret",
+      "Add the Slack app secret to continue",
     );
   });
 

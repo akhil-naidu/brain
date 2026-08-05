@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  canEnableConnection,
   integrationStatusText,
   IntegrationsMenu,
   shouldOfferConnectionConfigure,
@@ -49,7 +50,7 @@ describe("integrationStatusText", () => {
         status: { id: "asana", displayName: "Asana", status: "needs_setup" },
         statusError: null,
       }),
-    ).toBe("Needs setup");
+    ).toBe("Set up needed");
     expect(
       integrationStatusText({
         loading: false,
@@ -57,6 +58,33 @@ describe("integrationStatusText", () => {
         statusError: "boom",
       }),
     ).toBe("Status unavailable");
+  });
+});
+
+describe("canEnableConnection", () => {
+  it("allows enabling only when connected", () => {
+    expect(
+      canEnableConnection({
+        id: "clickup",
+        displayName: "ClickUp",
+        status: "connected",
+      }),
+    ).toBe(true);
+    expect(
+      canEnableConnection({
+        id: "slack",
+        displayName: "Slack",
+        status: "needs_sign_in",
+      }),
+    ).toBe(false);
+    expect(
+      canEnableConnection({
+        id: "asana",
+        displayName: "Asana",
+        status: "needs_setup",
+      }),
+    ).toBe(false);
+    expect(canEnableConnection(undefined)).toBe(false);
   });
 });
 

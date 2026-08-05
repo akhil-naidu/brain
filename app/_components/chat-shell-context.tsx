@@ -46,11 +46,11 @@ function readStoredModelId(): string {
 
 export function ChatShellProvider({ children }: { readonly children: ReactNode }) {
   const [enabledConnections, setEnabledConnections] = useState<EnabledConnections>({
-    clickup: true,
-    slack: true,
-    asana: true,
-    gmail: true,
-    dflow: true,
+    clickup: false,
+    slack: false,
+    asana: false,
+    gmail: false,
+    dflow: false,
   });
   const [selectedModelId, setSelectedModelIdState] = useState(DEFAULT_BRAIN_CHAT_MODEL_ID);
   const [preferenceReady, setPreferenceReady] = useState(false);

@@ -88,7 +88,7 @@ export function ConnectionSetupDialog({
         onSaved();
         onOpenChange(false);
       } catch (saveError) {
-        setError(saveError instanceof Error ? saveError.message : "Unable to save credentials.");
+        setError(saveError instanceof Error ? saveError.message : "Unable to save.");
       } finally {
         setSaving(false);
       }
@@ -111,7 +111,7 @@ export function ConnectionSetupDialog({
         setClientSecret("");
       } catch (clearError) {
         setError(
-          clearError instanceof Error ? clearError.message : "Unable to clear stored credentials.",
+          clearError instanceof Error ? clearError.message : "Unable to remove saved details.",
         );
       } finally {
         setClearing(false);
@@ -129,7 +129,7 @@ export function ConnectionSetupDialog({
         setCopied(true);
         window.setTimeout(() => setCopied(false), 1500);
       } catch {
-        setError("Couldn't copy redirect URI.");
+        setError("Couldn't copy the return link.");
       }
     })();
   };
@@ -140,16 +140,16 @@ export function ConnectionSetupDialog({
     !saving &&
     !loading;
 
+  const appName = info?.displayName ?? "this app";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>
-            {info ? `Configure ${info.displayName}` : "Configure connection"}
-          </DialogTitle>
+          <DialogTitle>{info ? `Set up ${info.displayName}` : "Set up connection"}</DialogTitle>
           <DialogDescription>
-            Paste the OAuth app client ID and secret from the provider console. Credentials stay on
-            this Brain host under <code className="text-xs">.eve/</code> — no redeploy needed.
+            Enter the app ID and secret from your {appName} account settings so Brain can connect.
+            They stay on this computer.
           </DialogDescription>
         </DialogHeader>
 
@@ -160,7 +160,10 @@ export function ConnectionSetupDialog({
             {info ? (
               <div className="bg-muted/40 rounded-md px-3 py-2">
                 <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
-                  Redirect URI
+                  Return link
+                </p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  Add this link in your {info.displayName} app settings, then continue.
                 </p>
                 <p className="text-foreground mt-1 font-mono text-xs break-all">
                   {info.callbackUrl}
@@ -172,7 +175,7 @@ export function ConnectionSetupDialog({
                   type="button"
                   variant="outline"
                 >
-                  {copied ? "Copied" : "Copy URI"}
+                  {copied ? "Copied" : "Copy link"}
                 </Button>
               </div>
             ) : null}
@@ -182,13 +185,13 @@ export function ConnectionSetupDialog({
                 className="text-foreground text-sm font-medium"
                 htmlFor="connection-setup-client-id"
               >
-                Client ID
+                App ID
               </label>
               <Input
                 autoComplete="off"
                 id="connection-setup-client-id"
                 onChange={(event) => setClientId(event.target.value)}
-                placeholder={info?.clientIdEnv ?? "Client ID"}
+                placeholder="Paste app ID"
                 spellCheck={false}
                 value={clientId}
               />
@@ -200,13 +203,13 @@ export function ConnectionSetupDialog({
                   className="text-foreground text-sm font-medium"
                   htmlFor="connection-setup-client-secret"
                 >
-                  Client secret
+                  App secret
                 </label>
                 <Input
                   autoComplete="off"
                   id="connection-setup-client-secret"
                   onChange={(event) => setClientSecret(event.target.value)}
-                  placeholder={info.clientSecretEnv ?? "Client secret"}
+                  placeholder="Paste app secret"
                   spellCheck={false}
                   type="password"
                   value={clientSecret}
@@ -216,12 +219,7 @@ export function ConnectionSetupDialog({
 
             {info?.hasStoredCredentials ? (
               <p className="text-muted-foreground text-xs">
-                Stored credentials are already on this host. Saving replaces them.
-              </p>
-            ) : info?.credentialSource === "env" ? (
-              <p className="text-muted-foreground text-xs">
-                Credentials are currently loaded from the environment. Saving stores a local copy
-                that takes priority.
+                Details are already saved here. Saving replaces them.
               </p>
             ) : null}
 
@@ -241,7 +239,7 @@ export function ConnectionSetupDialog({
               type="button"
               variant="ghost"
             >
-              {clearing ? "Clearing…" : "Clear stored"}
+              {clearing ? "Removing…" : "Remove saved"}
             </Button>
           ) : null}
           <Button onClick={() => onOpenChange(false)} type="button" variant="outline">

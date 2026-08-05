@@ -145,7 +145,7 @@ export async function getProviderCredentialSetupError(
 
   const credentials = await resolveProviderAppCredentials(provider, env);
   if (!credentials?.clientId) {
-    return `Add ${provider.displayName} app credentials`;
+    return `Set up ${provider.displayName} to continue`;
   }
 
   if (
@@ -153,7 +153,7 @@ export async function getProviderCredentialSetupError(
     provider.clientSecretEnv &&
     !credentials.clientSecret
   ) {
-    return `Add ${provider.displayName} client secret`;
+    return `Add the ${provider.displayName} app secret to continue`;
   }
 
   return null;

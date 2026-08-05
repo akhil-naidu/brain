@@ -46,7 +46,7 @@ describe("resolveConnectionAuthStatus", () => {
     expect(status).toMatchObject({
       id: "status-test",
       status: "needs_setup",
-      detail: "Add Status Test app credentials",
+      detail: "Set up Status Test to continue",
     });
   });
 

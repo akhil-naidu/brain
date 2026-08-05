@@ -5,7 +5,7 @@ describe("connectionStatusLabel", () => {
   it("maps statuses to user-facing labels", () => {
     expect(connectionStatusLabel("connected")).toBe("Connected");
     expect(connectionStatusLabel("needs_sign_in")).toBe("Sign in");
-    expect(connectionStatusLabel("needs_setup")).toBe("Needs setup");
+    expect(connectionStatusLabel("needs_setup")).toBe("Set up needed");
   });
 });
 

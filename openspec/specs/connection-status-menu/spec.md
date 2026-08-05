@@ -27,5 +27,5 @@ The integrations menu MUST show each connection’s status alongside the enable 
 
 #### Scenario: Menu shows status labels
 - **WHEN** the user opens the integrations menu
-- **THEN** each connection row indicates Connected, Sign in, or Needs setup according to the status API
+- **THEN** each connection row indicates Connected, Sign in, or Set up needed according to the status API
 

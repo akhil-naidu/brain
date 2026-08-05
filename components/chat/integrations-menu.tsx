@@ -65,6 +65,11 @@ export function shouldOfferConnectionConfigure(status: ConnectionStatus | undefi
   return status?.status === "needs_setup";
 }
 
+/** Users can only turn a connection on after it is signed in. */
+export function canEnableConnection(status: ConnectionStatus | undefined): boolean {
+  return status?.status === "connected";
+}
+
 export function IntegrationsMenu({
   enabledConnections,
   onConnectionEnabledChange,
@@ -79,8 +84,8 @@ export function IntegrationsMenu({
   const [statusById, setStatusById] = useState<ReadonlyMap<string, ConnectionStatus> | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(false);
-  const [connectingId, setConnectingId] = useState<string | null>(null);
-  const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
+  const [connectingId, setConnectingId] = useState<keyof EnabledConnections | null>(null);
+  const [disconnectingId, setDisconnectingId] = useState<keyof EnabledConnections | null>(null);
   const [connectError, setConnectError] = useState<string | null>(null);
   const [configureId, setConfigureId] = useState<string | null>(null);
 
@@ -131,10 +136,23 @@ export function IntegrationsMenu({
       return;
     }
     if (statusById.get(connectingId)?.status === "connected") {
+      onConnectionEnabledChange(connectingId, true);
       setConnectingId(null);
       setConnectError(null);
     }
-  }, [connectingId, statusById]);
+  }, [connectingId, onConnectionEnabledChange, statusById]);
+
+  useEffect(() => {
+    if (!statusById) {
+      return;
+    }
+    for (const { key } of CONNECTION_ITEMS) {
+      const status = statusById.get(key);
+      if (enabledConnections[key] && status && status.status !== "connected") {
+        onConnectionEnabledChange(key, false);
+      }
+    }
+  }, [enabledConnections, onConnectionEnabledChange, statusById]);
 
   const startConnect = (connectionId: keyof EnabledConnections) => {
     setConnectingId(connectionId);
@@ -171,6 +189,7 @@ export function IntegrationsMenu({
 
   return (
     <DropdownMenu
+      open={menuOpen}
       onOpenChange={(open) => {
         setMenuOpen(open);
         if (open) {
@@ -218,12 +237,14 @@ export function IntegrationsMenu({
           const showConnect = shouldOfferConnectionConnect(status);
           const showDisconnect = shouldOfferConnectionDisconnect(status);
           const showConfigure = shouldOfferConnectionConfigure(status);
+          const allowEnable = canEnableConnection(status);
           const isConnecting = connectingId === key;
           const isDisconnecting = disconnectingId === key;
 
           return (
             <DropdownMenuItem
               aria-checked={enabled}
+              aria-disabled={!enabled && !allowEnable}
               className="focus:bg-muted/70 h-auto cursor-pointer gap-2 rounded-sm px-2 py-1.5 text-sm"
               key={key}
               onSelect={(event) => {
@@ -237,7 +258,21 @@ export function IntegrationsMenu({
                 ) {
                   return;
                 }
-                onConnectionEnabledChange(key, !enabled);
+                if (enabled) {
+                  onConnectionEnabledChange(key, false);
+                  return;
+                }
+                if (!allowEnable) {
+                  setConnectError(
+                    status?.status === "needs_setup"
+                      ? `Set up ${label} before turning it on.`
+                      : status?.status === "needs_sign_in"
+                        ? `Connect ${label} before turning it on.`
+                        : `Wait for ${label} status, then connect it.`,
+                  );
+                  return;
+                }
+                onConnectionEnabledChange(key, true);
               }}
               role="menuitemcheckbox"
             >
@@ -281,7 +316,7 @@ export function IntegrationsMenu({
                   }}
                   type="button"
                 >
-                  Configure
+                  Set up
                 </button>
               ) : null}
               {showConnect ? (
@@ -327,6 +362,7 @@ export function IntegrationsMenu({
                 className={cn(
                   "relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors",
                   enabled ? "bg-emerald-500" : "bg-muted",
+                  !enabled && !allowEnable ? "opacity-50" : null,
                 )}
               >
                 <span
