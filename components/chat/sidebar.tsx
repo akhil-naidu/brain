@@ -397,21 +397,24 @@ export function ChatSidebar({
         </ul>
 
         <Collapsible className="mt-4" onOpenChange={setPlaybooksOpen} open={playbooksOpen}>
-          <div className="flex items-center gap-1 px-2 pb-1">
-            <CollapsibleTrigger className="text-muted-foreground/70 hover:text-muted-foreground flex min-w-0 flex-1 cursor-pointer items-center justify-between text-[11px] font-medium tracking-wide uppercase">
-              Playbooks
+          <div className="flex items-center gap-0.5 px-1 pb-1">
+            <CollapsibleTrigger
+              aria-label={playbooksOpen ? "Collapse playbooks" : "Expand playbooks"}
+              className="text-muted-foreground/70 hover:text-muted-foreground inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md"
+            >
               <ChevronDownIcon
                 className={cn(
-                  "size-3.5 shrink-0 transition-transform",
+                  "size-3.5 transition-transform",
                   playbooksOpen ? "rotate-0" : "-rotate-90",
                 )}
               />
             </CollapsibleTrigger>
             <Link
-              className="text-muted-foreground/70 hover:text-foreground shrink-0 text-[11px] font-medium tracking-wide transition-colors"
+              className="text-muted-foreground/70 hover:text-foreground min-w-0 flex-1 truncate text-[11px] font-medium tracking-wide uppercase transition-colors"
               href="/playbooks"
+              title="Open playbooks"
             >
-              Manage
+              Playbooks
             </Link>
           </div>
           <CollapsibleContent>
@@ -436,21 +439,24 @@ export function ChatSidebar({
         </Collapsible>
 
         <Collapsible className="mt-3" onOpenChange={setSchedulesOpen} open={schedulesOpen}>
-          <div className="flex items-center gap-1 px-2 pb-1">
-            <CollapsibleTrigger className="text-muted-foreground/70 hover:text-muted-foreground flex min-w-0 flex-1 cursor-pointer items-center justify-between text-[11px] font-medium tracking-wide uppercase">
-              Schedules
+          <div className="flex items-center gap-0.5 px-1 pb-1">
+            <CollapsibleTrigger
+              aria-label={schedulesOpen ? "Collapse schedules" : "Expand schedules"}
+              className="text-muted-foreground/70 hover:text-muted-foreground inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md"
+            >
               <ChevronDownIcon
                 className={cn(
-                  "size-3.5 shrink-0 transition-transform",
+                  "size-3.5 transition-transform",
                   schedulesOpen ? "rotate-0" : "-rotate-90",
                 )}
               />
             </CollapsibleTrigger>
             <Link
-              className="text-muted-foreground/70 hover:text-foreground shrink-0 text-[11px] font-medium tracking-wide transition-colors"
+              className="text-muted-foreground/70 hover:text-foreground min-w-0 flex-1 truncate text-[11px] font-medium tracking-wide uppercase transition-colors"
               href="/schedules"
+              title="Open schedules"
             >
-              Manage
+              Schedules
             </Link>
           </div>
           <CollapsibleContent>
@@ -485,7 +491,19 @@ export function ChatSidebar({
         </Collapsible>
       </div>
 
-      <div className="border-border mt-auto border-t px-3 py-3">
+      <div className="border-border mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 border-t px-3 py-3">
+        <Link
+          className="text-muted-foreground hover:text-foreground text-xs transition-colors"
+          href="/playbooks"
+        >
+          All playbooks
+        </Link>
+        <Link
+          className="text-muted-foreground hover:text-foreground text-xs transition-colors"
+          href="/schedules"
+        >
+          All schedules
+        </Link>
         <Link
           className="text-muted-foreground hover:text-foreground text-xs transition-colors"
           href="/"

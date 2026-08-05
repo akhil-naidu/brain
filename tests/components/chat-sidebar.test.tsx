@@ -124,18 +124,23 @@ describe("ChatSidebar rename", () => {
 });
 
 describe("ChatSidebar mini lists", () => {
-  it("shows playbook and schedule previews with manage links", async () => {
+  it("shows playbook and schedule previews with footer page links", async () => {
     renderSidebar();
     expect(await screen.findByRole("button", { name: "Triage inbox" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Playbooks" }).getAttribute("href")).toBe("/playbooks");
+    expect(screen.getByRole("link", { name: "Schedules" }).getAttribute("href")).toBe("/schedules");
     expect(screen.getByRole("link", { name: /Morning brief/i }).getAttribute("href")).toBe(
       "/schedules",
     );
     expect(screen.getByRole("link", { name: /Daily standup/i }).getAttribute("href")).toBe(
       "/schedules",
     );
-    const manageLinks = screen.getAllByRole("link", { name: "Manage" });
-    expect(manageLinks.some((link) => link.getAttribute("href") === "/playbooks")).toBe(true);
-    expect(manageLinks.some((link) => link.getAttribute("href") === "/schedules")).toBe(true);
+    expect(screen.getByRole("link", { name: "All playbooks" }).getAttribute("href")).toBe(
+      "/playbooks",
+    );
+    expect(screen.getByRole("link", { name: "All schedules" }).getAttribute("href")).toBe(
+      "/schedules",
+    );
     expect(screen.getByRole("link", { name: "Home" }).getAttribute("href")).toBe("/");
   });
 });
