@@ -287,7 +287,7 @@ export function ChatSidebar({
         className,
       )}
     >
-      <div className="border-border/70 flex shrink-0 items-center justify-between gap-2 border-b px-2 py-1.5">
+      <div className="border-border/50 flex h-12 shrink-0 items-center justify-between gap-2 border-b px-2">
         <div className="text-foreground flex min-w-0 items-center gap-2 text-sm font-medium">
           {brand}
         </div>
