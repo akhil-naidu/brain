@@ -120,18 +120,16 @@ export function ScheduledPlaybooksPanel({
   const atLimit = schedules.length >= MAX_SCHEDULED_PLAYBOOKS;
 
   return (
-    <div className={cn("mx-auto mt-6 w-full max-w-md text-left", className)}>
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-muted-foreground/80 text-xs font-medium tracking-wide uppercase">
-            Playbook schedules
-          </p>
-          <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">
-            Run a saved playbook on a timer.
-          </p>
-        </div>
+    <section
+      className={cn(
+        "border-border/60 bg-card mx-auto mt-6 w-full max-w-md overflow-hidden rounded-lg border text-left",
+        className,
+      )}
+    >
+      <div className="flex items-center justify-between gap-2 px-3 py-3">
+        <p className="text-sm font-medium">Playbooks</p>
         <Button
-          className="text-muted-foreground h-7 px-2 text-xs"
+          className="h-7 px-2 text-xs"
           disabled={disabled || atLimit || playbooks.length === 0}
           onClick={() => {
             setAdding((open) => !open);
@@ -143,18 +141,18 @@ export function ScheduledPlaybooksPanel({
               ? "Save a playbook first."
               : atLimit
                 ? `You can schedule up to ${MAX_SCHEDULED_PLAYBOOKS} playbooks.`
-                : "Schedule a playbook"
+                : "Add a playbook schedule"
           }
           type="button"
           variant="ghost"
         >
           <PlusIcon className="size-3.5" />
-          Schedule
+          Add
         </Button>
       </div>
 
       {adding ? (
-        <div className="border-border/60 bg-muted/20 mb-3 flex flex-col gap-2 rounded-lg border px-3 py-3">
+        <div className="border-border/60 flex flex-col gap-2 border-t px-3 py-3">
           <label
             className="flex flex-col gap-1 text-sm"
             htmlFor={fieldId("schedule-playbook-select")}
@@ -177,7 +175,7 @@ export function ScheduledPlaybooksPanel({
             </select>
           </label>
           <div className="flex items-center justify-between gap-3 text-sm">
-            <label htmlFor={fieldId("schedule-playbook-time")}>Local time</label>
+            <label htmlFor={fieldId("schedule-playbook-time")}>Time</label>
             <Input
               className="h-8 w-[7.5rem]"
               disabled={disabled || creating}
@@ -190,7 +188,7 @@ export function ScheduledPlaybooksPanel({
             />
           </div>
           <div className="flex items-center justify-between gap-3 text-sm">
-            <label htmlFor={fieldId("schedule-playbook-slack")}>Also post to Slack</label>
+            <label htmlFor={fieldId("schedule-playbook-slack")}>Post to Slack</label>
             <Switch
               checked={newSlack}
               disabled={disabled || creating}
@@ -205,7 +203,7 @@ export function ScheduledPlaybooksPanel({
               onChange={(event) => {
                 setNewSlackChannel(event.target.value);
               }}
-              placeholder="#alerts or C0123ABC"
+              placeholder="#alerts or channel ID"
               value={newSlackChannel}
             />
           ) : null}
@@ -252,7 +250,7 @@ export function ScheduledPlaybooksPanel({
               type="button"
             >
               {creating ? <LoaderCircleIcon className="size-3.5 animate-spin" /> : null}
-              Save schedule
+              Save
             </Button>
             <Button
               disabled={creating}
@@ -270,19 +268,16 @@ export function ScheduledPlaybooksPanel({
       ) : null}
 
       {schedules.length === 0 ? (
-        <p className="text-muted-foreground px-3 py-2 text-sm leading-relaxed">
-          Schedule a saved playbook to run into a chat on a daily cadence.
+        <p className="text-muted-foreground border-border/60 border-t px-3 py-3 text-sm">
+          None yet.
         </p>
       ) : (
-        <ul className="flex flex-col gap-2">
+        <ul className="border-border/60 divide-border/60 divide-y border-t">
           {schedules.map((schedule) => {
             const timeValue = formatTimeValue(schedule.hour, schedule.minute);
             const busy = busyId === schedule.id;
             return (
-              <li
-                className="border-border/60 bg-muted/20 flex flex-col gap-2 rounded-lg border px-3 py-3"
-                key={schedule.id}
-              >
+              <li className="flex flex-col gap-2 px-3 py-3" key={schedule.id}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{schedule.label}</p>
@@ -444,7 +439,11 @@ export function ScheduledPlaybooksPanel({
         </ul>
       )}
 
-      {actionError ? <p className="text-destructive mt-2 text-xs">{actionError}</p> : null}
-    </div>
+      {actionError ? (
+        <p className="text-destructive border-border/60 border-t px-3 py-2 text-xs">
+          {actionError}
+        </p>
+      ) : null}
+    </section>
   );
 }

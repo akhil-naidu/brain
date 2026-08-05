@@ -98,10 +98,7 @@ export function SchedulesMenu({
             <div className="flex flex-wrap items-start justify-between gap-2 pr-8">
               <div className="min-w-0 space-y-1.5">
                 <DialogTitle>Schedules</DialogTitle>
-                <DialogDescription>
-                  Optional timers. Morning brief stays off until you turn it on. Changes save as you
-                  edit.
-                </DialogDescription>
+                <DialogDescription>Morning brief and playbook timers.</DialogDescription>
               </div>
               <div className="flex shrink-0 gap-1">
                 {canResume ? (
@@ -163,7 +160,7 @@ export function SchedulesMenu({
             {pauseError ? <p className="text-destructive text-xs">{pauseError}</p> : null}
           </DialogHeader>
           {open ? (
-            <div className="flex flex-col gap-2 pb-1" key={`${refreshKey}-${panelKey}`}>
+            <div className="flex flex-col gap-3 pb-1" key={`${refreshKey}-${panelKey}`}>
               <ScheduledBriefPanel
                 className="mx-0 mt-0 max-w-none"
                 disabled={disabled || pauseBusy}

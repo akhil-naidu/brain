@@ -43,11 +43,8 @@ function parseTimeValue(value: string): { hour: number; minute: number } | null 
 }
 
 function scheduleSummary(schedule: ScheduledBriefConfig, timeValue: string): string {
-  if (!schedule.enabled) {
-    return "Off — won’t run on a timer";
-  }
-  const days = schedule.weekdaysOnly ? "weekdays" : "every day";
-  return `On · ${days} at ${timeValue}`;
+  const days = schedule.weekdaysOnly ? "Weekdays" : "Every day";
+  return `${days} at ${timeValue}`;
 }
 
 export function ScheduledBriefPanel({
@@ -156,40 +153,37 @@ export function ScheduledBriefPanel({
   const busy = disabled || saving || running;
 
   return (
-    <div className={cn("mx-auto mt-6 w-full max-w-md text-left", className)}>
-      <div className="mb-2 flex items-center justify-between gap-2">
+    <section
+      className={cn(
+        "border-border/60 bg-card mx-auto mt-6 w-full max-w-md overflow-hidden rounded-lg border text-left",
+        className,
+      )}
+    >
+      <div className="flex items-center justify-between gap-3 px-3 py-3">
         <div className="min-w-0">
-          <p className="text-muted-foreground/80 text-xs font-medium tracking-wide uppercase">
+          <label className="text-sm font-medium" htmlFor={fieldId("scheduled-brief-enabled")}>
             Morning brief
-          </p>
-          <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">
-            Optional. Leave off if you don’t want a timed brief.
-          </p>
-        </div>
-        <span
-          className={cn(
-            "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium",
-            schedule.enabled ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
-          )}
-        >
-          {schedule.enabled ? "On" : "Off"}
-        </span>
-      </div>
-
-      <div className="border-border/60 bg-muted/20 flex flex-col gap-3 rounded-lg border px-3 py-3">
-        <div className="flex items-start justify-between gap-3">
-          <label
-            className="min-w-0 text-sm leading-snug"
-            htmlFor={fieldId("scheduled-brief-enabled")}
-          >
-            <span className="font-medium">Daily morning brief</span>
-            <span className="text-muted-foreground mt-0.5 block text-xs leading-relaxed">
-              {scheduleSummary(schedule, timeValue)}
-            </span>
           </label>
+          {schedule.enabled ? (
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              {scheduleSummary(schedule, timeValue)}
+              {" · "}
+              {formatScheduleLastRun(schedule.lastRunAt, schedule.timezone)}
+            </p>
+          ) : (
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              {formatScheduleLastRun(schedule.lastRunAt, schedule.timezone)}
+            </p>
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {saving ? (
+            <span className="text-muted-foreground text-xs">Saving…</span>
+          ) : savedFlash ? (
+            <span className="text-muted-foreground text-xs">Saved</span>
+          ) : null}
           <Switch
             checked={schedule.enabled}
-            className="mt-1"
             disabled={busy}
             id={fieldId("scheduled-brief-enabled")}
             onCheckedChange={(enabled) => {
@@ -197,157 +191,153 @@ export function ScheduledBriefPanel({
             }}
           />
         </div>
+      </div>
 
-        {schedule.enabled ? (
-          <>
-            <div className="flex items-center justify-between gap-3 text-sm">
-              <label htmlFor={fieldId("scheduled-brief-time")}>Time</label>
+      {schedule.enabled ? (
+        <div className="border-border/60 flex flex-col gap-3 border-t px-3 py-3">
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <label htmlFor={fieldId("scheduled-brief-time")}>Time</label>
+            <Input
+              className="h-8 w-[7.5rem]"
+              disabled={busy}
+              id={fieldId("scheduled-brief-time")}
+              onBlur={() => {
+                const parsed = parseTimeValue(timeValue);
+                if (!parsed) {
+                  setTimeValue(formatTimeValue(schedule.hour, schedule.minute));
+                  return;
+                }
+                if (parsed.hour === schedule.hour && parsed.minute === schedule.minute) {
+                  return;
+                }
+                void persist({ hour: parsed.hour, minute: parsed.minute });
+              }}
+              onChange={(event) => {
+                setTimeValue(event.target.value);
+              }}
+              type="time"
+              value={timeValue}
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <label htmlFor={fieldId("scheduled-brief-weekdays")}>Weekdays only</label>
+            <Switch
+              checked={schedule.weekdaysOnly}
+              disabled={busy}
+              id={fieldId("scheduled-brief-weekdays")}
+              onCheckedChange={(weekdaysOnly) => {
+                void persist({ weekdaysOnly });
+              }}
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <label htmlFor={fieldId("scheduled-brief-slack")}>Post to Slack</label>
+            <Switch
+              checked={schedule.slackDeliveryEnabled}
+              disabled={busy}
+              id={fieldId("scheduled-brief-slack")}
+              onCheckedChange={(slackDeliveryEnabled) => {
+                void persist({ slackDeliveryEnabled });
+              }}
+            />
+          </div>
+
+          {schedule.slackDeliveryEnabled ? (
+            <div className="flex flex-col gap-1.5 text-sm">
+              <label htmlFor={fieldId("scheduled-brief-slack-channel")}>Channel</label>
               <Input
-                className="h-8 w-[7.5rem]"
                 disabled={busy}
-                id={fieldId("scheduled-brief-time")}
+                id={fieldId("scheduled-brief-slack-channel")}
                 onBlur={() => {
-                  const parsed = parseTimeValue(timeValue);
-                  if (!parsed) {
-                    setTimeValue(formatTimeValue(schedule.hour, schedule.minute));
+                  const next = slackChannelDraft.trim() || null;
+                  if (next === (schedule.slackChannel ?? null)) {
                     return;
                   }
-                  if (parsed.hour === schedule.hour && parsed.minute === schedule.minute) {
-                    return;
-                  }
-                  void persist({ hour: parsed.hour, minute: parsed.minute });
+                  void persist({ slackChannel: next });
                 }}
                 onChange={(event) => {
-                  setTimeValue(event.target.value);
+                  setSlackChannelDraft(event.target.value);
                 }}
-                type="time"
-                value={timeValue}
+                placeholder="#alerts or channel ID"
+                value={slackChannelDraft}
               />
             </div>
+          ) : null}
+        </div>
+      ) : null}
 
-            <div className="flex items-center justify-between gap-3 text-sm">
-              <label htmlFor={fieldId("scheduled-brief-weekdays")}>Weekdays only</label>
-              <Switch
-                checked={schedule.weekdaysOnly}
-                disabled={busy}
-                id={fieldId("scheduled-brief-weekdays")}
-                onCheckedChange={(weekdaysOnly) => {
-                  void persist({ weekdaysOnly });
-                }}
-              />
-            </div>
-
-            <div className="flex items-center justify-between gap-3 text-sm">
-              <label htmlFor={fieldId("scheduled-brief-slack")}>Also post to Slack</label>
-              <Switch
-                checked={schedule.slackDeliveryEnabled}
-                disabled={busy}
-                id={fieldId("scheduled-brief-slack")}
-                onCheckedChange={(slackDeliveryEnabled) => {
-                  void persist({ slackDeliveryEnabled });
-                }}
-              />
-            </div>
-
-            {schedule.slackDeliveryEnabled ? (
-              <div className="flex flex-col gap-1.5 text-sm">
-                <label htmlFor={fieldId("scheduled-brief-slack-channel")}>Slack channel</label>
-                <Input
-                  disabled={busy}
-                  id={fieldId("scheduled-brief-slack-channel")}
-                  onBlur={() => {
-                    const next = slackChannelDraft.trim() || null;
-                    if (next === (schedule.slackChannel ?? null)) {
-                      return;
-                    }
-                    void persist({ slackChannel: next });
-                  }}
-                  onChange={(event) => {
-                    setSlackChannelDraft(event.target.value);
-                  }}
-                  placeholder="#alerts or channel ID"
-                  value={slackChannelDraft}
-                />
-              </div>
-            ) : null}
-          </>
-        ) : null}
-
-        <p className="text-muted-foreground/90 text-xs">
-          {formatScheduleLastRun(schedule.lastRunAt, schedule.timezone)}
+      {schedule.lastSlackError ? (
+        <p className="text-destructive border-border/60 border-t px-3 py-2 text-xs leading-relaxed">
+          {schedule.lastSlackError}
         </p>
+      ) : null}
 
-        {schedule.lastSlackError ? (
-          <p className="text-destructive text-xs leading-relaxed">{schedule.lastSlackError}</p>
-        ) : null}
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            disabled={busy}
-            onClick={() => {
-              void (async () => {
-                setRunning(true);
-                setActionError(null);
-                try {
-                  const brief = await runScheduledBriefNow(true);
-                  if (brief.skipped) {
-                    setActionError("Brief did not run.");
-                    return;
-                  }
-                  if (brief.slack.attempted && !brief.slack.ok) {
-                    setActionError(brief.slack.error);
-                  }
-                  try {
-                    const latest = await fetchScheduledBrief();
-                    setSchedule(latest.schedule);
-                    setSlackChannelDraft(latest.schedule.slackChannel ?? "");
-                  } catch {
-                    // Opening the chat still succeeds if refresh fails.
-                  }
-                  onOpenChat(brief.chat.id);
-                } catch (error) {
-                  setActionError(
-                    error instanceof Error ? error.message : "Unable to run morning brief.",
-                  );
-                } finally {
-                  setRunning(false);
+      <div className="border-border/60 flex flex-wrap items-center gap-2 border-t px-3 py-2.5">
+        <Button
+          disabled={busy}
+          onClick={() => {
+            void (async () => {
+              setRunning(true);
+              setActionError(null);
+              try {
+                const brief = await runScheduledBriefNow(true);
+                if (brief.skipped) {
+                  setActionError("Brief did not run.");
+                  return;
                 }
-              })();
+                if (brief.slack.attempted && !brief.slack.ok) {
+                  setActionError(brief.slack.error);
+                }
+                try {
+                  const latest = await fetchScheduledBrief();
+                  setSchedule(latest.schedule);
+                  setSlackChannelDraft(latest.schedule.slackChannel ?? "");
+                } catch {
+                  // Opening the chat still succeeds if refresh fails.
+                }
+                onOpenChat(brief.chat.id);
+              } catch (error) {
+                setActionError(
+                  error instanceof Error ? error.message : "Unable to run morning brief.",
+                );
+              } finally {
+                setRunning(false);
+              }
+            })();
+          }}
+          size="sm"
+          type="button"
+          variant="secondary"
+        >
+          {running ? <LoaderCircleIcon className="size-3.5 animate-spin" /> : null}
+          {running ? "Running…" : "Run once"}
+        </Button>
+
+        {schedule.lastChatId ? (
+          <Button
+            disabled={disabled || running}
+            onClick={() => {
+              const chatId = schedule.lastChatId;
+              if (chatId) {
+                onOpenChat(chatId);
+              }
             }}
             size="sm"
             type="button"
-            variant="secondary"
+            variant="ghost"
           >
-            {running ? <LoaderCircleIcon className="size-3.5 animate-spin" /> : null}
-            {running ? "Running…" : "Run once now"}
+            Last chat
           </Button>
-
-          {schedule.lastChatId ? (
-            <Button
-              disabled={disabled || running}
-              onClick={() => {
-                const chatId = schedule.lastChatId;
-                if (chatId) {
-                  onOpenChat(chatId);
-                }
-              }}
-              size="sm"
-              type="button"
-              variant="ghost"
-            >
-              Open last chat
-            </Button>
-          ) : null}
-
-          {saving ? (
-            <span className="text-muted-foreground text-xs">Saving…</span>
-          ) : savedFlash ? (
-            <span className="text-muted-foreground text-xs">Saved</span>
-          ) : null}
-        </div>
-
-        {actionError ? <p className="text-destructive text-xs">{actionError}</p> : null}
+        ) : null}
       </div>
-    </div>
+
+      {actionError ? (
+        <p className="text-destructive border-border/60 border-t px-3 py-2 text-xs">
+          {actionError}
+        </p>
+      ) : null}
+    </section>
   );
 }
