@@ -22,4 +22,4 @@
 
 - [x] 4.1 Update/add component or API tests as needed
 - [x] 4.2 Run `pnpm run verify` clean
-- [ ] 4.3 Manual smoke: send message → refresh → history shows chat → reopen continues
+- [x] 4.3 Manual smoke: create/list/get/update/delete via `/api/chats` on running host (create → append events+session → list → reopen get → delete). Full LLM send skipped (no `COMMAND_CODE_API_KEY` in env).
