@@ -197,6 +197,29 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
     setMobileDrawerOpen(false);
   }, []);
 
+  useEffect(() => {
+    setMobileDrawerOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!mobileDrawerOpen) {
+      return undefined;
+    }
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMobileDrawerOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [mobileDrawerOpen]);
+
   const sidebarBrand = (
     <Link className="text-foreground flex min-w-0 items-center gap-2" href="/chat">
       <BrainMark className="size-5 shrink-0" />
@@ -261,7 +284,11 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
             onClick={closeMobileDrawer}
             type="button"
           />
-          <div className="border-border bg-background absolute inset-y-0 left-0 shadow-xl">
+          <dialog
+            aria-label="Sidebar"
+            className="border-border bg-background absolute inset-y-0 left-0 m-0 h-full max-h-none w-auto max-w-none border-0 p-0 shadow-xl open:block"
+            open
+          >
             <ChatSidebar
               {...sidebarProps}
               brand={sidebarBrand}
@@ -275,7 +302,7 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
               }}
               onToggleSidebar={closeMobileDrawer}
             />
-          </div>
+          </dialog>
         </div>
       ) : null}
 

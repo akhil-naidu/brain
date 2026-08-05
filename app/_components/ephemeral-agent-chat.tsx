@@ -775,7 +775,7 @@ export function EphemeralAgentChat({
         </ChatConversationContent>
         <ChatScrollButton />
       </ChatConversation>
-      <div className="bg-background relative px-3 pt-1 pb-3 sm:px-4 sm:pb-4">
+      <div className="bg-background relative px-3 pt-1 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4 sm:pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div
           aria-hidden
           className="from-background pointer-events-none absolute inset-x-0 -top-10 h-10 bg-gradient-to-t to-transparent"

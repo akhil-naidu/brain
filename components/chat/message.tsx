@@ -136,6 +136,7 @@ function AgentMessageView({
           isUser
             ? "border-border/40 bg-muted/70 text-foreground max-w-[85%] rounded-[18px] border px-3 py-1.5 text-[15px] leading-6 shadow-sm"
             : "text-foreground w-full max-w-none text-sm leading-relaxed",
+          showActions ? "mb-3" : undefined,
           sendFailed ? "border-destructive/40" : undefined,
         )}
       >
@@ -189,7 +190,7 @@ function AgentMessageView({
             {showActions ? (
               <div
                 className={cn(
-                  "absolute -bottom-3 flex gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100",
+                  "absolute -bottom-3 flex gap-1 opacity-100 transition-opacity md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100",
                   isUser ? "right-1" : "left-0",
                 )}
               >
