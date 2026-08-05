@@ -11,7 +11,7 @@ export function SchedulesPage() {
 
   return (
     <main className="h-full overflow-y-auto">
-      <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
+      <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
         <SchedulesPanel
           onOpenChat={(chatId) => {
             router.push(chatUrl(chatId));

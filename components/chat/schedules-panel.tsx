@@ -76,12 +76,11 @@ export function SchedulesPanel({
     >
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <p className={cn("font-medium", variant === "page" ? "text-xl" : "text-base")}>
-            Schedules
-          </p>
           {variant === "page" ? (
-            <p className="text-muted-foreground mt-1 text-sm">Morning brief and playbook timers.</p>
-          ) : null}
+            <p className="text-muted-foreground text-sm">Morning brief and playbook timers.</p>
+          ) : (
+            <p className="text-base font-medium">Schedules</p>
+          )}
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {canResume ? (

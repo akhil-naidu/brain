@@ -11,13 +11,8 @@ export function PlaybooksPage() {
 
   return (
     <main className="h-full overflow-y-auto">
-      <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
-        <div className="mb-5">
-          <h1 className="text-xl font-medium">Playbooks</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Save and edit prompts you reuse often.
-          </p>
-        </div>
+      <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
+        <p className="text-muted-foreground mb-5 text-sm">Save and edit prompts you reuse often.</p>
         <PlaybooksPanel
           className="mx-0 mt-0 max-w-none"
           onDelete={deletePlaybook}

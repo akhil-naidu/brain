@@ -3,6 +3,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ChatSidebar } from "@/components/chat/sidebar";
 import type { ChatSummary } from "@/lib/chat/store/types";
 
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/chat",
+}));
+
 vi.mock("@/components/chat/use-playbooks", () => ({
   usePlaybooks: () => ({
     playbooks: [
@@ -170,6 +174,27 @@ describe("ChatSidebar toggle shortcut hint", () => {
 
     const button = screen.getByRole("button", { name: /Collapse sidebar/i });
     expect(button.getAttribute("title")).toMatch(/Collapse sidebar \(.+\)/);
+  });
+});
+
+describe("ChatSidebar compact nav", () => {
+  it("marks the chats icon as the current page", () => {
+    render(
+      <ChatSidebar
+        activeChatId="chat-1"
+        brand={<span>Brain</span>}
+        chats={chats}
+        compact
+        currentTitle="First chat"
+        onDeleteChat={vi.fn()}
+        onNewChat={vi.fn()}
+        onRenameChat={vi.fn()}
+        onSelectChat={vi.fn()}
+        onToggleSidebar={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("link", { name: "Chats" }).getAttribute("aria-current")).toBe("page");
+    expect(screen.getByRole("link", { name: "Playbooks" }).getAttribute("aria-current")).toBeNull();
   });
 });
 

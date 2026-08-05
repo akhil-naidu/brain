@@ -13,6 +13,7 @@ import {
   Trash2Icon,
 } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { usePlaybooks } from "@/components/chat/use-playbooks";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ const SIDEBAR_LIST_PREVIEW = 3;
 
 function SidebarSection({
   actions,
+  active = false,
   children,
   className,
   contentClassName,
@@ -43,6 +45,7 @@ function SidebarSection({
   title,
 }: {
   readonly actions?: ReactNode;
+  readonly active?: boolean;
   readonly children: ReactNode;
   readonly className?: string;
   readonly contentClassName?: string;
@@ -56,8 +59,18 @@ function SidebarSection({
       onOpenChange={onOpenChange}
       open={open}
     >
-      <div className="bg-muted/25 flex h-7 shrink-0 items-center gap-0.5 px-0.5">
-        <CollapsibleTrigger className="text-muted-foreground hover:text-foreground flex min-w-0 flex-1 cursor-pointer items-center gap-1 rounded-sm px-1.5 py-1 text-left text-[11px] font-semibold tracking-wide uppercase">
+      <div
+        className={cn(
+          "flex h-7 shrink-0 items-center gap-0.5 px-0.5",
+          active ? "bg-muted/45" : "bg-muted/25",
+        )}
+      >
+        <CollapsibleTrigger
+          className={cn(
+            "hover:text-foreground flex min-w-0 flex-1 cursor-pointer items-center gap-1 rounded-sm px-1.5 py-1 text-left text-[11px] font-semibold tracking-wide uppercase",
+            active ? "text-foreground" : "text-muted-foreground",
+          )}
+        >
           <ChevronDownIcon
             className={cn(
               "size-3.5 shrink-0 opacity-70 transition-transform",
@@ -74,6 +87,15 @@ function SidebarSection({
         {children}
       </CollapsibleContent>
     </Collapsible>
+  );
+}
+
+function compactNavClass(active: boolean) {
+  return cn(
+    "mt-1",
+    active
+      ? "bg-muted text-foreground hover:bg-muted hover:text-foreground"
+      : "text-muted-foreground",
   );
 }
 
@@ -109,6 +131,10 @@ export function ChatSidebar({
   /** When true, show the in-progress draft chat row if no chat is selected. */
   readonly showChatDraft?: boolean;
 }) {
+  const pathname = usePathname();
+  const chatsActive = pathname === "/chat";
+  const playbooksActive = pathname === "/playbooks";
+  const schedulesActive = pathname === "/schedules";
   const showDraftRow = showChatDraft && !activeChatId;
   const draftTitle = currentTitle?.trim() || DEFAULT_CHAT_TITLE;
   const shortcutLabel = newChatShortcutLabel();
@@ -204,78 +230,85 @@ export function ChatSidebar({
     return (
       <aside
         className={cn(
-          "border-border bg-background flex h-full w-14 shrink-0 flex-col items-center border-r py-2",
+          "border-border bg-background flex h-full w-14 shrink-0 flex-col items-center border-r",
           className,
         )}
       >
-        <Link
-          aria-label="Brain"
-          className="text-foreground hover:bg-muted/50 mb-1 inline-flex size-9 items-center justify-center rounded-md"
-          href="/chat"
-          title="Brain"
-        >
-          {brand}
-        </Link>
-        {onToggleSidebar ? (
+        <div className="border-border/50 flex h-12 w-full shrink-0 items-center justify-center border-b">
+          <Link
+            aria-label="Brain"
+            className="text-foreground hover:bg-muted/50 inline-flex size-9 items-center justify-center rounded-md"
+            href="/chat"
+            title="Brain"
+          >
+            {brand}
+          </Link>
+        </div>
+        <div className="flex w-full flex-col items-center px-1 py-2">
+          {onToggleSidebar ? (
+            <Button
+              aria-label={`Expand sidebar (${sidebarShortcutLabel})`}
+              className="text-muted-foreground/55 hover:text-muted-foreground"
+              onClick={onToggleSidebar}
+              size="icon-sm"
+              title={`Expand sidebar (${sidebarShortcutLabel})`}
+              type="button"
+              variant="ghost"
+            >
+              <PanelLeftIcon className="size-4" />
+            </Button>
+          ) : null}
           <Button
-            aria-label={`Expand sidebar (${sidebarShortcutLabel})`}
-            className="text-muted-foreground/55 hover:text-muted-foreground mb-2"
-            onClick={onToggleSidebar}
+            aria-label={`New chat (${shortcutLabel})`}
+            className="text-muted-foreground mt-1"
+            onClick={onNewChat}
             size="icon-sm"
-            title={`Expand sidebar (${sidebarShortcutLabel})`}
+            title={`New chat (${shortcutLabel})`}
             type="button"
             variant="ghost"
           >
-            <PanelLeftIcon className="size-4" />
+            <PlusIcon className="size-4" />
           </Button>
-        ) : null}
-        <Button
-          aria-label={`New chat (${shortcutLabel})`}
-          className="text-muted-foreground"
-          onClick={onNewChat}
-          size="icon-sm"
-          title={`New chat (${shortcutLabel})`}
-          type="button"
-          variant="ghost"
-        >
-          <PlusIcon className="size-4" />
-        </Button>
-        <Button
-          aria-label="Chats"
-          asChild
-          className="text-muted-foreground mt-1"
-          size="icon-sm"
-          title="Chats"
-          variant="ghost"
-        >
-          <Link href="/chat">
-            <MessageSquareIcon className="size-4" />
-          </Link>
-        </Button>
-        <Button
-          aria-label="Playbooks"
-          asChild
-          className="text-muted-foreground mt-1"
-          size="icon-sm"
-          title="Playbooks"
-          variant="ghost"
-        >
-          <Link href="/playbooks">
-            <BookmarkIcon className="size-4" />
-          </Link>
-        </Button>
-        <Button
-          aria-label="Schedules"
-          asChild
-          className="text-muted-foreground mt-1"
-          size="icon-sm"
-          title="Schedules"
-          variant="ghost"
-        >
-          <Link href="/schedules">
-            <CalendarClockIcon className="size-4" />
-          </Link>
-        </Button>
+          <Button
+            aria-current={chatsActive ? "page" : undefined}
+            aria-label="Chats"
+            asChild
+            className={compactNavClass(chatsActive)}
+            size="icon-sm"
+            title="Chats"
+            variant="ghost"
+          >
+            <Link href="/chat">
+              <MessageSquareIcon className="size-4" />
+            </Link>
+          </Button>
+          <Button
+            aria-current={playbooksActive ? "page" : undefined}
+            aria-label="Playbooks"
+            asChild
+            className={compactNavClass(playbooksActive)}
+            size="icon-sm"
+            title="Playbooks"
+            variant="ghost"
+          >
+            <Link href="/playbooks">
+              <BookmarkIcon className="size-4" />
+            </Link>
+          </Button>
+          <Button
+            aria-current={schedulesActive ? "page" : undefined}
+            aria-label="Schedules"
+            asChild
+            className={compactNavClass(schedulesActive)}
+            size="icon-sm"
+            title="Schedules"
+            variant="ghost"
+          >
+            <Link href="/schedules">
+              <CalendarClockIcon className="size-4" />
+            </Link>
+          </Button>
+        </div>
       </aside>
     );
   }
@@ -321,6 +354,7 @@ export function ChatSidebar({
               <PlusIcon className="size-3.5" />
             </Button>
           }
+          active={chatsActive}
           className={cn(chatsOpen && "min-h-0 flex-1")}
           contentClassName="flex min-h-0 flex-1 flex-col"
           onOpenChange={setChatsOpen}
@@ -440,16 +474,22 @@ export function ChatSidebar({
             <Button
               aria-label="Open playbooks"
               asChild
-              className="text-muted-foreground/70 hover:text-foreground size-6"
+              className={cn(
+                "size-6",
+                playbooksActive
+                  ? "text-foreground"
+                  : "text-muted-foreground/70 hover:text-foreground",
+              )}
               size="icon-sm"
               title="Open playbooks"
               variant="ghost"
             >
-              <Link href="/playbooks">
+              <Link aria-current={playbooksActive ? "page" : undefined} href="/playbooks">
                 <ArrowUpRightIcon className="size-3.5" />
               </Link>
             </Button>
           }
+          active={playbooksActive}
           className="shrink-0"
           contentClassName="max-h-36 overflow-y-auto"
           onOpenChange={setPlaybooksOpen}
@@ -480,16 +520,22 @@ export function ChatSidebar({
             <Button
               aria-label="Open schedules"
               asChild
-              className="text-muted-foreground/70 hover:text-foreground size-6"
+              className={cn(
+                "size-6",
+                schedulesActive
+                  ? "text-foreground"
+                  : "text-muted-foreground/70 hover:text-foreground",
+              )}
               size="icon-sm"
               title="Open schedules"
               variant="ghost"
             >
-              <Link href="/schedules">
+              <Link aria-current={schedulesActive ? "page" : undefined} href="/schedules">
                 <ArrowUpRightIcon className="size-3.5" />
               </Link>
             </Button>
           }
+          active={schedulesActive}
           className="shrink-0 border-b-0"
           contentClassName="max-h-40 overflow-y-auto"
           onOpenChange={setSchedulesOpen}
