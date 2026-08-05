@@ -225,7 +225,18 @@ export async function readScheduledBriefConfig(
   try {
     const raw = await readFile(filePath, "utf8");
     const parsed = parseScheduledBriefConfig(JSON.parse(raw) as unknown);
-    return parsed ?? defaultScheduledBriefConfig();
+    const config = parsed ?? defaultScheduledBriefConfig();
+    // Drop locks left behind by crashed / interrupted runs once they go stale.
+    if (config.runningSince && !isScheduleRunLocked(config.runningSince)) {
+      const cleared = { ...config, runningSince: null };
+      try {
+        await writeScheduledBriefConfigAtomic(filePath, cleared);
+      } catch {
+        return cleared;
+      }
+      return cleared;
+    }
+    return config;
   } catch (error) {
     if (
       error instanceof Error &&

@@ -1,7 +1,9 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
+  PLAYBOOKS_CHANGED_EVENT,
   readStoredPlaybooks,
   removePlaybook,
   upsertPlaybook,
@@ -10,13 +12,23 @@ import {
 } from "@/lib/chat/playbooks";
 
 export function usePlaybooks() {
+  const pathname = usePathname();
   const [playbooks, setPlaybooks] = useState<readonly Playbook[]>([]);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    setPlaybooks(readStoredPlaybooks());
-    setReady(true);
-  }, []);
+    const sync = () => {
+      setPlaybooks(readStoredPlaybooks());
+      setReady(true);
+    };
+    sync();
+    window.addEventListener(PLAYBOOKS_CHANGED_EVENT, sync);
+    window.addEventListener("focus", sync);
+    return () => {
+      window.removeEventListener(PLAYBOOKS_CHANGED_EVENT, sync);
+      window.removeEventListener("focus", sync);
+    };
+  }, [pathname]);
 
   const persist = useCallback((next: readonly Playbook[]) => {
     setPlaybooks(next);

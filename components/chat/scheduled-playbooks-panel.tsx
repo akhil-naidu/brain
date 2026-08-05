@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import type { Playbook } from "@/lib/chat/playbooks";
 import { formatScheduleLastRun } from "@/lib/chat/schedule-defaults";
+import { notifySchedulesChanged } from "@/lib/chat/schedule-events";
 import {
   createScheduledPlaybookApi,
   deleteScheduledPlaybookApi,
@@ -75,6 +76,7 @@ export function ScheduledPlaybooksPanel({
   const refresh = async () => {
     const listed = await listScheduledPlaybooks();
     setSchedules(listed);
+    notifySchedulesChanged();
   };
 
   useEffect(() => {

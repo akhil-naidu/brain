@@ -10,6 +10,7 @@ import {
   morningBriefChatTitle,
   parseScheduledBriefConfig,
   readScheduledBriefConfig,
+  replaceScheduledBriefConfig,
   writeScheduledBriefConfig,
 } from "@/lib/chat/scheduled-brief";
 
@@ -90,6 +91,20 @@ describe("scheduled brief due logic", () => {
       runningSince: now.toISOString(),
     };
     expect(isScheduledBriefRunning(config, now)).toBe(true);
+  });
+
+  it("clears stale runningSince on read", async () => {
+    const filePath = await tempConfigPath();
+    const stale = new Date(Date.now() - 60 * 60_000).toISOString();
+    await replaceScheduledBriefConfig(
+      {
+        ...defaultScheduledBriefConfig(),
+        runningSince: stale,
+      },
+      filePath,
+    );
+    const read = await readScheduledBriefConfig(filePath);
+    expect(read.runningSince).toBeNull();
   });
 });
 

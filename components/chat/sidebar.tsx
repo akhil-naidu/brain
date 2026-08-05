@@ -28,6 +28,7 @@ import {
 import { formatScheduleTimeValue } from "@/lib/chat/schedule-defaults";
 import { fetchScheduledBrief } from "@/lib/chat/scheduled-brief-api";
 import { listScheduledPlaybooks, type ScheduledPlaybook } from "@/lib/chat/scheduled-playbooks-api";
+import { SCHEDULES_CHANGED_EVENT } from "@/lib/chat/schedule-events";
 import {
   DEFAULT_SIDEBAR_SECTIONS,
   readSidebarSections,
@@ -173,28 +174,35 @@ export function ChatSidebar({
 
   useEffect(() => {
     let cancelled = false;
-    void (async () => {
-      try {
-        const [listed, brief] = await Promise.all([
-          listScheduledPlaybooks(),
-          fetchScheduledBrief(),
-        ]);
-        if (cancelled) {
-          return;
+    const refreshSchedules = () => {
+      void (async () => {
+        try {
+          const [listed, brief] = await Promise.all([
+            listScheduledPlaybooks(),
+            fetchScheduledBrief(),
+          ]);
+          if (cancelled) {
+            return;
+          }
+          setSchedules(listed);
+          setMorningBriefEnabled(brief.schedule.enabled);
+        } catch {
+          if (!cancelled) {
+            setSchedules([]);
+            setMorningBriefEnabled(false);
+          }
         }
-        setSchedules(listed);
-        setMorningBriefEnabled(brief.schedule.enabled);
-      } catch {
-        if (!cancelled) {
-          setSchedules([]);
-          setMorningBriefEnabled(false);
-        }
-      }
-    })();
+      })();
+    };
+    refreshSchedules();
+    window.addEventListener(SCHEDULES_CHANGED_EVENT, refreshSchedules);
+    window.addEventListener("focus", refreshSchedules);
     return () => {
       cancelled = true;
+      window.removeEventListener(SCHEDULES_CHANGED_EVENT, refreshSchedules);
+      window.removeEventListener("focus", refreshSchedules);
     };
-  }, []);
+  }, [pathname, sections.schedules]);
 
   useEffect(() => {
     if (!editingId) {

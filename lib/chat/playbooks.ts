@@ -56,6 +56,15 @@ export function readStoredPlaybooks(
   }
 }
 
+export const PLAYBOOKS_CHANGED_EVENT = "brain:playbooks-changed";
+
+export function notifyPlaybooksChanged() {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.dispatchEvent(new Event(PLAYBOOKS_CHANGED_EVENT));
+}
+
 export function writeStoredPlaybooks(
   playbooks: readonly Playbook[],
   storage: Pick<Storage, "setItem"> | null | undefined = typeof window === "undefined"
@@ -73,6 +82,7 @@ export function writeStoredPlaybooks(
     })),
   );
   storage.setItem(BRAIN_PLAYBOOKS_STORAGE_KEY, JSON.stringify(normalized));
+  notifyPlaybooksChanged();
 }
 
 export function upsertPlaybook(
