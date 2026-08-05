@@ -106,7 +106,9 @@ useEffect(() => {
 
 ### P2 Streaming recreates callbacks and rerenders all historical messages
 
-**Location:** `app/_components/ephemeral-agent-chat.tsx:239-271`; `app/_components/ephemeral-agent-chat.tsx:333-343`
+**Status:** Fixed (`send` destructured; ref-stable row actions; `AgentMessage` memo with settled-row comparator; child-failure map scoped to the active message).
+
+**Location:** `app/_components/ephemeral-agent-chat.tsx`; `components/chat/message.tsx`
 
 **Problem:** Every streamed event creates a new `useEveAgent` snapshot. Both send callbacks depend on the entire `agent` helper object, so they are recreated on every token. The component then maps every historical message through a non-memoized row, passing the newly created `handleInputResponses` to each row. Long conversations therefore rerender and reprocess all prior markdown/tool content for every token rather than updating only the active message.
 

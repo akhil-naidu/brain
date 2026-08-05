@@ -272,11 +272,25 @@ function haveRelevantFailuresChanged(
   );
 }
 
-function areAgentMessagePropsEqual(
+/** True when the projected message body is the same render input (eve keeps settled refs). */
+function isSameMessageProjection(previous: EveMessage, next: EveMessage): boolean {
+  return (
+    previous === next ||
+    (previous.id === next.id &&
+      previous.role === next.role &&
+      previous.parts === next.parts &&
+      previous.metadata === next.metadata)
+  );
+}
+
+export function areAgentMessagePropsEqual(
   previous: Readonly<AgentMessageProps>,
   next: Readonly<AgentMessageProps>,
 ): boolean {
-  if (previous.message !== next.message || previous.isStreaming !== next.isStreaming) {
+  if (previous.isStreaming !== next.isStreaming) {
+    return false;
+  }
+  if (!isSameMessageProjection(previous.message, next.message)) {
     return false;
   }
   if (previous.canEdit !== next.canEdit || previous.onEditResend !== next.onEditResend) {
@@ -285,6 +299,7 @@ function areAgentMessagePropsEqual(
   if (haveRelevantFailuresChanged(previous, next)) {
     return false;
   }
+  // Settled rows ignore callback identity churn from the parent chat shell.
   if (!hasPendingInput(next.message)) {
     return true;
   }
@@ -293,8 +308,4 @@ function areAgentMessagePropsEqual(
   );
 }
 
-const MemoizedAgentMessageView = memo(AgentMessageView, areAgentMessagePropsEqual);
-
-export function AgentMessage(props: AgentMessageProps) {
-  return <MemoizedAgentMessageView {...props} />;
-}
+export const AgentMessage = memo(AgentMessageView, areAgentMessagePropsEqual);

@@ -7,7 +7,7 @@ import {
   isTurnFailureEvent,
 } from "eve/client";
 import { useEveAgent } from "eve/react";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useChatShell } from "@/app/_components/chat-shell-context";
 import {
   ChatConversation,
@@ -62,8 +62,6 @@ export type ChatThreadActions = {
 const DISPOSE_CANCEL_TIMEOUT_MS = 8_000;
 
 const EMPTY_EVENTS: readonly HandleMessageStreamEvent[] = [];
-
-const MemoizedAgentMessage = memo(AgentMessage);
 
 function toErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
@@ -507,6 +505,11 @@ export function EphemeralAgentChat({
     },
     [ensureChat, prepareTurn, send, showClientError, turnClientContext],
   );
+  const handleInputResponsesRef = useRef(handleInputResponses);
+  handleInputResponsesRef.current = handleInputResponses;
+  const onInputResponses = useCallback((responses: readonly AgentInputResponse[]) => {
+    return handleInputResponsesRef.current(responses);
+  }, []);
 
   const handleSubmit = useCallback(
     async (text: string) => {
@@ -594,32 +597,34 @@ export function EphemeralAgentChat({
     },
     [editableUserMessageId, handleSubmit],
   );
+  const handleEditResendRef = useRef(handleEditResend);
+  handleEditResendRef.current = handleEditResend;
+  const onEditResend = useCallback((text: string) => {
+    handleEditResendRef.current(text);
+  }, []);
 
   const authDisabledReason = pendingAuthorization
     ? `Connect ${pendingAuthorization.displayName} to continue this turn.`
     : undefined;
 
-  const canRespondToMessage = useCallback(
-    (messageId: string) => {
-      if (messageId !== lastMessage?.id) {
-        return false;
-      }
-      if (waitingForAuthorization) {
-        return false;
-      }
-      const hasPendingInput = lastMessage.parts.some(
-        (part) =>
-          part.type === "dynamic-tool" &&
-          part.toolMetadata?.eve?.inputRequest &&
-          !part.toolMetadata.eve.inputResponse,
-      );
-      if (hasPendingInput) {
-        return true;
-      }
-      return !isBusy;
-    },
-    [isBusy, lastMessage, waitingForAuthorization],
-  );
+  const lastMessageCanRespond = useMemo(() => {
+    if (!lastMessage) {
+      return false;
+    }
+    if (waitingForAuthorization) {
+      return false;
+    }
+    const hasPendingInput = lastMessage.parts.some(
+      (part) =>
+        part.type === "dynamic-tool" &&
+        part.toolMetadata?.eve?.inputRequest &&
+        !part.toolMetadata.eve.inputResponse,
+    );
+    if (hasPendingInput) {
+      return true;
+    }
+    return !isBusy;
+  }, [isBusy, lastMessage, waitingForAuthorization]);
 
   const dismissError = useCallback(() => {
     if (visibleError) {
@@ -674,20 +679,21 @@ export function EphemeralAgentChat({
               </div>
             </div>
           ) : null}
-          {messages.map((message) => (
-            <MemoizedAgentMessage
-              canEdit={message.id === editableUserMessageId}
-              canRespond={canRespondToMessage(message.id)}
-              childFailuresByCallId={childFailuresByCallId}
-              isStreaming={
-                isStreaming && message.role === "assistant" && message.id === lastMessage?.id
-              }
-              key={message.id}
-              message={message}
-              onEditResend={message.id === editableUserMessageId ? handleEditResend : undefined}
-              onInputResponses={handleInputResponses}
-            />
-          ))}
+          {messages.map((message) => {
+            const isLast = message.id === lastMessage?.id;
+            return (
+              <AgentMessage
+                canEdit={message.id === editableUserMessageId}
+                canRespond={isLast ? lastMessageCanRespond : false}
+                childFailuresByCallId={isLast ? childFailuresByCallId : undefined}
+                isStreaming={isStreaming && message.role === "assistant" && isLast}
+                key={message.id}
+                message={message}
+                onEditResend={message.id === editableUserMessageId ? onEditResend : undefined}
+                onInputResponses={onInputResponses}
+              />
+            );
+          })}
           {showThinking ? (
             <output aria-live="polite" className="block px-3">
               <div className="text-muted-foreground text-[15px] leading-6 font-medium">
