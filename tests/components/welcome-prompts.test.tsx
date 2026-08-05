@@ -13,4 +13,10 @@ describe("WelcomePrompts", () => {
     fireEvent.click(screen.getByRole("button", { name: WELCOME_PROMPTS[0]!.label }));
     expect(onSelect).toHaveBeenCalledWith(WELCOME_PROMPTS[0]!.prompt);
   });
+
+  it("emphasizes the primary morning brief chip", () => {
+    render(<WelcomePrompts onSelect={vi.fn()} prompts={WELCOME_PROMPTS} />);
+    const primary = screen.getByRole("button", { name: "What's waiting on me?" });
+    expect(primary.className).toContain("font-medium");
+  });
 });

@@ -25,7 +25,12 @@ export function WelcomePrompts({
         {prompts.map((item) => (
           <li key={item.id}>
             <button
-              className="text-foreground hover:bg-muted/70 focus-visible:ring-ring/50 w-full cursor-pointer rounded-lg px-3 py-2.5 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
+              className={cn(
+                "focus-visible:ring-ring/50 w-full cursor-pointer rounded-lg px-3 py-2.5 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none",
+                item.primary
+                  ? "bg-muted/60 text-foreground hover:bg-muted border-border/60 border font-medium"
+                  : "text-foreground hover:bg-muted/70",
+              )}
               onClick={() => onSelect(item.prompt)}
               type="button"
             >

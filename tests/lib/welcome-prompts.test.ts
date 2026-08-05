@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { WELCOME_PROMPTS } from "@/lib/chat/welcome-prompts";
+import {
+  MORNING_BRIEF_PROMPT,
+  MORNING_BRIEF_PROMPT_ID,
+  WELCOME_PROMPTS,
+} from "@/lib/chat/welcome-prompts";
 
 describe("WELCOME_PROMPTS", () => {
   it("provides a small set of labeled starter prompts", () => {
@@ -15,5 +19,13 @@ describe("WELCOME_PROMPTS", () => {
   it("uses unique ids", () => {
     const ids = WELCOME_PROMPTS.map((prompt) => prompt.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("leads with the morning brief starter", () => {
+    const first = WELCOME_PROMPTS[0];
+    expect(first?.id).toBe(MORNING_BRIEF_PROMPT_ID);
+    expect(first?.primary).toBe(true);
+    expect(first?.prompt).toBe(MORNING_BRIEF_PROMPT);
+    expect(first?.label.toLowerCase()).toContain("waiting");
   });
 });
