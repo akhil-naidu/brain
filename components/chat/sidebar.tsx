@@ -1,10 +1,21 @@
 "use client";
 
-import { PanelLeftIcon, PencilIcon, PlusIcon, SearchIcon, Trash2Icon } from "lucide-react";
+import {
+  BookmarkIcon,
+  CalendarClockIcon,
+  ChevronDownIcon,
+  MessageSquareIcon,
+  PanelLeftIcon,
+  PencilIcon,
+  PlusIcon,
+  SearchIcon,
+  Trash2Icon,
+} from "lucide-react";
 import Link from "next/link";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { usePlaybooks } from "@/components/chat/use-playbooks";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { filterChatsByTitle } from "@/lib/chat/filter-chats";
 import {
@@ -26,6 +37,7 @@ export function ChatSidebar({
   chats,
   className,
   activeChatId,
+  compact = false,
   currentTitle,
   onDeleteChat,
   onNewChat,
@@ -34,11 +46,13 @@ export function ChatSidebar({
   onSelectChat,
   onToggleSidebar,
   searchFocusRequest = 0,
+  showChatDraft = false,
 }: {
   readonly brand: ReactNode;
   readonly chats: readonly ChatSummary[];
   readonly className?: string;
   readonly activeChatId: string | null;
+  readonly compact?: boolean;
   readonly currentTitle: string | null;
   readonly onDeleteChat: (chatId: string) => void;
   readonly onNewChat: () => void;
@@ -47,8 +61,10 @@ export function ChatSidebar({
   readonly onSelectChat: (chatId: string) => void;
   readonly onToggleSidebar?: () => void;
   readonly searchFocusRequest?: number;
+  /** When true, show the in-progress draft chat row if no chat is selected. */
+  readonly showChatDraft?: boolean;
 }) {
-  const showDraftRow = !activeChatId;
+  const showDraftRow = showChatDraft && !activeChatId;
   const draftTitle = currentTitle?.trim() || DEFAULT_CHAT_TITLE;
   const shortcutLabel = newChatShortcutLabel();
   const searchShortcutLabel = focusChatSearchShortcutLabel();
@@ -64,6 +80,8 @@ export function ChatSidebar({
   const { playbooks } = usePlaybooks();
   const [schedules, setSchedules] = useState<readonly ScheduledPlaybook[]>([]);
   const [morningBriefEnabled, setMorningBriefEnabled] = useState(false);
+  const [playbooksOpen, setPlaybooksOpen] = useState(true);
+  const [schedulesOpen, setSchedulesOpen] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -135,6 +153,100 @@ export function ChatSidebar({
   const previewPlaybooks = playbooks.slice(0, SIDEBAR_LIST_PREVIEW);
   const previewSchedules = schedules.slice(0, SIDEBAR_LIST_PREVIEW);
 
+  if (compact) {
+    return (
+      <aside
+        className={cn(
+          "border-border bg-background flex h-full w-14 shrink-0 flex-col items-center border-r py-2",
+          className,
+        )}
+      >
+        <Link
+          aria-label="Brain"
+          className="text-foreground hover:bg-muted/50 mb-1 inline-flex size-9 items-center justify-center rounded-md"
+          href="/chat"
+          title="Brain"
+        >
+          {brand}
+        </Link>
+        {onToggleSidebar ? (
+          <Button
+            aria-label={`Expand sidebar (${sidebarShortcutLabel})`}
+            className="text-muted-foreground/55 hover:text-muted-foreground mb-2"
+            onClick={onToggleSidebar}
+            size="icon-sm"
+            title={`Expand sidebar (${sidebarShortcutLabel})`}
+            type="button"
+            variant="ghost"
+          >
+            <PanelLeftIcon className="size-4" />
+          </Button>
+        ) : null}
+        <Button
+          aria-label={`New chat (${shortcutLabel})`}
+          className="text-muted-foreground"
+          onClick={onNewChat}
+          size="icon-sm"
+          title={`New chat (${shortcutLabel})`}
+          type="button"
+          variant="ghost"
+        >
+          <PlusIcon className="size-4" />
+        </Button>
+        <Button
+          aria-label="Chats"
+          asChild
+          className="text-muted-foreground mt-1"
+          size="icon-sm"
+          title="Chats"
+          variant="ghost"
+        >
+          <Link href="/chat">
+            <MessageSquareIcon className="size-4" />
+          </Link>
+        </Button>
+        <Button
+          aria-label="Playbooks"
+          asChild
+          className="text-muted-foreground mt-1"
+          size="icon-sm"
+          title="Playbooks"
+          variant="ghost"
+        >
+          <Link href="/playbooks">
+            <BookmarkIcon className="size-4" />
+          </Link>
+        </Button>
+        <Button
+          aria-label="Schedules"
+          asChild
+          className="text-muted-foreground mt-1"
+          size="icon-sm"
+          title="Schedules"
+          variant="ghost"
+        >
+          <Link href="/schedules">
+            <CalendarClockIcon className="size-4" />
+          </Link>
+        </Button>
+        <div className="mt-auto pb-1">
+          <Button
+            aria-label="Home"
+            asChild
+            className="text-muted-foreground"
+            size="icon-sm"
+            title="Home"
+            variant="ghost"
+          >
+            <Link href="/">
+              <span className="text-[10px] font-medium">Home</span>
+            </Link>
+          </Button>
+        </div>
+      </aside>
+    );
+  }
+
   return (
     <aside
       className={cn(
@@ -149,11 +261,11 @@ export function ChatSidebar({
           </div>
           {onToggleSidebar ? (
             <Button
-              aria-label={`Close sidebar (${sidebarShortcutLabel})`}
+              aria-label={`Collapse sidebar (${sidebarShortcutLabel})`}
               className="text-muted-foreground/55 hover:text-muted-foreground"
               onClick={onToggleSidebar}
               size="icon-sm"
-              title={`Close sidebar (${sidebarShortcutLabel})`}
+              title={`Collapse sidebar (${sidebarShortcutLabel})`}
               type="button"
               variant="ghost"
             >
@@ -284,73 +396,89 @@ export function ChatSidebar({
           })}
         </ul>
 
-        <div className="mt-4">
-          <p className="text-muted-foreground/70 px-2 pb-1 text-[11px] font-medium tracking-wide uppercase">
+        <Collapsible className="mt-4" onOpenChange={setPlaybooksOpen} open={playbooksOpen}>
+          <CollapsibleTrigger className="text-muted-foreground/70 hover:text-muted-foreground flex w-full cursor-pointer items-center justify-between px-2 pb-1 text-[11px] font-medium tracking-wide uppercase">
             Playbooks
-          </p>
-          {previewPlaybooks.length === 0 ? (
-            <p className="text-muted-foreground/70 px-2 py-1.5 text-sm">None yet</p>
-          ) : (
-            <ul className="flex flex-col gap-0.5">
-              {previewPlaybooks.map((item) => (
-                <li key={item.id}>
-                  <button
-                    className="text-muted-foreground hover:bg-muted/40 hover:text-foreground w-full cursor-pointer rounded-md px-2 py-1.5 text-left text-sm"
-                    onClick={() => onRunPlaybook?.(item.prompt)}
-                    type="button"
-                  >
-                    <span className="line-clamp-1">{item.label}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          <Link
-            className="text-muted-foreground hover:text-foreground mt-0.5 block px-2 py-1.5 text-xs transition-colors"
-            href="/playbooks"
-          >
-            {playbooks.length > SIDEBAR_LIST_PREVIEW ? "View more" : "Manage"}
-          </Link>
-        </div>
+            <ChevronDownIcon
+              className={cn(
+                "size-3.5 transition-transform",
+                playbooksOpen ? "rotate-0" : "-rotate-90",
+              )}
+            />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            {previewPlaybooks.length === 0 ? (
+              <p className="text-muted-foreground/70 px-2 py-1.5 text-sm">None yet</p>
+            ) : (
+              <ul className="flex flex-col gap-0.5">
+                {previewPlaybooks.map((item) => (
+                  <li key={item.id}>
+                    <button
+                      className="text-muted-foreground hover:bg-muted/40 hover:text-foreground w-full cursor-pointer rounded-md px-2 py-1.5 text-left text-sm"
+                      onClick={() => onRunPlaybook?.(item.prompt)}
+                      type="button"
+                    >
+                      <span className="line-clamp-1">{item.label}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <Link
+              className="text-muted-foreground hover:text-foreground mt-0.5 block px-2 py-1.5 text-xs transition-colors"
+              href="/playbooks"
+            >
+              {playbooks.length > SIDEBAR_LIST_PREVIEW ? "View more" : "Manage"}
+            </Link>
+          </CollapsibleContent>
+        </Collapsible>
 
-        <div className="mt-3">
-          <p className="text-muted-foreground/70 px-2 pb-1 text-[11px] font-medium tracking-wide uppercase">
+        <Collapsible className="mt-3" onOpenChange={setSchedulesOpen} open={schedulesOpen}>
+          <CollapsibleTrigger className="text-muted-foreground/70 hover:text-muted-foreground flex w-full cursor-pointer items-center justify-between px-2 pb-1 text-[11px] font-medium tracking-wide uppercase">
             Schedules
-          </p>
-          <ul className="flex flex-col gap-0.5">
-            <li>
-              <Link
-                className="text-muted-foreground hover:bg-muted/40 hover:text-foreground block rounded-md px-2 py-1.5 text-sm transition-colors"
-                href="/schedules"
-              >
-                <span className="line-clamp-1">
-                  Morning brief · {morningBriefEnabled ? "On" : "Off"}
-                </span>
-              </Link>
-            </li>
-            {previewSchedules.map((schedule) => (
-              <li key={schedule.id}>
+            <ChevronDownIcon
+              className={cn(
+                "size-3.5 transition-transform",
+                schedulesOpen ? "rotate-0" : "-rotate-90",
+              )}
+            />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <ul className="flex flex-col gap-0.5">
+              <li>
                 <Link
                   className="text-muted-foreground hover:bg-muted/40 hover:text-foreground block rounded-md px-2 py-1.5 text-sm transition-colors"
                   href="/schedules"
                 >
                   <span className="line-clamp-1">
-                    {schedule.label}
-                    {" · "}
-                    {formatScheduleTimeValue(schedule.hour, schedule.minute)}
-                    {schedule.enabled ? "" : " · Off"}
+                    Morning brief · {morningBriefEnabled ? "On" : "Off"}
                   </span>
                 </Link>
               </li>
-            ))}
-          </ul>
-          <Link
-            className="text-muted-foreground hover:text-foreground mt-0.5 block px-2 py-1.5 text-xs transition-colors"
-            href="/schedules"
-          >
-            {schedules.length > SIDEBAR_LIST_PREVIEW ? "View more" : "Manage"}
-          </Link>
-        </div>
+              {previewSchedules.map((schedule) => (
+                <li key={schedule.id}>
+                  <Link
+                    className="text-muted-foreground hover:bg-muted/40 hover:text-foreground block rounded-md px-2 py-1.5 text-sm transition-colors"
+                    href="/schedules"
+                  >
+                    <span className="line-clamp-1">
+                      {schedule.label}
+                      {" · "}
+                      {formatScheduleTimeValue(schedule.hour, schedule.minute)}
+                      {schedule.enabled ? "" : " · Off"}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <Link
+              className="text-muted-foreground hover:text-foreground mt-0.5 block px-2 py-1.5 text-xs transition-colors"
+              href="/schedules"
+            >
+              {schedules.length > SIDEBAR_LIST_PREVIEW ? "View more" : "Manage"}
+            </Link>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
 
       <div className="border-border mt-auto border-t px-3 py-3">

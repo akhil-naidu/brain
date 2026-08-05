@@ -151,7 +151,7 @@ describe("ChatSidebar new chat shortcut hint", () => {
 });
 
 describe("ChatSidebar toggle shortcut hint", () => {
-  it("exposes the sidebar toggle shortcut on the close control", () => {
+  it("exposes the sidebar toggle shortcut on the collapse control", () => {
     render(
       <ChatSidebar
         activeChatId="chat-1"
@@ -166,8 +166,8 @@ describe("ChatSidebar toggle shortcut hint", () => {
       />,
     );
 
-    const button = screen.getByRole("button", { name: /Close sidebar/i });
-    expect(button.getAttribute("title")).toMatch(/Close sidebar \(.+\)/);
+    const button = screen.getByRole("button", { name: /Collapse sidebar/i });
+    expect(button.getAttribute("title")).toMatch(/Collapse sidebar \(.+\)/);
   });
 });
 

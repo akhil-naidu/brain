@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { BrainChatShell } from "@/app/_components/brain-chat-shell";
+import { ChatWorkspace } from "@/app/_components/chat-workspace";
 
 export const metadata: Metadata = {
   title: "Chat",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function ChatPage() {
-  return <BrainChatShell />;
+  return <ChatWorkspace />;
 }

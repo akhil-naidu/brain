@@ -1,23 +1,30 @@
 # sidebar-toggle-shortcut Specification
 
 ## Purpose
-Lets users show or hide the chat sidebar with a keyboard shortcut.
+
+Lets users expand or collapse the app sidebar with a keyboard shortcut.
+
 ## Requirements
+
 ### Requirement: Sidebar toggle keyboard shortcut
-The chat UI MUST toggle the sidebar open/closed when the user presses Command-B or Control-B, using the same visibility state as the sidebar buttons.
 
-#### Scenario: Shortcut closes an open sidebar
-- **WHEN** the sidebar is open and the user presses the toggle shortcut
-- **THEN** the sidebar closes
+The app UI MUST toggle the sidebar between expanded and compact modes when the user presses Command-B or Control-B, using the same state as the sidebar toggle control. Compact mode MUST keep a narrow icon rail visible instead of removing the sidebar entirely.
 
-#### Scenario: Shortcut opens a closed sidebar
-- **WHEN** the sidebar is closed and the user presses the toggle shortcut
-- **THEN** the sidebar opens
+#### Scenario: Shortcut collapses an expanded sidebar
+
+- **WHEN** the sidebar is expanded and the user presses the toggle shortcut
+- **THEN** the sidebar becomes compact
+
+#### Scenario: Shortcut expands a compact sidebar
+
+- **WHEN** the sidebar is compact and the user presses the toggle shortcut
+- **THEN** the sidebar expands
 
 ### Requirement: Shortcut discoverability
-The open/close sidebar controls MUST expose the shortcut so users can discover it.
+
+The expand/collapse sidebar controls MUST expose the shortcut so users can discover it.
 
 #### Scenario: Sidebar controls mention the shortcut
-- **WHEN** the user inspects an open or close sidebar control
-- **THEN** the shortcut is indicated
 
+- **WHEN** the user inspects an expand or collapse sidebar control
+- **THEN** the shortcut is indicated
