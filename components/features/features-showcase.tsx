@@ -1,8 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { Space_Grotesk } from "next/font/google";
 import { AsanaIcon, ClickUpIcon, DflowIcon, GmailIcon, SlackIcon } from "@/components/icons";
-import { FEATURE_SECTIONS } from "@/lib/features/catalog";
+import {
+  ChatTourMock,
+  ConnectionsTourMock,
+  ModelsTourMock,
+  RuntimeTourMock,
+} from "@/components/features/tour-mocks";
+import { HOME_TOUR_SCENES } from "@/lib/features/catalog";
 import { cn } from "@/lib/utils";
 
 const display = Space_Grotesk({
@@ -17,6 +24,13 @@ const CONNECTION_MARKS = [
   { id: "gmail", label: "Gmail", Icon: GmailIcon },
   { id: "dflow", label: "dFlow", Icon: DflowIcon },
 ] as const;
+
+const SCENE_MOCKS: Record<(typeof HOME_TOUR_SCENES)[number]["id"], ReactNode> = {
+  chat: <ChatTourMock />,
+  connections: <ConnectionsTourMock />,
+  models: <ModelsTourMock />,
+  runtime: <RuntimeTourMock />,
+};
 
 export function FeaturesShowcase() {
   return (
@@ -80,8 +94,7 @@ export function FeaturesShowcase() {
             Your self-hosted work assistant in the browser.
           </p>
           <p className="features-fade-up features-delay-2 mt-4 max-w-xl text-base leading-relaxed text-white/65 sm:text-lg">
-            Chat, connect ClickUp · Slack · Asana · Gmail · dFlow, pick a model, and keep history on
-            your machine — without Vercel platform lock-in.
+            Chat, connect your work apps, pick a model, and keep history on your machine.
           </p>
           <div className="features-fade-up features-delay-3 mt-8 flex flex-wrap items-center gap-3">
             <Link
@@ -92,9 +105,9 @@ export function FeaturesShowcase() {
             </Link>
             <a
               className="rounded-full border border-white/15 px-5 py-2.5 text-sm text-white/80 transition hover:border-white/30 hover:text-white"
-              href="#connections"
+              href="#chat"
             >
-              See connections
+              See how it works
             </a>
           </div>
         </section>
@@ -102,11 +115,11 @@ export function FeaturesShowcase() {
         <section
           aria-label="Connected apps"
           className="border-y border-white/10 bg-black/20 py-10 backdrop-blur-sm"
-          id="connections"
+          id="apps"
         >
           <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 sm:px-8">
             <p className="text-xs font-medium tracking-[0.18em] text-white/45 uppercase">
-              Connections
+              Works with
             </p>
             <ul className="flex flex-wrap items-center gap-x-8 gap-y-4">
               {CONNECTION_MARKS.map(({ Icon, id, label }) => (
@@ -121,39 +134,49 @@ export function FeaturesShowcase() {
           </div>
         </section>
 
-        <div className="mx-auto w-full max-w-5xl px-5 py-20 sm:px-8">
-          {FEATURE_SECTIONS.map((section, sectionIndex) => (
-            <section
-              className={cn(
-                "features-section border-white/10 py-14",
-                sectionIndex > 0 ? "border-t" : undefined,
-              )}
-              id={section.id}
-              key={section.id}
-            >
-              <div className="max-w-2xl">
-                <h2 className="font-[family-name:var(--font-features-display)] text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
-                  {section.title}
-                </h2>
-                <p className="mt-3 text-base leading-relaxed text-white/60">{section.summary}</p>
-              </div>
-              <ul className="mt-10 divide-y divide-white/10 border-y border-white/10">
-                {section.items.map((item) => (
-                  <li
-                    className="grid gap-2 py-5 sm:grid-cols-[minmax(12rem,16rem)_1fr] sm:gap-8"
-                    key={item.id}
-                  >
-                    <h3 className="font-[family-name:var(--font-features-display)] text-base font-medium text-white/90">
-                      {item.title}
-                    </h3>
-                    <p className="text-sm leading-relaxed text-white/55 sm:text-[15px]">
-                      {item.summary}
+        <div className="mx-auto w-full max-w-5xl px-5 py-10 sm:px-8 sm:py-16">
+          {HOME_TOUR_SCENES.map((scene, sceneIndex) => {
+            const reverse = sceneIndex % 2 === 1;
+            return (
+              <section
+                className={cn(
+                  "features-section py-14 sm:py-16",
+                  sceneIndex > 0 && "border-t border-white/10",
+                )}
+                id={scene.id}
+                key={scene.id}
+              >
+                <div
+                  className={cn(
+                    "grid items-center gap-10 lg:grid-cols-2 lg:gap-14",
+                    reverse && "lg:[&>*:first-child]:order-2",
+                  )}
+                >
+                  <div className="max-w-xl">
+                    <p className="text-xs font-medium tracking-[0.18em] text-white/40 uppercase">
+                      {String(sceneIndex + 1).padStart(2, "0")}
                     </p>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
+                    <h2 className="mt-3 font-[family-name:var(--font-features-display)] text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
+                      {scene.title}
+                    </h2>
+                    <p className="mt-3 text-base leading-relaxed text-white/60">{scene.summary}</p>
+                    <ul className="mt-6 space-y-2.5">
+                      {scene.points.map((point) => (
+                        <li
+                          className="flex gap-2.5 text-sm leading-relaxed text-white/70"
+                          key={point}
+                        >
+                          <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-[oklch(0.72_0.09_230)]" />
+                          {point}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="features-mock-stage min-w-0">{SCENE_MOCKS[scene.id]}</div>
+                </div>
+              </section>
+            );
+          })}
         </div>
 
         <section className="border-t border-white/10 bg-black/25 px-5 py-16 sm:px-8">
@@ -163,7 +186,7 @@ export function FeaturesShowcase() {
                 Ready when you are.
               </h2>
               <p className="mt-3 text-white/60">
-                Open the chat shell, Connect an app, and ask Brain about your work.
+                Open chat, connect an app, and ask Brain about your work.
               </p>
             </div>
             <Link
@@ -177,7 +200,7 @@ export function FeaturesShowcase() {
       </main>
 
       <footer className="relative z-10 mx-auto w-full max-w-5xl px-5 py-8 text-xs text-white/35 sm:px-8">
-        Brain · self-hosted eve agent · local/trusted use
+        Brain · self-hosted work assistant · local/trusted use
       </footer>
     </div>
   );
