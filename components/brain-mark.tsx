@@ -3,7 +3,7 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 /** Cache-bust when the transparent asset is replaced. */
-const BRAIN_MARK_SRC = "/brain-mark.png?v=3";
+export const BRAIN_MARK_SRC = "/brain-mark.png?v=8";
 
 export function BrainMark({ className }: { readonly className?: string }) {
   return (

@@ -179,36 +179,6 @@ html[data-eve-chat-sidebar="closed"] [data-desktop-sidebar] {
   }
 }
 
-/* Features showcase page — atmosphere follows the same light/dark tokens as chat */
-.features-atmosphere {
-  background:
-    radial-gradient(
-      120% 80% at 10% -10%,
-      color-mix(in oklab, var(--primary) 28%, transparent),
-      transparent 55%
-    ),
-    radial-gradient(
-      90% 70% at 90% 10%,
-      color-mix(in oklab, var(--ring) 18%, transparent),
-      transparent 50%
-    ),
-    linear-gradient(
-      180deg,
-      color-mix(in oklab, var(--background) 92%, var(--primary) 8%),
-      var(--background) 45%,
-      color-mix(in oklab, var(--background) 94%, var(--muted) 6%)
-    );
-}
-
-.features-grid {
-  background-image:
-    linear-gradient(color-mix(in oklab, var(--border) 55%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in oklab, var(--border) 55%, transparent) 1px, transparent 1px);
-  background-size: 48px 48px;
-  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 20%, black, transparent 75%);
-  mask-image: radial-gradient(ellipse 80% 60% at 50% 20%, black, transparent 75%);
-}
-
 .features-hero-glow {
   filter: drop-shadow(0 20px 60px color-mix(in oklab, var(--primary) 35%, transparent));
 }

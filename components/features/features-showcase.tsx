@@ -16,6 +16,7 @@ import {
   ModelsTourMock,
   RuntimeTourMock,
 } from "@/components/features/tour-mocks";
+import { BRAIN_MARK_SRC } from "@/components/brain-mark";
 import { HOME_TOUR_SCENES } from "@/lib/features/catalog";
 import { cn } from "@/lib/utils";
 
@@ -48,15 +49,6 @@ export function FeaturesShowcase() {
         "bg-background text-foreground relative min-h-dvh overflow-x-hidden",
       )}
     >
-      <div
-        aria-hidden="true"
-        className="features-atmosphere pointer-events-none absolute inset-0"
-      />
-      <div
-        aria-hidden="true"
-        className="features-grid pointer-events-none absolute inset-0 opacity-[0.35] dark:opacity-[0.18]"
-      />
-
       <header className="relative z-10 mx-auto flex w-full max-w-5xl items-center justify-between px-5 py-5 sm:px-8">
         <Link
           className="flex items-center gap-2.5 font-[family-name:var(--font-features-display)] text-lg font-semibold tracking-tight"
@@ -67,7 +59,7 @@ export function FeaturesShowcase() {
             aria-hidden="true"
             className="size-8 object-contain"
             height={64}
-            src="/brain-mark.png?v=3"
+            src={BRAIN_MARK_SRC}
             unoptimized
             width={64}
           />
@@ -90,7 +82,7 @@ export function FeaturesShowcase() {
               className="features-hero-glow size-28 object-contain sm:size-36"
               height={256}
               priority
-              src="/brain-mark.png?v=3"
+              src={BRAIN_MARK_SRC}
               unoptimized
               width={256}
             />
