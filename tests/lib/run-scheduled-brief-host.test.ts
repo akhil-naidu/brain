@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveEveHttpHost } from "@/lib/chat/run-scheduled-brief";
+import { resolveEveHttpHost } from "@/lib/chat/eve-http-host";
 
 describe("resolveEveHttpHost", () => {
   it("prefers EVE_BASE_URL", () => {

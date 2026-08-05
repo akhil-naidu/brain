@@ -1,0 +1,439 @@
+"use client";
+
+import { LoaderCircleIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import type { Playbook } from "@/lib/chat/playbooks";
+import {
+  createScheduledPlaybookApi,
+  deleteScheduledPlaybookApi,
+  listScheduledPlaybooks,
+  runScheduledPlaybookNow,
+  updateScheduledPlaybookApi,
+} from "@/lib/chat/scheduled-playbooks-api";
+import { MAX_SCHEDULED_PLAYBOOKS, type ScheduledPlaybook } from "@/lib/chat/scheduled-playbooks";
+import { cn } from "@/lib/utils";
+
+function browserTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch {
+    return "UTC";
+  }
+}
+
+function formatTimeValue(hour: number, minute: number): string {
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function parseTimeValue(value: string): { hour: number; minute: number } | null {
+  const match = /^(\d{2}):(\d{2})$/.exec(value);
+  if (!match) {
+    return null;
+  }
+  const hour = Number.parseInt(match[1] ?? "", 10);
+  const minute = Number.parseInt(match[2] ?? "", 10);
+  if (!Number.isInteger(hour) || hour < 0 || hour > 23) {
+    return null;
+  }
+  if (!Number.isInteger(minute) || minute < 0 || minute > 59) {
+    return null;
+  }
+  return { hour, minute };
+}
+
+export function ScheduledPlaybooksPanel({
+  className,
+  disabled = false,
+  onOpenChat,
+  playbooks,
+}: {
+  readonly className?: string;
+  readonly disabled?: boolean;
+  readonly onOpenChat: (chatId: string) => void;
+  readonly playbooks: readonly Playbook[];
+}) {
+  const [schedules, setSchedules] = useState<readonly ScheduledPlaybook[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [selectedPlaybookId, setSelectedPlaybookId] = useState("");
+  const [newTime, setNewTime] = useState("09:00");
+  const [newSlack, setNewSlack] = useState(false);
+  const [newSlackChannel, setNewSlackChannel] = useState("");
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+
+  const refresh = async () => {
+    const listed = await listScheduledPlaybooks();
+    setSchedules(listed);
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const listed = await listScheduledPlaybooks();
+        if (!cancelled) {
+          setSchedules(listed);
+        }
+      } catch {
+        if (!cancelled) {
+          setLoadError("Unable to load playbook schedules.");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!selectedPlaybookId && playbooks[0]) {
+      setSelectedPlaybookId(playbooks[0].id);
+    }
+  }, [playbooks, selectedPlaybookId]);
+
+  if (loadError) {
+    return (
+      <p className={cn("text-muted-foreground mx-auto mt-6 max-w-md text-sm", className)}>
+        {loadError}
+      </p>
+    );
+  }
+
+  if (!schedules) {
+    return (
+      <p className={cn("text-muted-foreground mx-auto mt-6 max-w-md text-sm", className)}>
+        Loading schedules…
+      </p>
+    );
+  }
+
+  const atLimit = schedules.length >= MAX_SCHEDULED_PLAYBOOKS;
+
+  return (
+    <div className={cn("mx-auto mt-6 w-full max-w-md text-left", className)}>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <p className="text-muted-foreground/80 text-xs font-medium tracking-wide uppercase">
+          Scheduled playbooks
+        </p>
+        <Button
+          className="text-muted-foreground h-7 px-2 text-xs"
+          disabled={disabled || atLimit || playbooks.length === 0}
+          onClick={() => {
+            setAdding((open) => !open);
+            setActionError(null);
+          }}
+          size="sm"
+          title={
+            playbooks.length === 0
+              ? "Save a playbook first."
+              : atLimit
+                ? `You can schedule up to ${MAX_SCHEDULED_PLAYBOOKS} playbooks.`
+                : "Schedule a playbook"
+          }
+          type="button"
+          variant="ghost"
+        >
+          <PlusIcon className="size-3.5" />
+          Schedule
+        </Button>
+      </div>
+
+      {adding ? (
+        <div className="border-border/60 bg-muted/20 mb-3 flex flex-col gap-2 rounded-lg border px-3 py-3">
+          <label className="flex flex-col gap-1 text-sm" htmlFor="schedule-playbook-select">
+            Playbook
+            <select
+              className="border-input bg-background h-9 rounded-md border px-2 text-sm"
+              disabled={disabled || creating}
+              id="schedule-playbook-select"
+              onChange={(event) => {
+                setSelectedPlaybookId(event.target.value);
+              }}
+              value={selectedPlaybookId}
+            >
+              {playbooks.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <label htmlFor="schedule-playbook-time">Local time</label>
+            <Input
+              className="h-8 w-[7.5rem]"
+              disabled={disabled || creating}
+              id="schedule-playbook-time"
+              onChange={(event) => {
+                setNewTime(event.target.value);
+              }}
+              type="time"
+              value={newTime}
+            />
+          </div>
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <label htmlFor="schedule-playbook-slack">Also post to Slack</label>
+            <input
+              checked={newSlack}
+              disabled={disabled || creating}
+              id="schedule-playbook-slack"
+              onChange={(event) => {
+                setNewSlack(event.target.checked);
+              }}
+              type="checkbox"
+            />
+          </div>
+          {newSlack ? (
+            <Input
+              disabled={disabled || creating}
+              id="schedule-playbook-slack-channel"
+              onChange={(event) => {
+                setNewSlackChannel(event.target.value);
+              }}
+              placeholder="#alerts or C0123ABC"
+              value={newSlackChannel}
+            />
+          ) : null}
+          <div className="flex gap-2">
+            <Button
+              disabled={disabled || creating || !selectedPlaybookId}
+              onClick={() => {
+                void (async () => {
+                  const playbook = playbooks.find((item) => item.id === selectedPlaybookId);
+                  const time = parseTimeValue(newTime);
+                  if (!playbook || !time) {
+                    setActionError("Pick a playbook and a valid time.");
+                    return;
+                  }
+                  setCreating(true);
+                  setActionError(null);
+                  try {
+                    await createScheduledPlaybookApi({
+                      label: playbook.label,
+                      prompt: playbook.prompt,
+                      sourcePlaybookId: playbook.id,
+                      hour: time.hour,
+                      minute: time.minute,
+                      timezone: browserTimeZone(),
+                      weekdaysOnly: true,
+                      enabled: true,
+                      slackDeliveryEnabled: newSlack,
+                      slackChannel: newSlackChannel.trim() || null,
+                    });
+                    await refresh();
+                    setAdding(false);
+                    setNewSlack(false);
+                    setNewSlackChannel("");
+                  } catch (error) {
+                    setActionError(
+                      error instanceof Error ? error.message : "Unable to create schedule.",
+                    );
+                  } finally {
+                    setCreating(false);
+                  }
+                })();
+              }}
+              size="sm"
+              type="button"
+            >
+              {creating ? <LoaderCircleIcon className="size-3.5 animate-spin" /> : null}
+              Save schedule
+            </Button>
+            <Button
+              disabled={creating}
+              onClick={() => {
+                setAdding(false);
+              }}
+              size="sm"
+              type="button"
+              variant="ghost"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {schedules.length === 0 ? (
+        <p className="text-muted-foreground px-3 py-2 text-sm leading-relaxed">
+          Schedule a saved playbook to run into a chat on a daily cadence.
+        </p>
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {schedules.map((schedule) => {
+            const timeValue = formatTimeValue(schedule.hour, schedule.minute);
+            const busy = busyId === schedule.id;
+            return (
+              <li
+                className="border-border/60 bg-muted/20 flex flex-col gap-2 rounded-lg border px-3 py-3"
+                key={schedule.id}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{schedule.label}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {timeValue}
+                      {schedule.weekdaysOnly ? " · weekdays" : ""}
+                      {schedule.slackDeliveryEnabled ? " · Slack" : ""}
+                    </p>
+                  </div>
+                  <button
+                    aria-label={`Delete ${schedule.label} schedule`}
+                    className="text-muted-foreground hover:text-destructive inline-flex size-8 items-center justify-center rounded-md"
+                    disabled={disabled || busy}
+                    onClick={() => {
+                      void (async () => {
+                        setBusyId(schedule.id);
+                        setActionError(null);
+                        try {
+                          await deleteScheduledPlaybookApi(schedule.id);
+                          await refresh();
+                        } catch (error) {
+                          setActionError(
+                            error instanceof Error ? error.message : "Unable to delete schedule.",
+                          );
+                        } finally {
+                          setBusyId(null);
+                        }
+                      })();
+                    }}
+                    type="button"
+                  >
+                    <Trash2Icon className="size-3.5" />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <label htmlFor={`schedule-enabled-${schedule.id}`}>Enabled</label>
+                  <input
+                    checked={schedule.enabled}
+                    disabled={disabled || busy}
+                    id={`schedule-enabled-${schedule.id}`}
+                    onChange={(event) => {
+                      void (async () => {
+                        setBusyId(schedule.id);
+                        try {
+                          await updateScheduledPlaybookApi(schedule.id, {
+                            enabled: event.target.checked,
+                          });
+                          await refresh();
+                        } catch (error) {
+                          setActionError(
+                            error instanceof Error ? error.message : "Unable to update schedule.",
+                          );
+                        } finally {
+                          setBusyId(null);
+                        }
+                      })();
+                    }}
+                    type="checkbox"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <label htmlFor={`schedule-time-${schedule.id}`}>Local time</label>
+                  <Input
+                    className="h-8 w-[7.5rem]"
+                    defaultValue={timeValue}
+                    disabled={disabled || busy}
+                    id={`schedule-time-${schedule.id}`}
+                    key={`${schedule.id}-${timeValue}`}
+                    onBlur={(event) => {
+                      const parsed = parseTimeValue(event.target.value);
+                      if (!parsed) {
+                        event.target.value = timeValue;
+                        return;
+                      }
+                      if (parsed.hour === schedule.hour && parsed.minute === schedule.minute) {
+                        return;
+                      }
+                      void (async () => {
+                        setBusyId(schedule.id);
+                        try {
+                          await updateScheduledPlaybookApi(schedule.id, {
+                            hour: parsed.hour,
+                            minute: parsed.minute,
+                          });
+                          await refresh();
+                        } catch (error) {
+                          setActionError(
+                            error instanceof Error ? error.message : "Unable to update schedule.",
+                          );
+                        } finally {
+                          setBusyId(null);
+                        }
+                      })();
+                    }}
+                    type="time"
+                  />
+                </div>
+
+                {schedule.lastSlackError ? (
+                  <p className="text-destructive text-xs">{schedule.lastSlackError}</p>
+                ) : null}
+
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    disabled={disabled || busy}
+                    onClick={() => {
+                      void (async () => {
+                        setBusyId(schedule.id);
+                        setActionError(null);
+                        try {
+                          const result = await runScheduledPlaybookNow(schedule.id);
+                          if (result.skipped) {
+                            setActionError("Schedule did not run.");
+                            return;
+                          }
+                          if (result.slack.attempted && !result.slack.ok) {
+                            setActionError(result.slack.error);
+                          }
+                          await refresh();
+                          onOpenChat(result.chat.id);
+                        } catch (error) {
+                          setActionError(
+                            error instanceof Error ? error.message : "Unable to run schedule.",
+                          );
+                        } finally {
+                          setBusyId(null);
+                        }
+                      })();
+                    }}
+                    size="sm"
+                    type="button"
+                    variant="secondary"
+                  >
+                    {busy ? <LoaderCircleIcon className="size-3.5 animate-spin" /> : null}
+                    Run now
+                  </Button>
+                  {schedule.lastChatId ? (
+                    <Button
+                      disabled={disabled || busy}
+                      onClick={() => {
+                        const chatId = schedule.lastChatId;
+                        if (chatId) {
+                          onOpenChat(chatId);
+                        }
+                      }}
+                      size="sm"
+                      type="button"
+                      variant="ghost"
+                    >
+                      Open last
+                    </Button>
+                  ) : null}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {actionError ? <p className="text-destructive mt-2 text-xs">{actionError}</p> : null}
+    </div>
+  );
+}

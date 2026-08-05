@@ -152,7 +152,16 @@ export function localTimeParts(
 
 const WEEKDAY_SHORT = new Set(["Mon", "Tue", "Wed", "Thu", "Fri"]);
 
-export function isScheduledBriefDue(config: ScheduledBriefConfig, now: Date = new Date()): boolean {
+export type DailyScheduleTiming = {
+  readonly enabled: boolean;
+  readonly hour: number;
+  readonly minute: number;
+  readonly timezone: string;
+  readonly weekdaysOnly: boolean;
+  readonly lastRunDateKey: string | null;
+};
+
+export function isDailyScheduleDue(config: DailyScheduleTiming, now: Date = new Date()): boolean {
   if (!config.enabled) {
     return false;
   }
@@ -174,18 +183,30 @@ export function isScheduledBriefDue(config: ScheduledBriefConfig, now: Date = ne
   return true;
 }
 
+export function isScheduledBriefDue(config: ScheduledBriefConfig, now: Date = new Date()): boolean {
+  return isDailyScheduleDue(config, now);
+}
+
+export function isScheduleRunLocked(
+  runningSince: string | null,
+  now: Date = new Date(),
+  staleMs: number = SCHEDULED_BRIEF_STALE_RUN_MS,
+): boolean {
+  if (!runningSince) {
+    return false;
+  }
+  const started = Date.parse(runningSince);
+  if (!Number.isFinite(started)) {
+    return false;
+  }
+  return now.getTime() - started < staleMs;
+}
+
 export function isScheduledBriefRunning(
   config: ScheduledBriefConfig,
   now: Date = new Date(),
 ): boolean {
-  if (!config.runningSince) {
-    return false;
-  }
-  const started = Date.parse(config.runningSince);
-  if (!Number.isFinite(started)) {
-    return false;
-  }
-  return now.getTime() - started < SCHEDULED_BRIEF_STALE_RUN_MS;
+  return isScheduleRunLocked(config.runningSince, now);
 }
 
 export function morningBriefChatTitle(date: Date, timeZone: string): string {

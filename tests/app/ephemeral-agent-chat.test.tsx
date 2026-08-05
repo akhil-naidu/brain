@@ -75,6 +75,10 @@ vi.mock("@/components/chat/scheduled-brief-panel", () => ({
   ScheduledBriefPanel: () => null,
 }));
 
+vi.mock("@/components/chat/scheduled-playbooks-panel", () => ({
+  ScheduledPlaybooksPanel: () => null,
+}));
+
 vi.mock("@/lib/chat/setup-api", () => ({
   fetchSetupStatus: async () => ({ commandCodeApiKeyConfigured: true }),
 }));
