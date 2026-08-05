@@ -495,19 +495,7 @@ export function ChatSidebar({
         </Collapsible>
       </div>
 
-      <div className="border-border flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-t px-3 py-3">
-        <Link
-          className="text-muted-foreground hover:text-foreground text-xs transition-colors"
-          href="/playbooks"
-        >
-          All playbooks
-        </Link>
-        <Link
-          className="text-muted-foreground hover:text-foreground text-xs transition-colors"
-          href="/schedules"
-        >
-          All schedules
-        </Link>
+      <div className="border-border shrink-0 border-t px-3 py-3">
         <Link
           className="text-muted-foreground hover:text-foreground text-xs transition-colors"
           href="/"

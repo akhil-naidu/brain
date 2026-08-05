@@ -124,7 +124,7 @@ describe("ChatSidebar rename", () => {
 });
 
 describe("ChatSidebar mini lists", () => {
-  it("shows playbook and schedule previews with footer page links", async () => {
+  it("shows playbook and schedule previews with section page links", async () => {
     renderSidebar();
     expect(await screen.findByRole("button", { name: "Triage inbox" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Playbooks" }).getAttribute("href")).toBe("/playbooks");
@@ -133,12 +133,6 @@ describe("ChatSidebar mini lists", () => {
       "/schedules",
     );
     expect(screen.getByRole("link", { name: /Daily standup/i }).getAttribute("href")).toBe(
-      "/schedules",
-    );
-    expect(screen.getByRole("link", { name: "All playbooks" }).getAttribute("href")).toBe(
-      "/playbooks",
-    );
-    expect(screen.getByRole("link", { name: "All schedules" }).getAttribute("href")).toBe(
       "/schedules",
     );
     expect(screen.getByRole("link", { name: "Home" }).getAttribute("href")).toBe("/");
