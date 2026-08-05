@@ -57,16 +57,21 @@ Brain SHALL define an eve schedule that checks approximately every minute and tr
 
 ### Requirement: Schedule controls in chat chrome
 
-The chat UI SHALL expose morning-brief schedule controls from a composer Schedules control available during any chat (including empty chat). Those controls SHALL let the user enable the schedule, set local time, optionally enable Slack delivery with a channel target, and run a brief now. The schedule UI MUST NOT show host crontab, curl, or other operator setup commands. The empty chat state MUST NOT duplicate the full morning-brief schedule panel.
+The chat UI SHALL expose morning-brief schedule controls from a composer Schedules control available during any chat (including empty chat). Those controls SHALL present the morning brief as optional (clearly off by default), let the user enable it, set local time and weekdays when enabled, optionally enable Slack delivery with a channel target when Slack is on, and run a brief once now. Detailed time/Slack fields SHOULD stay collapsed while the schedule is disabled. Saving MUST happen as the user edits, with brief Saved feedback. The schedule UI MUST NOT show host crontab, curl, or other operator setup commands. The empty chat state MUST NOT duplicate the full morning-brief schedule panel.
 
 #### Scenario: Open schedules from the composer
 
 - **WHEN** the user opens Schedules from the composer
 - **THEN** the UI shows the morning-brief schedule controls
 
+#### Scenario: Off by default keeps details collapsed
+
+- **WHEN** the morning brief schedule is disabled
+- **THEN** the UI shows an on/off control and does not require time or Slack setup to leave it off
+
 #### Scenario: Run now from Schedules
 
-- **WHEN** the user chooses Run now from Schedules
+- **WHEN** the user chooses to run the morning brief once from Schedules
 - **THEN** Brain performs a forced brief run and the UI can open the resulting chat
 
 ### Requirement: Show last-run status

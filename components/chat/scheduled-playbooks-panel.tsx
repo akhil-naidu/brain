@@ -121,9 +121,14 @@ export function ScheduledPlaybooksPanel({
   return (
     <div className={cn("mx-auto mt-6 w-full max-w-md text-left", className)}>
       <div className="mb-2 flex items-center justify-between gap-2">
-        <p className="text-muted-foreground/80 text-xs font-medium tracking-wide uppercase">
-          Scheduled playbooks
-        </p>
+        <div className="min-w-0">
+          <p className="text-muted-foreground/80 text-xs font-medium tracking-wide uppercase">
+            Playbook schedules
+          </p>
+          <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">
+            Run a saved playbook on a timer.
+          </p>
+        </div>
         <Button
           className="text-muted-foreground h-7 px-2 text-xs"
           disabled={disabled || atLimit || playbooks.length === 0}

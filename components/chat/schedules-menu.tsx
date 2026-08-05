@@ -99,7 +99,8 @@ export function SchedulesMenu({
               <div className="min-w-0 space-y-1.5">
                 <DialogTitle>Schedules</DialogTitle>
                 <DialogDescription>
-                  Set when Brain should run your morning brief or saved playbooks.
+                  Optional timers. Morning brief stays off until you turn it on. Changes save as you
+                  edit.
                 </DialogDescription>
               </div>
               <div className="flex shrink-0 gap-1">
