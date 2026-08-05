@@ -24,6 +24,12 @@ import { PlaybooksMenu } from "@/components/chat/playbooks-menu";
 import { PlaybooksPanel } from "@/components/chat/playbooks-panel";
 import { usePlaybooks } from "@/components/chat/use-playbooks";
 import { WelcomePrompts } from "@/components/chat/welcome-prompts";
+import {
+  buildUserContentMessage,
+  canSubmitChatTurn,
+  filesToPendingAttachments,
+  type PendingAttachment,
+} from "@/lib/chat/attachments";
 import { createChat, updateChat } from "@/lib/chat/chats-api";
 import { WELCOME_PROMPTS } from "@/lib/chat/welcome-prompts";
 import { getChatMessageLengthError } from "@/lib/chat/limits";
@@ -108,6 +114,7 @@ export function EphemeralAgentChat({
   const { enabledConnections, selectedModelId, setConnectionEnabled, setSelectedModelId } =
     useChatShell();
   const { playbooks, savePlaybook, deletePlaybook } = usePlaybooks();
+  const [attachments, setAttachments] = useState<readonly PendingAttachment[]>([]);
   const seedEvents = initialEvents ?? EMPTY_EVENTS;
   const [session] = useState(() =>
     new Client({ host: "", preserveCompletedSessions: true }).session(initialSession ?? undefined),
@@ -515,10 +522,29 @@ export function EphemeralAgentChat({
     return handleInputResponsesRef.current(responses);
   }, []);
 
+  const handleAddFiles = useCallback(
+    (files: readonly File[]) => {
+      void (async () => {
+        const result = await filesToPendingAttachments(files, attachments.length);
+        if (result.attachments.length > 0) {
+          setAttachments((previous) => [...previous, ...result.attachments]);
+        }
+        if (result.errors[0]) {
+          showClientError(result.errors[0]);
+        }
+      })();
+    },
+    [attachments.length, showClientError],
+  );
+
   const handleSubmit = useCallback(
     async (text: string) => {
       if (missingApiKey) {
         showClientError(MISSING_COMMAND_CODE_API_KEY_MESSAGE);
+        return;
+      }
+
+      if (!canSubmitChatTurn(text, attachments)) {
         return;
       }
 
@@ -529,22 +555,27 @@ export function EphemeralAgentChat({
       }
 
       const previousDraft = text;
+      const previousAttachments = attachments;
+      const titleSource = text.trim() || previousAttachments[0]?.filename || "Attachment";
       onDraftChange("");
-      onUserMessage?.(text);
+      setAttachments([]);
+      onUserMessage?.(text.trim() || titleSource);
       prepareTurn();
 
       try {
-        await ensureChat(text);
+        await ensureChat(titleSource);
         await send({
-          message: text,
+          message: buildUserContentMessage(text, previousAttachments),
           clientContext: turnClientContext,
         });
       } catch (error) {
         onDraftChange(previousDraft);
+        setAttachments(previousAttachments);
         showClientError(toErrorMessage(error, "Failed to send message."));
       }
     },
     [
+      attachments,
       ensureChat,
       missingApiKey,
       onDraftChange,
@@ -723,6 +754,7 @@ export function EphemeralAgentChat({
         />
         <div className="mx-auto w-full max-w-3xl">
           <ChatComposer
+            attachments={attachments}
             disabled={missingApiKey}
             disabledReason={
               missingApiKey
@@ -755,7 +787,11 @@ export function EphemeralAgentChat({
               </div>
             }
             isBusy={isBusy}
+            onAddFiles={handleAddFiles}
             onChange={onDraftChange}
+            onRemoveAttachment={(id) => {
+              setAttachments((previous) => previous.filter((item) => item.id !== id));
+            }}
             onStop={requestCancellation}
             onSubmit={handleSubmit}
             placeholder="Ask Brain anything..."
