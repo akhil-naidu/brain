@@ -51,7 +51,9 @@ import {
   applyMessageSuppression,
   collectEditSuppression,
   omitTurnEvents,
+  turnIdFromMessage,
 } from "@/lib/chat/edit-branch";
+import { timestampForTurn } from "@/lib/chat/message-timestamp";
 import { canOfferRetry, getLastUserMessage, getRetryableUserPrompt } from "@/lib/chat/retry-prompt";
 import { createTurnClientContext } from "@/lib/chat/turn-client-context";
 
@@ -829,6 +831,7 @@ export function EphemeralAgentChat({
                 canEdit={message.id === editableUserMessageId}
                 canRespond={isLast ? lastMessageCanRespond : false}
                 childFailuresByCallId={isLast ? childFailuresByCallId : undefined}
+                completedAt={timestampForTurn(turnIdFromMessage(message), agent.events)}
                 isStreaming={isStreaming && message.role === "assistant" && isLast}
                 key={message.id}
                 message={message}

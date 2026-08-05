@@ -4,16 +4,26 @@ import type { EveMessage } from "eve/react";
 import {
   CheckIcon,
   CopyIcon,
+  MoreHorizontalIcon,
   PencilIcon,
   RefreshCwIcon,
   Volume2Icon,
   VolumeXIcon,
 } from "lucide-react";
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 
 import { AgentMessageParts } from "@/components/chat/message-parts/message-parts";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { copyTextToClipboard, messageToMarkdown } from "@/lib/chat/export-markdown";
+import { formatMessageTimestamp } from "@/lib/chat/message-timestamp";
 import { canUseSpeechSynthesis, speakText } from "@/lib/chat/read-aloud";
 import type { SubagentChildFailure } from "@/lib/chat/subagent-child-failures";
 import { cn } from "@/lib/utils";
@@ -31,6 +41,7 @@ type AgentMessageProps = {
   readonly canEdit?: boolean;
   readonly canRespond: boolean;
   readonly childFailuresByCallId?: ReadonlyMap<string, readonly SubagentChildFailure[]>;
+  readonly completedAt?: string | null;
   readonly isStreaming: boolean;
   readonly message: EveMessage;
   readonly onEditResend?: (text: string) => void | Promise<void>;
@@ -49,6 +60,7 @@ function AgentMessageView({
   canEdit = false,
   canRespond,
   childFailuresByCallId,
+  completedAt = null,
   isStreaming,
   message,
   onEditResend,
@@ -179,12 +191,17 @@ function AgentMessageView({
 
   const canRegenerate = !isUser && Boolean(onRegenerate);
   const canReadAloud = speechSupported && spokenText.length > 0;
+  const timestampLabel = useMemo(
+    () => (completedAt ? formatMessageTimestamp(completedAt) : null),
+    [completedAt],
+  );
+  const showMoreMenu = !isUser && (canCopy || Boolean(timestampLabel));
 
   // Wait until the assistant turn finishes so actions aren't offered mid-stream.
   const showActions =
     !editing &&
     !isStreaming &&
-    (canCopy || (canEdit && onEditResend) || canRegenerate || canReadAloud);
+    (canCopy || (canEdit && onEditResend) || canRegenerate || canReadAloud || showMoreMenu);
 
   return (
     <article
@@ -343,6 +360,43 @@ function AgentMessageView({
                 <PencilIcon className="size-3.5" />
               </Button>
             ) : null}
+            {showMoreMenu ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    aria-label="More message actions"
+                    className={actionButtonClass}
+                    size="icon-xs"
+                    title="More"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <MoreHorizontalIcon className="size-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="min-w-44">
+                  {timestampLabel ? (
+                    <>
+                      <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
+                        {timestampLabel}
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                    </>
+                  ) : null}
+                  {canCopy ? (
+                    <DropdownMenuItem
+                      className="cursor-pointer gap-2"
+                      onSelect={() => {
+                        handleCopy();
+                      }}
+                    >
+                      <CopyIcon className="size-3.5" />
+                      Copy as Markdown
+                    </DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -399,6 +453,9 @@ export function areAgentMessagePropsEqual(
     return false;
   }
   if (previous.onRegenerate !== next.onRegenerate) {
+    return false;
+  }
+  if (previous.completedAt !== next.completedAt) {
     return false;
   }
   if (haveRelevantFailuresChanged(previous, next)) {

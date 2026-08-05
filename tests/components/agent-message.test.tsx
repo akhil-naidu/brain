@@ -132,6 +132,33 @@ describe("AgentMessage read aloud", () => {
   });
 });
 
+describe("AgentMessage more menu", () => {
+  it("shows timestamp and copies markdown from the overflow menu", async () => {
+    writeText.mockClear();
+
+    render(
+      <AgentMessage
+        canRespond={false}
+        completedAt="2026-08-04T20:27:00.000Z"
+        isStreaming={false}
+        message={assistantMessage}
+        onInputResponses={vi.fn()}
+      />,
+    );
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "More message actions" }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Yesterday,|Today,|Aug/)).toBeDefined();
+    });
+    fireEvent.click(screen.getByRole("menuitem", { name: "Copy as Markdown" }));
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith("Hello from Brain");
+    });
+  });
+});
+
 describe("AgentMessage copy", () => {
   it("copies the message markdown to the clipboard", async () => {
     writeText.mockClear();
@@ -154,8 +181,8 @@ describe("AgentMessage copy", () => {
   });
 
   it("hides copy while an assistant reply is still streaming", () => {
-    const assistantMessage = {
-      id: "assistant-1",
+    const streamingAssistant = {
+      id: "assistant-streaming",
       parts: [{ type: "text" as const, text: "Partial…", state: "streaming" as const }],
       role: "assistant" as const,
       metadata: { status: "streaming" as const },
@@ -165,7 +192,7 @@ describe("AgentMessage copy", () => {
       <AgentMessage
         canRespond={false}
         isStreaming
-        message={assistantMessage}
+        message={streamingAssistant}
         onInputResponses={vi.fn()}
       />,
     );
