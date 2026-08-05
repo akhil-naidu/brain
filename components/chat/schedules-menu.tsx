@@ -5,13 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ScheduledBriefPanel } from "@/components/chat/scheduled-brief-panel";
 import { ScheduledPlaybooksPanel } from "@/components/chat/scheduled-playbooks-panel";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   hasSchedulesPauseSnapshot,
   pauseAllSchedules,
@@ -76,108 +70,115 @@ export function SchedulesMenu({
   };
 
   return (
-    <>
-      <button
-        aria-label="Schedules"
-        className={cn(
-          "text-muted-foreground/75 hover:bg-muted/60 hover:text-foreground focus-visible:bg-muted/60 focus-visible:text-foreground dark:text-muted-foreground/60 inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50",
-        )}
-        disabled={disabled}
-        onClick={() => {
-          setOpen(true);
-        }}
-        title="Schedules"
-        type="button"
-      >
-        <CalendarClockIcon className="size-4" />
-      </button>
+    <Popover
+      modal={false}
+      onOpenChange={(next) => {
+        if (disabled && next) {
+          return;
+        }
+        setOpen(next);
+      }}
+      open={open}
+    >
+      <PopoverTrigger asChild>
+        <button
+          aria-label="Schedules"
+          className={cn(
+            "text-muted-foreground/75 hover:bg-muted/60 hover:text-foreground focus-visible:bg-muted/60 focus-visible:text-foreground dark:text-muted-foreground/60 inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50",
+          )}
+          disabled={disabled}
+          title="Schedules"
+          type="button"
+        >
+          <CalendarClockIcon className="size-4" />
+        </button>
+      </PopoverTrigger>
 
-      <Dialog onOpenChange={setOpen} open={open}>
-        <DialogContent className="max-h-[min(90vh,42rem)] gap-0 overflow-y-auto sm:max-w-lg">
-          <DialogHeader className="pb-2">
-            <div className="flex flex-wrap items-start justify-between gap-2 pr-8">
-              <div className="min-w-0 space-y-1.5">
-                <DialogTitle>Schedules</DialogTitle>
-                <DialogDescription>Morning brief and playbook timers.</DialogDescription>
-              </div>
-              <div className="flex shrink-0 gap-1">
-                {canResume ? (
-                  <Button
-                    disabled={disabled || pauseBusy}
-                    onClick={() => {
-                      void (async () => {
-                        setPauseBusy(true);
-                        setPauseError(null);
-                        try {
-                          await resumeAllSchedules();
-                          setPanelKey((value) => value + 1);
-                          await refreshPauseState();
-                        } catch (error) {
-                          setPauseError(
-                            error instanceof Error ? error.message : "Unable to resume schedules.",
-                          );
-                        } finally {
-                          setPauseBusy(false);
-                        }
-                      })();
-                    }}
-                    size="sm"
-                    type="button"
-                    variant="secondary"
-                  >
-                    Resume
-                  </Button>
-                ) : null}
-                {canPause ? (
-                  <Button
-                    disabled={disabled || pauseBusy}
-                    onClick={() => {
-                      void (async () => {
-                        setPauseBusy(true);
-                        setPauseError(null);
-                        try {
-                          await pauseAllSchedules();
-                          setPanelKey((value) => value + 1);
-                          await refreshPauseState();
-                        } catch (error) {
-                          setPauseError(
-                            error instanceof Error ? error.message : "Unable to pause schedules.",
-                          );
-                        } finally {
-                          setPauseBusy(false);
-                        }
-                      })();
-                    }}
-                    size="sm"
-                    type="button"
-                    variant="ghost"
-                  >
-                    Pause all
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-            {pauseError ? <p className="text-destructive text-xs">{pauseError}</p> : null}
-          </DialogHeader>
-          {open ? (
-            <div className="flex flex-col gap-3 pb-1" key={`${refreshKey}-${panelKey}`}>
-              <ScheduledBriefPanel
-                className="mx-0 mt-0 max-w-none"
+      <PopoverContent
+        align="start"
+        className="max-h-[min(85vh,36rem)] w-[min(22.5rem,calc(100vw-1.5rem))] gap-0 overflow-y-auto p-3"
+        collisionPadding={12}
+        side="top"
+        sideOffset={8}
+      >
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-medium">Schedules</p>
+          <div className="flex shrink-0 gap-1">
+            {canResume ? (
+              <Button
                 disabled={disabled || pauseBusy}
-                idPrefix="schedules-dialog-brief-"
-                onOpenChat={openChatAndClose}
-              />
-              <ScheduledPlaybooksPanel
-                className="mx-0 mt-0 max-w-none"
+                onClick={() => {
+                  void (async () => {
+                    setPauseBusy(true);
+                    setPauseError(null);
+                    try {
+                      await resumeAllSchedules();
+                      setPanelKey((value) => value + 1);
+                      await refreshPauseState();
+                    } catch (error) {
+                      setPauseError(
+                        error instanceof Error ? error.message : "Unable to resume schedules.",
+                      );
+                    } finally {
+                      setPauseBusy(false);
+                    }
+                  })();
+                }}
+                size="sm"
+                type="button"
+                variant="secondary"
+              >
+                Resume
+              </Button>
+            ) : null}
+            {canPause ? (
+              <Button
                 disabled={disabled || pauseBusy}
-                idPrefix="schedules-dialog-playbooks-"
-                onOpenChat={openChatAndClose}
-                playbooks={playbooks}
-              />
-            </div>
-          ) : null}
-        </DialogContent>
-      </Dialog>
-    </>
+                onClick={() => {
+                  void (async () => {
+                    setPauseBusy(true);
+                    setPauseError(null);
+                    try {
+                      await pauseAllSchedules();
+                      setPanelKey((value) => value + 1);
+                      await refreshPauseState();
+                    } catch (error) {
+                      setPauseError(
+                        error instanceof Error ? error.message : "Unable to pause schedules.",
+                      );
+                    } finally {
+                      setPauseBusy(false);
+                    }
+                  })();
+                }}
+                size="sm"
+                type="button"
+                variant="ghost"
+              >
+                Pause all
+              </Button>
+            ) : null}
+          </div>
+        </div>
+        {pauseError ? <p className="text-destructive mb-2 text-xs">{pauseError}</p> : null}
+        {open ? (
+          <div className="flex flex-col gap-3" key={`${refreshKey}-${panelKey}`}>
+            <ScheduledBriefPanel
+              className="mx-0 mt-0 max-w-none"
+              disabled={disabled || pauseBusy}
+              idPrefix="schedules-brief-"
+              onOpenChat={openChatAndClose}
+            />
+            <ScheduledPlaybooksPanel
+              className="mx-0 mt-0 max-w-none"
+              disabled={disabled || pauseBusy}
+              idPrefix="schedules-playbooks-"
+              onOpenChat={openChatAndClose}
+              playbooks={playbooks}
+            />
+          </div>
+        ) : null}
+      </PopoverContent>
+    </Popover>
   );
 }
