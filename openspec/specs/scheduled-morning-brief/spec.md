@@ -69,6 +69,15 @@ The chat UI SHALL expose morning-brief schedule controls from a composer Schedul
 - **WHEN** the user chooses Run now from Schedules
 - **THEN** Brain performs a forced brief run and the UI can open the resulting chat
 
+### Requirement: Show last-run status
+
+The morning-brief schedule controls MUST show a short last-run status and, when a last chat exists, a control to open that chat.
+
+#### Scenario: Last run shown
+
+- **WHEN** the morning brief has a recorded last run time
+- **THEN** the Schedules UI shows when it last ran in plain language
+
 ### Requirement: Included in Pause all
 
 Pause all in Schedules MUST disable the morning brief when it is enabled, and Resume MUST restore it when it was enabled at pause time.

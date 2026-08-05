@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Playbook } from "@/lib/chat/playbooks";
+import { formatScheduleLastRun } from "@/lib/chat/schedule-defaults";
 import {
   createScheduledPlaybookApi,
   deleteScheduledPlaybookApi,
@@ -287,6 +288,9 @@ export function ScheduledPlaybooksPanel({
                       {schedule.weekdaysOnly ? " · weekdays" : ""}
                       {schedule.slackDeliveryEnabled ? " · Slack" : ""}
                     </p>
+                    <p className="text-muted-foreground/90 mt-0.5 text-xs">
+                      {formatScheduleLastRun(schedule.lastRunAt, schedule.timezone)}
+                    </p>
                   </div>
                   <button
                     aria-label={`Delete ${schedule.label} schedule`}
@@ -430,7 +434,7 @@ export function ScheduledPlaybooksPanel({
                       type="button"
                       variant="ghost"
                     >
-                      Open last
+                      Open last chat
                     </Button>
                   ) : null}
                 </div>

@@ -41,6 +41,15 @@ The chat UI SHALL let the user manage playbook schedules from a composer Schedul
 - **WHEN** the user chooses Run now for a playbook schedule from Schedules
 - **THEN** Brain performs a forced run and the UI can open the resulting chat
 
+### Requirement: Show last-run status
+
+Each playbook schedule in Schedules MUST show a short last-run status (for example “Not run yet” or when it last ran) and, when a last chat exists, a control to open that chat.
+
+#### Scenario: Last run shown
+
+- **WHEN** a playbook schedule has a recorded last run time
+- **THEN** the Schedules UI shows when it last ran in plain language
+
 ### Requirement: Pause and resume all schedules
 
 Schedules MUST offer Pause all, which disables the morning brief and every playbook schedule that is currently enabled, and remembers those choices for Resume. Resume MUST restore only the schedules that were enabled when Pause all was used.

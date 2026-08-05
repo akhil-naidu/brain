@@ -3,6 +3,7 @@
 import { BookmarkIcon, CalendarClockIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 import { PlaybookEditorDialog } from "@/components/chat/playbook-editor-dialog";
+import { SchedulePlaybookDialog } from "@/components/chat/schedule-playbook-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MAX_PLAYBOOKS, type Playbook } from "@/lib/chat/playbooks";
-import { schedulePlaybookQuick } from "@/lib/chat/schedule-from-playbook";
+import { listScheduledPlaybooks } from "@/lib/chat/scheduled-playbooks-api";
 import { cn } from "@/lib/utils";
 
 export function PlaybooksMenu({
@@ -35,9 +36,10 @@ export function PlaybooksMenu({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
   const [editing, setEditing] = useState<Playbook | null>(null);
+  const [scheduling, setScheduling] = useState<Playbook | null>(null);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
-  const [schedulingId, setSchedulingId] = useState<string | null>(null);
   const atLimit = playbooks.length >= MAX_PLAYBOOKS;
 
   return (
@@ -90,29 +92,30 @@ export function PlaybooksMenu({
                 {onScheduled ? (
                   <button
                     aria-label={`Schedule ${item.label}`}
-                    className="text-muted-foreground hover:text-foreground inline-flex size-6 shrink-0 items-center justify-center rounded-md disabled:opacity-50"
+                    className="text-muted-foreground hover:text-foreground inline-flex size-6 shrink-0 items-center justify-center rounded-md"
                     data-playbook-schedule
-                    disabled={schedulingId !== null}
                     onClick={(event) => {
                       event.preventDefault();
                       event.stopPropagation();
                       void (async () => {
-                        setSchedulingId(item.id);
                         setScheduleError(null);
                         try {
-                          const result = await schedulePlaybookQuick(item);
-                          if (result.status === "at_limit") {
-                            setScheduleError("You already have the maximum number of schedules.");
+                          const listed = await listScheduledPlaybooks();
+                          const existing = listed.find(
+                            (schedule) => schedule.sourcePlaybookId === item.id,
+                          );
+                          if (existing) {
+                            setMenuOpen(false);
+                            onScheduled();
                             return;
                           }
                           setMenuOpen(false);
-                          onScheduled();
+                          setScheduling(item);
+                          setScheduleOpen(true);
                         } catch (error) {
                           setScheduleError(
                             error instanceof Error ? error.message : "Unable to schedule playbook.",
                           );
-                        } finally {
-                          setSchedulingId(null);
                         }
                       })();
                     }}
@@ -191,6 +194,15 @@ export function PlaybooksMenu({
         open={editorOpen}
         playbook={editing}
       />
+
+      {onScheduled ? (
+        <SchedulePlaybookDialog
+          onOpenChange={setScheduleOpen}
+          onScheduled={onScheduled}
+          open={scheduleOpen}
+          playbook={scheduling}
+        />
+      ) : null}
     </>
   );
 }

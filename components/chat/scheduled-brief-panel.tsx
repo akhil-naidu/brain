@@ -10,6 +10,7 @@ import {
   updateScheduledBrief,
 } from "@/lib/chat/scheduled-brief-api";
 import type { ScheduledBriefConfig } from "@/lib/chat/scheduled-brief-api";
+import { formatScheduleLastRun } from "@/lib/chat/schedule-defaults";
 import { cn } from "@/lib/utils";
 
 function browserTimeZone(): string {
@@ -221,6 +222,10 @@ export function ScheduledBriefPanel({
           use your connected Slack account.
         </p>
 
+        <p className="text-muted-foreground/90 text-xs">
+          {formatScheduleLastRun(schedule.lastRunAt, schedule.timezone)}
+        </p>
+
         {schedule.lastSlackError ? (
           <p className="text-destructive text-xs leading-relaxed">{schedule.lastSlackError}</p>
         ) : null}
@@ -279,7 +284,7 @@ export function ScheduledBriefPanel({
               type="button"
               variant="ghost"
             >
-              Open last brief
+              Open last chat
             </Button>
           ) : null}
         </div>

@@ -34,8 +34,8 @@ The empty chat state and composer MUST provide ways to add and edit playbooks. T
 - **THEN** the UI shows a Your playbooks section distinct from Try asking suggestions
 
 ### Requirement: Schedule a playbook in one step
-When schedules are available, the playbooks list and composer playbooks menu MUST let the user schedule a saved playbook with one action. That action MUST create a weekday morning schedule from the playbook prompt (or open Schedules if that playbook is already scheduled), without requiring the Schedules add form first.
+When schedules are available, the playbooks list and composer playbooks menu MUST let the user schedule a saved playbook with one action. That action MUST ask for a local time (remembering the last chosen time), then create an enabled weekday schedule from the playbook prompt (or open Schedules if that playbook is already scheduled), without requiring the Schedules add form first.
 
 #### Scenario: Schedule from playbooks list
-- **WHEN** the user chooses Schedule on a saved playbook that is not already scheduled
-- **THEN** Brain creates an enabled weekday schedule for that playbook and opens Schedules so the user can adjust it
+- **WHEN** the user chooses Schedule on a saved playbook that is not already scheduled and confirms a local time
+- **THEN** Brain creates an enabled weekday schedule for that playbook at that time and opens Schedules so the user can adjust it
