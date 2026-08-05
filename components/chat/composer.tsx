@@ -6,6 +6,7 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   type ClipboardEvent,
   type DragEvent,
@@ -93,6 +94,17 @@ export function ChatComposer({
 
     return () => window.cancelAnimationFrame(frame);
   }, []);
+
+  useLayoutEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      return;
+    }
+
+    // Collapse first so scrollHeight reflects the current value, then grow until max-h.
+    textarea.style.height = "0px";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [value]);
 
   const submitValue = useCallback(() => {
     if (!canSubmitChatTurn(value, attachments) || disabled || isBusy || isPreparing) {
@@ -229,7 +241,7 @@ export function ChatComposer({
       </label>
       <textarea
         aria-describedby={disabledReason ? disabledReasonId : undefined}
-        className="placeholder:text-muted-foreground/45 dark:placeholder:text-muted-foreground/60 max-h-32 min-h-12 w-full resize-none bg-transparent px-3 pt-3 pb-1 text-base leading-6 outline-none disabled:cursor-not-allowed disabled:opacity-60 sm:px-4 md:text-[15px]"
+        className="placeholder:text-muted-foreground/45 dark:placeholder:text-muted-foreground/60 max-h-56 min-h-[5.5rem] w-full resize-none overflow-y-auto bg-transparent px-3 pt-3 pb-1 text-base leading-6 outline-none disabled:cursor-not-allowed disabled:opacity-60 sm:px-4 md:text-[15px]"
         data-chat-composer-input
         disabled={textareaDisabled}
         id={composerId}
@@ -244,7 +256,7 @@ export function ChatComposer({
         onPaste={handlePaste}
         placeholder={placeholder}
         ref={textareaRef}
-        rows={2}
+        rows={3}
         value={value}
       />
       <div className="flex min-h-9 items-center justify-between gap-2 px-3 pt-1 pb-2 sm:gap-3 sm:px-4">

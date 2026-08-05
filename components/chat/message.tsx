@@ -132,51 +132,55 @@ function AgentMessageView({
     >
       <div
         className={cn(
-          "relative min-w-0",
-          isUser
-            ? "border-border/40 bg-muted/70 text-foreground max-w-[85%] rounded-[18px] border px-3 py-1.5 text-[15px] leading-6 shadow-sm"
-            : "text-foreground w-full max-w-none text-sm leading-relaxed",
-          showActions ? "mb-3" : undefined,
-          sendFailed ? "border-destructive/40" : undefined,
+          "flex min-w-0 flex-col",
+          isUser ? "max-w-[85%] items-end" : "w-full max-w-none items-start",
         )}
       >
-        {sendFailed ? (
-          <p className="text-destructive mb-1 text-xs">Message failed to send</p>
-        ) : null}
-        {editing ? (
-          <div className="flex flex-col gap-2 py-1">
-            <textarea
-              aria-label="Edit message"
-              className="border-border bg-background text-foreground focus-visible:ring-ring/50 min-h-20 w-full resize-y rounded-md border px-2 py-1.5 text-[15px] leading-6 outline-none focus-visible:ring-2"
-              onChange={(event) => setEditValue(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Escape") {
-                  event.preventDefault();
-                  cancelEdit();
-                } else if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-                  event.preventDefault();
-                  submitEdit();
-                }
-              }}
-              ref={textareaRef}
-              value={editValue}
-            />
-            <div className="flex justify-end gap-1.5">
-              <Button onClick={cancelEdit} size="xs" type="button" variant="ghost">
-                Cancel
-              </Button>
-              <Button
-                disabled={editValue.trim().length === 0}
-                onClick={submitEdit}
-                size="xs"
-                type="button"
-              >
-                Send
-              </Button>
+        <div
+          className={cn(
+            "min-w-0",
+            isUser
+              ? "border-border/40 bg-muted/70 text-foreground w-full rounded-[18px] border px-3 py-1.5 text-[15px] leading-6 shadow-sm"
+              : "text-foreground w-full text-sm leading-relaxed",
+            sendFailed ? "border-destructive/40" : undefined,
+          )}
+        >
+          {sendFailed ? (
+            <p className="text-destructive mb-1 text-xs">Message failed to send</p>
+          ) : null}
+          {editing ? (
+            <div className="flex flex-col gap-2 py-1">
+              <textarea
+                aria-label="Edit message"
+                className="border-border bg-background text-foreground focus-visible:ring-ring/50 min-h-20 w-full resize-y rounded-md border px-2 py-1.5 text-[15px] leading-6 outline-none focus-visible:ring-2"
+                onChange={(event) => setEditValue(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    event.preventDefault();
+                    cancelEdit();
+                  } else if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+                    event.preventDefault();
+                    submitEdit();
+                  }
+                }}
+                ref={textareaRef}
+                value={editValue}
+              />
+              <div className="flex justify-end gap-1.5">
+                <Button onClick={cancelEdit} size="xs" type="button" variant="ghost">
+                  Cancel
+                </Button>
+                <Button
+                  disabled={editValue.trim().length === 0}
+                  onClick={submitEdit}
+                  size="xs"
+                  type="button"
+                >
+                  Send
+                </Button>
+              </div>
             </div>
-          </div>
-        ) : (
-          <>
+          ) : (
             <AgentMessageParts
               canRespond={canRespond}
               childFailuresByCallId={childFailuresByCallId}
@@ -187,63 +191,66 @@ function AgentMessageView({
               parts={message.parts}
               showCaret={isStreaming && message.role === "assistant"}
             />
-            {showActions ? (
-              <div
+          )}
+        </div>
+        {showActions ? (
+          <div
+            className={cn(
+              "mt-1.5 flex gap-1 opacity-100 transition-opacity",
+              // User bubbles: reveal on hover/focus. Assistant replies: always show under the message.
+              isUser
+                ? "md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100"
+                : undefined,
+            )}
+          >
+            {canCopy ? (
+              <Button
+                aria-label={
+                  copyState === "copied"
+                    ? "Copied"
+                    : copyState === "error"
+                      ? "Copy failed"
+                      : "Copy message"
+                }
                 className={cn(
-                  "absolute -bottom-3 flex gap-1 opacity-100 transition-opacity md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100",
-                  isUser ? "right-1" : "left-0",
+                  "bg-background border-border/60 size-7 border shadow-sm",
+                  copyState === "error"
+                    ? "text-destructive"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
+                onClick={handleCopy}
+                size="icon-xs"
+                title={
+                  copyState === "copied"
+                    ? "Copied"
+                    : copyState === "error"
+                      ? "Copy failed"
+                      : "Copy message"
+                }
+                type="button"
+                variant="ghost"
               >
-                {canCopy ? (
-                  <Button
-                    aria-label={
-                      copyState === "copied"
-                        ? "Copied"
-                        : copyState === "error"
-                          ? "Copy failed"
-                          : "Copy message"
-                    }
-                    className={cn(
-                      "bg-background border-border/60 size-7 border shadow-sm",
-                      copyState === "error"
-                        ? "text-destructive"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                    onClick={handleCopy}
-                    size="icon-xs"
-                    title={
-                      copyState === "copied"
-                        ? "Copied"
-                        : copyState === "error"
-                          ? "Copy failed"
-                          : "Copy message"
-                    }
-                    type="button"
-                    variant="ghost"
-                  >
-                    {copyState === "copied" ? (
-                      <CheckIcon className="size-3.5" />
-                    ) : (
-                      <CopyIcon className="size-3.5" />
-                    )}
-                  </Button>
-                ) : null}
-                {canEdit && onEditResend ? (
-                  <Button
-                    aria-label="Edit message"
-                    className="bg-background text-muted-foreground hover:text-foreground border-border/60 size-7 border shadow-sm"
-                    onClick={beginEdit}
-                    size="icon-xs"
-                    type="button"
-                    variant="ghost"
-                  >
-                    <PencilIcon className="size-3.5" />
-                  </Button>
-                ) : null}
-              </div>
+                {copyState === "copied" ? (
+                  <CheckIcon className="size-3.5" />
+                ) : (
+                  <CopyIcon className="size-3.5" />
+                )}
+              </Button>
             ) : null}
-          </>
-        )}
+            {canEdit && onEditResend ? (
+              <Button
+                aria-label="Edit message"
+                className="bg-background text-muted-foreground hover:text-foreground border-border/60 size-7 border shadow-sm"
+                onClick={beginEdit}
+                size="icon-xs"
+                type="button"
+                variant="ghost"
+              >
+                <PencilIcon className="size-3.5" />
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </article>
   );

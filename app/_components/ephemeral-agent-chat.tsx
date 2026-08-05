@@ -47,6 +47,11 @@ import { useSubagentChildFailures } from "@/lib/chat/subagent-child-failures";
 import { createFallbackTitle } from "@/lib/chat/title";
 import { copyTextToClipboard, messagesToMarkdown } from "@/lib/chat/export-markdown";
 import { takePendingPlaybookRun } from "@/lib/chat/pending-playbook-run";
+import {
+  applyMessageSuppression,
+  collectEditSuppression,
+  omitTurnEvents,
+} from "@/lib/chat/edit-branch";
 import { canOfferRetry, getLastUserMessage, getRetryableUserPrompt } from "@/lib/chat/retry-prompt";
 import { createTurnClientContext } from "@/lib/chat/turn-client-context";
 
@@ -138,6 +143,10 @@ export function EphemeralAgentChat({
   const [cancellationState, setCancellationState] = useState<CancellationState>("idle");
   const [clientError, setClientError] = useState<ErrorNotice | null>(null);
   const [dismissedError, setDismissedError] = useState<string | null>(null);
+  const [suppressedMessageIds, setSuppressedMessageIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const suppressedTurnIdsRef = useRef<ReadonlySet<string>>(new Set());
 
   const clearDisposalTimeout = useCallback(() => {
     if (disposalTimeoutRef.current !== null) {
@@ -314,9 +323,12 @@ export function EphemeralAgentChat({
       readonly events: readonly HandleMessageStreamEvent[];
       readonly session: SessionState;
     }) => {
+      const droppedTurnIds = suppressedTurnIdsRef.current;
+      const events =
+        droppedTurnIds.size > 0 ? omitTurnEvents(snapshot.events, droppedTurnIds) : snapshot.events;
       void persistChatUpdate({
         eveSession: snapshot.session,
-        events: snapshot.events,
+        events,
       });
 
       if (!disposalBoundaryRef.current) {
@@ -343,7 +355,7 @@ export function EphemeralAgentChat({
   const childFailuresByCallId = useSubagentChildFailures(agent.events);
   const send = agent.send;
 
-  const messages = agent.data.messages;
+  const messages = applyMessageSuppression(agent.data.messages, suppressedMessageIds);
 
   useEffect(() => {
     if (!onThreadActionsReady) {
@@ -648,9 +660,29 @@ export function EphemeralAgentChat({
       if (!editableUserMessageId) {
         return;
       }
+
+      // Hide the edited user bubble and anything after it, then send as a replacement turn.
+      const suppression = collectEditSuppression(agent.data.messages, editableUserMessageId);
+      if (suppression.messageIds.length > 0) {
+        setSuppressedMessageIds((previous) => {
+          const next = new Set(previous);
+          for (const id of suppression.messageIds) {
+            next.add(id);
+          }
+          return next;
+        });
+      }
+      if (suppression.turnIds.length > 0) {
+        const next = new Set(suppressedTurnIdsRef.current);
+        for (const id of suppression.turnIds) {
+          next.add(id);
+        }
+        suppressedTurnIdsRef.current = next;
+      }
+
       void handleSubmit(text);
     },
-    [editableUserMessageId, handleSubmit],
+    [agent.data.messages, editableUserMessageId, handleSubmit],
   );
   const handleEditResendRef = useRef(handleEditResend);
   handleEditResendRef.current = handleEditResend;
