@@ -120,7 +120,9 @@ function AgentMessageView({
     })();
   };
 
-  const showActions = !editing && (canCopy || (canEdit && onEditResend));
+  // Wait until the assistant turn finishes so copy isn't offered mid-stream.
+  const showActions =
+    !editing && !isStreaming && (canCopy || (canEdit && onEditResend));
 
   return (
     <article

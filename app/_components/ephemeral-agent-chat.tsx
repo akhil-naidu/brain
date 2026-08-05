@@ -355,15 +355,16 @@ export function EphemeralAgentChat({
   const childFailuresByCallId = useSubagentChildFailures(agent.events);
   const send = agent.send;
 
-  const messages = applyMessageSuppression(agent.data.messages, suppressedMessageIds);
+  const messages = useMemo(
+    () => applyMessageSuppression(agent.data.messages, suppressedMessageIds),
+    [agent.data.messages, suppressedMessageIds],
+  );
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
 
-  useEffect(() => {
-    if (!onThreadActionsReady) {
-      return undefined;
-    }
-
-    onThreadActionsReady({
-      canCopy: messages.some((message) =>
+  const canCopyThread = useMemo(
+    () =>
+      messages.some((message) =>
         message.parts.some(
           (part) =>
             (part.type === "text" && part.text.trim().length > 0) ||
@@ -373,8 +374,20 @@ export function EphemeralAgentChat({
             part.type === "file",
         ),
       ),
+    [messages],
+  );
+
+  useEffect(() => {
+    if (!onThreadActionsReady) {
+      return undefined;
+    }
+
+    // Depend on canCopyThread (boolean), not messages identity — a new actions
+    // object every render was looping setThreadActions in ChatWorkspace.
+    onThreadActionsReady({
+      canCopy: canCopyThread,
       copyAsMarkdown: async (title) => {
-        const markdown = messagesToMarkdown(messages, title);
+        const markdown = messagesToMarkdown(messagesRef.current, title);
         if (!markdown) {
           throw new Error("Nothing to copy yet.");
         }
@@ -385,7 +398,7 @@ export function EphemeralAgentChat({
     return () => {
       onThreadActionsReady(null);
     };
-  }, [messages, onThreadActionsReady]);
+  }, [canCopyThread, onThreadActionsReady]);
 
   const lastMessage = messages.at(-1);
   const pendingAuthorization = useMemo(

@@ -87,4 +87,24 @@ describe("AgentMessage copy", () => {
     });
     expect(screen.getByRole("button", { name: "Copied" })).toBeDefined();
   });
+
+  it("hides copy while an assistant reply is still streaming", () => {
+    const assistantMessage = {
+      id: "assistant-1",
+      parts: [{ type: "text" as const, text: "Partial…", state: "streaming" as const }],
+      role: "assistant" as const,
+      metadata: { status: "streaming" as const },
+    } as EveMessage;
+
+    render(
+      <AgentMessage
+        canRespond={false}
+        isStreaming
+        message={assistantMessage}
+        onInputResponses={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "Copy message" })).toBeNull();
+  });
 });
