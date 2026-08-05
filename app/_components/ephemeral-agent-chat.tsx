@@ -20,6 +20,9 @@ import { IntegrationsMenu } from "@/components/chat/integrations-menu";
 import { AgentMessage, type AgentInputResponse } from "@/components/chat/message";
 import { BrainMark } from "@/components/brain-mark";
 import { ModelPicker } from "@/components/chat/model-picker";
+import { PlaybooksMenu } from "@/components/chat/playbooks-menu";
+import { PlaybooksPanel } from "@/components/chat/playbooks-panel";
+import { usePlaybooks } from "@/components/chat/use-playbooks";
 import { WelcomePrompts } from "@/components/chat/welcome-prompts";
 import { createChat, updateChat } from "@/lib/chat/chats-api";
 import { WELCOME_PROMPTS } from "@/lib/chat/welcome-prompts";
@@ -104,6 +107,7 @@ export function EphemeralAgentChat({
 }) {
   const { enabledConnections, selectedModelId, setConnectionEnabled, setSelectedModelId } =
     useChatShell();
+  const { playbooks, savePlaybook, deletePlaybook } = usePlaybooks();
   const seedEvents = initialEvents ?? EMPTY_EVENTS;
   const [session] = useState(() =>
     new Client({ host: "", preserveCompletedSessions: true }).session(initialSession ?? undefined),
@@ -674,6 +678,14 @@ export function EphemeralAgentChat({
                       }}
                       prompts={WELCOME_PROMPTS}
                     />
+                    <PlaybooksPanel
+                      onDelete={deletePlaybook}
+                      onRun={(prompt) => {
+                        void handleSubmit(prompt);
+                      }}
+                      onSave={savePlaybook}
+                      playbooks={playbooks}
+                    />
                   </>
                 )}
               </div>
@@ -725,6 +737,15 @@ export function EphemeralAgentChat({
                 <IntegrationsMenu
                   enabledConnections={enabledConnections}
                   onConnectionEnabledChange={setConnectionEnabled}
+                />
+                <PlaybooksMenu
+                  disabled={isBusy || missingApiKey}
+                  onDelete={deletePlaybook}
+                  onRun={(prompt) => {
+                    void handleSubmit(prompt);
+                  }}
+                  onSave={savePlaybook}
+                  playbooks={playbooks}
                 />
                 <ModelPicker
                   disabled={isBusy || missingApiKey}
