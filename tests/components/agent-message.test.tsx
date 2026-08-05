@@ -67,6 +67,31 @@ describe("AgentMessage edit", () => {
   });
 });
 
+describe("AgentMessage regenerate", () => {
+  it("calls onRegenerate for an assistant message", () => {
+    const onRegenerate = vi.fn();
+    const assistantMessage = {
+      id: "assistant-1",
+      parts: [{ type: "text" as const, text: "Hello", state: "done" as const }],
+      role: "assistant" as const,
+      metadata: { status: "complete" as const },
+    } as EveMessage;
+
+    render(
+      <AgentMessage
+        canRespond={false}
+        isStreaming={false}
+        message={assistantMessage}
+        onInputResponses={vi.fn()}
+        onRegenerate={onRegenerate}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Regenerate response" }));
+    expect(onRegenerate).toHaveBeenCalledOnce();
+  });
+});
+
 describe("AgentMessage copy", () => {
   it("copies the message markdown to the clipboard", async () => {
     writeText.mockClear();

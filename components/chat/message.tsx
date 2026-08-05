@@ -1,7 +1,7 @@
 "use client";
 
 import type { EveMessage } from "eve/react";
-import { CheckIcon, CopyIcon, PencilIcon } from "lucide-react";
+import { CheckIcon, CopyIcon, PencilIcon, RefreshCwIcon } from "lucide-react";
 import { memo, useEffect, useRef, useState } from "react";
 
 import { AgentMessageParts } from "@/components/chat/message-parts/message-parts";
@@ -16,6 +16,9 @@ export type AgentInputResponse = {
   readonly text?: string;
 };
 
+const actionButtonClass =
+  "bg-background text-muted-foreground hover:text-foreground border-border/60 size-7 border shadow-sm";
+
 type AgentMessageProps = {
   readonly canEdit?: boolean;
   readonly canRespond: boolean;
@@ -24,6 +27,7 @@ type AgentMessageProps = {
   readonly message: EveMessage;
   readonly onEditResend?: (text: string) => void | Promise<void>;
   readonly onInputResponses: (responses: readonly AgentInputResponse[]) => void | Promise<void>;
+  readonly onRegenerate?: () => void | Promise<void>;
 };
 
 function userTextFromMessage(message: EveMessage): string {
@@ -41,6 +45,7 @@ function AgentMessageView({
   message,
   onEditResend,
   onInputResponses,
+  onRegenerate,
 }: AgentMessageProps) {
   const lastTextIndex = message.parts.reduce(
     (last, part, index) => (part.type === "text" ? index : last),
@@ -120,8 +125,11 @@ function AgentMessageView({
     })();
   };
 
-  // Wait until the assistant turn finishes so copy isn't offered mid-stream.
-  const showActions = !editing && !isStreaming && (canCopy || (canEdit && onEditResend));
+  const canRegenerate = !isUser && Boolean(onRegenerate);
+
+  // Wait until the assistant turn finishes so actions aren't offered mid-stream.
+  const showActions =
+    !editing && !isStreaming && (canCopy || (canEdit && onEditResend) || canRegenerate);
 
   return (
     <article
@@ -214,10 +222,8 @@ function AgentMessageView({
                       : "Copy message"
                 }
                 className={cn(
-                  "bg-background border-border/60 size-7 border shadow-sm",
-                  copyState === "error"
-                    ? "text-destructive"
-                    : "text-muted-foreground hover:text-foreground",
+                  actionButtonClass,
+                  copyState === "error" ? "text-destructive hover:text-destructive" : undefined,
                 )}
                 onClick={handleCopy}
                 size="icon-xs"
@@ -238,10 +244,25 @@ function AgentMessageView({
                 )}
               </Button>
             ) : null}
+            {canRegenerate ? (
+              <Button
+                aria-label="Regenerate response"
+                className={actionButtonClass}
+                onClick={() => {
+                  void onRegenerate?.();
+                }}
+                size="icon-xs"
+                title="Regenerate"
+                type="button"
+                variant="ghost"
+              >
+                <RefreshCwIcon className="size-3.5" />
+              </Button>
+            ) : null}
             {canEdit && onEditResend ? (
               <Button
                 aria-label="Edit message"
-                className="bg-background text-muted-foreground hover:text-foreground border-border/60 size-7 border shadow-sm"
+                className={actionButtonClass}
                 onClick={beginEdit}
                 size="icon-xs"
                 type="button"
@@ -303,6 +324,9 @@ export function areAgentMessagePropsEqual(
     return false;
   }
   if (previous.canEdit !== next.canEdit || previous.onEditResend !== next.onEditResend) {
+    return false;
+  }
+  if (previous.onRegenerate !== next.onRegenerate) {
     return false;
   }
   if (haveRelevantFailuresChanged(previous, next)) {

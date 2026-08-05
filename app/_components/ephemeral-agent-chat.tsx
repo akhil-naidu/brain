@@ -667,15 +667,12 @@ export function EphemeralAgentChat({
   const lastUserMessage = useMemo(() => getLastUserMessage(messages), [messages]);
   const editableUserMessageId =
     !isBusy && !missingApiKey && lastUserMessage ? lastUserMessage.id : null;
+  const regeneratableAssistantId =
+    !isBusy && !missingApiKey && lastMessage?.role === "assistant" ? lastMessage.id : null;
 
-  const handleEditResend = useCallback(
-    (text: string) => {
-      if (!editableUserMessageId) {
-        return;
-      }
-
-      // Hide the edited user bubble and anything after it, then send as a replacement turn.
-      const suppression = collectEditSuppression(agent.data.messages, editableUserMessageId);
+  const suppressFromMessage = useCallback(
+    (fromMessageId: string) => {
+      const suppression = collectEditSuppression(agent.data.messages, fromMessageId);
       if (suppression.messageIds.length > 0) {
         setSuppressedMessageIds((previous) => {
           const next = new Set(previous);
@@ -692,15 +689,45 @@ export function EphemeralAgentChat({
         }
         suppressedTurnIdsRef.current = next;
       }
+    },
+    [agent.data.messages],
+  );
 
+  const handleEditResend = useCallback(
+    (text: string) => {
+      if (!editableUserMessageId) {
+        return;
+      }
+
+      // Hide the edited user bubble and anything after it, then send as a replacement turn.
+      suppressFromMessage(editableUserMessageId);
       void handleSubmit(text);
     },
-    [agent.data.messages, editableUserMessageId, handleSubmit],
+    [editableUserMessageId, handleSubmit, suppressFromMessage],
   );
   const handleEditResendRef = useRef(handleEditResend);
   handleEditResendRef.current = handleEditResend;
   const onEditResend = useCallback((text: string) => {
     handleEditResendRef.current(text);
+  }, []);
+
+  const handleRegenerate = useCallback(() => {
+    if (!regeneratableAssistantId || !lastUserMessage) {
+      return;
+    }
+    const prompt = getRetryableUserPrompt(messages);
+    if (!prompt) {
+      return;
+    }
+
+    // Replace the latest user+assistant turn with a fresh reply for the same prompt.
+    suppressFromMessage(lastUserMessage.id);
+    void handleSubmit(prompt);
+  }, [handleSubmit, lastUserMessage, messages, regeneratableAssistantId, suppressFromMessage]);
+  const handleRegenerateRef = useRef(handleRegenerate);
+  handleRegenerateRef.current = handleRegenerate;
+  const onRegenerate = useCallback(() => {
+    handleRegenerateRef.current();
   }, []);
 
   const authDisabledReason = pendingAuthorization
@@ -807,6 +834,7 @@ export function EphemeralAgentChat({
                 message={message}
                 onEditResend={message.id === editableUserMessageId ? onEditResend : undefined}
                 onInputResponses={onInputResponses}
+                onRegenerate={message.id === regeneratableAssistantId ? onRegenerate : undefined}
               />
             );
           })}
