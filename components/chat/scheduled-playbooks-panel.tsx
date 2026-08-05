@@ -4,6 +4,7 @@ import { LoaderCircleIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import type { Playbook } from "@/lib/chat/playbooks";
 import { formatScheduleLastRun } from "@/lib/chat/schedule-defaults";
 import {
@@ -190,14 +191,11 @@ export function ScheduledPlaybooksPanel({
           </div>
           <div className="flex items-center justify-between gap-3 text-sm">
             <label htmlFor={fieldId("schedule-playbook-slack")}>Also post to Slack</label>
-            <input
+            <Switch
               checked={newSlack}
               disabled={disabled || creating}
               id={fieldId("schedule-playbook-slack")}
-              onChange={(event) => {
-                setNewSlack(event.target.checked);
-              }}
-              type="checkbox"
+              onCheckedChange={setNewSlack}
             />
           </div>
           {newSlack ? (
@@ -324,18 +322,16 @@ export function ScheduledPlaybooksPanel({
                 </div>
 
                 <div className="flex items-center justify-between gap-3 text-sm">
-                  <label htmlFor={fieldId(`schedule-enabled-${schedule.id}`)}>Enabled</label>
-                  <input
+                  <label htmlFor={fieldId(`schedule-enabled-${schedule.id}`)}>On</label>
+                  <Switch
                     checked={schedule.enabled}
                     disabled={disabled || busy}
                     id={fieldId(`schedule-enabled-${schedule.id}`)}
-                    onChange={(event) => {
+                    onCheckedChange={(enabled) => {
                       void (async () => {
                         setBusyId(schedule.id);
                         try {
-                          await updateScheduledPlaybookApi(schedule.id, {
-                            enabled: event.target.checked,
-                          });
+                          await updateScheduledPlaybookApi(schedule.id, { enabled });
                           await refresh();
                         } catch (error) {
                           setActionError(
@@ -346,7 +342,6 @@ export function ScheduledPlaybooksPanel({
                         }
                       })();
                     }}
-                    type="checkbox"
                   />
                 </div>
 

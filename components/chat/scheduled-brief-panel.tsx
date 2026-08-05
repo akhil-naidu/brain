@@ -4,6 +4,7 @@ import { LoaderCircleIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
   fetchScheduledBrief,
   runScheduledBriefNow,
@@ -186,15 +187,14 @@ export function ScheduledBriefPanel({
               {scheduleSummary(schedule, timeValue)}
             </span>
           </label>
-          <input
+          <Switch
             checked={schedule.enabled}
             className="mt-1"
             disabled={busy}
             id={fieldId("scheduled-brief-enabled")}
-            onChange={(event) => {
-              void persist({ enabled: event.target.checked });
+            onCheckedChange={(enabled) => {
+              void persist({ enabled });
             }}
-            type="checkbox"
           />
         </div>
 
@@ -227,27 +227,25 @@ export function ScheduledBriefPanel({
 
             <div className="flex items-center justify-between gap-3 text-sm">
               <label htmlFor={fieldId("scheduled-brief-weekdays")}>Weekdays only</label>
-              <input
+              <Switch
                 checked={schedule.weekdaysOnly}
                 disabled={busy}
                 id={fieldId("scheduled-brief-weekdays")}
-                onChange={(event) => {
-                  void persist({ weekdaysOnly: event.target.checked });
+                onCheckedChange={(weekdaysOnly) => {
+                  void persist({ weekdaysOnly });
                 }}
-                type="checkbox"
               />
             </div>
 
             <div className="flex items-center justify-between gap-3 text-sm">
               <label htmlFor={fieldId("scheduled-brief-slack")}>Also post to Slack</label>
-              <input
+              <Switch
                 checked={schedule.slackDeliveryEnabled}
                 disabled={busy}
                 id={fieldId("scheduled-brief-slack")}
-                onChange={(event) => {
-                  void persist({ slackDeliveryEnabled: event.target.checked });
+                onCheckedChange={(slackDeliveryEnabled) => {
+                  void persist({ slackDeliveryEnabled });
                 }}
-                type="checkbox"
               />
             </div>
 
