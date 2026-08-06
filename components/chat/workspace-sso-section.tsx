@@ -13,7 +13,33 @@ type SsoProvider = {
   readonly samlCallbackUrl: string;
   readonly clientId: string | null;
   readonly hasClientSecret: boolean;
+  readonly domainVerified: boolean;
 };
+
+type DnsInstruction = {
+  readonly providerId: string;
+  readonly token: string;
+  readonly hosts: readonly { readonly domain: string; readonly host: string }[];
+};
+
+function parseDnsHosts(value: unknown): { domain: string; host: string }[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const hosts: { domain: string; host: string }[] = [];
+  for (const entry of value) {
+    const item: unknown = entry;
+    if (typeof item !== "object" || item === null) {
+      continue;
+    }
+    const domain: unknown = Reflect.get(item, "domain");
+    const host: unknown = Reflect.get(item, "host");
+    if (typeof domain === "string" && typeof host === "string") {
+      hosts.push({ domain, host });
+    }
+  }
+  return hosts;
+}
 
 function isSsoProvider(value: unknown): value is SsoProvider {
   if (typeof value !== "object" || value === null) {
@@ -40,6 +66,9 @@ function isSsoProvider(value: unknown): value is SsoProvider {
   if (!("samlCallbackUrl" in value) || typeof value.samlCallbackUrl !== "string") {
     return false;
   }
+  if (!("domainVerified" in value) || typeof value.domainVerified !== "boolean") {
+    return false;
+  }
   return true;
 }
 
@@ -61,6 +90,7 @@ export function WorkspaceSsoSection(props: {
   const [clientSecret, setClientSecret] = useState("");
   const [entryPoint, setEntryPoint] = useState("");
   const [cert, setCert] = useState("");
+  const [dnsInstruction, setDnsInstruction] = useState<DnsInstruction | null>(null);
 
   const load = useCallback(async () => {
     if (!props.enabled) {
@@ -170,6 +200,77 @@ export function WorkspaceSsoSection(props: {
     }
   }
 
+  async function requestDomain(id: string) {
+    setPending(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/workspaces/sso/domain", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ providerId: id, action: "request" }),
+      });
+      const data: unknown = await response.json();
+      if (!response.ok) {
+        setError(
+          typeof data === "object" &&
+            data !== null &&
+            "error" in data &&
+            typeof data.error === "string"
+            ? data.error
+            : "Unable to request domain verification.",
+        );
+        setPending(false);
+        return;
+      }
+      if (typeof data === "object" && data !== null) {
+        const tokenValue: unknown = Reflect.get(data, "domainVerificationToken");
+        const domainsValue: unknown = Reflect.get(data, "domains");
+        if (typeof tokenValue === "string") {
+          setDnsInstruction({
+            providerId: id,
+            token: tokenValue,
+            hosts: parseDnsHosts(domainsValue),
+          });
+        }
+      }
+      setPending(false);
+    } catch {
+      setPending(false);
+      setError("Unable to request domain verification.");
+    }
+  }
+
+  async function verifyDomain(id: string) {
+    setPending(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/workspaces/sso/domain", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ providerId: id, action: "verify" }),
+      });
+      const data: unknown = await response.json();
+      if (!response.ok) {
+        setError(
+          typeof data === "object" &&
+            data !== null &&
+            "error" in data &&
+            typeof data.error === "string"
+            ? data.error
+            : "Unable to verify domain.",
+        );
+        setPending(false);
+        return;
+      }
+      setDnsInstruction(null);
+      await load();
+      setPending(false);
+    } catch {
+      setPending(false);
+      setError("Unable to verify domain.");
+    }
+  }
+
   async function removeProvider(id: string) {
     setPending(true);
     setError(null);
@@ -230,18 +331,61 @@ export function WorkspaceSsoSection(props: {
                 Callback:{" "}
                 {provider.protocol === "oidc" ? provider.oidcCallbackUrl : provider.samlCallbackUrl}
               </p>
+              <p className="text-muted-foreground">
+                Domain: {provider.domainVerified ? "Verified" : "Unverified (SSO login blocked)"}
+              </p>
               {canManage && props.canManage ? (
-                <Button
-                  disabled={pending}
-                  onClick={() => {
-                    void removeProvider(provider.providerId);
-                  }}
-                  size="sm"
-                  type="button"
-                  variant="ghost"
-                >
-                  Remove
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  {!provider.domainVerified ? (
+                    <>
+                      <Button
+                        disabled={pending}
+                        onClick={() => {
+                          void requestDomain(provider.providerId);
+                        }}
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
+                        Show DNS token
+                      </Button>
+                      <Button
+                        disabled={pending}
+                        onClick={() => {
+                          void verifyDomain(provider.providerId);
+                        }}
+                        size="sm"
+                        type="button"
+                      >
+                        Verify DNS
+                      </Button>
+                    </>
+                  ) : null}
+                  <Button
+                    disabled={pending}
+                    onClick={() => {
+                      void removeProvider(provider.providerId);
+                    }}
+                    size="sm"
+                    type="button"
+                    variant="ghost"
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ) : null}
+              {dnsInstruction?.providerId === provider.providerId ? (
+                <div className="bg-muted/40 mt-2 space-y-1 rounded-md p-2">
+                  <p className="text-foreground text-xs font-medium">Publish TXT records</p>
+                  <p className="text-muted-foreground break-all">
+                    Value: <code>{dnsInstruction.token}</code>
+                  </p>
+                  {dnsInstruction.hosts.map((item) => (
+                    <p className="text-muted-foreground break-all" key={item.host}>
+                      Host for {item.domain}: <code>{item.host}</code>
+                    </p>
+                  ))}
+                </div>
               ) : null}
             </li>
           ))}
