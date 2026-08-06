@@ -39,6 +39,8 @@ function isEntitlements(value: unknown): value is Entitlements {
 export default function InstanceSettingsPage() {
   const [policies, setPolicies] = useState<InstancePolicies | null>(null);
   const [entitlements, setEntitlements] = useState<Entitlements | null>(null);
+  const [ssoAvailable, setSsoAvailable] = useState(false);
+  const [ssoCallbackPath, setSsoCallbackPath] = useState<string | null>(null);
   const [licenseKey, setLicenseKey] = useState("");
   const [canManage, setCanManage] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,12 +51,14 @@ export default function InstanceSettingsPage() {
     let cancelled = false;
     void (async () => {
       try {
-        const [policiesResponse, licenseResponse] = await Promise.all([
+        const [policiesResponse, licenseResponse, statusResponse] = await Promise.all([
           fetch("/api/instance/policies"),
           fetch("/api/instance/license"),
+          fetch("/api/auth/signup-status"),
         ]);
         const policiesData: unknown = await policiesResponse.json();
         const licenseData: unknown = await licenseResponse.json();
+        const statusData: unknown = await statusResponse.json();
         if (cancelled) {
           return;
         }
@@ -77,6 +81,18 @@ export default function InstanceSettingsPage() {
           isEntitlements(licenseData.entitlements)
         ) {
           setEntitlements(licenseData.entitlements);
+        }
+        if (statusResponse.ok && typeof statusData === "object" && statusData !== null) {
+          setSsoAvailable("ssoAvailable" in statusData && Boolean(statusData.ssoAvailable));
+          if (
+            "ssoCallbackPath" in statusData &&
+            typeof statusData.ssoCallbackPath === "string" &&
+            statusData.ssoCallbackPath.trim()
+          ) {
+            setSsoCallbackPath(statusData.ssoCallbackPath);
+          } else {
+            setSsoCallbackPath(null);
+          }
         }
       } catch {
         if (!cancelled) {
@@ -293,6 +309,22 @@ export default function InstanceSettingsPage() {
         ) : null}
       </div>
 
+      <div className="border-border space-y-3 rounded-xl border p-4">
+        <div className="space-y-1">
+          <p className="text-sm font-medium">OIDC SSO</p>
+          <p className="text-muted-foreground text-xs">
+            {ssoAvailable
+              ? "Configured via BRAIN_OIDC_* environment variables and allowed by license."
+              : "Not available. Set BRAIN_OIDC_DISCOVERY_URL (or BRAIN_OIDC_ISSUER), BRAIN_OIDC_CLIENT_ID, and BRAIN_OIDC_CLIENT_SECRET, ensure the license allows SSO, then restart."}
+          </p>
+          {ssoCallbackPath ? (
+            <p className="text-muted-foreground text-xs">
+              IdP redirect URI path: <code className="text-foreground">{ssoCallbackPath}</code>
+            </p>
+          ) : null}
+        </div>
+      </div>
+
       <div className="border-border space-y-4 rounded-xl border p-4">
         <div className="space-y-2">
           <label className="text-sm font-medium" htmlFor="signup-mode">
@@ -315,7 +347,7 @@ export default function InstanceSettingsPage() {
               Open signup
             </option>
             <option disabled={entitlements?.sso === false} value="sso-only">
-              SSO only {entitlements?.sso ? "(policy only — IdP later)" : "(locked by license)"}
+              SSO only {entitlements?.sso ? "" : "(locked by license)"}
             </option>
           </select>
           <p className="text-muted-foreground text-xs">

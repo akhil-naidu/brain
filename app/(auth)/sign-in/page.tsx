@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth/client";
 import { safeCallbackUrl } from "@/lib/auth/safe-callback-url";
+import type { SignupMode } from "@/lib/auth/workspaces/types";
 
 function SignInForm() {
   const router = useRouter();
@@ -18,6 +19,9 @@ function SignInForm() {
   const [pending, setPending] = useState(false);
   const [openSignupAllowed, setOpenSignupAllowed] = useState(false);
   const [bootstrapAllowed, setBootstrapAllowed] = useState(false);
+  const [signupMode, setSignupMode] = useState<SignupMode | null>(null);
+  const [ssoAvailable, setSsoAvailable] = useState(false);
+  const [ssoProviderId, setSsoProviderId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -30,6 +34,24 @@ function SignInForm() {
         }
         setOpenSignupAllowed("openSignupAllowed" in data && Boolean(data.openSignupAllowed));
         setBootstrapAllowed("bootstrapAllowed" in data && Boolean(data.bootstrapAllowed));
+        setSsoAvailable("ssoAvailable" in data && Boolean(data.ssoAvailable));
+        if (
+          "ssoProviderId" in data &&
+          typeof data.ssoProviderId === "string" &&
+          data.ssoProviderId.trim()
+        ) {
+          setSsoProviderId(data.ssoProviderId);
+        } else {
+          setSsoProviderId(null);
+        }
+        if (
+          "signupMode" in data &&
+          (data.signupMode === "open" ||
+            data.signupMode === "invite-only" ||
+            data.signupMode === "sso-only")
+        ) {
+          setSignupMode(data.signupMode);
+        }
       } catch {
         // ignore
       }
@@ -38,6 +60,8 @@ function SignInForm() {
       cancelled = true;
     };
   }, []);
+
+  const passwordSignInAllowed = bootstrapAllowed || signupMode !== "sso-only";
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -56,47 +80,101 @@ function SignInForm() {
     router.refresh();
   }
 
+  async function onSso() {
+    if (!ssoProviderId) {
+      setError("SSO is not configured on this host.");
+      return;
+    }
+    setPending(true);
+    setError(null);
+    const { error: ssoError } = await authClient.signIn.oauth2({
+      providerId: ssoProviderId,
+      callbackURL: callbackUrl,
+      errorCallbackURL: `/sign-in?callbackUrl=${encodeURIComponent(callbackUrl)}`,
+    });
+    if (ssoError) {
+      setPending(false);
+      setError(ssoError.message || "Unable to start SSO sign-in.");
+    }
+  }
+
   return (
-    <form
-      className="border-border bg-card w-full max-w-sm space-y-4 rounded-2xl border p-6 shadow-sm"
-      onSubmit={(event) => {
-        void onSubmit(event);
-      }}
-    >
+    <div className="border-border bg-card w-full max-w-sm space-y-4 rounded-2xl border p-6 shadow-sm">
       <div className="space-y-1">
         <h1 className="text-lg font-semibold tracking-tight">Sign in</h1>
-        <p className="text-muted-foreground text-sm">Use your Brain host account.</p>
+        <p className="text-muted-foreground text-sm">
+          {signupMode === "sso-only" && !bootstrapAllowed
+            ? "Use your organization SSO to continue."
+            : "Use your Brain host account."}
+        </p>
       </div>
-      <div className="space-y-2">
-        <label className="text-sm font-medium" htmlFor="email">
-          Email
-        </label>
-        <Input
-          autoComplete="username"
-          id="email"
-          onChange={(event) => setEmail(event.target.value)}
-          required
-          type="email"
-          value={email}
-        />
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm font-medium" htmlFor="password">
-          Password
-        </label>
-        <Input
-          autoComplete="current-password"
-          id="password"
-          onChange={(event) => setPassword(event.target.value)}
-          required
-          type="password"
-          value={password}
-        />
-      </div>
+
+      {ssoAvailable ? (
+        <div className="space-y-3">
+          <Button
+            className="w-full"
+            disabled={pending}
+            onClick={() => {
+              void onSso();
+            }}
+            type="button"
+            variant={passwordSignInAllowed ? "outline" : "default"}
+          >
+            {pending ? "Redirecting…" : "Continue with SSO"}
+          </Button>
+          {passwordSignInAllowed ? (
+            <p className="text-muted-foreground text-center text-xs">or continue with email</p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {passwordSignInAllowed ? (
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            void onSubmit(event);
+          }}
+        >
+          <div className="space-y-2">
+            <label className="text-sm font-medium" htmlFor="email">
+              Email
+            </label>
+            <Input
+              autoComplete="username"
+              id="email"
+              onChange={(event) => setEmail(event.target.value)}
+              required
+              type="email"
+              value={email}
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium" htmlFor="password">
+              Password
+            </label>
+            <Input
+              autoComplete="current-password"
+              id="password"
+              onChange={(event) => setPassword(event.target.value)}
+              required
+              type="password"
+              value={password}
+            />
+          </div>
+          <Button className="w-full" disabled={pending} type="submit">
+            {pending ? "Signing in…" : "Sign in"}
+          </Button>
+        </form>
+      ) : null}
+
+      {!passwordSignInAllowed && !ssoAvailable ? (
+        <p className="text-destructive text-sm">
+          This host requires SSO, but OIDC is not configured. Set BRAIN_OIDC_* env vars and restart.
+        </p>
+      ) : null}
+
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
-      <Button className="w-full" disabled={pending} type="submit">
-        {pending ? "Signing in…" : "Sign in"}
-      </Button>
+
       <p className="text-muted-foreground text-center text-xs">
         {bootstrapAllowed ? (
           <>
@@ -112,11 +190,13 @@ function SignInForm() {
               Create an account
             </Link>
           </>
+        ) : signupMode === "sso-only" ? (
+          <>Password self-signup is disabled. Use SSO or an invite link.</>
         ) : (
           <>This host is invite-only. Use an invite link from a workspace admin.</>
         )}
       </p>
-    </form>
+    </div>
   );
 }
 
