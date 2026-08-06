@@ -21,13 +21,13 @@ export function PlaybooksPanel({
 }: {
   readonly className?: string;
   readonly playbooks: readonly Playbook[];
-  readonly onDelete: (id: string) => void;
+  readonly onDelete: (id: string) => void | Promise<void>;
   readonly onRun: (prompt: string) => void;
   readonly onSave: (input: {
     readonly id?: string;
     readonly label: string;
     readonly prompt: string;
-  }) => void;
+  }) => void | Promise<void>;
   readonly onScheduled?: () => void;
   readonly variant?: "empty" | "page";
 }) {
@@ -159,7 +159,9 @@ export function PlaybooksPanel({
               <button
                 aria-label={`Delete ${item.label}`}
                 className="text-muted-foreground hover:bg-muted/70 hover:text-destructive inline-flex size-9 shrink-0 items-center justify-center rounded-lg opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-                onClick={() => onDelete(item.id)}
+                onClick={() => {
+                  void onDelete(item.id);
+                }}
                 type="button"
               >
                 <Trash2Icon className="size-3.5" />

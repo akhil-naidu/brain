@@ -33,13 +33,13 @@ export function PlaybooksMenu({
 }: {
   readonly disabled?: boolean;
   readonly playbooks: readonly Playbook[];
-  readonly onDelete: (id: string) => void;
+  readonly onDelete: (id: string) => void | Promise<void>;
   readonly onRun: (prompt: string) => void;
   readonly onSave: (input: {
     readonly id?: string;
     readonly label: string;
     readonly prompt: string;
-  }) => void;
+  }) => void | Promise<void>;
   readonly onScheduled?: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -163,7 +163,7 @@ export function PlaybooksMenu({
                   onClick={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
-                    onDelete(item.id);
+                    void onDelete(item.id);
                   }}
                   onPointerDown={(event) => {
                     event.preventDefault();

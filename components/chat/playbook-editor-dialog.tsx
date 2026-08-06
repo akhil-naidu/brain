@@ -30,7 +30,7 @@ export function PlaybookEditorDialog({
     readonly id?: string;
     readonly label: string;
     readonly prompt: string;
-  }) => void;
+  }) => void | Promise<void>;
 }) {
   const [label, setLabel] = useState("");
   const [prompt, setPrompt] = useState("");
@@ -98,16 +98,18 @@ export function PlaybookEditorDialog({
           <Button
             disabled={!canSave}
             onClick={() => {
-              try {
-                onSave({
-                  id: playbook?.id,
-                  label,
-                  prompt,
-                });
-                onOpenChange(false);
-              } catch (saveError) {
-                setError(saveError instanceof Error ? saveError.message : "Unable to save.");
-              }
+              void (async () => {
+                try {
+                  await onSave({
+                    id: playbook?.id,
+                    label,
+                    prompt,
+                  });
+                  onOpenChange(false);
+                } catch (saveError) {
+                  setError(saveError instanceof Error ? saveError.message : "Unable to save.");
+                }
+              })();
             }}
             type="button"
           >

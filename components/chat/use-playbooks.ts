@@ -3,56 +3,81 @@
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
+  BRAIN_PLAYBOOKS_STORAGE_KEY,
   PLAYBOOKS_CHANGED_EVENT,
+  notifyPlaybooksChanged,
   readStoredPlaybooks,
-  removePlaybook,
-  upsertPlaybook,
-  writeStoredPlaybooks,
   type Playbook,
 } from "@/lib/chat/playbooks";
+import {
+  deletePlaybookApi,
+  importPlaybooksApi,
+  listPlaybooksApi,
+  savePlaybookApi,
+} from "@/lib/chat/playbooks-api";
+
+const MIGRATED_KEY = "brain.playbooks.migrated.v1";
 
 export function usePlaybooks() {
   const pathname = usePathname();
   const [playbooks, setPlaybooks] = useState<readonly Playbook[]>([]);
   const [ready, setReady] = useState(false);
 
-  useEffect(() => {
-    const sync = () => {
-      setPlaybooks(readStoredPlaybooks());
+  const refresh = useCallback(async () => {
+    try {
+      let listed = await listPlaybooksApi();
+      if (
+        listed.length === 0 &&
+        typeof window !== "undefined" &&
+        window.localStorage.getItem(MIGRATED_KEY) !== "1"
+      ) {
+        const legacy = readStoredPlaybooks();
+        if (legacy.length > 0) {
+          listed = await importPlaybooksApi(legacy);
+          window.localStorage.setItem(MIGRATED_KEY, "1");
+          window.localStorage.removeItem(BRAIN_PLAYBOOKS_STORAGE_KEY);
+        } else {
+          window.localStorage.setItem(MIGRATED_KEY, "1");
+        }
+      }
+      setPlaybooks(listed);
+    } catch {
+      setPlaybooks([]);
+    } finally {
       setReady(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+    const sync = () => {
+      void refresh();
     };
-    sync();
     window.addEventListener(PLAYBOOKS_CHANGED_EVENT, sync);
     window.addEventListener("focus", sync);
     return () => {
       window.removeEventListener(PLAYBOOKS_CHANGED_EVENT, sync);
       window.removeEventListener("focus", sync);
     };
-  }, [pathname]);
-
-  const persist = useCallback((next: readonly Playbook[]) => {
-    setPlaybooks(next);
-    try {
-      writeStoredPlaybooks(next);
-    } catch {
-      // Ignore quota / private mode failures; in-memory list still works this session.
-    }
-  }, []);
+  }, [pathname, refresh]);
 
   const savePlaybook = useCallback(
-    (input: { readonly id?: string; readonly label: string; readonly prompt: string }) => {
-      const result = upsertPlaybook(playbooks, input);
-      persist(result.playbooks);
-      return result.playbook;
+    async (input: { readonly id?: string; readonly label: string; readonly prompt: string }) => {
+      const playbook = await savePlaybookApi(input);
+      await refresh();
+      notifyPlaybooksChanged();
+      return playbook;
     },
-    [persist, playbooks],
+    [refresh],
   );
 
   const deletePlaybook = useCallback(
-    (id: string) => {
-      persist(removePlaybook(playbooks, id));
+    async (id: string) => {
+      await deletePlaybookApi(id);
+      await refresh();
+      notifyPlaybooksChanged();
     },
-    [persist, playbooks],
+    [refresh],
   );
 
   return {
