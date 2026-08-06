@@ -89,9 +89,10 @@ const connectionSetupSchema = z.object({
   id: z.string(),
   displayName: z.string(),
   requiresClientSecret: z.boolean(),
-  hasStoredCredentials: z.boolean(),
+  hasStoredCredentials: z.boolean().optional(),
+  hasWorkspaceCredentials: z.boolean().optional(),
   hasCredentials: z.boolean(),
-  credentialSource: z.enum(["stored", "env"]).nullable(),
+  credentialSource: z.enum(["workspace", "stored", "env"]).nullable(),
   clientIdEnv: z.string().optional(),
   clientSecretEnv: z.string().optional(),
   callbackPath: z.string(),
@@ -148,6 +149,62 @@ export async function clearConnectionSetup(
       typeof data === "object" && data !== null && "error" in data && typeof data.error === "string"
         ? data.error
         : `Unable to clear credentials (${response.status})`;
+    throw new Error(error);
+  }
+  return z.object({ displayName: z.string() }).parse(data);
+}
+
+export async function fetchWorkspaceConnectionSetup(
+  connectionId: string,
+): Promise<ConnectionSetupInfo> {
+  const response = await fetch(`/api/workspaces/connections/${connectionId}/setup`, {
+    cache: "no-store",
+  });
+  const data: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const error =
+      typeof data === "object" && data !== null && "error" in data && typeof data.error === "string"
+        ? data.error
+        : `Workspace connection setup request failed (${response.status})`;
+    throw new Error(error);
+  }
+  return connectionSetupSchema.parse(data);
+}
+
+export async function saveWorkspaceConnectionSetup(
+  connectionId: string,
+  input: { readonly clientId: string; readonly clientSecret?: string },
+): Promise<{ readonly displayName: string }> {
+  const response = await fetch(`/api/workspaces/connections/${connectionId}/setup`, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input),
+    cache: "no-store",
+  });
+  const data: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const error =
+      typeof data === "object" && data !== null && "error" in data && typeof data.error === "string"
+        ? data.error
+        : `Unable to save workspace credentials (${response.status})`;
+    throw new Error(error);
+  }
+  return z.object({ displayName: z.string() }).parse(data);
+}
+
+export async function clearWorkspaceConnectionSetup(
+  connectionId: string,
+): Promise<{ readonly displayName: string }> {
+  const response = await fetch(`/api/workspaces/connections/${connectionId}/setup`, {
+    method: "DELETE",
+    cache: "no-store",
+  });
+  const data: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const error =
+      typeof data === "object" && data !== null && "error" in data && typeof data.error === "string"
+        ? data.error
+        : `Unable to clear workspace credentials (${response.status})`;
     throw new Error(error);
   }
   return z.object({ displayName: z.string() }).parse(data);
