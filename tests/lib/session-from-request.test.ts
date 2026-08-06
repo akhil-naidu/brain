@@ -20,6 +20,22 @@ describe("resolveBrainSessionAuthFromRequest", () => {
     });
   });
 
+  it("honors x-brain-run-as-user only with the internal bearer", async () => {
+    const auth = await resolveBrainSessionAuthFromRequest(
+      new Request("http://localhost/eve/v1/sessions", {
+        headers: {
+          authorization: "Bearer internal-secret",
+          "x-brain-run-as-user": "user-42",
+        },
+      }),
+      {
+        BRAIN_INTERNAL_TOKEN: "internal-secret",
+        BRAIN_OPERATOR_USER_ID: "operator-1",
+      },
+    );
+    expect(auth?.principalId).toBe("user-42");
+  });
+
   it("rejects unauthenticated requests", async () => {
     const auth = await resolveBrainSessionAuthFromRequest(
       new Request("http://localhost/eve/v1/sessions"),

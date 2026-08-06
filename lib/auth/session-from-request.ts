@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { resolveInternalOperatorToken, resolveOperatorUserId } from "@/lib/auth/operator";
 import { sessionAuthContext } from "@/lib/auth/principal";
+import { readRunAsUserId } from "@/lib/auth/run-as";
 import { ensureAuthReady, getAuth } from "@/lib/auth/server";
 
 function secretsEqual(a: string, b: string): boolean {
@@ -27,6 +28,10 @@ export async function resolveBrainUserIdFromRequest(
   const internal = resolveInternalOperatorToken(env);
   const bearer = extractBearer(request.headers.get("authorization"));
   if (internal && bearer && secretsEqual(bearer, internal)) {
+    const runAs = readRunAsUserId(request.headers);
+    if (runAs) {
+      return runAs;
+    }
     return resolveOperatorUserId(env);
   }
 
