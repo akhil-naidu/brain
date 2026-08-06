@@ -1,12 +1,34 @@
 import { NextResponse } from "next/server";
 import { toNextJsHandler } from "better-auth/next-js";
 import { isBootstrapAllowed } from "@/lib/auth/bootstrap";
-import { ensureAuthReady, getAuth, getWorkspaceStore } from "@/lib/auth/server";
+import { ensureAuthReady, getAuth, getWorkspaceStore, runWithOpenSignup } from "@/lib/auth/server";
 
 export const runtime = "nodejs";
 
 function requestPath(request: Request): string {
   return new URL(request.url).pathname;
+}
+
+function isScimProvisioningPath(pathname: string): boolean {
+  return pathname.includes("/api/auth/scim/v2/") || pathname.endsWith("/api/auth/scim/v2");
+}
+
+async function dispatchAuth(request: Request): Promise<Response> {
+  const { GET, POST, PUT, PATCH, DELETE } = toNextJsHandler(getAuth());
+  switch (request.method) {
+    case "GET":
+      return GET(request);
+    case "POST":
+      return POST(request);
+    case "PUT":
+      return PUT(request);
+    case "PATCH":
+      return PATCH(request);
+    case "DELETE":
+      return DELETE(request);
+    default:
+      return new Response("Method Not Allowed", { status: 405 });
+  }
 }
 
 async function handler(request: Request) {
@@ -31,15 +53,16 @@ async function handler(request: Request) {
     }
   }
 
-  const { GET, POST } = toNextJsHandler(getAuth());
-  if (request.method === "GET") {
-    return GET(request);
+  if (isScimProvisioningPath(pathname)) {
+    // SCIM is an admin-issued directory path; allow user create under invite-only/sso-only.
+    return runWithOpenSignup(() => dispatchAuth(request));
   }
-  if (request.method === "POST") {
-    return POST(request);
-  }
-  return new Response("Method Not Allowed", { status: 405 });
+
+  return dispatchAuth(request);
 }
 
 export const GET = handler;
 export const POST = handler;
+export const PUT = handler;
+export const PATCH = handler;
+export const DELETE = handler;

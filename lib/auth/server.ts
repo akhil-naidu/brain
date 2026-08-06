@@ -2,14 +2,17 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { scim } from "@better-auth/scim";
 import { sso } from "@better-auth/sso";
 import { betterAuth } from "better-auth";
 import { APIError } from "better-auth/api";
 import { getMigrations } from "better-auth/db/migration";
 import { nextCookies } from "better-auth/next-js";
 import { assertCanCreateUser, resolveLicenseEntitlements } from "@/lib/auth/license";
+import { workspaceIdFromScimProviderId } from "@/lib/auth/scim/provider-id";
 import { resolveAuthDbPath } from "@/lib/auth/users-path";
 import { createWorkspaceStore, type WorkspaceStore } from "@/lib/auth/workspaces/store";
+import { isWorkspaceAdminRole } from "@/lib/auth/workspaces/types";
 
 type SqlRow = Record<string, null | number | bigint | string | Uint8Array>;
 
@@ -153,6 +156,49 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
           },
         },
       },
+      account: {
+        create: {
+          after: async (account) => {
+            const providerId = typeof account.providerId === "string" ? account.providerId : "";
+            const userId = typeof account.userId === "string" ? account.userId : "";
+            const workspaceId = workspaceIdFromScimProviderId(providerId);
+            if (!workspaceId || !userId) {
+              return;
+            }
+            const workspaces = createWorkspaceStore(db);
+            const workspace = workspaces.getWorkspace(workspaceId);
+            if (!workspace || workspace.kind !== "team") {
+              return;
+            }
+            if (!workspaces.getMembership(workspaceId, userId)) {
+              workspaces.addMember(workspaceId, userId, "member");
+            }
+            if (!workspaces.getActiveWorkspaceId(userId)) {
+              workspaces.setActiveWorkspaceId(userId, workspaceId);
+            }
+          },
+        },
+        delete: {
+          after: async (account) => {
+            const providerId = typeof account.providerId === "string" ? account.providerId : "";
+            const userId = typeof account.userId === "string" ? account.userId : "";
+            const workspaceId = workspaceIdFromScimProviderId(providerId);
+            if (!workspaceId || !userId) {
+              return;
+            }
+            const workspaces = createWorkspaceStore(db);
+            try {
+              workspaces.removeMember({
+                workspaceId,
+                actorUserId: userId,
+                targetUserId: userId,
+              });
+            } catch {
+              // Last owner / already removed — ignore.
+            }
+          },
+        },
+      },
     },
     plugins: [
       nextCookies(),
@@ -182,6 +228,34 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
           if (!workspaces.getActiveWorkspaceId(user.id)) {
             workspaces.setActiveWorkspaceId(user.id, workspaceId);
           }
+        },
+      }),
+      scim({
+        // Personal SCIM connections only — BA organization() is not used; workspace
+        // membership is synced from providerId via account database hooks.
+        // Ownership off so any workspace owner/admin can rotate the token.
+        providerOwnership: { enabled: false },
+        storeSCIMToken: "hashed",
+        linkExistingUsers: true,
+        canGenerateToken: async ({ user, providerId, organizationId }) => {
+          if (organizationId) {
+            return false;
+          }
+          const workspaceId = workspaceIdFromScimProviderId(providerId);
+          if (!workspaceId) {
+            return false;
+          }
+          const entitlements = await resolveLicenseEntitlements();
+          if (!entitlements.sso) {
+            return false;
+          }
+          const workspaces = createWorkspaceStore(db);
+          const workspace = workspaces.getWorkspace(workspaceId);
+          if (!workspace || workspace.kind !== "team") {
+            return false;
+          }
+          const role = workspaces.getMembership(workspaceId, user.id);
+          return Boolean(role && isWorkspaceAdminRole(role));
         },
       }),
     ],
