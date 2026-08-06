@@ -101,6 +101,7 @@ export default function WorkspaceSettingsPage() {
   const [pending, setPending] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
+  const [emailDeliveryNote, setEmailDeliveryNote] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setError(null);
@@ -200,6 +201,7 @@ export default function WorkspaceSettingsPage() {
     setPending(true);
     setError(null);
     setCreatedUrl(null);
+    setEmailDeliveryNote(null);
     try {
       const response = await fetch("/api/workspaces/invites", {
         method: "POST",
@@ -235,6 +237,24 @@ export default function WorkspaceSettingsPage() {
           setCopiedId(data.invite.id);
         } catch {
           // ignore clipboard failures
+        }
+        const bound = data.invite.email;
+        if (bound) {
+          if ("emailSent" in data && data.emailSent === true) {
+            setEmailDeliveryNote(`Invite email sent to ${bound}.`);
+          } else if ("emailSkipReason" in data && data.emailSkipReason === "smtp-not-configured") {
+            setEmailDeliveryNote(
+              "Invite created. Email not sent — configure BRAIN_SMTP_* / BRAIN_EMAIL_FROM, or share the link.",
+            );
+          } else if (
+            "emailSkipReason" in data &&
+            typeof data.emailSkipReason === "string" &&
+            data.emailSkipReason
+          ) {
+            setEmailDeliveryNote(
+              `Invite created, but email failed (${data.emailSkipReason}). Share the link instead.`,
+            );
+          }
         }
       }
       setEmail("");
@@ -512,6 +532,9 @@ export default function WorkspaceSettingsPage() {
           >
             {pending ? "Creating…" : "Create invite link"}
           </Button>
+          {emailDeliveryNote ? (
+            <p className="text-muted-foreground text-xs">{emailDeliveryNote}</p>
+          ) : null}
           {createdUrl ? (
             <div className="bg-muted/40 space-y-1 rounded-md p-3">
               <p className="text-xs font-medium">Invite link</p>
