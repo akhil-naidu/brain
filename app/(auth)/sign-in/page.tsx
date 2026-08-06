@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth/client";
@@ -16,6 +16,28 @@ function SignInForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [openSignupAllowed, setOpenSignupAllowed] = useState(false);
+  const [bootstrapAllowed, setBootstrapAllowed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch("/api/auth/signup-status");
+        const data: unknown = await response.json();
+        if (cancelled || typeof data !== "object" || data === null) {
+          return;
+        }
+        setOpenSignupAllowed("openSignupAllowed" in data && Boolean(data.openSignupAllowed));
+        setBootstrapAllowed("bootstrapAllowed" in data && Boolean(data.bootstrapAllowed));
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -76,10 +98,23 @@ function SignInForm() {
         {pending ? "Signing in…" : "Sign in"}
       </Button>
       <p className="text-muted-foreground text-center text-xs">
-        First time on this host?{" "}
-        <Link className="text-foreground underline underline-offset-2" href="/setup">
-          Create the operator account
-        </Link>
+        {bootstrapAllowed ? (
+          <>
+            First time on this host?{" "}
+            <Link className="text-foreground underline underline-offset-2" href="/setup">
+              Create the operator account
+            </Link>
+          </>
+        ) : openSignupAllowed ? (
+          <>
+            No account yet?{" "}
+            <Link className="text-foreground underline underline-offset-2" href="/sign-up">
+              Create an account
+            </Link>
+          </>
+        ) : (
+          <>This host is invite-only. Use an invite link from a workspace admin.</>
+        )}
       </p>
     </form>
   );
