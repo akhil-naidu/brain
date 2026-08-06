@@ -4,14 +4,14 @@
 Shows whether each MCP connection is ready, needs sign-in, or needs local setup.
 ## Requirements
 ### Requirement: Connection status API
-The host MUST expose a status endpoint that reports each supported connection’s setup/auth state for the local chat principal without requiring a chat turn.
+The host MUST expose a status endpoint that reports each supported connection’s setup/auth state for the signed-in user without requiring a chat turn.
 
 #### Scenario: Connected when a usable token exists
-- **WHEN** a connection has a usable or refreshable stored token for the chat principal
+- **WHEN** a connection has a usable or refreshable stored token for the signed-in user
 - **THEN** the status endpoint reports that connection as connected
 
 #### Scenario: Needs sign-in when no token exists
-- **WHEN** a connection’s local setup is complete but no token is stored
+- **WHEN** a connection’s local setup is complete but no token is stored for the signed-in user
 - **THEN** the status endpoint reports that connection as needs sign-in
 
 #### Scenario: Needs setup when app credentials are missing
@@ -19,8 +19,12 @@ The host MUST expose a status endpoint that reports each supported connection’
 - **THEN** the status endpoint reports that connection as needs setup
 
 #### Scenario: Needs sign-in after UI credentials are saved
-- **WHEN** a static-credential connection has UI-stored app credentials and no token
+- **WHEN** a static-credential connection has UI-stored app credentials and no token for the signed-in user
 - **THEN** the status endpoint reports needs sign-in (not needs setup)
+
+#### Scenario: Users do not share connected status
+- **WHEN** user A is connected for a connection and user B has no token for that connection
+- **THEN** user B’s status endpoint reports needs sign-in (or needs setup) for that connection, not connected
 
 ### Requirement: Status visible in the integrations menu
 The integrations menu MUST show each connection’s status alongside the enable toggle.
@@ -28,4 +32,3 @@ The integrations menu MUST show each connection’s status alongside the enable 
 #### Scenario: Menu shows status labels
 - **WHEN** the user opens the integrations menu
 - **THEN** each connection row indicates Connected, Sign in, or Set up needed according to the status API
-
