@@ -21,13 +21,17 @@ const temporaryDirectories: string[] = [];
 const principal = brainUserPrincipal("user-a");
 const principalB = brainUserPrincipal("user-b");
 
-async function pendingFileExists(connectionName: string, userId: string): Promise<boolean> {
+async function pendingFileExists(
+  connectionName: string,
+  userId: string,
+  issuer = "brain",
+): Promise<boolean> {
   try {
     await access(
       path.join(
         process.cwd(),
         ".eve",
-        `mcp-oauth-pending-${connectionName}-${sanitizeUserIdForPendingPath(userId)}.json`,
+        `mcp-oauth-pending-${connectionName}-${sanitizeUserIdForPendingPath(userId)}-${sanitizeUserIdForPendingPath(issuer)}.json`,
       ),
     );
     return true;

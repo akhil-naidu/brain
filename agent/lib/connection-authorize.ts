@@ -58,6 +58,30 @@ function legacyPendingPath(name: string): string {
   return path.join(process.cwd(), ".eve", `mcp-oauth-pending-${name}.json`);
 }
 
+function pendingOwnerKey(userId: string, issuer: string): string {
+  return `${userId}::${issuer}`;
+}
+
+function parsePendingOwnerKey(owner: string): { readonly userId: string; readonly issuer: string } {
+  const split = owner.indexOf("::");
+  if (split === -1) {
+    return { userId: owner, issuer: BRAIN_AUTH_ISSUER };
+  }
+  return {
+    userId: owner.slice(0, split),
+    issuer: owner.slice(split + 2) || BRAIN_AUTH_ISSUER,
+  };
+}
+
+function pendingPathForPrincipal(name: string, userId: string, issuer: string): string {
+  return path.join(
+    process.cwd(),
+    ".eve",
+    `mcp-oauth-pending-${name}-${sanitizeUserIdForPendingPath(userId)}-${sanitizeUserIdForPendingPath(issuer)}.json`,
+  );
+}
+
+/** @deprecated legacy path without workspace issuer */
 function pendingPathForUser(name: string, userId: string): string {
   return path.join(
     process.cwd(),
@@ -107,30 +131,37 @@ async function writePendingForUser(
   userId: string,
   pending: PendingMenuAuthorization,
 ): Promise<void> {
-  const file = pendingPathForUser(name, userId);
+  const issuer = pending.principalIssuer;
+  const file = pendingPathForPrincipal(name, userId, issuer);
   await mkdir(path.dirname(file), { recursive: true });
   await writeFile(file, `${JSON.stringify(pending, null, 2)}\n`, "utf8");
 
+  const ownerKey = pendingOwnerKey(userId, issuer);
   const byState = await readPendingIndex(name);
   for (const [state, owner] of Object.entries(byState)) {
-    if (owner === userId) {
+    if (owner === ownerKey || owner === userId) {
       delete byState[state];
     }
   }
-  byState[pending.state] = userId;
+  byState[pending.state] = ownerKey;
   await writePendingIndex(name, byState);
 
-  // Drop legacy shared pending if it belonged to this user (or always after per-user write).
   const legacy = await readPendingFile(legacyPendingPath(name));
   if (legacy && legacy.principalId === userId) {
     await rm(legacyPendingPath(name), { force: true });
   }
+  await rm(pendingPathForUser(name, userId), { force: true });
 }
 
 async function readPendingForUser(
   name: string,
   userId: string,
+  issuer: string = BRAIN_AUTH_ISSUER,
 ): Promise<PendingMenuAuthorization | null> {
+  const perPrincipal = await readPendingFile(pendingPathForPrincipal(name, userId, issuer));
+  if (perPrincipal) {
+    return perPrincipal;
+  }
   const perUser = await readPendingFile(pendingPathForUser(name, userId));
   if (perUser) {
     return perUser;
@@ -151,9 +182,12 @@ async function readPendingByState(
   }
 
   const byState = await readPendingIndex(name);
-  const userId = byState[state];
-  if (userId) {
-    const pending = await readPendingFile(pendingPathForUser(name, userId));
+  const owner = byState[state];
+  if (owner) {
+    const { userId, issuer } = parsePendingOwnerKey(owner);
+    const pending =
+      (await readPendingFile(pendingPathForPrincipal(name, userId, issuer))) ??
+      (await readPendingFile(pendingPathForUser(name, userId)));
     if (pending && verifyOAuthState(pending.state, state)) {
       return pending;
     }
@@ -167,14 +201,20 @@ async function readPendingByState(
   return null;
 }
 
-async function clearPendingForUser(name: string, userId: string): Promise<void> {
-  const pending = await readPendingForUser(name, userId);
+async function clearPendingForUser(
+  name: string,
+  userId: string,
+  issuer: string = BRAIN_AUTH_ISSUER,
+): Promise<void> {
+  const pending = await readPendingForUser(name, userId, issuer);
+  await rm(pendingPathForPrincipal(name, userId, issuer), { force: true });
   await rm(pendingPathForUser(name, userId), { force: true });
 
+  const ownerKey = pendingOwnerKey(userId, issuer);
   const byState = await readPendingIndex(name);
   let changed = false;
   for (const [state, owner] of Object.entries(byState)) {
-    if (owner === userId || (pending && state === pending.state)) {
+    if (owner === ownerKey || owner === userId || (pending && state === pending.state)) {
       delete byState[state];
       changed = true;
     }
@@ -264,7 +304,7 @@ export async function completeMenuConnectionAuthorization(
   };
 
   const clearThis = async () => {
-    await clearPendingForUser(provider.name, pending.principalId);
+    await clearPendingForUser(provider.name, pending.principalId, pending.principalIssuer);
   };
 
   if (params.error) {
@@ -315,6 +355,6 @@ export async function disconnectMenuConnection(
   principal: Extract<ConnectionPrincipal, { readonly type: "user" }>,
 ): Promise<{ readonly displayName: string }> {
   await deleteStoredToken(provider, principal);
-  await clearPendingForUser(provider.name, principal.id);
+  await clearPendingForUser(provider.name, principal.id, principal.issuer ?? BRAIN_AUTH_ISSUER);
   return { displayName: provider.displayName };
 }

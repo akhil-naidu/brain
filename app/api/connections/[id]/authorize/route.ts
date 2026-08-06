@@ -5,7 +5,7 @@ import {
 } from "@/agent/lib/connection-authorize";
 import { getChatConnectionProvider } from "@/agent/lib/connection-status";
 import { brainUserPrincipal } from "@/lib/auth/principal";
-import { requireSessionUserId } from "@/lib/auth/require-session";
+import { requireWorkspaceSession } from "@/lib/auth/require-workspace-session";
 import { resolvePublicOrigin } from "@/lib/http/public-origin";
 
 export const runtime = "nodejs";
@@ -15,7 +15,7 @@ type RouteContext = {
 };
 
 export async function POST(request: Request, context: RouteContext) {
-  const session = await requireSessionUserId();
+  const session = await requireWorkspaceSession();
   if (!session.ok) {
     return session.response;
   }
@@ -31,7 +31,7 @@ export async function POST(request: Request, context: RouteContext) {
     const result = await startMenuConnectionAuthorization(
       provider,
       callbackUrl,
-      brainUserPrincipal(session.userId),
+      brainUserPrincipal(session.session.userId, session.session.workspaceId),
     );
     return NextResponse.json(result);
   } catch (error) {
