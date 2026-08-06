@@ -1,5 +1,6 @@
 import { Client } from "eve/client";
-import { requireOperatorUserId, resolveInternalOperatorToken } from "@/lib/auth/operator";
+import { resolveInternalOperatorToken } from "@/lib/auth/operator";
+import { BRAIN_RUN_AS_USER_HEADER } from "@/lib/auth/run-as";
 import { createConnectionClientContext } from "@/lib/chat/connection-context";
 import { resolveEveHttpHost } from "@/lib/chat/eve-http-host";
 import { postMorningBriefToSlack } from "@/lib/chat/slack-brief-delivery";
@@ -21,6 +22,7 @@ const SCHEDULED_CONNECTIONS = {
 } as const;
 
 async function deliverToSlackIfConfigured(input: {
+  readonly userId: string;
   readonly slackDeliveryEnabled: boolean;
   readonly slackChannel: string | null;
   readonly title: string;
@@ -39,6 +41,7 @@ async function deliverToSlackIfConfigured(input: {
   }
 
   const result = await postMorningBriefToSlack({
+    userId: input.userId,
     channel,
     title: input.title,
     briefText: input.text,
@@ -54,6 +57,7 @@ async function deliverToSlackIfConfigured(input: {
  * Creates a chat, runs one eve turn with the given prompt, optionally posts to Slack.
  */
 export async function runScheduledPromptTurn(input: {
+  readonly userId: string;
   readonly title: string;
   readonly prompt: string;
   readonly slackDeliveryEnabled?: boolean;
@@ -63,7 +67,10 @@ export async function runScheduledPromptTurn(input: {
   readonly message: string;
   readonly slack: ScheduledSlackResult;
 }> {
-  const userId = requireOperatorUserId();
+  const userId = input.userId.trim();
+  if (!userId) {
+    throw new Error("Scheduled runs require an owning user id.");
+  }
   const store = getChatStore();
   const chat = store.createChat(userId, { title: input.title });
 
@@ -76,6 +83,9 @@ export async function runScheduledPromptTurn(input: {
     host: resolveEveHttpHost(),
     preserveCompletedSessions: true,
     auth: { bearer: internalToken },
+    headers: {
+      [BRAIN_RUN_AS_USER_HEADER]: userId,
+    },
   });
   const session = client.session();
   const response = await session.send({
@@ -107,6 +117,7 @@ export async function runScheduledPromptTurn(input: {
 
   const message = result.message ?? "";
   const slack = await deliverToSlackIfConfigured({
+    userId,
     slackDeliveryEnabled: input.slackDeliveryEnabled === true,
     slackChannel: input.slackChannel ?? null,
     title: input.title,

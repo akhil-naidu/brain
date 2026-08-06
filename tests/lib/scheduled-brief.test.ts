@@ -1,7 +1,4 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   defaultScheduledBriefConfig,
   isScheduledBriefDue,
@@ -9,22 +6,7 @@ import {
   localDateKey,
   morningBriefChatTitle,
   parseScheduledBriefConfig,
-  readScheduledBriefConfig,
-  replaceScheduledBriefConfig,
-  writeScheduledBriefConfig,
 } from "@/lib/chat/scheduled-brief";
-
-const tempDirs: string[] = [];
-
-afterEach(async () => {
-  await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
-});
-
-async function tempConfigPath() {
-  const dir = await mkdtemp(path.join(tmpdir(), "brain-brief-"));
-  tempDirs.push(dir);
-  return path.join(dir, "scheduled-brief.json");
-}
 
 describe("scheduled brief due logic", () => {
   it("is due at the configured local minute on a weekday", () => {
@@ -91,49 +73,6 @@ describe("scheduled brief due logic", () => {
       runningSince: now.toISOString(),
     };
     expect(isScheduledBriefRunning(config, now)).toBe(true);
-  });
-
-  it("clears stale runningSince on read", async () => {
-    const filePath = await tempConfigPath();
-    const stale = new Date(Date.now() - 60 * 60_000).toISOString();
-    await replaceScheduledBriefConfig(
-      {
-        ...defaultScheduledBriefConfig(),
-        runningSince: stale,
-      },
-      filePath,
-    );
-    const read = await readScheduledBriefConfig(filePath);
-    expect(read.runningSince).toBeNull();
-  });
-});
-
-describe("scheduled brief persistence", () => {
-  it("writes and reads schedule config", async () => {
-    const filePath = await tempConfigPath();
-    const written = await writeScheduledBriefConfig(
-      {
-        enabled: true,
-        hour: 8,
-        minute: 15,
-        timezone: "America/New_York",
-        weekdaysOnly: false,
-        slackDeliveryEnabled: true,
-        slackChannel: "#alerts",
-      },
-      filePath,
-    );
-    expect(written.enabled).toBe(true);
-    expect(written.hour).toBe(8);
-    expect(written.minute).toBe(15);
-    expect(written.slackDeliveryEnabled).toBe(true);
-    expect(written.slackChannel).toBe("#alerts");
-
-    const raw = await readFile(filePath, "utf8");
-    expect(parseScheduledBriefConfig(JSON.parse(raw) as unknown)).toEqual(written);
-
-    const read = await readScheduledBriefConfig(filePath);
-    expect(read).toEqual(written);
   });
 
   it("defaults missing Slack fields on older config files", () => {

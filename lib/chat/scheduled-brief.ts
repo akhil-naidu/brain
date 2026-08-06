@@ -1,7 +1,6 @@
-import { mkdir, open, readFile, rename, rm } from "node:fs/promises";
 import path from "node:path";
-import { randomBytes } from "node:crypto";
 import { z } from "zod";
+import { getUserDataStore } from "@/lib/chat/user-data/sqlite-user-data-store";
 
 export const SCHEDULED_BRIEF_FILENAME = "scheduled-brief.json";
 export const DEFAULT_SCHEDULED_BRIEF_HOUR = 9;
@@ -76,6 +75,7 @@ export function resolveScheduledBriefPath(
   cwd: string = process.cwd(),
   env: Record<string, string | undefined> = process.env,
 ): string {
+  // Legacy host JSON path (one-time migrate into SQLite). Prefer SQLite APIs.
   const configured = env["BRAIN_SCHEDULED_BRIEF_PATH"]?.trim();
   if (configured) {
     return path.isAbsolute(configured) ? configured : path.resolve(cwd, configured);
@@ -219,100 +219,39 @@ export function morningBriefChatTitle(date: Date, timeZone: string): string {
   return `Morning brief — ${formatted}`;
 }
 
-export async function readScheduledBriefConfig(
-  filePath: string = resolveScheduledBriefPath(),
-): Promise<ScheduledBriefConfig> {
-  try {
-    const raw = await readFile(filePath, "utf8");
-    const parsed = parseScheduledBriefConfig(JSON.parse(raw) as unknown);
-    const config = parsed ?? defaultScheduledBriefConfig();
-    // Drop locks left behind by crashed / interrupted runs once they go stale.
-    if (config.runningSince && !isScheduleRunLocked(config.runningSince)) {
-      const cleared = { ...config, runningSince: null };
-      try {
-        await writeScheduledBriefConfigAtomic(filePath, cleared);
-      } catch {
-        return cleared;
-      }
-      return cleared;
-    }
-    return config;
-  } catch (error) {
-    if (
-      error instanceof Error &&
-      "code" in error &&
-      typeof error.code === "string" &&
-      error.code === "ENOENT"
-    ) {
-      return defaultScheduledBriefConfig();
-    }
-    return defaultScheduledBriefConfig();
+export async function readScheduledBriefConfig(userId: string): Promise<ScheduledBriefConfig> {
+  const store = getUserDataStore();
+  const config = store.getMorningBrief(userId);
+  // Drop locks left behind by crashed / interrupted runs once they go stale.
+  if (config.runningSince && !isScheduleRunLocked(config.runningSince)) {
+    const cleared = { ...config, runningSince: null };
+    return store.replaceMorningBrief(userId, cleared);
   }
+  return config;
 }
 
-async function writeScheduledBriefConfigAtomic(
-  filePath: string,
-  config: ScheduledBriefConfig,
-): Promise<void> {
-  const directory = path.dirname(filePath);
-  await mkdir(directory, { recursive: true, mode: 0o700 });
-  const temporary = path.join(
-    directory,
-    `.${path.basename(filePath)}.${process.pid}.${randomBytes(8).toString("hex")}.tmp`,
-  );
-  try {
-    const handle = await open(temporary, "wx", 0o600);
-    try {
-      await handle.writeFile(`${JSON.stringify(config, null, 2)}\n`, "utf8");
-    } finally {
-      await handle.close();
-    }
-    await rename(temporary, filePath);
-  } catch (error) {
-    await rm(temporary, { force: true }).catch(() => undefined);
-    throw error;
-  }
+export async function listScheduledBriefConfigs(): Promise<
+  readonly (ScheduledBriefConfig & { readonly userId: string })[]
+> {
+  return getUserDataStore().listMorningBriefs();
 }
 
 export async function writeScheduledBriefConfig(
+  userId: string,
   update: ScheduledBriefUpdate,
-  filePath: string = resolveScheduledBriefPath(),
 ): Promise<ScheduledBriefConfig> {
-  const current = await readScheduledBriefConfig(filePath);
-  const next: ScheduledBriefConfig = {
-    ...current,
-    ...update,
-  };
-
-  if (!isValidTimeZone(next.timezone)) {
-    throw new Error("Invalid timezone.");
-  }
-  if (!Number.isInteger(next.hour) || next.hour < 0 || next.hour > 23) {
-    throw new Error("Hour must be an integer from 0 to 23.");
-  }
-  if (!Number.isInteger(next.minute) || next.minute < 0 || next.minute > 59) {
-    throw new Error("Minute must be an integer from 0 to 59.");
-  }
-
-  const parsed = parseScheduledBriefConfig(next);
-  if (!parsed) {
-    throw new Error("Invalid schedule configuration.");
-  }
-
-  await writeScheduledBriefConfigAtomic(filePath, parsed);
-  return parsed;
+  return getUserDataStore().updateMorningBrief(userId, update);
 }
 
 export async function replaceScheduledBriefConfig(
+  userId: string,
   config: ScheduledBriefConfig,
-  filePath: string = resolveScheduledBriefPath(),
 ): Promise<ScheduledBriefConfig> {
   const parsed = parseScheduledBriefConfig(config);
   if (!parsed) {
     throw new Error("Invalid schedule configuration.");
   }
-  await writeScheduledBriefConfigAtomic(filePath, parsed);
-  return parsed;
+  return getUserDataStore().replaceMorningBrief(userId, parsed);
 }
 
 export const updateScheduledBriefBodySchema = z

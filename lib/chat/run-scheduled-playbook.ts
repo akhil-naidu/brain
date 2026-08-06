@@ -1,9 +1,9 @@
+import { getUserDataStore } from "@/lib/chat/user-data/sqlite-user-data-store";
 import { runScheduledPromptTurn, type ScheduledSlackResult } from "@/lib/chat/run-scheduled-prompt";
 import {
   isScheduledPlaybookDue,
   isScheduledPlaybookRunning,
   markPlaybookScheduleCompleted,
-  readScheduledPlaybooks,
   replaceScheduledPlaybook,
   scheduledPlaybookChatTitle,
   type ScheduledPlaybook,
@@ -29,14 +29,20 @@ export async function runScheduledPlaybook(options: {
   readonly id: string;
   readonly force?: boolean;
   readonly now?: Date;
+  readonly userId?: string;
 }): Promise<RunScheduledPlaybookResult> {
   const now = options.now ?? new Date();
   const force = options.force === true;
-  const schedules = await readScheduledPlaybooks();
-  let schedule = schedules.find((item) => item.id === options.id);
-  if (!schedule) {
+  const found = getUserDataStore().getPlaybookSchedule(options.id);
+  if (!found) {
     return { ok: true, skipped: true, reason: "not_found" };
   }
+  if (options.userId && found.userId !== options.userId) {
+    return { ok: true, skipped: true, reason: "not_found" };
+  }
+
+  const { userId, ...scheduleBase } = found;
+  let schedule: ScheduledPlaybook = scheduleBase;
 
   if (!force && !schedule.enabled) {
     return { ok: true, skipped: true, reason: "disabled", schedule };
@@ -50,7 +56,7 @@ export async function runScheduledPlaybook(options: {
     return { ok: true, skipped: true, reason: "already_running", schedule };
   }
 
-  schedule = await replaceScheduledPlaybook({
+  schedule = await replaceScheduledPlaybook(userId, {
     ...schedule,
     runningSince: now.toISOString(),
   });
@@ -59,6 +65,7 @@ export async function runScheduledPlaybook(options: {
 
   try {
     const { chat, slack } = await runScheduledPromptTurn({
+      userId,
       title,
       prompt: schedule.prompt,
       slackDeliveryEnabled: schedule.slackDeliveryEnabled,
@@ -66,6 +73,7 @@ export async function runScheduledPlaybook(options: {
     });
 
     const completed = await replaceScheduledPlaybook(
+      userId,
       markPlaybookScheduleCompleted(schedule, {
         chatId: chat.id,
         completedAt: new Date(),
@@ -75,10 +83,11 @@ export async function runScheduledPlaybook(options: {
 
     return { ok: true, skipped: false, schedule: completed, chat, slack };
   } catch (error) {
-    const latest = (await readScheduledPlaybooks()).find((item) => item.id === options.id);
+    const latest = getUserDataStore().getPlaybookSchedule(options.id);
     if (latest) {
-      await replaceScheduledPlaybook({
-        ...latest,
+      const { userId: ownerId, ...rest } = latest;
+      await replaceScheduledPlaybook(ownerId, {
+        ...rest,
         runningSince: null,
       });
     }
@@ -102,7 +111,7 @@ async function runDueQueue(
 export async function runDueScheduledPlaybooks(
   now: Date = new Date(),
 ): Promise<readonly RunScheduledPlaybookResult[]> {
-  const schedules = await readScheduledPlaybooks();
+  const schedules = getUserDataStore().listAllPlaybookSchedules();
   const dueIds = schedules
     .filter((item) => isScheduledPlaybookDue(item, now))
     .map((item) => item.id);

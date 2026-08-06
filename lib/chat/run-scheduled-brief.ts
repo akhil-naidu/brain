@@ -1,6 +1,7 @@
 import {
   isScheduledBriefDue,
   isScheduledBriefRunning,
+  listScheduledBriefConfigs,
   localDateKey,
   morningBriefChatTitle,
   readScheduledBriefConfig,
@@ -19,39 +20,41 @@ export type RunScheduledBriefResult =
       readonly skipped: false;
       readonly chat: ChatRecord;
       readonly slack: ScheduledSlackResult;
+      readonly userId: string;
     }
   | {
       readonly ok: true;
       readonly skipped: true;
-      readonly reason: "disabled" | "not_due" | "already_running";
-      readonly config: ScheduledBriefConfig;
+      readonly reason: "disabled" | "not_due" | "already_running" | "not_found";
+      readonly config?: ScheduledBriefConfig;
+      readonly userId?: string;
     };
 
 export { resolveEveHttpHost } from "@/lib/chat/eve-http-host";
 
-export async function runScheduledBrief(
-  options: {
-    readonly force?: boolean;
-    readonly now?: Date;
-  } = {},
-): Promise<RunScheduledBriefResult> {
+export async function runScheduledBrief(options: {
+  readonly userId: string;
+  readonly force?: boolean;
+  readonly now?: Date;
+}): Promise<RunScheduledBriefResult> {
   const now = options.now ?? new Date();
   const force = options.force === true;
-  let config = await readScheduledBriefConfig();
+  const userId = options.userId;
+  let config = await readScheduledBriefConfig(userId);
 
   if (!force && !config.enabled) {
-    return { ok: true, skipped: true, reason: "disabled", config };
+    return { ok: true, skipped: true, reason: "disabled", config, userId };
   }
 
   if (!force && !isScheduledBriefDue(config, now)) {
-    return { ok: true, skipped: true, reason: "not_due", config };
+    return { ok: true, skipped: true, reason: "not_due", config, userId };
   }
 
   if (isScheduledBriefRunning(config, now)) {
-    return { ok: true, skipped: true, reason: "already_running", config };
+    return { ok: true, skipped: true, reason: "already_running", config, userId };
   }
 
-  config = await replaceScheduledBriefConfig({
+  config = await replaceScheduledBriefConfig(userId, {
     ...config,
     runningSince: now.toISOString(),
   });
@@ -60,6 +63,7 @@ export async function runScheduledBrief(
 
   try {
     const { chat, slack } = await runScheduledPromptTurn({
+      userId,
       title,
       prompt: MORNING_BRIEF_PROMPT,
       slackDeliveryEnabled: config.slackDeliveryEnabled,
@@ -67,7 +71,7 @@ export async function runScheduledBrief(
     });
 
     const completedAt = new Date();
-    await replaceScheduledBriefConfig({
+    await replaceScheduledBriefConfig(userId, {
       ...config,
       runningSince: null,
       lastRunAt: completedAt.toISOString(),
@@ -76,13 +80,37 @@ export async function runScheduledBrief(
       lastSlackError: slack.attempted && !slack.ok ? slack.error : null,
     });
 
-    return { ok: true, skipped: false, chat, slack };
+    return { ok: true, skipped: false, chat, slack, userId };
   } catch (error) {
-    const latest = await readScheduledBriefConfig();
-    await replaceScheduledBriefConfig({
+    const latest = await readScheduledBriefConfig(userId);
+    await replaceScheduledBriefConfig(userId, {
       ...latest,
       runningSince: null,
     });
     throw error;
   }
+}
+
+async function runDueBriefQueue(
+  items: readonly { readonly userId: string }[],
+  now: Date,
+  results: readonly RunScheduledBriefResult[] = [],
+): Promise<readonly RunScheduledBriefResult[]> {
+  const [item, ...rest] = items;
+  if (!item) {
+    return results;
+  }
+  const result = await runScheduledBrief({ userId: item.userId, force: false, now });
+  return runDueBriefQueue(rest, now, [...results, result]);
+}
+
+export async function runDueScheduledBriefs(
+  now: Date = new Date(),
+): Promise<readonly RunScheduledBriefResult[]> {
+  const configs = await listScheduledBriefConfigs();
+  const due = configs.filter((item) => {
+    const { userId: _userId, ...config } = item;
+    return isScheduledBriefDue(config, now);
+  });
+  return runDueBriefQueue(due, now);
 }
