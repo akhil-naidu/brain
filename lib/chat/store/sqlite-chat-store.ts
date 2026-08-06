@@ -67,6 +67,46 @@ function toRecord(row: SqlRow, events: readonly HandleMessageStreamEvent[]): Cha
   };
 }
 
+function tableColumns(db: DatabaseSync, table: string): Set<string> {
+  const rows = db.prepare(`PRAGMA table_info(${table})`).all() as SqlRow[];
+  return new Set(
+    rows
+      .map((row) => optionalString(row, "name"))
+      .filter((name): name is string => typeof name === "string"),
+  );
+}
+
+/** Drop legacy multi-tenant columns (user_id / workspace_id) from older Brain DBs. */
+function migrateLegacyChatSchema(db: DatabaseSync): void {
+  const columns = tableColumns(db, "chat");
+  if (columns.size === 0 || !columns.has("user_id")) {
+    return;
+  }
+
+  // Rebuild `chat` in place. Keep `chat_event` rows; FK checks are off during swap.
+  db.exec(`
+    PRAGMA foreign_keys = OFF;
+    BEGIN;
+    DROP INDEX IF EXISTS chat_updated_at_idx;
+    DROP INDEX IF EXISTS chat_user_workspace_updated_at_idx;
+    DROP INDEX IF EXISTS chat_workspace_visibility_updated_at_idx;
+    CREATE TABLE chat_new (
+      id TEXT PRIMARY KEY NOT NULL,
+      title TEXT NOT NULL,
+      eve_session TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    INSERT INTO chat_new (id, title, eve_session, created_at, updated_at)
+      SELECT id, title, eve_session, created_at, updated_at FROM chat;
+    DROP TABLE chat;
+    ALTER TABLE chat_new RENAME TO chat;
+    CREATE INDEX IF NOT EXISTS chat_updated_at_idx ON chat(updated_at DESC);
+    COMMIT;
+    PRAGMA foreign_keys = ON;
+  `);
+}
+
 export function createSqliteChatStore(dbPath: string): ChatStore {
   if (dbPath !== ":memory:") {
     mkdirSync(path.dirname(dbPath), { recursive: true });
@@ -92,6 +132,7 @@ export function createSqliteChatStore(dbPath: string): ChatStore {
     CREATE INDEX IF NOT EXISTS chat_updated_at_idx ON chat(updated_at DESC);
     CREATE INDEX IF NOT EXISTS chat_event_chat_id_idx ON chat_event(chat_id, event_index);
   `);
+  migrateLegacyChatSchema(db);
 
   const selectChat = db.prepare("SELECT * FROM chat WHERE id = ?");
   const selectEvents = db.prepare(

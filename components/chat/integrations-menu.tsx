@@ -1,7 +1,7 @@
 "use client";
 
 import type { ComponentType } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { HammerIcon } from "lucide-react";
 import {
   AsanaIcon,
@@ -100,6 +100,8 @@ export function IntegrationsMenu({
   const [disconnectingId, setDisconnectingId] = useState<keyof EnabledConnections | null>(null);
   const [connectError, setConnectError] = useState<string | null>(null);
   const [configureId, setConfigureId] = useState<string | null>(null);
+  const enabledConnectionsRef = useRef(enabledConnections);
+  enabledConnectionsRef.current = enabledConnections;
 
   const loadStatus = () => {
     setLoadingStatus(true);
@@ -160,11 +162,15 @@ export function IntegrationsMenu({
     }
     for (const { key } of CONNECTION_ITEMS) {
       const status = statusById.get(key);
-      if (enabledConnections[key] && status && status.status !== "connected") {
+      if (
+        enabledConnectionsRef.current[key] &&
+        status &&
+        status.status !== "connected"
+      ) {
         onConnectionEnabledChange(key, false);
       }
     }
-  }, [enabledConnections, onConnectionEnabledChange, statusById]);
+  }, [onConnectionEnabledChange, statusById]);
 
   const startConnect = (connectionId: keyof EnabledConnections) => {
     setConnectingId(connectionId);

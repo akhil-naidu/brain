@@ -91,6 +91,13 @@ export type McpOAuthProvider = {
    * Connect is offered (account-specific hosts such as Snowflake).
    */
   mcpUrlEnv?: string;
+  /**
+   * Bearer / Programmatic Access Token auth (Cursor-style Snowflake MCP).
+   * When set, Menu Connect OAuth is skipped — Set up stores the PAT.
+   */
+  patTokenEnv?: string;
+  /** Defaults to interactive OAuth. */
+  authKind?: "oauth" | "pat";
   tokenAuthMethod: "none" | "client_secret_post";
   /** Extra authorize query params (e.g. Google access_type=offline). */
   authorizeExtraParams?: Record<string, string>;

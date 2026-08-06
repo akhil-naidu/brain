@@ -32,6 +32,7 @@ export function ConnectionSetupDialog({
   const [info, setInfo] = useState<ConnectionSetupInfo | null>(null);
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
+  const [accessToken, setAccessToken] = useState("");
   const [mcpUrl, setMcpUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -49,6 +50,7 @@ export function ConnectionSetupDialog({
     setError(null);
     setClientId("");
     setClientSecret("");
+    setAccessToken("");
     setMcpUrl("");
     setInfo(null);
     setCopied(false);
@@ -87,8 +89,9 @@ export function ConnectionSetupDialog({
     void (async () => {
       try {
         await saveConnectionSetup(connectionId, {
-          clientId,
+          clientId: info?.requiresClientId ? clientId : undefined,
           clientSecret: info?.requiresClientSecret ? clientSecret : undefined,
+          accessToken: info?.requiresAccessToken ? accessToken : undefined,
           mcpUrl: info?.requiresMcpUrl ? mcpUrl : undefined,
         });
         onSaved();
@@ -115,6 +118,7 @@ export function ConnectionSetupDialog({
         setInfo(setup);
         setClientId("");
         setClientSecret("");
+        setAccessToken("");
         setMcpUrl(setup.mcpUrl ?? "");
       } catch (clearError) {
         setError(
@@ -141,9 +145,12 @@ export function ConnectionSetupDialog({
     })();
   };
 
+  const isPat = info?.authKind === "pat" || info?.requiresAccessToken;
+
   const canSave =
-    clientId.trim().length > 0 &&
+    (!info?.requiresClientId || clientId.trim().length > 0) &&
     (!info?.requiresClientSecret || clientSecret.trim().length > 0) &&
+    (!info?.requiresAccessToken || accessToken.trim().length > 0) &&
     (!info?.requiresMcpUrl || mcpUrl.trim().length > 0) &&
     !saving &&
     !loading;
@@ -156,9 +163,11 @@ export function ConnectionSetupDialog({
         <DialogHeader>
           <DialogTitle>{info ? `Set up ${info.displayName}` : "Set up connection"}</DialogTitle>
           <DialogDescription>
-            {info?.requiresMcpUrl
-              ? `Enter the MCP server URL plus the OAuth app ID and secret from your ${appName} account. They stay on this computer.`
-              : `Enter the app ID and secret from your ${appName} account settings so Brain can connect. They stay on this computer.`}
+            {isPat
+              ? `Paste your ${appName} MCP server URL and Programmatic Access Token (same as Cursor). They stay on this computer.`
+              : info?.requiresMcpUrl
+                ? `Enter the MCP server URL plus the OAuth app ID and secret from your ${appName} account. They stay on this computer.`
+                : `Enter the app ID and secret from your ${appName} account settings so Brain can connect. They stay on this computer.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -166,7 +175,7 @@ export function ConnectionSetupDialog({
           <p className="text-muted-foreground text-sm">Loading…</p>
         ) : (
           <div className="flex flex-col gap-3">
-            {info ? (
+            {info && !isPat ? (
               <div className="bg-muted/40 rounded-md px-3 py-2">
                 <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
                   Return link
@@ -212,22 +221,47 @@ export function ConnectionSetupDialog({
               </div>
             ) : null}
 
-            <div className="flex flex-col gap-1.5">
-              <label
-                className="text-foreground text-sm font-medium"
-                htmlFor="connection-setup-client-id"
-              >
-                App ID
-              </label>
-              <Input
-                autoComplete="off"
-                id="connection-setup-client-id"
-                onChange={(event) => setClientId(event.target.value)}
-                placeholder="Paste app ID"
-                spellCheck={false}
-                value={clientId}
-              />
-            </div>
+            {info?.requiresAccessToken ? (
+              <div className="flex flex-col gap-1.5">
+                <label
+                  className="text-foreground text-sm font-medium"
+                  htmlFor="connection-setup-access-token"
+                >
+                  Programmatic Access Token
+                </label>
+                <Input
+                  autoComplete="off"
+                  id="connection-setup-access-token"
+                  onChange={(event) => setAccessToken(event.target.value)}
+                  placeholder="Paste PAT from Snowsight"
+                  spellCheck={false}
+                  type="password"
+                  value={accessToken}
+                />
+                <p className="text-muted-foreground text-xs">
+                  Snowsight → Settings → Authentication → Programmatic Access Tokens
+                </p>
+              </div>
+            ) : null}
+
+            {info?.requiresClientId ? (
+              <div className="flex flex-col gap-1.5">
+                <label
+                  className="text-foreground text-sm font-medium"
+                  htmlFor="connection-setup-client-id"
+                >
+                  App ID
+                </label>
+                <Input
+                  autoComplete="off"
+                  id="connection-setup-client-id"
+                  onChange={(event) => setClientId(event.target.value)}
+                  placeholder="Paste app ID"
+                  spellCheck={false}
+                  value={clientId}
+                />
+              </div>
+            ) : null}
 
             {info?.requiresClientSecret ? (
               <div className="flex flex-col gap-1.5">

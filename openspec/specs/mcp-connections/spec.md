@@ -56,20 +56,20 @@ The system MUST provide a dFlow MCP connection using the official dFlow Cloud MC
 - **WHEN** the model calls a dFlow create/update or GitHub setup tool
 - **THEN** the connection approval policy requires user approval
 
-### Requirement: Snowflake MCP connection with account URL and OAuth client
-The system MUST provide a Snowflake-managed MCP connection. The MCP server URL and OAuth app credentials MUST be resolvable from UI-stored host credentials (Set up) or from `SNOWFLAKE_MCP_URL` / `SNOWFLAKE_MCP_CLIENT_ID` / `SNOWFLAKE_MCP_CLIENT_SECRET`, with stored credentials preferred. The connection MUST use Snowflake OAuth authorize and token-request endpoints derived from the MCP URL origin, and MUST NOT use Vercel Connect or dynamic client registration.
+### Requirement: Snowflake MCP connection with account URL and Programmatic Access Token
+The system MUST provide a Snowflake-managed MCP connection using the same auth model as Cursor's Snowflake plugin: an account MCP server URL plus a Programmatic Access Token sent as a Bearer token. Values MUST be resolvable from UI-stored host credentials (Set up) or from `SNOWFLAKE_MCP_URL` / `SNOWFLAKE_PAT_TOKEN`, with stored credentials preferred. The connection MUST NOT require a Snowflake OAuth security integration, Vercel Connect, or dynamic client registration.
 
 #### Scenario: Snowflake connection is defined
 - **WHEN** the agent loads connections
-- **THEN** a Snowflake MCP connection is available for Cortex Agents, Analyst, Search, SQL, and custom tools via interactive Snowflake OAuth
+- **THEN** a Snowflake MCP connection is available for Cortex Agents, Analyst, Search, SQL, and custom tools via PAT bearer auth
 
-#### Scenario: Snowflake needs setup without MCP URL
-- **WHEN** neither UI-stored nor env MCP URL is configured
+#### Scenario: Snowflake needs setup without MCP URL or PAT
+- **WHEN** neither UI-stored nor env MCP URL/PAT is configured
 - **THEN** the status endpoint reports Snowflake as needs setup
 
-#### Scenario: Snowflake Set up accepts MCP URL
-- **WHEN** the operator saves Snowflake setup with an MCP server URL, client id, and secret
-- **THEN** those values are stored host-locally and Connect can proceed without requiring env vars
+#### Scenario: Snowflake Set up accepts MCP URL and PAT
+- **WHEN** the operator saves Snowflake setup with an MCP server URL and Programmatic Access Token
+- **THEN** those values are stored host-locally and status becomes connected without a browser OAuth Connect step
 
 #### Scenario: Snowflake tools require approval by default
 - **WHEN** the model calls a Snowflake MCP tool

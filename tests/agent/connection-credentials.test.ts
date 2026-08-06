@@ -145,24 +145,24 @@ describe("getProviderCredentialSetupError", () => {
     await expect(getProviderCredentialSetupError(staticProvider, {})).resolves.toBeNull();
   });
 
-  it("accepts a stored MCP URL when the provider requires one", async () => {
+  it("accepts a stored MCP URL and PAT for PAT providers", async () => {
     await useTemporaryWorkingDirectory();
     const snowflakeLike: Pick<
       McpOAuthProvider,
       | "name"
       | "displayName"
-      | "clientIdEnv"
-      | "clientSecretEnv"
       | "mcpUrlEnv"
+      | "patTokenEnv"
+      | "authKind"
       | "registrationEndpoint"
       | "tokenAuthMethod"
     > = {
       name: "snowflake",
       displayName: "Snowflake",
-      clientIdEnv: "SNOWFLAKE_MCP_CLIENT_ID",
-      clientSecretEnv: "SNOWFLAKE_MCP_CLIENT_SECRET",
       mcpUrlEnv: "SNOWFLAKE_MCP_URL",
-      tokenAuthMethod: "client_secret_post",
+      patTokenEnv: "SNOWFLAKE_PAT_TOKEN",
+      authKind: "pat",
+      tokenAuthMethod: "none",
     };
 
     await expect(getProviderCredentialSetupError(snowflakeLike, {})).resolves.toMatch(
@@ -170,8 +170,7 @@ describe("getProviderCredentialSetupError", () => {
     );
 
     await writeStoredAppCredentials("snowflake", {
-      clientId: "id",
-      clientSecret: "secret",
+      accessToken: "pat-token",
       mcpUrl:
         "https://myorg-myaccount.snowflakecomputing.com/api/v2/databases/A/schemas/B/mcp-servers/C",
     });

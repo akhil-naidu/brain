@@ -88,13 +88,17 @@ export async function disconnectConnection(
 const connectionSetupSchema = z.object({
   id: z.string(),
   displayName: z.string(),
+  authKind: z.enum(["oauth", "pat"]).default("oauth"),
+  requiresClientId: z.boolean().default(true),
   requiresClientSecret: z.boolean(),
+  requiresAccessToken: z.boolean().default(false),
   requiresMcpUrl: z.boolean().default(false),
   hasStoredCredentials: z.boolean(),
   hasCredentials: z.boolean(),
   credentialSource: z.enum(["stored", "env"]).nullable(),
   clientIdEnv: z.string().optional(),
   clientSecretEnv: z.string().optional(),
+  patTokenEnv: z.string().optional(),
   mcpUrlEnv: z.string().optional(),
   mcpUrl: z.string().url().optional(),
   callbackPath: z.string(),
@@ -119,8 +123,9 @@ export async function fetchConnectionSetup(connectionId: string): Promise<Connec
 export async function saveConnectionSetup(
   connectionId: string,
   input: {
-    readonly clientId: string;
+    readonly clientId?: string;
     readonly clientSecret?: string;
+    readonly accessToken?: string;
     readonly mcpUrl?: string;
   },
 ): Promise<{ readonly displayName: string }> {

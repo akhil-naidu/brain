@@ -7,7 +7,7 @@ import { gmailProvider } from "../connections/gmail";
 import { slackProvider } from "../connections/slack";
 import { createSnowflakeProvider } from "../connections/snowflake";
 import { zernioProvider } from "../connections/zernio";
-import { getProviderCredentialSetupError } from "./connection-credentials";
+import { getProviderCredentialSetupError, providerUsesPatAuth } from "./connection-credentials";
 import { getStoredTokenAuthState, type McpOAuthProvider } from "./mcp-oauth";
 
 /** Matches the anonymous chat channel principal in `agent/channels/eve.ts`. */
@@ -63,6 +63,15 @@ export async function resolveConnectionAuthStatus(
       displayName: provider.displayName,
       status: "needs_setup",
       detail: setupError,
+    };
+  }
+
+  // PAT connections are ready after Set up — no browser OAuth Connect step.
+  if (providerUsesPatAuth(provider)) {
+    return {
+      id: provider.name,
+      displayName: provider.displayName,
+      status: "connected",
     };
   }
 

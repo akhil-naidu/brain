@@ -3,7 +3,11 @@ import path from "node:path";
 import type { ConnectionPrincipal } from "eve/connections";
 import { z } from "zod";
 import { ANONYMOUS_CHAT_PRINCIPAL } from "./connection-status";
-import { getProviderCredentialSetupError } from "./connection-credentials";
+import {
+  deleteStoredAppCredentials,
+  getProviderCredentialSetupError,
+  providerUsesPatAuth,
+} from "./connection-credentials";
 import {
   authorizeUrlPath,
   buildAuthorizeUrl,
@@ -90,6 +94,12 @@ export async function startMenuConnectionAuthorization(
   callbackUrl: string,
   env: { readonly [key: string]: string | undefined } = process.env,
 ): Promise<MenuAuthorizeStartResult> {
+  if (providerUsesPatAuth(provider)) {
+    throw new Error(
+      `${provider.displayName} uses a Programmatic Access Token. Open Set up and paste your MCP URL and PAT — no Connect sign-in is required.`,
+    );
+  }
+
   const setupError = await getProviderCredentialSetupError(provider, env);
   if (setupError) {
     throw new Error(setupError);
@@ -179,5 +189,8 @@ export async function disconnectMenuConnection(
 ): Promise<{ readonly displayName: string }> {
   await deleteStoredToken(provider, principal);
   await clearPending(provider.name);
+  if (providerUsesPatAuth(provider)) {
+    await deleteStoredAppCredentials(provider.name);
+  }
   return { displayName: provider.displayName };
 }

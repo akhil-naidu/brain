@@ -3,13 +3,16 @@ import { z } from "zod";
 import {
   connectionCallbackPath,
   deleteStoredAppCredentials,
+  providerNeedsCredentialSetup,
   providerNeedsStaticAppCredentials,
+  providerUsesPatAuth,
   readStoredAppCredentials,
   resolveProviderAppCredentials,
   resolveProviderMcpUrlSync,
   writeStoredAppCredentials,
 } from "@/agent/lib/connection-credentials";
 import { getChatConnectionProvider } from "@/agent/lib/connection-status";
+import { writeSnowflakeConnectionMcpUrlBinding } from "@/agent/lib/snowflake-mcp-url-binding";
 import { resolvePublicOrigin } from "@/lib/http/public-origin";
 
 export const runtime = "nodejs";
@@ -20,8 +23,9 @@ type RouteContext = {
 
 const putBodySchema = z
   .object({
-    clientId: z.string().min(1),
+    clientId: z.string().optional(),
     clientSecret: z.string().optional(),
+    accessToken: z.string().optional(),
     mcpUrl: z.string().optional(),
   })
   .strict();
@@ -32,7 +36,7 @@ export async function GET(request: Request, context: RouteContext) {
   if (!provider) {
     return NextResponse.json({ error: "Unknown connection." }, { status: 404 });
   }
-  if (!providerNeedsStaticAppCredentials(provider)) {
+  if (!providerNeedsCredentialSetup(provider)) {
     return NextResponse.json(
       { error: `${provider.displayName} does not need app credentials in Brain.` },
       { status: 400 },
@@ -43,19 +47,24 @@ export async function GET(request: Request, context: RouteContext) {
   const resolved = await resolveProviderAppCredentials(provider);
   const origin = resolvePublicOrigin(request);
   const callbackPath = connectionCallbackPath(provider.name);
+  const usesPat = providerUsesPatAuth(provider);
   const requiresMcpUrl = Boolean(provider.mcpUrlEnv);
   const mcpUrl = requiresMcpUrl ? resolveProviderMcpUrlSync(provider) : null;
 
   return NextResponse.json({
     id: provider.name,
     displayName: provider.displayName,
-    requiresClientSecret: Boolean(provider.clientSecretEnv),
+    authKind: usesPat ? "pat" : "oauth",
+    requiresClientId: providerNeedsStaticAppCredentials(provider),
+    requiresClientSecret: Boolean(provider.clientSecretEnv) && !usesPat,
+    requiresAccessToken: usesPat,
     requiresMcpUrl,
-    hasStoredCredentials: Boolean(stored?.clientId),
-    hasCredentials: Boolean(resolved?.clientId),
+    hasStoredCredentials: Boolean(stored?.clientId || stored?.accessToken),
+    hasCredentials: Boolean(resolved?.clientId || resolved?.accessToken),
     credentialSource: resolved?.source ?? null,
     clientIdEnv: provider.clientIdEnv,
     clientSecretEnv: provider.clientSecretEnv,
+    patTokenEnv: provider.patTokenEnv,
     mcpUrlEnv: provider.mcpUrlEnv,
     mcpUrl: mcpUrl ?? undefined,
     callbackPath,
@@ -69,7 +78,7 @@ export async function PUT(request: Request, context: RouteContext) {
   if (!provider) {
     return NextResponse.json({ error: "Unknown connection." }, { status: 404 });
   }
-  if (!providerNeedsStaticAppCredentials(provider)) {
+  if (!providerNeedsCredentialSetup(provider)) {
     return NextResponse.json(
       { error: `${provider.displayName} does not need app credentials in Brain.` },
       { status: 400 },
@@ -79,10 +88,23 @@ export async function PUT(request: Request, context: RouteContext) {
   const body: unknown = await request.json().catch(() => null);
   const parsed = putBodySchema.safeParse(body);
   if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid setup payload." }, { status: 400 });
+  }
+
+  const usesPat = providerUsesPatAuth(provider);
+
+  if (usesPat) {
+    if (!parsed.data.accessToken?.trim()) {
+      return NextResponse.json(
+        { error: "Programmatic Access Token is required." },
+        { status: 400 },
+      );
+    }
+  } else if (!parsed.data.clientId?.trim()) {
     return NextResponse.json({ error: "Client ID is required." }, { status: 400 });
   }
 
-  if (provider.clientSecretEnv && !parsed.data.clientSecret?.trim()) {
+  if (!usesPat && provider.clientSecretEnv && !parsed.data.clientSecret?.trim()) {
     return NextResponse.json({ error: "Client secret is required." }, { status: 400 });
   }
 
@@ -92,10 +114,16 @@ export async function PUT(request: Request, context: RouteContext) {
 
   try {
     await writeStoredAppCredentials(provider.name, {
-      clientId: parsed.data.clientId,
-      clientSecret: parsed.data.clientSecret,
+      clientId: usesPat ? undefined : parsed.data.clientId,
+      clientSecret: usesPat ? undefined : parsed.data.clientSecret,
+      accessToken: usesPat ? parsed.data.accessToken : undefined,
       mcpUrl: parsed.data.mcpUrl,
     });
+    // Eve bakes MCP urls at compile time — rewrite the generated binding so
+    // snowflake.ts recompiles with the account-specific server path.
+    if (provider.name === "snowflake") {
+      await writeSnowflakeConnectionMcpUrlBinding(parsed.data.mcpUrl);
+    }
     return NextResponse.json({
       ok: true,
       displayName: provider.displayName,
@@ -112,7 +140,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
   if (!provider) {
     return NextResponse.json({ error: "Unknown connection." }, { status: 404 });
   }
-  if (!providerNeedsStaticAppCredentials(provider)) {
+  if (!providerNeedsCredentialSetup(provider)) {
     return NextResponse.json(
       { error: `${provider.displayName} does not need app credentials in Brain.` },
       { status: 400 },
@@ -120,5 +148,8 @@ export async function DELETE(_request: Request, context: RouteContext) {
   }
 
   await deleteStoredAppCredentials(provider.name);
+  if (provider.name === "snowflake") {
+    await writeSnowflakeConnectionMcpUrlBinding(null);
+  }
   return NextResponse.json({ ok: true, displayName: provider.displayName });
 }

@@ -1,41 +1,48 @@
-import { resolveProviderMcpUrlSync } from "../lib/connection-credentials";
-import { defineMcpOAuthConnection } from "../lib/define-mcp-oauth-connection";
+import { defineMcpClientConnection } from "eve/connections";
+import {
+  resolveProviderMcpUrlSync,
+  resolveProviderPatTokenSync,
+} from "../lib/connection-credentials";
+import { approvalForTool } from "../lib/define-mcp-oauth-connection";
 import type { McpOAuthProvider } from "../lib/mcp-oauth";
+import { SNOWFLAKE_CONNECTION_MCP_URL } from "../lib/snowflake-mcp-url";
 
 /**
- * Snowflake-managed MCP server (Cortex Agents / Analyst / Search / SQL).
- * https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-mcp
+ * Snowflake-managed MCP (Cortex Agents / Analyst / Search / SQL).
+ * Auth matches Cursor's Snowflake plugin: MCP URL + Programmatic Access Token
+ * as `Authorization: Bearer …` — no OAuth security integration required.
  *
- * Requires a per-account MCP server URL plus a Snowflake OAuth security
- * integration (no dynamic client registration). Prefer Set up in the
- * connections menu; env vars remain a deploy-time fallback.
+ * The connection `url` is imported from `snowflake-mcp-url.ts` so eve
+ * recompiles when Set up writes a new account-specific MCP server path.
+ *
+ * https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-mcp
+ * https://github.com/snowflakedb/snowflake-cursor-plugin
  */
 export const SNOWFLAKE_MCP_URL_ENV = "SNOWFLAKE_MCP_URL";
-export const SNOWFLAKE_MCP_SCOPE_ENV = "SNOWFLAKE_MCP_SCOPE";
-export const SNOWFLAKE_MCP_CLIENT_ID_ENV = "SNOWFLAKE_MCP_CLIENT_ID";
-export const SNOWFLAKE_MCP_CLIENT_SECRET_ENV = "SNOWFLAKE_MCP_CLIENT_SECRET";
+export const SNOWFLAKE_PAT_TOKEN_ENV = "SNOWFLAKE_PAT_TOKEN";
 
-/** Used only so the connection module can load before setup is configured. */
-const PLACEHOLDER_MCP_URL =
-  "https://org-account.snowflakecomputing.com/api/v2/databases/EXAMPLE/schemas/EXAMPLE/mcp-servers/EXAMPLE";
-
-const DEFAULT_SCOPE = "session:role:all";
-
-const snowflakeMcpUrlLookup = {
+const snowflakeLookup = {
   name: "snowflake",
   mcpUrlEnv: SNOWFLAKE_MCP_URL_ENV,
+  patTokenEnv: SNOWFLAKE_PAT_TOKEN_ENV,
 } as const;
 
 export function resolveSnowflakeMcpUrl(
   env: { readonly [key: string]: string | undefined } = process.env,
 ): string | null {
-  return resolveProviderMcpUrlSync(snowflakeMcpUrlLookup, env);
+  return resolveProviderMcpUrlSync(snowflakeLookup, env);
+}
+
+export function resolveSnowflakePatToken(
+  env: { readonly [key: string]: string | undefined } = process.env,
+): string | null {
+  return resolveProviderPatTokenSync(snowflakeLookup, env);
 }
 
 export function createSnowflakeProvider(
   env: { readonly [key: string]: string | undefined } = process.env,
 ): McpOAuthProvider {
-  const mcpUrl = resolveSnowflakeMcpUrl(env) ?? PLACEHOLDER_MCP_URL;
+  const mcpUrl = resolveSnowflakeMcpUrl(env) ?? SNOWFLAKE_CONNECTION_MCP_URL;
   let origin = "https://org-account.snowflakecomputing.com";
   try {
     origin = new URL(mcpUrl).origin;
@@ -48,25 +55,39 @@ export function createSnowflakeProvider(
     displayName: "Snowflake",
     mcpUrl,
     resource: mcpUrl,
-    scope: env[SNOWFLAKE_MCP_SCOPE_ENV]?.trim() || DEFAULT_SCOPE,
+    authKind: "pat",
+    patTokenEnv: SNOWFLAKE_PAT_TOKEN_ENV,
+    mcpUrlEnv: SNOWFLAKE_MCP_URL_ENV,
+    // Unused for PAT — kept so status helpers share McpOAuthProvider.
+    scope: null,
     authorizationEndpoint: `${origin}/oauth/authorize`,
     tokenEndpoint: `${origin}/oauth/token-request`,
-    clientIdEnv: SNOWFLAKE_MCP_CLIENT_ID_ENV,
-    clientSecretEnv: SNOWFLAKE_MCP_CLIENT_SECRET_ENV,
-    mcpUrlEnv: SNOWFLAKE_MCP_URL_ENV,
-    tokenAuthMethod: "client_secret_post",
-    // Classic Snowflake OAuth rejects unknown authorize/token params.
+    tokenAuthMethod: "none",
     includeResourceIndicator: false,
-    // Tool names are defined per MCP server object — require approval.
     safeReadOnlyTools: [],
   };
 }
 
 export const snowflakeProvider = createSnowflakeProvider();
 
-export default defineMcpOAuthConnection({
-  provider: snowflakeProvider,
-  resolveProvider: () => createSnowflakeProvider(),
+export default defineMcpClientConnection({
+  // Must be a compile-time string import — eve bakes this into the connection.
+  url: SNOWFLAKE_CONNECTION_MCP_URL,
   description:
-    "Snowflake-managed MCP: Cortex Agents, Cortex Analyst, Cortex Search, SQL execution, and custom tools. Use for governed business data questions against the configured Snowflake MCP server.",
+    "Snowflake-managed MCP (PAT auth, same as Cursor): Cortex Agents, Analyst, Search, SQL, and custom tools. Configure MCP URL + Programmatic Access Token in Connections → Set up.",
+  auth: {
+    async getToken() {
+      const token = resolveSnowflakePatToken();
+      if (!token) {
+        throw new Error(
+          "Snowflake is not set up. Open Connections → Snowflake → Set up and paste your MCP server URL and Programmatic Access Token (Snowsight → Settings → Authentication → Programmatic Access Tokens).",
+        );
+      }
+      return { token };
+    },
+  },
+  approval: ({ toolName }) => {
+    const provider = createSnowflakeProvider();
+    return approvalForTool(provider.name, provider.safeReadOnlyTools, toolName);
+  },
 });

@@ -67,7 +67,12 @@ export function ChatShellProvider({ children }: { readonly children: ReactNode }
   }, []);
 
   const setConnectionEnabled = useCallback((key: keyof EnabledConnections, enabled: boolean) => {
-    setEnabledConnections((previous) => ({ ...previous, [key]: enabled }));
+    setEnabledConnections((previous) => {
+      if (previous[key] === enabled) {
+        return previous;
+      }
+      return { ...previous, [key]: enabled };
+    });
   }, []);
 
   const setSelectedModelId = useCallback((modelId: string) => {
