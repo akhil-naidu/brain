@@ -1,16 +1,21 @@
 import type { HandleMessageStreamEvent, SessionState } from "eve/client";
 import { z } from "zod";
-import type { ChatRecord, ChatSummary } from "@/lib/chat/store/types";
+import type { ChatRecord, ChatSummary, ChatVisibility } from "@/lib/chat/store/types";
 import { parseSessionState, parseStreamEvent, sessionStateSchema } from "@/lib/chat/store/parse";
+
+const chatVisibilitySchema = z.enum(["personal", "shared"]);
 
 const chatSummarySchema = z.object({
   id: z.string(),
   title: z.string(),
   createdAt: z.string(),
   updatedAt: z.string(),
+  visibility: chatVisibilitySchema.default("personal"),
+  userId: z.string().default(""),
 });
 
 const chatRecordSchema = chatSummarySchema.extend({
+  workspaceId: z.string().optional(),
   eveSession: sessionStateSchema.nullable(),
   events: z.array(z.unknown()),
 });
@@ -22,6 +27,9 @@ function toChatRecord(value: unknown): ChatRecord {
     title: parsed.title,
     createdAt: parsed.createdAt,
     updatedAt: parsed.updatedAt,
+    visibility: parsed.visibility,
+    userId: parsed.userId,
+    workspaceId: parsed.workspaceId ?? "",
     eveSession: parsed.eveSession === null ? null : parseSessionState(parsed.eveSession),
     events: parsed.events.map(parseStreamEvent),
   };
@@ -43,16 +51,30 @@ async function readBody(response: Response): Promise<unknown> {
   return data;
 }
 
-export async function listChats(): Promise<readonly ChatSummary[]> {
+export type ListChatsResult = {
+  readonly chats: readonly ChatSummary[];
+  readonly canCreateShared: boolean;
+};
+
+export async function listChats(): Promise<ListChatsResult> {
   const response = await fetch("/api/chats", { cache: "no-store" });
   const data = await readBody(response);
-  const parsed = z.object({ chats: z.array(z.unknown()) }).parse(data);
-  return parsed.chats.map(toChatSummary);
+  const parsed = z
+    .object({
+      chats: z.array(z.unknown()),
+      canCreateShared: z.boolean().optional(),
+    })
+    .parse(data);
+  return {
+    chats: parsed.chats.map(toChatSummary),
+    canCreateShared: Boolean(parsed.canCreateShared),
+  };
 }
 
 export async function createChat(input?: {
   readonly id?: string;
   readonly title?: string;
+  readonly visibility?: ChatVisibility;
 }): Promise<ChatRecord> {
   const response = await fetch("/api/chats", {
     method: "POST",

@@ -11,7 +11,10 @@ export async function GET() {
     return session.response;
   }
   const chats = getChatStore().listChats(session.session.userId, session.session.workspaceId);
-  return NextResponse.json({ chats });
+  return NextResponse.json({
+    chats,
+    canCreateShared: session.session.workspace.kind === "team",
+  });
 }
 
 export async function POST(request: Request) {
@@ -32,10 +35,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
+  const visibility = parsed.data.visibility ?? "personal";
+  if (visibility === "shared" && session.session.workspace.kind !== "team") {
+    return NextResponse.json(
+      { error: "Shared chats are only available in team workspaces." },
+      { status: 400 },
+    );
+  }
+
   const chat = getChatStore().createChat(session.session.userId, {
     id: parsed.data.id,
     title: parsed.data.title,
     workspaceId: session.session.workspaceId,
+    visibility,
   });
 
   return NextResponse.json({ chat }, { status: 201 });

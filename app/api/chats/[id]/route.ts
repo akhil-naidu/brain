@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireWorkspaceSession } from "@/lib/auth/require-workspace-session";
+import { isWorkspaceAdminRole } from "@/lib/auth/workspaces/types";
 import { getChatStore } from "@/lib/chat/store";
 import { parseSessionState, parseStreamEvent, updateChatBodySchema } from "@/lib/chat/store/parse";
 
@@ -69,6 +70,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     session.session.userId,
     session.session.workspaceId,
     id,
+    { moderateShared: isWorkspaceAdminRole(session.session.role) },
   );
   if (!deleted) {
     return NextResponse.json({ error: "Chat not found" }, { status: 404 });

@@ -56,6 +56,9 @@ const chatRecordSchema = z.object({
   title: z.string(),
   createdAt: z.string(),
   updatedAt: z.string(),
+  visibility: z.enum(["personal", "shared"]).default("personal"),
+  userId: z.string().default(""),
+  workspaceId: z.string().optional(),
   eveSession: sessionStateSchema.nullable(),
   events: z.array(z.unknown()),
 });
@@ -81,6 +84,9 @@ function toChatRecord(value: unknown): ChatRecord {
     title: parsed.title,
     createdAt: parsed.createdAt,
     updatedAt: parsed.updatedAt,
+    visibility: parsed.visibility,
+    userId: parsed.userId,
+    workspaceId: parsed.workspaceId ?? "",
     eveSession: parsed.eveSession === null ? null : parseSessionState(parsed.eveSession),
     events: parsed.events.map(parseStreamEvent),
   };
