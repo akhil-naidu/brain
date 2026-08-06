@@ -2,13 +2,12 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { sso } from "@better-auth/sso";
 import { betterAuth } from "better-auth";
 import { APIError } from "better-auth/api";
 import { getMigrations } from "better-auth/db/migration";
 import { nextCookies } from "better-auth/next-js";
-import { genericOAuth } from "better-auth/plugins";
 import { assertCanCreateUser, resolveLicenseEntitlements } from "@/lib/auth/license";
-import { resolveOidcEnvConfig } from "@/lib/auth/oidc";
 import { resolveAuthDbPath } from "@/lib/auth/users-path";
 import { createWorkspaceStore, type WorkspaceStore } from "@/lib/auth/workspaces/store";
 
@@ -62,7 +61,6 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
   const db = new DatabaseSync(dbPath);
   const secret = resolveAuthSecret(env);
   const baseURL = resolveAuthBaseURL(env);
-  const oidc = resolveOidcEnvConfig(env);
 
   const ensureBootstrapClaimTable = () => {
     db.exec(`
@@ -92,6 +90,11 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
       minPasswordLength: 8,
       disableSignUp: false,
       autoSignIn: true,
+    },
+    account: {
+      accountLinking: {
+        enabled: true,
+      },
     },
     databaseHooks: {
       user: {
@@ -127,7 +130,7 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
               return;
             }
 
-            // Lazy policy check for Better Auth client / OIDC JIT sign-up (no ALS gate).
+            // Lazy policy check for Better Auth client / SSO JIT sign-up (no ALS gate).
             const workspaces = createWorkspaceStore(db);
             const signupMode = workspaces.getPolicies().signupMode;
             if (signupMode === "open" || signupMode === "sso-only") {
@@ -151,32 +154,33 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
         },
       },
     },
-    account: oidc
-      ? {
-          accountLinking: {
-            enabled: true,
-            trustedProviders: [oidc.providerId],
-          },
-        }
-      : undefined,
     plugins: [
       nextCookies(),
-      ...(oidc
-        ? [
-            genericOAuth({
-              config: [
-                {
-                  providerId: oidc.providerId,
-                  discoveryUrl: oidc.discoveryUrl,
-                  clientId: oidc.clientId,
-                  clientSecret: oidc.clientSecret,
-                  scopes: [...oidc.scopes],
-                  pkce: true,
-                },
-              ],
-            }),
-          ]
-        : []),
+      sso({
+        // Workspace Settings API owns registration; block Better Auth's public register path.
+        providersLimit: 0,
+        organizationProvisioning: {
+          disabled: true,
+        },
+        provisionUserOnEveryLogin: true,
+        provisionUser: async ({ user, provider }) => {
+          const workspaceId = provider.organizationId?.trim();
+          if (!workspaceId || !user.id) {
+            return;
+          }
+          const workspaces = createWorkspaceStore(db);
+          const workspace = workspaces.getWorkspace(workspaceId);
+          if (!workspace || workspace.kind !== "team") {
+            return;
+          }
+          if (!workspaces.getMembership(workspaceId, user.id)) {
+            workspaces.addMember(workspaceId, user.id, "member");
+          }
+          if (!workspaces.getActiveWorkspaceId(user.id)) {
+            workspaces.setActiveWorkspaceId(user.id, workspaceId);
+          }
+        },
+      }),
     ],
   });
 
@@ -243,11 +247,7 @@ const globalForAuth = globalThis as typeof globalThis & {
 };
 
 function authBundleKey(env: Record<string, string | undefined>): string {
-  const oidc = resolveOidcEnvConfig(env);
-  const oidcKey = oidc
-    ? `${oidc.providerId}|${oidc.discoveryUrl}|${oidc.clientId}|${oidc.scopes.join(" ")}`
-    : "no-oidc";
-  return `${resolveAuthDbPath(env)}|${resolveAuthBaseURL(env)}|${oidcKey}`;
+  return `${resolveAuthDbPath(env)}|${resolveAuthBaseURL(env)}`;
 }
 
 function getBrainAuthBundle(
@@ -263,6 +263,10 @@ function getBrainAuthBundle(
 
 export function getAuth(env: Record<string, string | undefined> = process.env) {
   return getBrainAuthBundle(env).auth;
+}
+
+export function getAuthDb(env: Record<string, string | undefined> = process.env): DatabaseSync {
+  return getBrainAuthBundle(env).db;
 }
 
 export async function ensureAuthReady(
