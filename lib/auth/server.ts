@@ -7,10 +7,11 @@ import { APIError } from "better-auth/api";
 import { getMigrations } from "better-auth/db/migration";
 import { nextCookies } from "better-auth/next-js";
 import { resolveAuthDbPath } from "@/lib/auth/users-path";
+import { createWorkspaceStore, type WorkspaceStore } from "@/lib/auth/workspaces/store";
 
 type SqlRow = Record<string, null | number | bigint | string | Uint8Array>;
 
-const bootstrapSignupGate = new AsyncLocalStorage<boolean>();
+const bootstrapSignupGate = new AsyncLocalStorage<"bootstrap" | "open" | "invite">();
 
 function resolveAuthSecret(env: Record<string, string | undefined> = process.env): string {
   const secret = env["BETTER_AUTH_SECRET"]?.trim();
@@ -69,10 +70,28 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
       user: {
         create: {
           before: async () => {
-            if (!bootstrapSignupGate.getStore()) {
-              throw new APIError("FORBIDDEN", {
-                message: "Signup is disabled. Use /setup to create the first operator account.",
-              });
+            const gate = bootstrapSignupGate.getStore();
+            if (gate === "bootstrap" || gate === "open" || gate === "invite") {
+              return;
+            }
+            // Lazy policy check for Better Auth client sign-up (no ALS gate).
+            const workspaces = createWorkspaceStore(db);
+            if (workspaces.getPolicies().signupMode === "open") {
+              return;
+            }
+            throw new APIError("FORBIDDEN", {
+              message:
+                "Signup is disabled. Use an invite or ask the instance admin to enable open signup.",
+            });
+          },
+          after: async (user) => {
+            const workspaces = createWorkspaceStore(db);
+            const policies = workspaces.getPolicies();
+            if (policies.autoPersonalWorkspace && user.id) {
+              const personal = workspaces.ensurePersonalWorkspace(user.id);
+              if (!workspaces.getActiveWorkspaceId(user.id)) {
+                workspaces.setActiveWorkspaceId(user.id, personal.id);
+              }
             }
           },
         },
@@ -81,7 +100,11 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
     plugins: [nextCookies()],
   });
 
-  const ready = getMigrations(auth.options).then(({ runMigrations }) => runMigrations());
+  const ready = getMigrations(auth.options).then(async ({ runMigrations }) => {
+    await runMigrations();
+    createWorkspaceStore(db);
+    return undefined;
+  });
 
   const ensureBootstrapClaimTable = () => {
     db.exec(`
@@ -91,9 +114,16 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
     `);
   };
 
+  let workspaceStore: WorkspaceStore | undefined;
+
   return {
     auth,
+    db,
     ready,
+    workspaces() {
+      workspaceStore ??= createWorkspaceStore(db);
+      return workspaceStore;
+    },
     countUsers() {
       try {
         const row = db.prepare("SELECT COUNT(*) AS count FROM user").get() as SqlRow | undefined;
@@ -176,7 +206,21 @@ export function firstAuthUserId(
 }
 
 export async function runWithBootstrapSignup<T>(fn: () => Promise<T>): Promise<T> {
-  return bootstrapSignupGate.run(true, fn);
+  return bootstrapSignupGate.run("bootstrap", fn);
+}
+
+export async function runWithOpenSignup<T>(fn: () => Promise<T>): Promise<T> {
+  return bootstrapSignupGate.run("open", fn);
+}
+
+export async function runWithInviteSignup<T>(fn: () => Promise<T>): Promise<T> {
+  return bootstrapSignupGate.run("invite", fn);
+}
+
+export function getWorkspaceStore(
+  env: Record<string, string | undefined> = process.env,
+): WorkspaceStore {
+  return getBrainAuthBundle(env).workspaces();
 }
 
 export function claimFirstBootstrap(

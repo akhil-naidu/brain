@@ -5,6 +5,7 @@ import {
   countAuthUsers,
   ensureAuthReady,
   getAuth,
+  getWorkspaceStore,
   releaseBootstrapClaim,
   runWithBootstrapSignup,
 } from "@/lib/auth/server";
@@ -79,9 +80,15 @@ async function bootstrapFirstUserUnlocked(input: {
     );
 
     const userId = result.user.id;
+    const workspaces = getWorkspaceStore();
+    workspaces.addInstanceAdmin(userId);
+    const personal = workspaces.ensurePersonalWorkspace(userId);
+    workspaces.setActiveWorkspaceId(userId, personal.id);
+
     // Best-effort: older in-memory store singletons (HMR) may lack reassignOwner.
     try {
       getChatStore().reassignOwner(LEGACY_CHAT_OWNER_ID, userId);
+      getChatStore().assignWorkspaceToUserChats(userId, personal.id);
     } catch {
       // Existing chats stay under LEGACY_CHAT_OWNER_ID until process restart.
     }

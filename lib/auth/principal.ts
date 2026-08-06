@@ -4,21 +4,33 @@ export const BRAIN_AUTH_ISSUER = "brain";
 
 export const LEGACY_CHAT_OWNER_ID = "__legacy__";
 
+/** Issuer encodes workspace so MCP token keys isolate grants per workspace. */
+export function brainAuthIssuer(workspaceId?: string | null): string {
+  const trimmed = workspaceId?.trim();
+  return trimmed ? `${BRAIN_AUTH_ISSUER}:${trimmed}` : BRAIN_AUTH_ISSUER;
+}
+
 export function brainUserPrincipal(
   userId: string,
+  workspaceId?: string | null,
 ): Extract<ConnectionPrincipal, { readonly type: "user" }> {
   return {
     type: "user",
     id: userId,
-    issuer: BRAIN_AUTH_ISSUER,
+    issuer: brainAuthIssuer(workspaceId),
   };
 }
 
-export function sessionAuthContext(userId: string) {
+export function sessionAuthContext(userId: string, workspaceId?: string | null) {
+  const attributes: Record<string, string> = {};
+  const trimmedWorkspace = workspaceId?.trim();
+  if (trimmedWorkspace) {
+    attributes["workspaceId"] = trimmedWorkspace;
+  }
   return {
-    attributes: {},
+    attributes,
     authenticator: "brain-session",
-    issuer: BRAIN_AUTH_ISSUER,
+    issuer: brainAuthIssuer(workspaceId),
     principalId: userId,
     principalType: "user" as const,
   };

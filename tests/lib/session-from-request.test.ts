@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 import { resolveBrainSessionAuthFromRequest } from "@/lib/auth/session-from-request";
 
 describe("resolveBrainSessionAuthFromRequest", () => {
-  it("accepts the internal operator bearer token", async () => {
+  it("accepts the internal operator bearer token with workspace header", async () => {
     const auth = await resolveBrainSessionAuthFromRequest(
       new Request("http://localhost/eve/v1/sessions", {
-        headers: { authorization: "Bearer internal-secret" },
+        headers: {
+          authorization: "Bearer internal-secret",
+          "x-brain-workspace-id": "ws-1",
+        },
       }),
       {
         BRAIN_INTERNAL_TOKEN: "internal-secret",
@@ -15,7 +18,7 @@ describe("resolveBrainSessionAuthFromRequest", () => {
     expect(auth).toMatchObject({
       principalId: "operator-1",
       principalType: "user",
-      issuer: "brain",
+      issuer: "brain:ws-1",
       authenticator: "brain-session",
     });
   });
@@ -26,6 +29,7 @@ describe("resolveBrainSessionAuthFromRequest", () => {
         headers: {
           authorization: "Bearer internal-secret",
           "x-brain-run-as-user": "user-42",
+          "x-brain-workspace-id": "ws-9",
         },
       }),
       {
@@ -34,6 +38,20 @@ describe("resolveBrainSessionAuthFromRequest", () => {
       },
     );
     expect(auth?.principalId).toBe("user-42");
+    expect(auth?.issuer).toBe("brain:ws-9");
+  });
+
+  it("rejects internal bearer without workspace", async () => {
+    const auth = await resolveBrainSessionAuthFromRequest(
+      new Request("http://localhost/eve/v1/sessions", {
+        headers: { authorization: "Bearer internal-secret" },
+      }),
+      {
+        BRAIN_INTERNAL_TOKEN: "internal-secret",
+        BRAIN_OPERATOR_USER_ID: "operator-1",
+      },
+    );
+    expect(auth).toBeNull();
   });
 
   it("rejects unauthenticated requests", async () => {
