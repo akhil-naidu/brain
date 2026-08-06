@@ -1,3 +1,5 @@
+# shared-workspace-chats Specification
+
 ## Purpose
 
 Optional shared chat threads in team workspaces so members can see and continue the same conversation while personal chats stay private.
