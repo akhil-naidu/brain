@@ -5,6 +5,7 @@ import { dflowProvider } from "../connections/dflow";
 import { githubProvider } from "../connections/github";
 import { gmailProvider } from "../connections/gmail";
 import { slackProvider } from "../connections/slack";
+import { createSnowflakeProvider } from "../connections/snowflake";
 import { getProviderCredentialSetupError } from "./connection-credentials";
 import { getStoredTokenAuthState, type McpOAuthProvider } from "./mcp-oauth";
 
@@ -24,17 +25,28 @@ export type ConnectionStatusItem = {
   readonly detail?: string;
 };
 
-export const CHAT_CONNECTION_PROVIDERS: readonly McpOAuthProvider[] = [
-  clickupProvider,
-  slackProvider,
-  asanaProvider,
-  gmailProvider,
-  dflowProvider,
-  githubProvider,
-];
+export function listChatConnectionProviders(
+  env: { readonly [key: string]: string | undefined } = process.env,
+): readonly McpOAuthProvider[] {
+  return [
+    clickupProvider,
+    slackProvider,
+    asanaProvider,
+    gmailProvider,
+    dflowProvider,
+    githubProvider,
+    createSnowflakeProvider(env),
+  ];
+}
 
-export function getChatConnectionProvider(id: string): McpOAuthProvider | undefined {
-  return CHAT_CONNECTION_PROVIDERS.find((provider) => provider.name === id);
+/** Snapshot of providers for the current process env (Snowflake URL may vary). */
+export const CHAT_CONNECTION_PROVIDERS: readonly McpOAuthProvider[] = listChatConnectionProviders();
+
+export function getChatConnectionProvider(
+  id: string,
+  env: { readonly [key: string]: string | undefined } = process.env,
+): McpOAuthProvider | undefined {
+  return listChatConnectionProviders(env).find((provider) => provider.name === id);
 }
 
 export async function resolveConnectionAuthStatus(
@@ -65,7 +77,7 @@ export async function listChatConnectionStatuses(
   env: { readonly [key: string]: string | undefined } = process.env,
 ): Promise<readonly ConnectionStatusItem[]> {
   return Promise.all(
-    CHAT_CONNECTION_PROVIDERS.map((provider) =>
+    listChatConnectionProviders(env).map((provider) =>
       resolveConnectionAuthStatus(provider, principal, env),
     ),
   );
