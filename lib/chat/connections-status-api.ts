@@ -89,11 +89,14 @@ const connectionSetupSchema = z.object({
   id: z.string(),
   displayName: z.string(),
   requiresClientSecret: z.boolean(),
+  requiresMcpUrl: z.boolean().default(false),
   hasStoredCredentials: z.boolean(),
   hasCredentials: z.boolean(),
   credentialSource: z.enum(["stored", "env"]).nullable(),
   clientIdEnv: z.string().optional(),
   clientSecretEnv: z.string().optional(),
+  mcpUrlEnv: z.string().optional(),
+  mcpUrl: z.string().url().optional(),
   callbackPath: z.string(),
   callbackUrl: z.string().url(),
 });
@@ -115,7 +118,11 @@ export async function fetchConnectionSetup(connectionId: string): Promise<Connec
 
 export async function saveConnectionSetup(
   connectionId: string,
-  input: { readonly clientId: string; readonly clientSecret?: string },
+  input: {
+    readonly clientId: string;
+    readonly clientSecret?: string;
+    readonly mcpUrl?: string;
+  },
 ): Promise<{ readonly displayName: string }> {
   const response = await fetch(`/api/connections/${connectionId}/setup`, {
     method: "PUT",

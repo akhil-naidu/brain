@@ -32,6 +32,7 @@ export function ConnectionSetupDialog({
   const [info, setInfo] = useState<ConnectionSetupInfo | null>(null);
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
+  const [mcpUrl, setMcpUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [clearing, setClearing] = useState(false);
@@ -48,6 +49,7 @@ export function ConnectionSetupDialog({
     setError(null);
     setClientId("");
     setClientSecret("");
+    setMcpUrl("");
     setInfo(null);
     setCopied(false);
 
@@ -56,6 +58,9 @@ export function ConnectionSetupDialog({
         const setup = await fetchConnectionSetup(connectionId);
         if (!cancelled) {
           setInfo(setup);
+          if (setup.mcpUrl) {
+            setMcpUrl(setup.mcpUrl);
+          }
         }
       } catch (loadError) {
         if (!cancelled) {
@@ -84,6 +89,7 @@ export function ConnectionSetupDialog({
         await saveConnectionSetup(connectionId, {
           clientId,
           clientSecret: info?.requiresClientSecret ? clientSecret : undefined,
+          mcpUrl: info?.requiresMcpUrl ? mcpUrl : undefined,
         });
         onSaved();
         onOpenChange(false);
@@ -109,6 +115,7 @@ export function ConnectionSetupDialog({
         setInfo(setup);
         setClientId("");
         setClientSecret("");
+        setMcpUrl(setup.mcpUrl ?? "");
       } catch (clearError) {
         setError(
           clearError instanceof Error ? clearError.message : "Unable to remove saved details.",
@@ -137,6 +144,7 @@ export function ConnectionSetupDialog({
   const canSave =
     clientId.trim().length > 0 &&
     (!info?.requiresClientSecret || clientSecret.trim().length > 0) &&
+    (!info?.requiresMcpUrl || mcpUrl.trim().length > 0) &&
     !saving &&
     !loading;
 
@@ -148,8 +156,9 @@ export function ConnectionSetupDialog({
         <DialogHeader>
           <DialogTitle>{info ? `Set up ${info.displayName}` : "Set up connection"}</DialogTitle>
           <DialogDescription>
-            Enter the app ID and secret from your {appName} account settings so Brain can connect.
-            They stay on this computer.
+            {info?.requiresMcpUrl
+              ? `Enter the MCP server URL plus the OAuth app ID and secret from your ${appName} account. They stay on this computer.`
+              : `Enter the app ID and secret from your ${appName} account settings so Brain can connect. They stay on this computer.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -163,7 +172,8 @@ export function ConnectionSetupDialog({
                   Return link
                 </p>
                 <p className="text-muted-foreground mt-1 text-xs">
-                  Add this link in your {info.displayName} app settings, then continue.
+                  Add this link in your {info.displayName} OAuth app / security integration, then
+                  continue.
                 </p>
                 <p className="text-foreground mt-1 font-mono text-xs break-all">
                   {info.callbackUrl}
@@ -177,6 +187,28 @@ export function ConnectionSetupDialog({
                 >
                   {copied ? "Copied" : "Copy link"}
                 </Button>
+              </div>
+            ) : null}
+
+            {info?.requiresMcpUrl ? (
+              <div className="flex flex-col gap-1.5">
+                <label
+                  className="text-foreground text-sm font-medium"
+                  htmlFor="connection-setup-mcp-url"
+                >
+                  MCP server URL
+                </label>
+                <Input
+                  autoComplete="off"
+                  id="connection-setup-mcp-url"
+                  onChange={(event) => setMcpUrl(event.target.value)}
+                  placeholder="https://…/mcp-servers/…"
+                  spellCheck={false}
+                  value={mcpUrl}
+                />
+                <p className="text-muted-foreground text-xs">
+                  Restart Brain after saving if tools still use an old URL.
+                </p>
               </div>
             ) : null}
 

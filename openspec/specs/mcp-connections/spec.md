@@ -57,15 +57,19 @@ The system MUST provide a dFlow MCP connection using the official dFlow Cloud MC
 - **THEN** the connection approval policy requires user approval
 
 ### Requirement: Snowflake MCP connection with account URL and OAuth client
-The system MUST provide a Snowflake-managed MCP connection. The MCP server URL MUST come from `SNOWFLAKE_MCP_URL`. OAuth app credentials MUST be resolvable from UI-stored host credentials or `SNOWFLAKE_MCP_CLIENT_ID` / `SNOWFLAKE_MCP_CLIENT_SECRET`, with stored credentials preferred. The connection MUST use Snowflake OAuth authorize and token-request endpoints derived from the MCP URL origin, and MUST NOT use Vercel Connect or dynamic client registration.
+The system MUST provide a Snowflake-managed MCP connection. The MCP server URL and OAuth app credentials MUST be resolvable from UI-stored host credentials (Set up) or from `SNOWFLAKE_MCP_URL` / `SNOWFLAKE_MCP_CLIENT_ID` / `SNOWFLAKE_MCP_CLIENT_SECRET`, with stored credentials preferred. The connection MUST use Snowflake OAuth authorize and token-request endpoints derived from the MCP URL origin, and MUST NOT use Vercel Connect or dynamic client registration.
 
 #### Scenario: Snowflake connection is defined
 - **WHEN** the agent loads connections
 - **THEN** a Snowflake MCP connection is available for Cortex Agents, Analyst, Search, SQL, and custom tools via interactive Snowflake OAuth
 
 #### Scenario: Snowflake needs setup without MCP URL
-- **WHEN** `SNOWFLAKE_MCP_URL` is unset
+- **WHEN** neither UI-stored nor env MCP URL is configured
 - **THEN** the status endpoint reports Snowflake as needs setup
+
+#### Scenario: Snowflake Set up accepts MCP URL
+- **WHEN** the operator saves Snowflake setup with an MCP server URL, client id, and secret
+- **THEN** those values are stored host-locally and Connect can proceed without requiring env vars
 
 #### Scenario: Snowflake tools require approval by default
 - **WHEN** the model calls a Snowflake MCP tool
