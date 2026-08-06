@@ -2,12 +2,44 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { parseInstancePolicies } from "@/lib/auth/parse-policies";
 import type { InstancePolicies } from "@/lib/auth/workspaces/types";
 
+type Entitlements = {
+  readonly maxUsers: number | null;
+  readonly sso: boolean;
+  readonly multiWorkspace: boolean;
+  readonly byoa: boolean;
+  readonly openSignup: boolean;
+  readonly source: "license" | "unlicensed";
+  readonly expiresAt: string | null;
+  readonly issuedAt: string | null;
+};
+
+function isEntitlements(value: unknown): value is Entitlements {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  return (
+    "source" in value &&
+    (value.source === "license" || value.source === "unlicensed") &&
+    "sso" in value &&
+    typeof value.sso === "boolean" &&
+    "multiWorkspace" in value &&
+    typeof value.multiWorkspace === "boolean" &&
+    "byoa" in value &&
+    typeof value.byoa === "boolean" &&
+    "openSignup" in value &&
+    typeof value.openSignup === "boolean"
+  );
+}
+
 export default function InstanceSettingsPage() {
   const [policies, setPolicies] = useState<InstancePolicies | null>(null);
+  const [entitlements, setEntitlements] = useState<Entitlements | null>(null);
+  const [licenseKey, setLicenseKey] = useState("");
   const [canManage, setCanManage] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -17,24 +49,38 @@ export default function InstanceSettingsPage() {
     let cancelled = false;
     void (async () => {
       try {
-        const response = await fetch("/api/instance/policies");
-        const data: unknown = await response.json();
-        if (cancelled || !response.ok || typeof data !== "object" || data === null) {
-          if (!cancelled) {
-            setError("Unable to load instance policies.");
-          }
+        const [policiesResponse, licenseResponse] = await Promise.all([
+          fetch("/api/instance/policies"),
+          fetch("/api/instance/license"),
+        ]);
+        const policiesData: unknown = await policiesResponse.json();
+        const licenseData: unknown = await licenseResponse.json();
+        if (cancelled) {
           return;
         }
-        setCanManage("canManage" in data && Boolean(data.canManage));
-        if ("policies" in data) {
-          const parsed = parseInstancePolicies(data.policies);
+        if (!policiesResponse.ok || typeof policiesData !== "object" || policiesData === null) {
+          setError("Unable to load instance policies.");
+          return;
+        }
+        setCanManage("canManage" in policiesData && Boolean(policiesData.canManage));
+        if ("policies" in policiesData) {
+          const parsed = parseInstancePolicies(policiesData.policies);
           if (parsed) {
             setPolicies(parsed);
           }
         }
+        if (
+          licenseResponse.ok &&
+          typeof licenseData === "object" &&
+          licenseData !== null &&
+          "entitlements" in licenseData &&
+          isEntitlements(licenseData.entitlements)
+        ) {
+          setEntitlements(licenseData.entitlements);
+        }
       } catch {
         if (!cancelled) {
-          setError("Unable to load instance policies.");
+          setError("Unable to load instance settings.");
         }
       }
     })();
@@ -80,6 +126,81 @@ export default function InstanceSettingsPage() {
     }
   }
 
+  async function installLicense() {
+    setPending(true);
+    setError(null);
+    setSaved(false);
+    try {
+      const response = await fetch("/api/instance/license", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ key: licenseKey }),
+      });
+      const data: unknown = await response.json();
+      if (!response.ok) {
+        setError(
+          typeof data === "object" &&
+            data !== null &&
+            "error" in data &&
+            typeof data.error === "string"
+            ? data.error
+            : "Unable to install license.",
+        );
+        setPending(false);
+        return;
+      }
+      if (
+        typeof data === "object" &&
+        data !== null &&
+        "entitlements" in data &&
+        isEntitlements(data.entitlements)
+      ) {
+        setEntitlements(data.entitlements);
+      }
+      setLicenseKey("");
+      setSaved(true);
+      setPending(false);
+    } catch {
+      setPending(false);
+      setError("Unable to install license.");
+    }
+  }
+
+  async function clearLicense() {
+    setPending(true);
+    setError(null);
+    setSaved(false);
+    try {
+      const response = await fetch("/api/instance/license", { method: "DELETE" });
+      const data: unknown = await response.json();
+      if (!response.ok) {
+        setError(
+          typeof data === "object" &&
+            data !== null &&
+            "error" in data &&
+            typeof data.error === "string"
+            ? data.error
+            : "Unable to clear license.",
+        );
+        setPending(false);
+        return;
+      }
+      if (
+        typeof data === "object" &&
+        data !== null &&
+        "entitlements" in data &&
+        isEntitlements(data.entitlements)
+      ) {
+        setEntitlements(data.entitlements);
+      }
+      setSaved(true);
+      setPending(false);
+    } catch {
+      setPending(false);
+      setError("Unable to clear license.");
+    }
+  }
+
   if (error && !policies) {
     return (
       <div className="mx-auto max-w-lg p-6">
@@ -101,15 +222,76 @@ export default function InstanceSettingsPage() {
       <div className="space-y-1">
         <h1 className="text-xl font-semibold tracking-tight">Instance settings</h1>
         <p className="text-muted-foreground text-sm">
-          Host-wide policies for signup and workspace provisioning.
+          Host-wide license entitlements and policies for signup and workspace provisioning.
         </p>
       </div>
 
       {!canManage ? (
         <p className="text-muted-foreground text-sm">
-          You can view these policies. Only the instance admin can change them.
+          You can view these settings. Only the instance admin can change them.
         </p>
       ) : null}
+
+      <div className="border-border space-y-3 rounded-xl border p-4">
+        <div className="space-y-1">
+          <p className="text-sm font-medium">License</p>
+          <p className="text-muted-foreground text-xs">
+            {entitlements?.source === "license"
+              ? "Using installed license entitlements."
+              : "No license installed — all features unlocked (self-host default)."}
+          </p>
+        </div>
+        {entitlements ? (
+          <ul className="text-muted-foreground space-y-1 text-xs">
+            <li>
+              Max users: {entitlements.maxUsers === null ? "Unlimited" : entitlements.maxUsers}
+            </li>
+            <li>Open signup: {entitlements.openSignup ? "Allowed" : "Locked"}</li>
+            <li>SSO mode: {entitlements.sso ? "Allowed" : "Locked"}</li>
+            <li>Multi-workspace: {entitlements.multiWorkspace ? "Allowed" : "Locked"}</li>
+            <li>Workspace BYOA: {entitlements.byoa ? "Allowed" : "Locked"}</li>
+            {entitlements.expiresAt ? <li>Expires: {entitlements.expiresAt}</li> : null}
+          </ul>
+        ) : null}
+        {canManage ? (
+          <div className="space-y-2">
+            <label className="text-sm font-medium" htmlFor="license-key">
+              License key
+            </label>
+            <Input
+              id="license-key"
+              onChange={(event) => setLicenseKey(event.target.value)}
+              placeholder="BRAIN1...."
+              value={licenseKey}
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                disabled={pending || !licenseKey.trim()}
+                onClick={() => {
+                  void installLicense();
+                }}
+                size="sm"
+                type="button"
+              >
+                Install license
+              </Button>
+              {entitlements?.source === "license" ? (
+                <Button
+                  disabled={pending}
+                  onClick={() => {
+                    void clearLicense();
+                  }}
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  Clear license
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+      </div>
 
       <div className="border-border space-y-4 rounded-xl border p-4">
         <div className="space-y-2">
@@ -129,13 +311,16 @@ export default function InstanceSettingsPage() {
             value={policies.signupMode}
           >
             <option value="invite-only">Invite only</option>
-            <option value="open">Open signup</option>
-            <option value="sso-only" disabled>
-              SSO only (coming later)
+            <option disabled={entitlements?.openSignup === false} value="open">
+              Open signup
+            </option>
+            <option disabled={entitlements?.sso === false} value="sso-only">
+              SSO only {entitlements?.sso ? "(policy only — IdP later)" : "(locked by license)"}
             </option>
           </select>
           <p className="text-muted-foreground text-xs">
-            Invite only is the self-host default. Open signup enables `/sign-up` for anyone.
+            Invite only is the self-host default. Open signup enables `/sign-up` for anyone when the
+            license allows it.
           </p>
         </div>
 
@@ -148,7 +333,7 @@ export default function InstanceSettingsPage() {
           </div>
           <Switch
             checked={policies.allowCreateWorkspace}
-            disabled={!canManage || pending}
+            disabled={!canManage || pending || entitlements?.multiWorkspace === false}
             onCheckedChange={(checked) => {
               setPolicies({ ...policies, allowCreateWorkspace: checked });
             }}
@@ -183,7 +368,7 @@ export default function InstanceSettingsPage() {
           }}
           type="button"
         >
-          {pending ? "Saving…" : "Save changes"}
+          {pending ? "Saving…" : "Save policy changes"}
         </Button>
       ) : null}
     </div>
