@@ -273,7 +273,7 @@ export function IntegrationsMenu({
                 if (!allowEnable) {
                   setConnectError(
                     status?.status === "needs_setup"
-                      ? `Set up ${label} before turning it on.`
+                      ? `Ask the host operator to set up ${label}, then connect it.`
                       : status?.status === "needs_sign_in"
                         ? `Connect ${label} before turning it on.`
                         : `Wait for ${label} status, then connect it.`,

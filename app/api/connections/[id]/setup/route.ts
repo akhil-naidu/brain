@@ -9,6 +9,7 @@ import {
   writeStoredAppCredentials,
 } from "@/agent/lib/connection-credentials";
 import { getChatConnectionProvider } from "@/agent/lib/connection-status";
+import { isOperatorUserId, requireOperatorSession } from "@/lib/auth/require-operator-session";
 import { requireSessionUserId } from "@/lib/auth/require-session";
 import { resolvePublicOrigin } from "@/lib/http/public-origin";
 
@@ -58,11 +59,12 @@ export async function GET(request: Request, context: RouteContext) {
     clientSecretEnv: provider.clientSecretEnv,
     callbackPath,
     callbackUrl: new URL(callbackPath, origin).toString(),
+    canManageCredentials: isOperatorUserId(session.userId),
   });
 }
 
 export async function PUT(request: Request, context: RouteContext) {
-  const session = await requireSessionUserId();
+  const session = await requireOperatorSession();
   if (!session.ok) {
     return session.response;
   }
@@ -104,7 +106,7 @@ export async function PUT(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
-  const session = await requireSessionUserId();
+  const session = await requireOperatorSession();
   if (!session.ok) {
     return session.response;
   }

@@ -134,7 +134,9 @@ export function ConnectionSetupDialog({
     })();
   };
 
+  const canManage = info?.canManageCredentials === true;
   const canSave =
+    canManage &&
     clientId.trim().length > 0 &&
     (!info?.requiresClientSecret || clientSecret.trim().length > 0) &&
     !saving &&
@@ -148,8 +150,9 @@ export function ConnectionSetupDialog({
         <DialogHeader>
           <DialogTitle>{info ? `Set up ${info.displayName}` : "Set up connection"}</DialogTitle>
           <DialogDescription>
-            Enter the app ID and secret from your {appName} account settings so Brain can connect.
-            They stay on this computer.
+            {canManage
+              ? `Enter the app ID and secret from your ${appName} account settings so Brain can connect. They stay on this computer.`
+              : `Ask the host operator to configure ${appName} app credentials for this Brain host. You can still copy the return link below.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -180,47 +183,60 @@ export function ConnectionSetupDialog({
               </div>
             ) : null}
 
-            <div className="flex flex-col gap-1.5">
-              <label
-                className="text-foreground text-sm font-medium"
-                htmlFor="connection-setup-client-id"
-              >
-                App ID
-              </label>
-              <Input
-                autoComplete="off"
-                id="connection-setup-client-id"
-                onChange={(event) => setClientId(event.target.value)}
-                placeholder="Paste app ID"
-                spellCheck={false}
-                value={clientId}
-              />
-            </div>
-
-            {info?.requiresClientSecret ? (
-              <div className="flex flex-col gap-1.5">
-                <label
-                  className="text-foreground text-sm font-medium"
-                  htmlFor="connection-setup-client-secret"
-                >
-                  App secret
-                </label>
-                <Input
-                  autoComplete="off"
-                  id="connection-setup-client-secret"
-                  onChange={(event) => setClientSecret(event.target.value)}
-                  placeholder="Paste app secret"
-                  spellCheck={false}
-                  type="password"
-                  value={clientSecret}
-                />
-              </div>
+            {!canManage && info ? (
+              <output className="text-muted-foreground text-sm">
+                Only the host operator can save or remove app credentials.
+                {info.hasCredentials
+                  ? " Credentials are already configured — use Connect after setup is complete."
+                  : ""}
+              </output>
             ) : null}
 
-            {info?.hasStoredCredentials ? (
-              <p className="text-muted-foreground text-xs">
-                Details are already saved here. Saving replaces them.
-              </p>
+            {canManage ? (
+              <>
+                <div className="flex flex-col gap-1.5">
+                  <label
+                    className="text-foreground text-sm font-medium"
+                    htmlFor="connection-setup-client-id"
+                  >
+                    App ID
+                  </label>
+                  <Input
+                    autoComplete="off"
+                    id="connection-setup-client-id"
+                    onChange={(event) => setClientId(event.target.value)}
+                    placeholder="Paste app ID"
+                    spellCheck={false}
+                    value={clientId}
+                  />
+                </div>
+
+                {info?.requiresClientSecret ? (
+                  <div className="flex flex-col gap-1.5">
+                    <label
+                      className="text-foreground text-sm font-medium"
+                      htmlFor="connection-setup-client-secret"
+                    >
+                      App secret
+                    </label>
+                    <Input
+                      autoComplete="off"
+                      id="connection-setup-client-secret"
+                      onChange={(event) => setClientSecret(event.target.value)}
+                      placeholder="Paste app secret"
+                      spellCheck={false}
+                      type="password"
+                      value={clientSecret}
+                    />
+                  </div>
+                ) : null}
+
+                {info?.hasStoredCredentials ? (
+                  <p className="text-muted-foreground text-xs">
+                    Details are already saved here. Saving replaces them.
+                  </p>
+                ) : null}
+              </>
             ) : null}
 
             {error ? (
@@ -232,7 +248,7 @@ export function ConnectionSetupDialog({
         )}
 
         <DialogFooter>
-          {info?.hasStoredCredentials ? (
+          {canManage && info?.hasStoredCredentials ? (
             <Button
               disabled={clearing || saving}
               onClick={clearStored}
@@ -243,11 +259,13 @@ export function ConnectionSetupDialog({
             </Button>
           ) : null}
           <Button onClick={() => onOpenChange(false)} type="button" variant="outline">
-            Cancel
+            {canManage ? "Cancel" : "Close"}
           </Button>
-          <Button disabled={!canSave} onClick={save} type="button">
-            {saving ? "Saving…" : "Save"}
-          </Button>
+          {canManage ? (
+            <Button disabled={!canSave} onClick={save} type="button">
+              {saving ? "Saving…" : "Save"}
+            </Button>
+          ) : null}
         </DialogFooter>
       </DialogContent>
     </Dialog>

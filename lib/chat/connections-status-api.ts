@@ -96,6 +96,7 @@ const connectionSetupSchema = z.object({
   clientSecretEnv: z.string().optional(),
   callbackPath: z.string(),
   callbackUrl: z.string().url(),
+  canManageCredentials: z.boolean(),
 });
 
 export type ConnectionSetupInfo = z.infer<typeof connectionSetupSchema>;
