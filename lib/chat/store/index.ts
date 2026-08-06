@@ -19,10 +19,16 @@ const globalForStore = globalThis as typeof globalThis & {
 
 export function getChatStore(): ChatStore {
   const dbPath = resolveChatsDbPath();
-  if (!globalForStore.brainChatStore || globalForStore.brainChatStorePath !== dbPath) {
-    globalForStore.brainChatStore?.close();
-    globalForStore.brainChatStore = createSqliteChatStore(dbPath);
+  const existing = globalForStore.brainChatStore;
+  const stale =
+    existing !== undefined &&
+    (globalForStore.brainChatStorePath !== dbPath || typeof existing.reassignOwner !== "function");
+  if (!existing || stale) {
+    existing?.close();
+    const store = createSqliteChatStore(dbPath);
+    globalForStore.brainChatStore = store;
     globalForStore.brainChatStorePath = dbPath;
+    return store;
   }
-  return globalForStore.brainChatStore;
+  return existing;
 }

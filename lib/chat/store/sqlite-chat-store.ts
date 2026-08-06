@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { HandleMessageStreamEvent } from "eve/client";
+import { LEGACY_CHAT_OWNER_ID } from "@/lib/auth/principal";
 import { DEFAULT_CHAT_TITLE } from "@/lib/chat/title";
 import { parseSessionStateJson, parseStreamEventJson } from "@/lib/chat/store/parse";
 import type {
@@ -62,9 +63,21 @@ function toRecord(row: SqlRow, events: readonly HandleMessageStreamEvent[]): Cha
   const sessionRaw = optionalString(row, "eve_session");
   return {
     ...toSummary(row),
+    userId: requireString(row, "user_id"),
     eveSession: sessionRaw ? parseSessionStateJson(sessionRaw) : null,
     events,
   };
+}
+
+function migrateSchema(db: DatabaseSync) {
+  const columns = db.prepare("PRAGMA table_info(chat)").all() as readonly SqlRow[];
+  const hasUserId = columns.some((column) => optionalString(column, "name") === "user_id");
+  if (!hasUserId) {
+    db.exec(`ALTER TABLE chat ADD COLUMN user_id TEXT NOT NULL DEFAULT '${LEGACY_CHAT_OWNER_ID}'`);
+  }
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS chat_user_updated_at_idx ON chat(user_id, updated_at DESC);
+  `);
 }
 
 export function createSqliteChatStore(dbPath: string): ChatStore {
@@ -77,6 +90,7 @@ export function createSqliteChatStore(dbPath: string): ChatStore {
     PRAGMA foreign_keys = ON;
     CREATE TABLE IF NOT EXISTS chat (
       id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT NOT NULL,
       title TEXT NOT NULL,
       eve_session TEXT,
       created_at TEXT NOT NULL,
@@ -92,8 +106,9 @@ export function createSqliteChatStore(dbPath: string): ChatStore {
     CREATE INDEX IF NOT EXISTS chat_updated_at_idx ON chat(updated_at DESC);
     CREATE INDEX IF NOT EXISTS chat_event_chat_id_idx ON chat_event(chat_id, event_index);
   `);
+  migrateSchema(db);
 
-  const selectChat = db.prepare("SELECT * FROM chat WHERE id = ?");
+  const selectChat = db.prepare("SELECT * FROM chat WHERE id = ? AND user_id = ?");
   const selectEvents = db.prepare(
     "SELECT event FROM chat_event WHERE chat_id = ? ORDER BY event_index ASC",
   );
@@ -101,30 +116,35 @@ export function createSqliteChatStore(dbPath: string): ChatStore {
     "SELECT COALESCE(MAX(event_index) + 1, 0) AS next_index FROM chat_event WHERE chat_id = ?",
   );
   const listChatsStmt = db.prepare(
-    "SELECT id, title, eve_session, created_at, updated_at FROM chat ORDER BY updated_at DESC",
+    "SELECT id, title, eve_session, created_at, updated_at, user_id FROM chat WHERE user_id = ? ORDER BY updated_at DESC",
   );
   const insertChat = db.prepare(
-    "INSERT INTO chat (id, title, eve_session, created_at, updated_at) VALUES (?, ?, NULL, ?, ?)",
+    "INSERT INTO chat (id, user_id, title, eve_session, created_at, updated_at) VALUES (?, ?, ?, NULL, ?, ?)",
   );
-  const updateTitle = db.prepare("UPDATE chat SET title = ?, updated_at = ? WHERE id = ?");
-  const updateSession = db.prepare("UPDATE chat SET eve_session = ?, updated_at = ? WHERE id = ?");
-  const touchUpdated = db.prepare("UPDATE chat SET updated_at = ? WHERE id = ?");
+  const updateTitle = db.prepare(
+    "UPDATE chat SET title = ?, updated_at = ? WHERE id = ? AND user_id = ?",
+  );
+  const updateSession = db.prepare(
+    "UPDATE chat SET eve_session = ?, updated_at = ? WHERE id = ? AND user_id = ?",
+  );
+  const touchUpdated = db.prepare("UPDATE chat SET updated_at = ? WHERE id = ? AND user_id = ?");
   const insertEvent = db.prepare(
     "INSERT OR IGNORE INTO chat_event (chat_id, event_index, event) VALUES (?, ?, ?)",
   );
   const deleteEvents = db.prepare("DELETE FROM chat_event WHERE chat_id = ?");
-  const deleteChatStmt = db.prepare("DELETE FROM chat WHERE id = ?");
+  const deleteChatStmt = db.prepare("DELETE FROM chat WHERE id = ? AND user_id = ?");
+  const reassignStmt = db.prepare("UPDATE chat SET user_id = ? WHERE user_id = ?");
 
   function loadEvents(chatId: string): HandleMessageStreamEvent[] {
     return selectEvents.all(chatId).map((row) => parseStreamEventJson(requireString(row, "event")));
   }
 
-  function getChatRow(id: string): SqlRow | null {
-    return selectChat.get(id) ?? null;
+  function getChatRow(userId: string, id: string): SqlRow | null {
+    return selectChat.get(id, userId) ?? null;
   }
 
-  function getChat(id: string): ChatRecord | null {
-    const row = getChatRow(id);
+  function getChat(userId: string, id: string): ChatRecord | null {
+    const row = getChatRow(userId, id);
     if (!row) {
       return null;
     }
@@ -132,26 +152,26 @@ export function createSqliteChatStore(dbPath: string): ChatStore {
   }
 
   return {
-    createChat(input: CreateChatInput = {}): ChatRecord {
+    createChat(userId: string, input: CreateChatInput = {}): ChatRecord {
       const id = input.id?.trim() || randomUUID();
       const title = input.title?.trim() || DEFAULT_CHAT_TITLE;
       const createdAt = nowIso();
-      insertChat.run(id, title, createdAt, createdAt);
-      const created = getChat(id);
+      insertChat.run(id, userId, title, createdAt, createdAt);
+      const created = getChat(userId, id);
       if (!created) {
         throw new Error(`Failed to create chat ${id}`);
       }
       return created;
     },
 
-    listChats(): readonly ChatSummary[] {
-      return listChatsStmt.all().map(toSummary);
+    listChats(userId: string): readonly ChatSummary[] {
+      return listChatsStmt.all(userId).map(toSummary);
     },
 
     getChat,
 
-    updateChat(id: string, input: UpdateChatInput): ChatRecord | null {
-      const existing = getChatRow(id);
+    updateChat(userId: string, id: string, input: UpdateChatInput): ChatRecord | null {
+      const existing = getChatRow(userId, id);
       if (!existing) {
         return null;
       }
@@ -161,13 +181,13 @@ export function createSqliteChatStore(dbPath: string): ChatStore {
 
       if (input.title !== undefined) {
         const title = input.title.trim() || DEFAULT_CHAT_TITLE;
-        updateTitle.run(title, updatedAt, id);
+        updateTitle.run(title, updatedAt, id, userId);
         touched = true;
       }
 
       if (input.eveSession !== undefined) {
         const sessionJson = input.eveSession === null ? null : JSON.stringify(input.eveSession);
-        updateSession.run(sessionJson, updatedAt, id);
+        updateSession.run(sessionJson, updatedAt, id, userId);
         touched = true;
       }
 
@@ -188,15 +208,20 @@ export function createSqliteChatStore(dbPath: string): ChatStore {
       }
 
       if (touched && input.title === undefined && input.eveSession === undefined) {
-        touchUpdated.run(updatedAt, id);
+        touchUpdated.run(updatedAt, id, userId);
       }
 
-      return getChat(id);
+      return getChat(userId, id);
     },
 
-    deleteChat(id: string): boolean {
-      const result = deleteChatStmt.run(id);
+    deleteChat(userId: string, id: string): boolean {
+      const result = deleteChatStmt.run(id, userId);
       return result.changes > 0;
+    },
+
+    reassignOwner(fromUserId: string, toUserId: string): number {
+      const result = reassignStmt.run(toUserId, fromUserId);
+      return Number(result.changes);
     },
 
     close(): void {

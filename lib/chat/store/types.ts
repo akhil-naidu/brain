@@ -8,6 +8,7 @@ export type ChatSummary = {
 };
 
 export type ChatRecord = ChatSummary & {
+  readonly userId: string;
   readonly eveSession: SessionState | null;
   readonly events: readonly HandleMessageStreamEvent[];
 };
@@ -26,10 +27,12 @@ export type UpdateChatInput = {
 };
 
 export interface ChatStore {
-  createChat(input?: CreateChatInput): ChatRecord;
-  listChats(): readonly ChatSummary[];
-  getChat(id: string): ChatRecord | null;
-  updateChat(id: string, input: UpdateChatInput): ChatRecord | null;
-  deleteChat(id: string): boolean;
+  createChat(userId: string, input?: CreateChatInput): ChatRecord;
+  listChats(userId: string): readonly ChatSummary[];
+  getChat(userId: string, id: string): ChatRecord | null;
+  updateChat(userId: string, id: string, input: UpdateChatInput): ChatRecord | null;
+  deleteChat(userId: string, id: string): boolean;
+  /** One-time migration helper: move chats from one owner id to another. */
+  reassignOwner(fromUserId: string, toUserId: string): number;
   close(): void;
 }

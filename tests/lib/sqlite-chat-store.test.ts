@@ -26,14 +26,16 @@ function fakeEvent(message: string): HandleMessageStreamEvent {
 }
 
 describe("sqlite chat store", () => {
-  it("creates, lists, updates, and deletes chats", () => {
+  it("creates, lists, updates, and deletes chats for a user", () => {
     const store = openStore();
-    const created = store.createChat({ title: "Hello world" });
+    const userId = "user-a";
+    const created = store.createChat(userId, { title: "Hello world" });
 
     expect(created.title).toBe("Hello world");
-    expect(store.listChats()).toHaveLength(1);
+    expect(created.userId).toBe(userId);
+    expect(store.listChats(userId)).toHaveLength(1);
 
-    const updated = store.updateChat(created.id, {
+    const updated = store.updateChat(userId, created.id, {
       eveSession: { streamIndex: 3, sessionId: "s1", continuationToken: "c1" },
       appendEvents: [fakeEvent("one"), fakeEvent("two")],
     });
@@ -41,26 +43,47 @@ describe("sqlite chat store", () => {
     expect(updated?.eveSession?.streamIndex).toBe(3);
     expect(updated?.events).toHaveLength(2);
 
-    const snapshotted = store.updateChat(created.id, {
+    const snapshotted = store.updateChat(userId, created.id, {
       events: [fakeEvent("only")],
       eveSession: { streamIndex: 4 },
     });
     expect(snapshotted?.events).toHaveLength(1);
     expect(snapshotted?.eveSession?.streamIndex).toBe(4);
 
-    expect(store.deleteChat(created.id)).toBe(true);
-    expect(store.getChat(created.id)).toBeNull();
-    expect(store.listChats()).toHaveLength(0);
+    expect(store.deleteChat(userId, created.id)).toBe(true);
+    expect(store.getChat(userId, created.id)).toBeNull();
+    expect(store.listChats(userId)).toHaveLength(0);
   });
 
   it("orders chats by most recently updated", () => {
     const store = openStore();
-    const first = store.createChat({ title: "First" });
-    const second = store.createChat({ title: "Second" });
+    const userId = "user-a";
+    const first = store.createChat(userId, { title: "First" });
+    const second = store.createChat(userId, { title: "Second" });
 
-    store.updateChat(first.id, { title: "First updated" });
+    store.updateChat(userId, first.id, { title: "First updated" });
 
-    const listed = store.listChats();
+    const listed = store.listChats(userId);
     expect(listed.map((chat) => chat.id)).toEqual([first.id, second.id]);
+  });
+
+  it("isolates chats between users", () => {
+    const store = openStore();
+    const a = store.createChat("user-a", { title: "A only" });
+    store.createChat("user-b", { title: "B only" });
+
+    expect(store.listChats("user-a")).toHaveLength(1);
+    expect(store.listChats("user-b")).toHaveLength(1);
+    expect(store.getChat("user-b", a.id)).toBeNull();
+    expect(store.deleteChat("user-b", a.id)).toBe(false);
+    expect(store.getChat("user-a", a.id)?.title).toBe("A only");
+  });
+
+  it("reassigns legacy ownership", () => {
+    const store = openStore();
+    const legacy = store.createChat("__legacy__", { title: "Old" });
+    expect(store.reassignOwner("__legacy__", "user-a")).toBe(1);
+    expect(store.getChat("user-a", legacy.id)?.title).toBe("Old");
+    expect(store.listChats("__legacy__")).toHaveLength(0);
   });
 });
