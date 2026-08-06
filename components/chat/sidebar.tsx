@@ -258,15 +258,8 @@ export function ChatSidebar({
           className,
         )}
       >
-        <div className="border-border/50 flex h-12 w-full shrink-0 items-center justify-center border-b">
-          <Link
-            aria-label="Brain"
-            className="text-foreground hover:bg-muted/50 inline-flex size-9 items-center justify-center rounded-md"
-            href="/chat"
-            title="Brain"
-          >
-            {brand}
-          </Link>
+        <div className="border-border/50 flex w-full shrink-0 flex-col items-center justify-center gap-1 border-b py-2">
+          {brand}
         </div>
         <div className="flex w-full flex-col items-center px-1 py-2">
           {onToggleSidebar ? (
@@ -344,8 +337,8 @@ export function ChatSidebar({
         className,
       )}
     >
-      <div className="border-border/50 flex h-12 shrink-0 items-center justify-between gap-2 border-b px-2">
-        <div className="text-foreground flex min-w-0 items-center gap-2 text-sm font-medium">
+      <div className="border-border/50 flex shrink-0 items-start justify-between gap-2 border-b px-2 py-2">
+        <div className="text-foreground flex min-w-0 flex-1 flex-col gap-2 text-sm font-medium">
           {brand}
         </div>
         {onToggleSidebar ? (
