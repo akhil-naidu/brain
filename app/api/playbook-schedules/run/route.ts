@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireInternalBearer } from "@/lib/auth/require-internal-token";
 import { requireSessionUserId } from "@/lib/auth/require-session";
 import { runScheduledPlaybookBodySchema } from "@/lib/chat/scheduled-playbooks";
 import { runDueScheduledPlaybooks, runScheduledPlaybook } from "@/lib/chat/run-scheduled-playbook";
@@ -35,7 +36,11 @@ export async function POST(request: Request) {
       return NextResponse.json(result, { status: 201 });
     }
 
-    // Cron due sweep across all users (no session).
+    // Cron due sweep across all users — host internal bearer only.
+    const internal = requireInternalBearer(request);
+    if (!internal.ok) {
+      return internal.response;
+    }
     const results = await runDueScheduledPlaybooks();
     return NextResponse.json({ results });
   } catch (error) {

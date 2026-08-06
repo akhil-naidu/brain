@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireInternalBearer } from "@/lib/auth/require-internal-token";
 import { requireSessionUserId } from "@/lib/auth/require-session";
 import { runScheduledBriefBodySchema } from "@/lib/chat/scheduled-brief";
 import { runDueScheduledBriefs, runScheduledBrief } from "@/lib/chat/run-scheduled-brief";
@@ -19,8 +20,12 @@ export async function POST(request: Request) {
   }
 
   try {
-    // Cron / due sweep: no id, not forced — run all due briefs across users.
+    // Cron / due sweep across users — host internal bearer only.
     if (parsed.data.force !== true && parsed.data.source === "schedule") {
+      const internal = requireInternalBearer(request);
+      if (!internal.ok) {
+        return internal.response;
+      }
       const results = await runDueScheduledBriefs();
       return NextResponse.json({ results });
     }

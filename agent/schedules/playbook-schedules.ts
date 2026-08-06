@@ -1,26 +1,27 @@
 import { defineSchedule } from "eve/schedules";
+import {
+  internalBrainOrigin,
+  internalScheduleFetchHeaders,
+} from "@/lib/chat/internal-brain-origin";
 
 /**
  * Production-only minute tick for due playbook schedules.
  * Override Next origin with BRAIN_INTERNAL_URL when needed.
+ * Requires BRAIN_INTERNAL_TOKEN (same secret the Next due-sweep routes expect).
  */
-function internalBrainOrigin(): string {
-  const configured = process.env.BRAIN_INTERNAL_URL?.trim();
-  if (configured) {
-    return configured.replace(/\/$/, "");
-  }
-  return "http://127.0.0.1:3000";
-}
-
 export default defineSchedule({
   cron: "* * * * *",
   async run({ waitUntil }) {
     waitUntil(
       (async () => {
         try {
+          const headers = internalScheduleFetchHeaders();
+          if (!headers) {
+            return;
+          }
           await fetch(`${internalBrainOrigin()}/api/playbook-schedules/run`, {
             method: "POST",
-            headers: { "content-type": "application/json" },
+            headers,
             body: JSON.stringify({ source: "schedule" }),
           });
         } catch {
