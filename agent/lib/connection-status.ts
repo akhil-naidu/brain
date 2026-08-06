@@ -6,6 +6,7 @@ import { githubProvider } from "../connections/github";
 import { gmailProvider } from "../connections/gmail";
 import { slackProvider } from "../connections/slack";
 import { createSnowflakeProvider } from "../connections/snowflake";
+import { zernioProvider } from "../connections/zernio";
 import { getProviderCredentialSetupError } from "./connection-credentials";
 import { getStoredTokenAuthState, type McpOAuthProvider } from "./mcp-oauth";
 
@@ -36,6 +37,7 @@ export function listChatConnectionProviders(
     dflowProvider,
     githubProvider,
     createSnowflakeProvider(env),
+    zernioProvider,
   ];
 }
 
