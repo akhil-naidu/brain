@@ -21,7 +21,6 @@ function SignInForm() {
   const [bootstrapAllowed, setBootstrapAllowed] = useState(false);
   const [signupMode, setSignupMode] = useState<SignupMode | null>(null);
   const [ssoAvailable, setSsoAvailable] = useState(false);
-  const [ssoProviderId, setSsoProviderId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -35,15 +34,6 @@ function SignInForm() {
         setOpenSignupAllowed("openSignupAllowed" in data && Boolean(data.openSignupAllowed));
         setBootstrapAllowed("bootstrapAllowed" in data && Boolean(data.bootstrapAllowed));
         setSsoAvailable("ssoAvailable" in data && Boolean(data.ssoAvailable));
-        if (
-          "ssoProviderId" in data &&
-          typeof data.ssoProviderId === "string" &&
-          data.ssoProviderId.trim()
-        ) {
-          setSsoProviderId(data.ssoProviderId);
-        } else {
-          setSsoProviderId(null);
-        }
         if (
           "signupMode" in data &&
           (data.signupMode === "open" ||
@@ -80,21 +70,22 @@ function SignInForm() {
     router.refresh();
   }
 
-  async function onSso() {
-    if (!ssoProviderId) {
-      setError("SSO is not configured on this host.");
+  async function onCompanySso() {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed.includes("@")) {
+      setError("Enter your work email to continue with company SSO.");
       return;
     }
     setPending(true);
     setError(null);
-    const { error: ssoError } = await authClient.signIn.oauth2({
-      providerId: ssoProviderId,
+    const { error: ssoError } = await authClient.signIn.sso({
+      email: trimmed,
       callbackURL: callbackUrl,
       errorCallbackURL: `/sign-in?callbackUrl=${encodeURIComponent(callbackUrl)}`,
     });
     if (ssoError) {
       setPending(false);
-      setError(ssoError.message || "Unable to start SSO sign-in.");
+      setError(ssoError.message || "Unable to start company SSO.");
     }
   }
 
@@ -109,23 +100,32 @@ function SignInForm() {
         </p>
       </div>
 
+      <div className="space-y-2">
+        <label className="text-sm font-medium" htmlFor="email">
+          Email
+        </label>
+        <Input
+          autoComplete="username"
+          id="email"
+          onChange={(event) => setEmail(event.target.value)}
+          required={passwordSignInAllowed}
+          type="email"
+          value={email}
+        />
+      </div>
+
       {ssoAvailable ? (
-        <div className="space-y-3">
-          <Button
-            className="w-full"
-            disabled={pending}
-            onClick={() => {
-              void onSso();
-            }}
-            type="button"
-            variant={passwordSignInAllowed ? "outline" : "default"}
-          >
-            {pending ? "Redirecting…" : "Continue with SSO"}
-          </Button>
-          {passwordSignInAllowed ? (
-            <p className="text-muted-foreground text-center text-xs">or continue with email</p>
-          ) : null}
-        </div>
+        <Button
+          className="w-full"
+          disabled={pending}
+          onClick={() => {
+            void onCompanySso();
+          }}
+          type="button"
+          variant={passwordSignInAllowed ? "outline" : "default"}
+        >
+          {pending ? "Redirecting…" : "Continue with company SSO"}
+        </Button>
       ) : null}
 
       {passwordSignInAllowed ? (
@@ -135,19 +135,9 @@ function SignInForm() {
             void onSubmit(event);
           }}
         >
-          <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="email">
-              Email
-            </label>
-            <Input
-              autoComplete="username"
-              id="email"
-              onChange={(event) => setEmail(event.target.value)}
-              required
-              type="email"
-              value={email}
-            />
-          </div>
+          {ssoAvailable ? (
+            <p className="text-muted-foreground text-center text-xs">or continue with password</p>
+          ) : null}
           <div className="space-y-2">
             <label className="text-sm font-medium" htmlFor="password">
               Password
@@ -169,7 +159,7 @@ function SignInForm() {
 
       {!passwordSignInAllowed && !ssoAvailable ? (
         <p className="text-destructive text-sm">
-          This host requires SSO, but OIDC is not configured. Set BRAIN_OIDC_* env vars and restart.
+          This host requires SSO, but the license does not allow it. Ask the instance admin.
         </p>
       ) : null}
 
@@ -191,7 +181,7 @@ function SignInForm() {
             </Link>
           </>
         ) : signupMode === "sso-only" ? (
-          <>Password self-signup is disabled. Use SSO or an invite link.</>
+          <>Password self-signup is disabled. Use company SSO or an invite link.</>
         ) : (
           <>This host is invite-only. Use an invite link from a workspace admin.</>
         )}

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { WorkspaceByoaSection } from "@/components/chat/workspace-byoa-section";
+import { WorkspaceSsoSection } from "@/components/chat/workspace-sso-section";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -589,6 +590,7 @@ export default function WorkspaceSettingsPage() {
         </div>
       ) : null}
 
+      <WorkspaceSsoSection canManage={canManage} enabled={isTeam} />
       <WorkspaceByoaSection />
     </div>
   );
