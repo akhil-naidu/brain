@@ -30,6 +30,7 @@
   "packageManager": "pnpm@11.13.1",
   "dependencies": {
     "@ai-sdk/openai": "^4.0.20",
+    "@better-auth/sso": "^1.6.26",
     "@streamdown/cjk": "^1.0.3",
     "@streamdown/code": "^1.1.1",
     "@streamdown/math": "^1.0.2",
