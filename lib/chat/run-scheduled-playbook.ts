@@ -29,7 +29,7 @@ export async function runScheduledPlaybook(options: {
   readonly id: string;
   readonly force?: boolean;
   readonly now?: Date;
-  readonly userId?: string;
+  readonly workspaceId?: string;
 }): Promise<RunScheduledPlaybookResult> {
   const now = options.now ?? new Date();
   const force = options.force === true;
@@ -37,11 +37,11 @@ export async function runScheduledPlaybook(options: {
   if (!found) {
     return { ok: true, skipped: true, reason: "not_found" };
   }
-  if (options.userId && found.userId !== options.userId) {
+  if (options.workspaceId && found.workspaceId !== options.workspaceId) {
     return { ok: true, skipped: true, reason: "not_found" };
   }
 
-  const { userId, ...scheduleBase } = found;
+  const { workspaceId, runAsUserId, ...scheduleBase } = found;
   let schedule: ScheduledPlaybook = scheduleBase;
 
   if (!force && !schedule.enabled) {
@@ -53,21 +53,22 @@ export async function runScheduledPlaybook(options: {
   }
 
   const claimed = getUserDataStore().tryClaimPlaybookScheduleRun(
-    userId,
+    workspaceId,
     options.id,
     scheduleRunClaimTimestamps(now),
   );
   if (!claimed) {
     return { ok: true, skipped: true, reason: "already_running", schedule };
   }
-  const { userId: _claimedOwner, ...claimedSchedule } = claimed;
+  const { workspaceId: _claimedWorkspace, runAsUserId: _claimedUser, ...claimedSchedule } = claimed;
   schedule = claimedSchedule;
 
   const title = scheduledPlaybookChatTitle(schedule.label, now, schedule.timezone);
 
   try {
     const { chat, slack } = await runScheduledPromptTurn({
-      userId,
+      userId: runAsUserId,
+      workspaceId,
       title,
       prompt: schedule.prompt,
       slackDeliveryEnabled: schedule.slackDeliveryEnabled,
@@ -75,7 +76,8 @@ export async function runScheduledPlaybook(options: {
     });
 
     const completed = await replaceScheduledPlaybook(
-      userId,
+      workspaceId,
+      runAsUserId,
       markPlaybookScheduleCompleted(schedule, {
         chatId: chat.id,
         completedAt: new Date(),
@@ -87,8 +89,8 @@ export async function runScheduledPlaybook(options: {
   } catch (error) {
     const latest = getUserDataStore().getPlaybookSchedule(options.id);
     if (latest) {
-      const { userId: ownerId, ...rest } = latest;
-      await replaceScheduledPlaybook(ownerId, {
+      const { workspaceId: latestWorkspace, runAsUserId: latestUser, ...rest } = latest;
+      await replaceScheduledPlaybook(latestWorkspace, latestUser, {
         ...rest,
         runningSince: null,
       });

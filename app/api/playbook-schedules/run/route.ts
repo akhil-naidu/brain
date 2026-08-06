@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireInternalBearer } from "@/lib/auth/require-internal-token";
-import { requireSessionUserId } from "@/lib/auth/require-session";
+import { requireWorkspaceSession } from "@/lib/auth/require-workspace-session";
 import { runScheduledPlaybookBodySchema } from "@/lib/chat/scheduled-playbooks";
 import { runDueScheduledPlaybooks, runScheduledPlaybook } from "@/lib/chat/run-scheduled-playbook";
 
@@ -21,14 +21,14 @@ export async function POST(request: Request) {
 
   try {
     if (parsed.data.id) {
-      const session = await requireSessionUserId();
-      if (!session.ok) {
-        return session.response;
+      const auth = await requireWorkspaceSession();
+      if (!auth.ok) {
+        return auth.response;
       }
       const result = await runScheduledPlaybook({
         id: parsed.data.id,
         force: parsed.data.force === true,
-        userId: session.userId,
+        workspaceId: auth.session.workspaceId,
       });
       if (result.skipped) {
         return NextResponse.json(result);

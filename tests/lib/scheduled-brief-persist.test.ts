@@ -31,8 +31,8 @@ describe("scheduled brief persistence (sqlite)", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it("writes and reads schedule config per user", async () => {
-    const written = await writeScheduledBriefConfig("user-1", {
+  it("writes and reads schedule config per workspace and user", async () => {
+    const written = await writeScheduledBriefConfig("workspace-1", "user-1", {
       enabled: true,
       hour: 8,
       minute: 15,
@@ -43,17 +43,19 @@ describe("scheduled brief persistence (sqlite)", () => {
     });
     expect(written.enabled).toBe(true);
     expect(written.slackChannel).toBe("#alerts");
-    expect(await readScheduledBriefConfig("user-1")).toEqual(written);
-    expect(await readScheduledBriefConfig("user-2")).toEqual(defaultScheduledBriefConfig());
+    expect(await readScheduledBriefConfig("workspace-1", "user-1")).toEqual(written);
+    expect(await readScheduledBriefConfig("workspace-2", "user-2")).toEqual(
+      defaultScheduledBriefConfig(),
+    );
   });
 
   it("clears stale runningSince on read", async () => {
     const stale = new Date(Date.now() - 60 * 60_000).toISOString();
-    await replaceScheduledBriefConfig("user-1", {
+    await replaceScheduledBriefConfig("workspace-1", "user-1", {
       ...defaultScheduledBriefConfig(),
       runningSince: stale,
     });
-    const read = await readScheduledBriefConfig("user-1");
+    const read = await readScheduledBriefConfig("workspace-1", "user-1");
     expect(read.runningSince).toBeNull();
   });
 });

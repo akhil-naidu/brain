@@ -23,6 +23,7 @@ const SCHEDULED_CONNECTIONS = {
 
 async function deliverToSlackIfConfigured(input: {
   readonly userId: string;
+  readonly workspaceId: string;
   readonly slackDeliveryEnabled: boolean;
   readonly slackChannel: string | null;
   readonly title: string;
@@ -42,6 +43,7 @@ async function deliverToSlackIfConfigured(input: {
 
   const result = await postMorningBriefToSlack({
     userId: input.userId,
+    workspaceId: input.workspaceId,
     channel,
     title: input.title,
     briefText: input.text,
@@ -58,6 +60,7 @@ async function deliverToSlackIfConfigured(input: {
  */
 export async function runScheduledPromptTurn(input: {
   readonly userId: string;
+  readonly workspaceId: string;
   readonly title: string;
   readonly prompt: string;
   readonly slackDeliveryEnabled?: boolean;
@@ -68,11 +71,15 @@ export async function runScheduledPromptTurn(input: {
   readonly slack: ScheduledSlackResult;
 }> {
   const userId = input.userId.trim();
+  const workspaceId = input.workspaceId.trim();
   if (!userId) {
     throw new Error("Scheduled runs require an owning user id.");
   }
+  if (!workspaceId) {
+    throw new Error("Scheduled runs require a workspace id.");
+  }
   const store = getChatStore();
-  const chat = store.createChat(userId, { title: input.title });
+  const chat = store.createChat(userId, { title: input.title, workspaceId });
 
   const internalToken = resolveInternalOperatorToken();
   if (!internalToken) {
@@ -85,6 +92,7 @@ export async function runScheduledPromptTurn(input: {
     auth: { bearer: internalToken },
     headers: {
       [BRAIN_RUN_AS_USER_HEADER]: userId,
+      "x-brain-workspace-id": workspaceId,
     },
   });
   const session = client.session();
@@ -93,7 +101,7 @@ export async function runScheduledPromptTurn(input: {
     clientContext: [createConnectionClientContext(SCHEDULED_CONNECTIONS)],
   });
 
-  store.updateChat(userId, chat.id, {
+  store.updateChat(userId, workspaceId, chat.id, {
     eveSession: {
       sessionId: response.sessionId,
       continuationToken: response.continuationToken,
@@ -102,7 +110,7 @@ export async function runScheduledPromptTurn(input: {
   });
 
   const result = await response.result();
-  const updated = store.updateChat(userId, chat.id, {
+  const updated = store.updateChat(userId, workspaceId, chat.id, {
     eveSession: session.state,
     events: result.events,
   });
@@ -118,6 +126,7 @@ export async function runScheduledPromptTurn(input: {
   const message = result.message ?? "";
   const slack = await deliverToSlackIfConfigured({
     userId,
+    workspaceId,
     slackDeliveryEnabled: input.slackDeliveryEnabled === true,
     slackChannel: input.slackChannel ?? null,
     title: input.title,

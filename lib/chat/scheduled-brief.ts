@@ -230,39 +230,47 @@ export function morningBriefChatTitle(date: Date, timeZone: string): string {
   return `Morning brief — ${formatted}`;
 }
 
-export async function readScheduledBriefConfig(userId: string): Promise<ScheduledBriefConfig> {
+export async function readScheduledBriefConfig(
+  workspaceId: string,
+  runAsUserId: string,
+): Promise<ScheduledBriefConfig> {
   const store = getUserDataStore();
-  const config = store.getMorningBrief(userId);
+  const config = store.getMorningBrief(workspaceId, runAsUserId);
   // Drop locks left behind by crashed / interrupted runs once they go stale.
   if (config.runningSince && !isScheduleRunLocked(config.runningSince)) {
     const cleared = { ...config, runningSince: null };
-    return store.replaceMorningBrief(userId, cleared);
+    return store.replaceMorningBrief(workspaceId, runAsUserId, cleared);
   }
   return config;
 }
 
 export async function listScheduledBriefConfigs(): Promise<
-  readonly (ScheduledBriefConfig & { readonly userId: string })[]
+  readonly (ScheduledBriefConfig & {
+    readonly workspaceId: string;
+    readonly runAsUserId: string;
+  })[]
 > {
   return getUserDataStore().listMorningBriefs();
 }
 
 export async function writeScheduledBriefConfig(
-  userId: string,
+  workspaceId: string,
+  runAsUserId: string,
   update: ScheduledBriefUpdate,
 ): Promise<ScheduledBriefConfig> {
-  return getUserDataStore().updateMorningBrief(userId, update);
+  return getUserDataStore().updateMorningBrief(workspaceId, runAsUserId, update);
 }
 
 export async function replaceScheduledBriefConfig(
-  userId: string,
+  workspaceId: string,
+  runAsUserId: string,
   config: ScheduledBriefConfig,
 ): Promise<ScheduledBriefConfig> {
   const parsed = parseScheduledBriefConfig(config);
   if (!parsed) {
     throw new Error("Invalid schedule configuration.");
   }
-  return getUserDataStore().replaceMorningBrief(userId, parsed);
+  return getUserDataStore().replaceMorningBrief(workspaceId, runAsUserId, parsed);
 }
 
 export const updateScheduledBriefBodySchema = z

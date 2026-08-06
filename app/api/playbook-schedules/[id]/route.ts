@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireSessionUserId } from "@/lib/auth/require-session";
+import { requireWorkspaceSession } from "@/lib/auth/require-workspace-session";
 import {
   deleteScheduledPlaybook,
   updateScheduledPlaybook,
@@ -13,9 +13,9 @@ type RouteContext = {
 };
 
 export async function PATCH(request: Request, context: RouteContext) {
-  const session = await requireSessionUserId();
-  if (!session.ok) {
-    return session.response;
+  const auth = await requireWorkspaceSession();
+  if (!auth.ok) {
+    return auth.response;
   }
   const { id } = await context.params;
   let body: unknown = {};
@@ -31,7 +31,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   try {
-    const schedule = await updateScheduledPlaybook(session.userId, id, parsed.data);
+    const schedule = await updateScheduledPlaybook(auth.session.workspaceId, id, parsed.data);
     return NextResponse.json({ schedule });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to update schedule.";
@@ -41,12 +41,12 @@ export async function PATCH(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
-  const session = await requireSessionUserId();
-  if (!session.ok) {
-    return session.response;
+  const auth = await requireWorkspaceSession();
+  if (!auth.ok) {
+    return auth.response;
   }
   const { id } = await context.params;
-  const deleted = await deleteScheduledPlaybook(session.userId, id);
+  const deleted = await deleteScheduledPlaybook(auth.session.workspaceId, id);
   if (!deleted) {
     return NextResponse.json({ error: "Schedule not found." }, { status: 404 });
   }

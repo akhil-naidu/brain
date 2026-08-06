@@ -76,42 +76,44 @@ export function scheduledPlaybookChatTitle(label: string, date: Date, timeZone: 
 }
 
 export async function readScheduledPlaybooks(
-  userId: string,
+  workspaceId: string,
 ): Promise<readonly ScheduledPlaybook[]> {
-  return getUserDataStore().listPlaybookSchedules(userId);
+  return getUserDataStore().listPlaybookSchedules(workspaceId);
 }
 
 export async function listAllScheduledPlaybooks(): Promise<
-  readonly (ScheduledPlaybook & { readonly userId: string })[]
+  readonly (ScheduledPlaybook & { readonly workspaceId: string; readonly runAsUserId: string })[]
 > {
   return getUserDataStore().listAllPlaybookSchedules();
 }
 
 export async function createScheduledPlaybook(
-  userId: string,
+  workspaceId: string,
+  runAsUserId: string,
   input: ScheduledPlaybookCreate,
 ): Promise<ScheduledPlaybook> {
-  return getUserDataStore().createPlaybookSchedule(userId, input);
+  return getUserDataStore().createPlaybookSchedule(workspaceId, runAsUserId, input);
 }
 
 export async function updateScheduledPlaybook(
-  userId: string,
+  workspaceId: string,
   id: string,
   update: ScheduledPlaybookUpdate,
 ): Promise<ScheduledPlaybook> {
-  return getUserDataStore().updatePlaybookSchedule(userId, id, update);
+  return getUserDataStore().updatePlaybookSchedule(workspaceId, id, update);
 }
 
-export async function deleteScheduledPlaybook(userId: string, id: string): Promise<boolean> {
-  return getUserDataStore().deletePlaybookSchedule(userId, id);
+export async function deleteScheduledPlaybook(workspaceId: string, id: string): Promise<boolean> {
+  return getUserDataStore().deletePlaybookSchedule(workspaceId, id);
 }
 
 export async function replaceScheduledPlaybook(
-  userId: string,
+  workspaceId: string,
+  runAsUserId: string,
   schedule: ScheduledPlaybook,
 ): Promise<ScheduledPlaybook> {
   const parsed = scheduleItemSchema.parse(schedule);
-  return getUserDataStore().replacePlaybookSchedule(userId, parsed);
+  return getUserDataStore().replacePlaybookSchedule(workspaceId, runAsUserId, parsed);
 }
 
 export function isScheduledPlaybookDue(

@@ -33,7 +33,7 @@ describe("scheduled playbooks store", () => {
   });
 
   it("creates and lists a schedule with a prompt snapshot", async () => {
-    const created = await createScheduledPlaybook("user-1", {
+    const created = await createScheduledPlaybook("workspace-1", "user-1", {
       label: "Triage inbox",
       prompt: "Triage important unread email.",
       sourcePlaybookId: "pb-1",
@@ -47,20 +47,20 @@ describe("scheduled playbooks store", () => {
     expect(created.sourcePlaybookId).toBe("pb-1");
     expect(created.enabled).toBe(true);
 
-    const listed = await readScheduledPlaybooks("user-1");
+    const listed = await readScheduledPlaybooks("workspace-1");
     expect(listed).toHaveLength(1);
     expect(listed[0]?.id).toBe(created.id);
-    expect(await readScheduledPlaybooks("user-2")).toHaveLength(0);
+    expect(await readScheduledPlaybooks("workspace-2")).toHaveLength(0);
   });
 
   it("updates enable and time", async () => {
-    const created = await createScheduledPlaybook("user-1", {
+    const created = await createScheduledPlaybook("workspace-1", "user-1", {
       label: "Sprint risks",
       prompt: "List sprint risks.",
       timezone: "UTC",
     });
 
-    const updated = await updateScheduledPlaybook("user-1", created.id, {
+    const updated = await updateScheduledPlaybook("workspace-1", created.id, {
       enabled: false,
       hour: 10,
       minute: 15,

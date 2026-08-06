@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireSessionUserId } from "@/lib/auth/require-session";
+import { requireWorkspaceSession } from "@/lib/auth/require-workspace-session";
 import {
   isScheduledBriefDue,
   readScheduledBriefConfig,
@@ -10,11 +10,11 @@ import {
 export const runtime = "nodejs";
 
 export async function GET() {
-  const session = await requireSessionUserId();
-  if (!session.ok) {
-    return session.response;
+  const auth = await requireWorkspaceSession();
+  if (!auth.ok) {
+    return auth.response;
   }
-  const config = await readScheduledBriefConfig(session.userId);
+  const config = await readScheduledBriefConfig(auth.session.workspaceId, auth.session.userId);
   return NextResponse.json({
     schedule: config,
     due: isScheduledBriefDue(config),
@@ -22,9 +22,9 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
-  const session = await requireSessionUserId();
-  if (!session.ok) {
-    return session.response;
+  const auth = await requireWorkspaceSession();
+  if (!auth.ok) {
+    return auth.response;
   }
 
   let body: unknown = {};
@@ -40,7 +40,11 @@ export async function PUT(request: Request) {
   }
 
   try {
-    const schedule = await writeScheduledBriefConfig(session.userId, parsed.data);
+    const schedule = await writeScheduledBriefConfig(
+      auth.session.workspaceId,
+      auth.session.userId,
+      parsed.data,
+    );
     return NextResponse.json({
       schedule,
       due: isScheduledBriefDue(schedule),

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireSessionUserId } from "@/lib/auth/require-session";
+import { requireWorkspaceSession } from "@/lib/auth/require-workspace-session";
 import {
   createScheduledPlaybook,
   createScheduledPlaybookBodySchema,
@@ -9,18 +9,18 @@ import {
 export const runtime = "nodejs";
 
 export async function GET() {
-  const session = await requireSessionUserId();
-  if (!session.ok) {
-    return session.response;
+  const auth = await requireWorkspaceSession();
+  if (!auth.ok) {
+    return auth.response;
   }
-  const schedules = await readScheduledPlaybooks(session.userId);
+  const schedules = await readScheduledPlaybooks(auth.session.workspaceId);
   return NextResponse.json({ schedules });
 }
 
 export async function POST(request: Request) {
-  const session = await requireSessionUserId();
-  if (!session.ok) {
-    return session.response;
+  const auth = await requireWorkspaceSession();
+  if (!auth.ok) {
+    return auth.response;
   }
 
   let body: unknown = {};
@@ -36,7 +36,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const schedule = await createScheduledPlaybook(session.userId, parsed.data);
+    const schedule = await createScheduledPlaybook(
+      auth.session.workspaceId,
+      auth.session.userId,
+      parsed.data,
+    );
     return NextResponse.json({ schedule }, { status: 201 });
   } catch (error) {
     return NextResponse.json(

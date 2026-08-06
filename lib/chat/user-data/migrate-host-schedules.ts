@@ -1,7 +1,6 @@
 import { existsSync, readFileSync, renameSync } from "node:fs";
 import path from "node:path";
 import { z } from "zod";
-import { resolveOperatorUserId } from "@/lib/auth/operator";
 import { MAX_PLAYBOOK_LABEL_CHARS, MAX_PLAYBOOK_PROMPT_CHARS } from "@/lib/chat/playbooks";
 import { MAX_SCHEDULED_PLAYBOOKS } from "@/lib/chat/scheduled-playbooks-limits";
 import type {
@@ -133,10 +132,13 @@ export function migrateHostSchedulesIntoStore(
     return { importedPlaybooks: 0, importedBrief: false };
   }
 
-  const userId = resolveOperatorUserId(env);
+  // Host JSON migrate targets an explicit operator id only (no first-user fallback).
+  const userId = env["BRAIN_OPERATOR_USER_ID"]?.trim();
   if (!userId) {
     return { importedPlaybooks: 0, importedBrief: false };
   }
+  // Scope key equals operator user id; first login remaps onto Personal workspace UUID.
+  const workspaceId = userId;
 
   const playbooksPath = resolveScheduledPlaybooksPath(cwd, env);
   const briefPath = resolveLegacyScheduledBriefPath(cwd, env);
@@ -152,7 +154,7 @@ export function migrateHostSchedulesIntoStore(
     const parsed = playbooksStoreSchema.safeParse(raw);
     if (parsed.success) {
       for (const schedule of parsed.data.schedules) {
-        store.replacePlaybookSchedule(userId, schedule);
+        store.replacePlaybookSchedule(workspaceId, userId, schedule);
         importedPlaybooks += 1;
       }
       renameMigrated(playbooksPath);
@@ -163,7 +165,7 @@ export function migrateHostSchedulesIntoStore(
   if (briefExists) {
     const brief = parseBriefConfig(readJsonFile(briefPath));
     if (brief) {
-      store.replaceMorningBrief(userId, brief);
+      store.replaceMorningBrief(workspaceId, userId, brief);
       importedBrief = true;
       renameMigrated(briefPath);
     }

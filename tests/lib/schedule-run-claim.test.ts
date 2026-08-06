@@ -29,7 +29,7 @@ describe("schedule run compare-and-swap", () => {
   });
 
   it("allows only one fresh claim on a playbook schedule", () => {
-    const created = store.createPlaybookSchedule("user-1", {
+    const created = store.createPlaybookSchedule("workspace-1", "user-1", {
       label: "Triage",
       prompt: "Triage",
       timezone: "UTC",
@@ -37,10 +37,10 @@ describe("schedule run compare-and-swap", () => {
     const now = new Date("2026-08-06T12:00:00.000Z");
     const claim = scheduleRunClaimTimestamps(now);
 
-    const first = store.tryClaimPlaybookScheduleRun("user-1", created.id, claim);
+    const first = store.tryClaimPlaybookScheduleRun("workspace-1", created.id, claim);
     expect(first?.runningSince).toBe(claim.runningSince);
 
-    const second = store.tryClaimPlaybookScheduleRun("user-1", created.id, {
+    const second = store.tryClaimPlaybookScheduleRun("workspace-1", created.id, {
       runningSince: "2026-08-06T12:00:01.000Z",
       staleBefore: claim.staleBefore,
     });
@@ -49,28 +49,34 @@ describe("schedule run compare-and-swap", () => {
   });
 
   it("allows reclaim after the lock goes stale", () => {
-    const created = store.createPlaybookSchedule("user-1", {
+    const created = store.createPlaybookSchedule("workspace-1", "user-1", {
       label: "Triage",
       prompt: "Triage",
       timezone: "UTC",
     });
     const started = new Date("2026-08-06T12:00:00.000Z");
     expect(
-      store.tryClaimPlaybookScheduleRun("user-1", created.id, scheduleRunClaimTimestamps(started)),
+      store.tryClaimPlaybookScheduleRun(
+        "workspace-1",
+        created.id,
+        scheduleRunClaimTimestamps(started),
+      ),
     ).not.toBeNull();
 
     const later = new Date(started.getTime() + SCHEDULED_BRIEF_STALE_RUN_MS + 1_000);
     const reclaim = scheduleRunClaimTimestamps(later);
-    const claimed = store.tryClaimPlaybookScheduleRun("user-1", created.id, reclaim);
+    const claimed = store.tryClaimPlaybookScheduleRun("workspace-1", created.id, reclaim);
     expect(claimed?.runningSince).toBe(reclaim.runningSince);
   });
 
   it("allows only one fresh claim on a morning brief", () => {
     const now = new Date("2026-08-06T09:00:00.000Z");
     const claim = scheduleRunClaimTimestamps(now);
-    expect(store.tryClaimMorningBriefRun("user-1", claim)?.runningSince).toBe(claim.runningSince);
+    expect(store.tryClaimMorningBriefRun("workspace-1", "user-1", claim)?.runningSince).toBe(
+      claim.runningSince,
+    );
     expect(
-      store.tryClaimMorningBriefRun("user-1", {
+      store.tryClaimMorningBriefRun("workspace-1", "user-1", {
         runningSince: "2026-08-06T09:00:01.000Z",
         staleBefore: claim.staleBefore,
       }),

@@ -163,9 +163,12 @@ function toPlaybook(row: SqlRow): Playbook {
   };
 }
 
-function toScheduledPlaybook(row: SqlRow): StoredScheduledPlaybook & { readonly userId: string } {
+function toScheduledPlaybook(
+  row: SqlRow,
+): StoredScheduledPlaybook & { readonly workspaceId: string; readonly runAsUserId: string } {
   return {
-    userId: requireString(row, "user_id"),
+    workspaceId: requireString(row, "workspace_id"),
+    runAsUserId: requireString(row, "run_as_user_id"),
     id: requireString(row, "id"),
     label: requireString(row, "label"),
     prompt: requireString(row, "prompt"),
@@ -185,9 +188,12 @@ function toScheduledPlaybook(row: SqlRow): StoredScheduledPlaybook & { readonly 
   };
 }
 
-function toMorningBrief(row: SqlRow): ScheduledBriefConfig & { readonly userId: string } {
+function toMorningBrief(
+  row: SqlRow,
+): ScheduledBriefConfig & { readonly workspaceId: string; readonly runAsUserId: string } {
   return {
-    userId: requireString(row, "user_id"),
+    workspaceId: requireString(row, "workspace_id"),
+    runAsUserId: requireString(row, "run_as_user_id"),
     enabled: requireBool(row, "enabled"),
     hour: requireNumber(row, "hour"),
     minute: requireNumber(row, "minute"),
@@ -204,29 +210,44 @@ function toMorningBrief(row: SqlRow): ScheduledBriefConfig & { readonly userId: 
 }
 
 export type UserDataStore = {
-  listPlaybooks(userId: string): readonly Playbook[];
+  listPlaybooks(workspaceId: string): readonly Playbook[];
   upsertPlaybook(
-    userId: string,
+    workspaceId: string,
+    createdBy: string,
     input: { readonly id?: string; readonly label: string; readonly prompt: string },
   ): Playbook;
-  deletePlaybook(userId: string, id: string): boolean;
-  importPlaybooks(userId: string, playbooks: readonly Playbook[]): readonly Playbook[];
+  deletePlaybook(workspaceId: string, id: string): boolean;
+  importPlaybooks(
+    workspaceId: string,
+    createdBy: string,
+    playbooks: readonly Playbook[],
+  ): readonly Playbook[];
 
-  listPlaybookSchedules(userId: string): readonly StoredScheduledPlaybook[];
-  listAllPlaybookSchedules(): readonly (StoredScheduledPlaybook & { readonly userId: string })[];
-  getPlaybookSchedule(id: string): (StoredScheduledPlaybook & { readonly userId: string }) | null;
+  listPlaybookSchedules(workspaceId: string): readonly StoredScheduledPlaybook[];
+  listAllPlaybookSchedules(): readonly (StoredScheduledPlaybook & {
+    readonly workspaceId: string;
+    readonly runAsUserId: string;
+  })[];
+  getPlaybookSchedule(id: string):
+    | (StoredScheduledPlaybook & {
+        readonly workspaceId: string;
+        readonly runAsUserId: string;
+      })
+    | null;
   createPlaybookSchedule(
-    userId: string,
+    workspaceId: string,
+    runAsUserId: string,
     input: StoredScheduledPlaybookCreate,
   ): StoredScheduledPlaybook;
   updatePlaybookSchedule(
-    userId: string,
+    workspaceId: string,
     id: string,
     update: StoredScheduledPlaybookUpdate,
   ): StoredScheduledPlaybook;
-  deletePlaybookSchedule(userId: string, id: string): boolean;
+  deletePlaybookSchedule(workspaceId: string, id: string): boolean;
   replacePlaybookSchedule(
-    userId: string,
+    workspaceId: string,
+    runAsUserId: string,
     schedule: StoredScheduledPlaybook,
   ): StoredScheduledPlaybook;
   /**
@@ -235,19 +256,38 @@ export type UserDataStore = {
    * runner already holds a fresh lock.
    */
   tryClaimPlaybookScheduleRun(
-    userId: string,
+    workspaceId: string,
     id: string,
     claim: { readonly runningSince: string; readonly staleBefore: string },
-  ): (StoredScheduledPlaybook & { readonly userId: string }) | null;
+  ):
+    | (StoredScheduledPlaybook & {
+        readonly workspaceId: string;
+        readonly runAsUserId: string;
+      })
+    | null;
 
-  getMorningBrief(userId: string): ScheduledBriefConfig;
-  listMorningBriefs(): readonly (ScheduledBriefConfig & { readonly userId: string })[];
-  updateMorningBrief(userId: string, update: ScheduledBriefUpdate): ScheduledBriefConfig;
-  replaceMorningBrief(userId: string, config: ScheduledBriefConfig): ScheduledBriefConfig;
+  getMorningBrief(workspaceId: string, runAsUserId: string): ScheduledBriefConfig;
+  listMorningBriefs(): readonly (ScheduledBriefConfig & {
+    readonly workspaceId: string;
+    readonly runAsUserId: string;
+  })[];
+  updateMorningBrief(
+    workspaceId: string,
+    runAsUserId: string,
+    update: ScheduledBriefUpdate,
+  ): ScheduledBriefConfig;
+  replaceMorningBrief(
+    workspaceId: string,
+    runAsUserId: string,
+    config: ScheduledBriefConfig,
+  ): ScheduledBriefConfig;
   tryClaimMorningBriefRun(
-    userId: string,
+    workspaceId: string,
+    runAsUserId: string,
     claim: { readonly runningSince: string; readonly staleBefore: string },
   ): ScheduledBriefConfig | null;
+
+  migrateUserScopedDataToWorkspace(userId: string, workspaceId: string): void;
 
   close(): void;
 };
@@ -295,15 +335,19 @@ export function createSqliteUserDataStore(dbPath: string): UserDataStore {
     CREATE TABLE IF NOT EXISTS playbook (
       id TEXT PRIMARY KEY NOT NULL,
       user_id TEXT NOT NULL,
+      workspace_id TEXT,
       label TEXT NOT NULL,
       prompt TEXT NOT NULL,
       updated_at INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS playbook_user_updated_idx ON playbook(user_id, updated_at DESC);
+    CREATE INDEX IF NOT EXISTS playbook_workspace_updated_idx ON playbook(workspace_id, updated_at DESC);
 
     CREATE TABLE IF NOT EXISTS playbook_schedule (
       id TEXT PRIMARY KEY NOT NULL,
       user_id TEXT NOT NULL,
+      workspace_id TEXT,
+      run_as_user_id TEXT,
       label TEXT NOT NULL,
       prompt TEXT NOT NULL,
       source_playbook_id TEXT,
@@ -321,9 +365,12 @@ export function createSqliteUserDataStore(dbPath: string): UserDataStore {
       running_since TEXT
     );
     CREATE INDEX IF NOT EXISTS playbook_schedule_user_idx ON playbook_schedule(user_id);
+    CREATE INDEX IF NOT EXISTS playbook_schedule_workspace_idx ON playbook_schedule(workspace_id);
 
     CREATE TABLE IF NOT EXISTS morning_brief_schedule (
       user_id TEXT PRIMARY KEY NOT NULL,
+      workspace_id TEXT,
+      run_as_user_id TEXT,
       enabled INTEGER NOT NULL,
       hour INTEGER NOT NULL,
       minute INTEGER NOT NULL,
@@ -337,38 +384,41 @@ export function createSqliteUserDataStore(dbPath: string): UserDataStore {
       last_run_at TEXT,
       running_since TEXT
     );
+    CREATE INDEX IF NOT EXISTS morning_brief_schedule_workspace_idx ON morning_brief_schedule(workspace_id);
   `);
 
   const listPlaybooksStmt = db.prepare(
-    "SELECT * FROM playbook WHERE user_id = ? ORDER BY updated_at DESC",
+    "SELECT * FROM playbook WHERE workspace_id = ? ORDER BY updated_at DESC",
   );
-  const findPlaybookStmt = db.prepare("SELECT * FROM playbook WHERE user_id = ? AND id = ?");
-  const countPlaybooksStmt = db.prepare("SELECT COUNT(*) AS count FROM playbook WHERE user_id = ?");
+  const findPlaybookStmt = db.prepare("SELECT * FROM playbook WHERE workspace_id = ? AND id = ?");
+  const countPlaybooksStmt = db.prepare(
+    "SELECT COUNT(*) AS count FROM playbook WHERE workspace_id = ?",
+  );
   const insertPlaybookStmt = db.prepare(
-    "INSERT INTO playbook (id, user_id, label, prompt, updated_at) VALUES (?, ?, ?, ?, ?)",
+    "INSERT INTO playbook (id, user_id, workspace_id, label, prompt, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
   );
   const updatePlaybookStmt = db.prepare(
-    "UPDATE playbook SET label = ?, prompt = ?, updated_at = ? WHERE user_id = ? AND id = ?",
+    "UPDATE playbook SET label = ?, prompt = ?, updated_at = ? WHERE workspace_id = ? AND id = ?",
   );
-  const deletePlaybookStmt = db.prepare("DELETE FROM playbook WHERE user_id = ? AND id = ?");
+  const deletePlaybookStmt = db.prepare("DELETE FROM playbook WHERE workspace_id = ? AND id = ?");
 
   const listSchedulesForUserStmt = db.prepare(
-    "SELECT * FROM playbook_schedule WHERE user_id = ? ORDER BY label ASC",
+    "SELECT * FROM playbook_schedule WHERE workspace_id = ? ORDER BY label ASC",
   );
   const listAllSchedulesStmt = db.prepare("SELECT * FROM playbook_schedule");
   const findScheduleStmt = db.prepare("SELECT * FROM playbook_schedule WHERE id = ?");
   const findScheduleForUserStmt = db.prepare(
-    "SELECT * FROM playbook_schedule WHERE user_id = ? AND id = ?",
+    "SELECT * FROM playbook_schedule WHERE workspace_id = ? AND id = ?",
   );
   const countSchedulesStmt = db.prepare(
-    "SELECT COUNT(*) AS count FROM playbook_schedule WHERE user_id = ?",
+    "SELECT COUNT(*) AS count FROM playbook_schedule WHERE workspace_id = ?",
   );
   const insertScheduleStmt = db.prepare(`
     INSERT INTO playbook_schedule (
-      id, user_id, label, prompt, source_playbook_id, enabled, hour, minute, timezone,
+      id, user_id, workspace_id, run_as_user_id, label, prompt, source_playbook_id, enabled, hour, minute, timezone,
       weekdays_only, slack_delivery_enabled, slack_channel, last_slack_error,
       last_run_date_key, last_chat_id, last_run_at, running_since
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const updateScheduleStmt = db.prepare(`
     UPDATE playbook_schedule SET
@@ -376,39 +426,43 @@ export function createSqliteUserDataStore(dbPath: string): UserDataStore {
       timezone = ?, weekdays_only = ?, slack_delivery_enabled = ?, slack_channel = ?,
       last_slack_error = ?, last_run_date_key = ?, last_chat_id = ?, last_run_at = ?,
       running_since = ?
-    WHERE user_id = ? AND id = ?
+    WHERE workspace_id = ? AND id = ?
   `);
   const deleteScheduleStmt = db.prepare(
-    "DELETE FROM playbook_schedule WHERE user_id = ? AND id = ?",
+    "DELETE FROM playbook_schedule WHERE workspace_id = ? AND id = ?",
   );
   const claimScheduleRunStmt = db.prepare(`
     UPDATE playbook_schedule
     SET running_since = ?
-    WHERE user_id = ? AND id = ?
+    WHERE workspace_id = ? AND id = ?
       AND (running_since IS NULL OR running_since <= ?)
   `);
 
-  const getBriefStmt = db.prepare("SELECT * FROM morning_brief_schedule WHERE user_id = ?");
+  const getBriefStmt = db.prepare(
+    "SELECT * FROM morning_brief_schedule WHERE workspace_id = ? AND run_as_user_id = ?",
+  );
   const listBriefsStmt = db.prepare("SELECT * FROM morning_brief_schedule");
   const ensureBriefRowStmt = db.prepare(`
     INSERT INTO morning_brief_schedule (
-      user_id, enabled, hour, minute, timezone, weekdays_only, slack_delivery_enabled,
+      user_id, workspace_id, run_as_user_id, enabled, hour, minute, timezone, weekdays_only, slack_delivery_enabled,
       slack_channel, last_slack_error, last_run_date_key, last_chat_id, last_run_at, running_since
-    ) VALUES (?, 0, ?, ?, ?, 1, 0, NULL, NULL, NULL, NULL, NULL, NULL)
+    ) VALUES (?, ?, ?, 0, ?, ?, ?, 1, 0, NULL, NULL, NULL, NULL, NULL, NULL)
     ON CONFLICT(user_id) DO NOTHING
   `);
   const claimBriefRunStmt = db.prepare(`
     UPDATE morning_brief_schedule
     SET running_since = ?
-    WHERE user_id = ?
+    WHERE workspace_id = ? AND run_as_user_id = ?
       AND (running_since IS NULL OR running_since <= ?)
   `);
   const upsertBriefStmt = db.prepare(`
     INSERT INTO morning_brief_schedule (
-      user_id, enabled, hour, minute, timezone, weekdays_only, slack_delivery_enabled,
+      user_id, workspace_id, run_as_user_id, enabled, hour, minute, timezone, weekdays_only, slack_delivery_enabled,
       slack_channel, last_slack_error, last_run_date_key, last_chat_id, last_run_at, running_since
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(user_id) DO UPDATE SET
+      workspace_id = excluded.workspace_id,
+      run_as_user_id = excluded.run_as_user_id,
       enabled = excluded.enabled,
       hour = excluded.hour,
       minute = excluded.minute,
@@ -423,7 +477,26 @@ export function createSqliteUserDataStore(dbPath: string): UserDataStore {
       running_since = excluded.running_since
   `);
 
-  function writeScheduleRow(userId: string, schedule: StoredScheduledPlaybook) {
+  const migratePlaybooksStmt = db.prepare(
+    `UPDATE playbook SET workspace_id = ?
+     WHERE user_id = ? AND (workspace_id IS NULL OR workspace_id = '' OR workspace_id = user_id)`,
+  );
+  const migratePlaybookSchedulesStmt = db.prepare(
+    `UPDATE playbook_schedule
+     SET workspace_id = ?, run_as_user_id = COALESCE(run_as_user_id, user_id)
+     WHERE user_id = ? AND (workspace_id IS NULL OR workspace_id = '' OR workspace_id = user_id)`,
+  );
+  const migrateMorningBriefStmt = db.prepare(
+    `UPDATE morning_brief_schedule
+     SET workspace_id = ?, run_as_user_id = COALESCE(run_as_user_id, user_id)
+     WHERE user_id = ? AND (workspace_id IS NULL OR workspace_id = '' OR workspace_id = user_id)`,
+  );
+
+  function writeScheduleRow(
+    workspaceId: string,
+    _runAsUserId: string,
+    schedule: StoredScheduledPlaybook,
+  ) {
     updateScheduleStmt.run(
       schedule.label,
       schedule.prompt,
@@ -440,14 +513,16 @@ export function createSqliteUserDataStore(dbPath: string): UserDataStore {
       schedule.lastChatId,
       schedule.lastRunAt,
       schedule.runningSince,
-      userId,
+      workspaceId,
       schedule.id,
     );
   }
 
-  function writeBriefRow(userId: string, config: ScheduledBriefConfig) {
+  function writeBriefRow(workspaceId: string, runAsUserId: string, config: ScheduledBriefConfig) {
     upsertBriefStmt.run(
-      userId,
+      runAsUserId,
+      workspaceId,
+      runAsUserId,
       config.enabled ? 1 : 0,
       config.hour,
       config.minute,
@@ -464,11 +539,11 @@ export function createSqliteUserDataStore(dbPath: string): UserDataStore {
   }
 
   return {
-    listPlaybooks(userId) {
-      return listPlaybooksStmt.all(userId).map((row) => toPlaybook(requireRow(row)));
+    listPlaybooks(workspaceId) {
+      return listPlaybooksStmt.all(workspaceId).map((row) => toPlaybook(requireRow(row)));
     },
 
-    upsertPlaybook(userId, input) {
+    upsertPlaybook(workspaceId, createdBy, input) {
       const label = normalizePlaybookLabel(input.label);
       const prompt = normalizePlaybookPrompt(input.prompt);
       if (!label) throw new Error("Name is required.");
@@ -478,26 +553,26 @@ export function createSqliteUserDataStore(dbPath: string): UserDataStore {
       }
       const now = Date.now();
       if (input.id) {
-        const existing = findPlaybookStmt.get(userId, input.id);
+        const existing = findPlaybookStmt.get(workspaceId, input.id);
         if (!existing) throw new Error("Playbook not found.");
-        updatePlaybookStmt.run(label, prompt, now, userId, input.id);
-        return toPlaybook(requireRow(findPlaybookStmt.get(userId, input.id)));
+        updatePlaybookStmt.run(label, prompt, now, workspaceId, input.id);
+        return toPlaybook(requireRow(findPlaybookStmt.get(workspaceId, input.id)));
       }
-      if (countFromRow(countPlaybooksStmt.get(userId)) >= MAX_PLAYBOOKS) {
+      if (countFromRow(countPlaybooksStmt.get(workspaceId)) >= MAX_PLAYBOOKS) {
         throw new Error(`You can save up to ${MAX_PLAYBOOKS} playbooks.`);
       }
       const id = randomUUID();
-      insertPlaybookStmt.run(id, userId, label, prompt, now);
-      return toPlaybook(requireRow(findPlaybookStmt.get(userId, id)));
+      insertPlaybookStmt.run(id, createdBy, workspaceId, label, prompt, now);
+      return toPlaybook(requireRow(findPlaybookStmt.get(workspaceId, id)));
     },
 
-    deletePlaybook(userId, id) {
-      const result = deletePlaybookStmt.run(userId, id);
+    deletePlaybook(workspaceId, id) {
+      const result = deletePlaybookStmt.run(workspaceId, id);
       return Number(result.changes ?? 0) > 0;
     },
 
-    importPlaybooks(userId, playbooks) {
-      const existing = this.listPlaybooks(userId);
+    importPlaybooks(workspaceId, createdBy, playbooks) {
+      const existing = this.listPlaybooks(workspaceId);
       if (existing.length > 0) {
         return existing;
       }
@@ -506,15 +581,22 @@ export function createSqliteUserDataStore(dbPath: string): UserDataStore {
         const label = normalizePlaybookLabel(item.label);
         const prompt = normalizePlaybookPrompt(item.prompt);
         if (!label || !prompt) continue;
-        insertPlaybookStmt.run(item.id || randomUUID(), userId, label, prompt, item.updatedAt);
+        insertPlaybookStmt.run(
+          item.id || randomUUID(),
+          createdBy,
+          workspaceId,
+          label,
+          prompt,
+          item.updatedAt,
+        );
       }
-      return this.listPlaybooks(userId);
+      return this.listPlaybooks(workspaceId);
     },
 
-    listPlaybookSchedules(userId) {
-      return listSchedulesForUserStmt.all(userId).map((row) => {
+    listPlaybookSchedules(workspaceId) {
+      return listSchedulesForUserStmt.all(workspaceId).map((row) => {
         const full = toScheduledPlaybook(requireRow(row));
-        const { userId: _ownerId, ...schedule } = full;
+        const { workspaceId: _workspaceId, runAsUserId: _runAsUserId, ...schedule } = full;
         return schedule;
       });
     },
@@ -528,8 +610,8 @@ export function createSqliteUserDataStore(dbPath: string): UserDataStore {
       return row ? toScheduledPlaybook(requireRow(row)) : null;
     },
 
-    createPlaybookSchedule(userId, input) {
-      if (countFromRow(countSchedulesStmt.get(userId)) >= MAX_SCHEDULED_PLAYBOOKS) {
+    createPlaybookSchedule(workspaceId, runAsUserId, input) {
+      if (countFromRow(countSchedulesStmt.get(workspaceId)) >= MAX_SCHEDULED_PLAYBOOKS) {
         throw new Error(`You can schedule up to ${MAX_SCHEDULED_PLAYBOOKS} playbooks.`);
       }
       const label = normalizePlaybookLabel(input.label);
@@ -558,7 +640,9 @@ export function createSqliteUserDataStore(dbPath: string): UserDataStore {
       };
       insertScheduleStmt.run(
         schedule.id,
-        userId,
+        runAsUserId,
+        workspaceId,
+        runAsUserId,
         schedule.label,
         schedule.prompt,
         schedule.sourcePlaybookId,
@@ -578,8 +662,8 @@ export function createSqliteUserDataStore(dbPath: string): UserDataStore {
       return schedule;
     },
 
-    updatePlaybookSchedule(userId, id, update) {
-      const existing = findScheduleForUserStmt.get(userId, id);
+    updatePlaybookSchedule(workspaceId, id, update) {
+      const existing = findScheduleForUserStmt.get(workspaceId, id);
       if (!existing) throw new Error("Schedule not found.");
       const current = toScheduledPlaybook(requireRow(existing));
       const next: StoredScheduledPlaybook = {
@@ -607,27 +691,30 @@ export function createSqliteUserDataStore(dbPath: string): UserDataStore {
       if (!next.label) throw new Error("Name is required.");
       if (!next.prompt) throw new Error("Prompt is required.");
       if (!isValidTimeZone(next.timezone)) throw new Error("Invalid timezone.");
-      writeScheduleRow(userId, next);
+      writeScheduleRow(workspaceId, current.runAsUserId, next);
       return next;
     },
 
-    deletePlaybookSchedule(userId, id) {
-      const result = deleteScheduleStmt.run(userId, id);
+    deletePlaybookSchedule(workspaceId, id) {
+      const result = deleteScheduleStmt.run(workspaceId, id);
       return Number(result.changes ?? 0) > 0;
     },
 
-    replacePlaybookSchedule(userId, schedule) {
-      const existing = findScheduleForUserStmt.get(userId, schedule.id);
+    replacePlaybookSchedule(workspaceId, runAsUserId, schedule) {
+      const existing = findScheduleForUserStmt.get(workspaceId, schedule.id);
       if (existing) {
-        writeScheduleRow(userId, schedule);
+        const existingParsed = toScheduledPlaybook(requireRow(existing));
+        writeScheduleRow(workspaceId, existingParsed.runAsUserId, schedule);
         return schedule;
       }
-      if (countFromRow(countSchedulesStmt.get(userId)) >= MAX_SCHEDULED_PLAYBOOKS) {
+      if (countFromRow(countSchedulesStmt.get(workspaceId)) >= MAX_SCHEDULED_PLAYBOOKS) {
         throw new Error(`You can schedule up to ${MAX_SCHEDULED_PLAYBOOKS} playbooks.`);
       }
       insertScheduleStmt.run(
         schedule.id,
-        userId,
+        runAsUserId,
+        workspaceId,
+        runAsUserId,
         schedule.label,
         schedule.prompt,
         schedule.sourcePlaybookId,
@@ -647,21 +734,30 @@ export function createSqliteUserDataStore(dbPath: string): UserDataStore {
       return schedule;
     },
 
-    tryClaimPlaybookScheduleRun(userId, id, claim) {
-      const result = claimScheduleRunStmt.run(claim.runningSince, userId, id, claim.staleBefore);
+    tryClaimPlaybookScheduleRun(workspaceId, id, claim) {
+      const result = claimScheduleRunStmt.run(
+        claim.runningSince,
+        workspaceId,
+        id,
+        claim.staleBefore,
+      );
       if (Number(result.changes ?? 0) === 0) {
         return null;
       }
-      const row = findScheduleForUserStmt.get(userId, id);
+      const row = findScheduleForUserStmt.get(workspaceId, id);
       return row ? toScheduledPlaybook(requireRow(row)) : null;
     },
 
-    getMorningBrief(userId) {
-      const row = getBriefStmt.get(userId);
+    getMorningBrief(workspaceId, runAsUserId) {
+      const row = getBriefStmt.get(workspaceId, runAsUserId);
       if (!row) {
         return defaultScheduledBriefConfig();
       }
-      const { userId: _ownerId, ...config } = toMorningBrief(requireRow(row));
+      const {
+        workspaceId: _workspaceId,
+        runAsUserId: _runAsUserId,
+        ...config
+      } = toMorningBrief(requireRow(row));
       return config;
     },
 
@@ -669,8 +765,8 @@ export function createSqliteUserDataStore(dbPath: string): UserDataStore {
       return listBriefsStmt.all().map((row) => toMorningBrief(requireRow(row)));
     },
 
-    updateMorningBrief(userId, update) {
-      const current = this.getMorningBrief(userId);
+    updateMorningBrief(workspaceId, runAsUserId, update) {
+      const current = this.getMorningBrief(workspaceId, runAsUserId);
       const next: ScheduledBriefConfig = {
         ...current,
         ...(update.enabled !== undefined ? { enabled: update.enabled } : {}),
@@ -686,23 +782,41 @@ export function createSqliteUserDataStore(dbPath: string): UserDataStore {
           : {}),
       };
       if (!isValidTimeZone(next.timezone)) throw new Error("Invalid timezone.");
-      writeBriefRow(userId, next);
+      writeBriefRow(workspaceId, runAsUserId, next);
       return next;
     },
 
-    replaceMorningBrief(userId, config) {
-      writeBriefRow(userId, config);
+    replaceMorningBrief(workspaceId, runAsUserId, config) {
+      writeBriefRow(workspaceId, runAsUserId, config);
       return config;
     },
 
-    tryClaimMorningBriefRun(userId, claim) {
+    tryClaimMorningBriefRun(workspaceId, runAsUserId, claim) {
       const defaults = defaultScheduledBriefConfig();
-      ensureBriefRowStmt.run(userId, defaults.hour, defaults.minute, defaults.timezone);
-      const result = claimBriefRunStmt.run(claim.runningSince, userId, claim.staleBefore);
+      ensureBriefRowStmt.run(
+        runAsUserId,
+        workspaceId,
+        runAsUserId,
+        defaults.hour,
+        defaults.minute,
+        defaults.timezone,
+      );
+      const result = claimBriefRunStmt.run(
+        claim.runningSince,
+        workspaceId,
+        runAsUserId,
+        claim.staleBefore,
+      );
       if (Number(result.changes ?? 0) === 0) {
         return null;
       }
-      return this.getMorningBrief(userId);
+      return this.getMorningBrief(workspaceId, runAsUserId);
+    },
+
+    migrateUserScopedDataToWorkspace(userId, workspaceId) {
+      migratePlaybooksStmt.run(workspaceId, userId);
+      migratePlaybookSchedulesStmt.run(workspaceId, userId);
+      migrateMorningBriefStmt.run(workspaceId, userId);
     },
 
     close() {

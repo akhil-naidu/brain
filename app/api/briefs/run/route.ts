@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireInternalBearer } from "@/lib/auth/require-internal-token";
-import { requireSessionUserId } from "@/lib/auth/require-session";
+import { requireWorkspaceSession } from "@/lib/auth/require-workspace-session";
 import { runScheduledBriefBodySchema } from "@/lib/chat/scheduled-brief";
 import { runDueScheduledBriefs, runScheduledBrief } from "@/lib/chat/run-scheduled-brief";
 
@@ -30,13 +30,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ results });
     }
 
-    const session = await requireSessionUserId();
-    if (!session.ok) {
-      return session.response;
+    const auth = await requireWorkspaceSession();
+    if (!auth.ok) {
+      return auth.response;
     }
 
     const result = await runScheduledBrief({
-      userId: session.userId,
+      workspaceId: auth.session.workspaceId,
+      runAsUserId: auth.session.userId,
       force: parsed.data.force === true,
     });
     if (result.skipped) {

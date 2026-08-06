@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireSessionUserId } from "@/lib/auth/require-session";
+import { requireWorkspaceSession } from "@/lib/auth/require-workspace-session";
 import { MAX_PLAYBOOK_LABEL_CHARS, MAX_PLAYBOOK_PROMPT_CHARS } from "@/lib/chat/playbooks";
 import { getUserDataStore } from "@/lib/chat/user-data/sqlite-user-data-store";
 
@@ -30,18 +30,18 @@ const importSchema = z
   .strict();
 
 export async function GET() {
-  const session = await requireSessionUserId();
-  if (!session.ok) {
-    return session.response;
+  const auth = await requireWorkspaceSession();
+  if (!auth.ok) {
+    return auth.response;
   }
-  const playbooks = getUserDataStore().listPlaybooks(session.userId);
+  const playbooks = getUserDataStore().listPlaybooks(auth.session.workspaceId);
   return NextResponse.json({ playbooks });
 }
 
 export async function POST(request: Request) {
-  const session = await requireSessionUserId();
-  if (!session.ok) {
-    return session.response;
+  const auth = await requireWorkspaceSession();
+  if (!auth.ok) {
+    return auth.response;
   }
 
   let body: unknown;
@@ -56,7 +56,11 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid playbooks import body" }, { status: 400 });
     }
-    const playbooks = getUserDataStore().importPlaybooks(session.userId, parsed.data.playbooks);
+    const playbooks = getUserDataStore().importPlaybooks(
+      auth.session.workspaceId,
+      auth.session.userId,
+      parsed.data.playbooks,
+    );
     return NextResponse.json({ playbooks }, { status: 201 });
   }
 
@@ -66,7 +70,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const playbook = getUserDataStore().upsertPlaybook(session.userId, parsed.data);
+    const playbook = getUserDataStore().upsertPlaybook(
+      auth.session.workspaceId,
+      auth.session.userId,
+      parsed.data,
+    );
     return NextResponse.json({ playbook }, { status: parsed.data.id ? 200 : 201 });
   } catch (error) {
     return NextResponse.json(

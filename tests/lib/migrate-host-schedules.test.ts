@@ -106,8 +106,8 @@ describe("migrateHostSchedulesIntoStore", () => {
     const result = migrateHostSchedulesIntoStore(store, process.env, dir);
     expect(result).toEqual({ importedPlaybooks: 1, importedBrief: true });
     expect(store.listPlaybookSchedules("operator-1")).toHaveLength(1);
-    expect(store.getMorningBrief("operator-1").enabled).toBe(true);
-    expect(store.getMorningBrief("operator-1").minute).toBe(30);
+    expect(store.getMorningBrief("operator-1", "operator-1").enabled).toBe(true);
+    expect(store.getMorningBrief("operator-1", "operator-1").minute).toBe(30);
     expect(existsSync(playbooksPath)).toBe(false);
     expect(existsSync(`${playbooksPath}.migrated`)).toBe(true);
     expect(existsSync(`${briefPath}.migrated`)).toBe(true);

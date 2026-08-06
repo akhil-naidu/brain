@@ -21,42 +21,47 @@ export type RunScheduledBriefResult =
       readonly skipped: false;
       readonly chat: ChatRecord;
       readonly slack: ScheduledSlackResult;
-      readonly userId: string;
+      readonly workspaceId: string;
+      readonly runAsUserId: string;
     }
   | {
       readonly ok: true;
       readonly skipped: true;
       readonly reason: "disabled" | "not_due" | "already_running" | "not_found";
       readonly config?: ScheduledBriefConfig;
-      readonly userId?: string;
+      readonly workspaceId?: string;
+      readonly runAsUserId?: string;
     };
 
 export { resolveEveHttpHost } from "@/lib/chat/eve-http-host";
 
 export async function runScheduledBrief(options: {
-  readonly userId: string;
+  readonly workspaceId: string;
+  readonly runAsUserId: string;
   readonly force?: boolean;
   readonly now?: Date;
 }): Promise<RunScheduledBriefResult> {
   const now = options.now ?? new Date();
   const force = options.force === true;
-  const userId = options.userId;
-  let config = await readScheduledBriefConfig(userId);
+  const workspaceId = options.workspaceId;
+  const runAsUserId = options.runAsUserId;
+  let config = await readScheduledBriefConfig(workspaceId, runAsUserId);
 
   if (!force && !config.enabled) {
-    return { ok: true, skipped: true, reason: "disabled", config, userId };
+    return { ok: true, skipped: true, reason: "disabled", config, workspaceId, runAsUserId };
   }
 
   if (!force && !isScheduledBriefDue(config, now)) {
-    return { ok: true, skipped: true, reason: "not_due", config, userId };
+    return { ok: true, skipped: true, reason: "not_due", config, workspaceId, runAsUserId };
   }
 
   const claimed = getUserDataStore().tryClaimMorningBriefRun(
-    userId,
+    workspaceId,
+    runAsUserId,
     scheduleRunClaimTimestamps(now),
   );
   if (!claimed) {
-    return { ok: true, skipped: true, reason: "already_running", config, userId };
+    return { ok: true, skipped: true, reason: "already_running", config, workspaceId, runAsUserId };
   }
   config = claimed;
 
@@ -64,7 +69,8 @@ export async function runScheduledBrief(options: {
 
   try {
     const { chat, slack } = await runScheduledPromptTurn({
-      userId,
+      userId: runAsUserId,
+      workspaceId,
       title,
       prompt: MORNING_BRIEF_PROMPT,
       slackDeliveryEnabled: config.slackDeliveryEnabled,
@@ -72,7 +78,7 @@ export async function runScheduledBrief(options: {
     });
 
     const completedAt = new Date();
-    await replaceScheduledBriefConfig(userId, {
+    await replaceScheduledBriefConfig(workspaceId, runAsUserId, {
       ...config,
       runningSince: null,
       lastRunAt: completedAt.toISOString(),
@@ -81,10 +87,10 @@ export async function runScheduledBrief(options: {
       lastSlackError: slack.attempted && !slack.ok ? slack.error : null,
     });
 
-    return { ok: true, skipped: false, chat, slack, userId };
+    return { ok: true, skipped: false, chat, slack, workspaceId, runAsUserId };
   } catch (error) {
-    const latest = await readScheduledBriefConfig(userId);
-    await replaceScheduledBriefConfig(userId, {
+    const latest = await readScheduledBriefConfig(workspaceId, runAsUserId);
+    await replaceScheduledBriefConfig(workspaceId, runAsUserId, {
       ...latest,
       runningSince: null,
     });
@@ -93,7 +99,7 @@ export async function runScheduledBrief(options: {
 }
 
 async function runDueBriefQueue(
-  items: readonly { readonly userId: string }[],
+  items: readonly { readonly workspaceId: string; readonly runAsUserId: string }[],
   now: Date,
   results: readonly RunScheduledBriefResult[] = [],
 ): Promise<readonly RunScheduledBriefResult[]> {
@@ -101,7 +107,12 @@ async function runDueBriefQueue(
   if (!item) {
     return results;
   }
-  const result = await runScheduledBrief({ userId: item.userId, force: false, now });
+  const result = await runScheduledBrief({
+    workspaceId: item.workspaceId,
+    runAsUserId: item.runAsUserId,
+    force: false,
+    now,
+  });
   return runDueBriefQueue(rest, now, [...results, result]);
 }
 
@@ -110,7 +121,7 @@ export async function runDueScheduledBriefs(
 ): Promise<readonly RunScheduledBriefResult[]> {
   const configs = await listScheduledBriefConfigs();
   const due = configs.filter((item) => {
-    const { userId: _userId, ...config } = item;
+    const { workspaceId: _workspaceId, runAsUserId: _runAsUserId, ...config } = item;
     return isScheduledBriefDue(config, now);
   });
   return runDueBriefQueue(due, now);

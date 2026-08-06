@@ -150,6 +150,7 @@ export async function resolveSlackChannelId(
 
 export async function postMorningBriefToSlack(input: {
   readonly userId: string;
+  readonly workspaceId: string;
   readonly channel: string;
   readonly title: string;
   readonly briefText: string;
@@ -157,7 +158,10 @@ export async function postMorningBriefToSlack(input: {
 }): Promise<SlackBriefDeliveryResult> {
   const fetchImpl = input.fetchImpl ?? fetch;
   try {
-    const stored = await getStoredAccessToken(slackProvider, brainUserPrincipal(input.userId));
+    const stored = await getStoredAccessToken(
+      slackProvider,
+      brainUserPrincipal(input.userId, input.workspaceId),
+    );
     if (!stored) {
       return {
         ok: false,
