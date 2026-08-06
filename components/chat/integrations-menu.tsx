@@ -11,6 +11,7 @@ import {
   GmailIcon,
   SlackIcon,
   SnowflakeIcon,
+  ZernioIcon,
 } from "@/components/icons";
 import {
   DropdownMenu,
@@ -44,6 +45,7 @@ const CONNECTION_ITEMS: readonly ConnectionItem[] = [
   { key: "dflow", label: "dFlow", Icon: DflowIcon },
   { key: "github", label: "GitHub", Icon: GitHubIcon },
   { key: "snowflake", label: "Snowflake", Icon: SnowflakeIcon },
+  { key: "zernio", label: "Zernio", Icon: ZernioIcon },
 ];
 
 export function integrationStatusText(input: {

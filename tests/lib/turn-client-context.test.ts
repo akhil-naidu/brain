@@ -13,6 +13,7 @@ describe("createTurnClientContext", () => {
         gmail: true,
         slack: true,
         snowflake: false,
+        zernio: false,
       },
     });
 
@@ -33,6 +34,7 @@ describe("createTurnClientContext", () => {
         gmail: true,
         slack: true,
         snowflake: true,
+        zernio: true,
       },
     });
 

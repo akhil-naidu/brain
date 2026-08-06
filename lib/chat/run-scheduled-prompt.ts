@@ -18,6 +18,7 @@ const SCHEDULED_CONNECTIONS = {
   gmail: true,
   slack: true,
   snowflake: false,
+  zernio: false,
 } as const;
 
 async function deliverToSlackIfConfigured(input: {

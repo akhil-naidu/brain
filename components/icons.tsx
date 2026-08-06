@@ -106,3 +106,14 @@ export function SnowflakeIcon({ className }: { readonly className?: string }) {
     </svg>
   );
 }
+
+/** Zernio mark — stacked signal bars. */
+export function ZernioIcon({ className }: { readonly className?: string }) {
+  return (
+    <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
+      <rect fill="currentColor" height="6" opacity="0.55" rx="1.5" width="4" x="3" y="14" />
+      <rect fill="currentColor" height="10" opacity="0.8" rx="1.5" width="4" x="10" y="10" />
+      <rect fill="#F97316" height="16" rx="1.5" width="4" x="17" y="4" />
+    </svg>
+  );
+}

@@ -7,6 +7,7 @@ import {
   GmailIcon,
   SlackIcon,
   SnowflakeIcon,
+  ZernioIcon,
 } from "@/components/icons";
 import { cn } from "@/lib/utils";
 
@@ -108,6 +109,7 @@ const CONNECTION_ROWS: readonly ConnectionRow[] = [
     action: "Set up",
     Icon: SnowflakeIcon,
   },
+  { id: "zernio", label: "Zernio", status: "Sign in", action: "Connect", Icon: ZernioIcon },
 ];
 
 export function ConnectionsTourMock() {

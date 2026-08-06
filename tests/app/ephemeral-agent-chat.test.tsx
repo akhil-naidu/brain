@@ -62,6 +62,7 @@ vi.mock("@/app/_components/chat-shell-context", () => ({
       gmail: true,
       slack: true,
       snowflake: false,
+      zernio: false,
     },
     selectedModelId: "deepseek/deepseek-v4-pro",
     setConnectionEnabled: vi.fn(),

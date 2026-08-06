@@ -23,6 +23,7 @@ const fetchConnectionStatuses = vi.hoisted(() =>
       status: "needs_setup" as const,
       detail: "Set SNOWFLAKE_MCP_URL",
     },
+    { id: "zernio", displayName: "Zernio", status: "needs_sign_in" as const },
   ]),
 );
 
@@ -181,6 +182,7 @@ describe("IntegrationsMenu status", () => {
           gmail: true,
           slack: true,
           snowflake: false,
+          zernio: false,
         }}
         onConnectionEnabledChange={vi.fn()}
       />,

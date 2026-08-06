@@ -23,6 +23,7 @@ export type EnabledConnections = {
   readonly dflow: boolean;
   readonly github: boolean;
   readonly snowflake: boolean;
+  readonly zernio: boolean;
 };
 
 type ChatShellValue = {
@@ -55,6 +56,7 @@ export function ChatShellProvider({ children }: { readonly children: ReactNode }
     dflow: false,
     github: false,
     snowflake: false,
+    zernio: false,
   });
   const [selectedModelId, setSelectedModelIdState] = useState(DEFAULT_BRAIN_CHAT_MODEL_ID);
   const [preferenceReady, setPreferenceReady] = useState(false);
