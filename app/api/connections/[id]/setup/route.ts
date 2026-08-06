@@ -12,7 +12,7 @@ import {
   writeStoredAppCredentials,
 } from "@/agent/lib/connection-credentials";
 import { getChatConnectionProvider } from "@/agent/lib/connection-status";
-import { writeSnowflakeConnectionMcpUrlBinding } from "@/agent/lib/snowflake-mcp-url-binding";
+import { reloadSnowflakeConnectionModule } from "@/agent/lib/snowflake-connection-reload";
 import { resolvePublicOrigin } from "@/lib/http/public-origin";
 
 export const runtime = "nodejs";
@@ -124,10 +124,8 @@ export async function PUT(request: Request, context: RouteContext) {
       accessToken: usesPat ? nextAccessToken : undefined,
       mcpUrl: nextMcpUrl,
     });
-    // Eve bakes MCP urls at compile time — rewrite the generated binding so
-    // snowflake.ts recompiles with the account-specific server path.
-    if (provider.name === "snowflake" && nextMcpUrl) {
-      await writeSnowflakeConnectionMcpUrlBinding(nextMcpUrl);
+    if (provider.name === "snowflake") {
+      await reloadSnowflakeConnectionModule();
     }
     return NextResponse.json({
       ok: true,
@@ -154,7 +152,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
   await deleteStoredAppCredentials(provider.name);
   if (provider.name === "snowflake") {
-    await writeSnowflakeConnectionMcpUrlBinding(null);
+    await reloadSnowflakeConnectionModule();
   }
   return NextResponse.json({ ok: true, displayName: provider.displayName });
 }

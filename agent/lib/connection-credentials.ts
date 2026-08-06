@@ -1,9 +1,42 @@
 import { chmod, mkdir, open, readFile, rename, rm } from "node:fs/promises";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import type { McpOAuthProvider } from "./mcp-oauth";
+
+const EVE_SNAPSHOT_MARKER = `${path.sep}.eve${path.sep}dev-runtime${path.sep}snapshots${path.sep}`;
+
+/**
+ * Eve may load connection modules with cwd inside a snapshot under
+ * `.eve/dev-runtime/snapshots/...`. Host credentials live on the real project
+ * root `.eve/`, so walk out of the snapshot when needed.
+ */
+export function resolveEveDataRoot(cwd: string = process.cwd()): string {
+  if (!cwd.includes(EVE_SNAPSHOT_MARKER)) {
+    return cwd;
+  }
+
+  let dir = cwd;
+  while (dir.includes(EVE_SNAPSHOT_MARKER)) {
+    const parent = path.dirname(dir);
+    if (parent === dir) {
+      return cwd;
+    }
+    dir = parent;
+  }
+
+  for (;;) {
+    if (existsSync(path.join(dir, "package.json")) && existsSync(path.join(dir, ".eve"))) {
+      return dir;
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) {
+      return cwd;
+    }
+    dir = parent;
+  }
+}
 
 export function providerUsesPatAuth(
   provider: Pick<McpOAuthProvider, "authKind" | "patTokenEnv">,
@@ -37,7 +70,7 @@ export type ResolvedAppCredentials = {
 };
 
 function credentialsPath(name: string): string {
-  return path.join(process.cwd(), ".eve", `mcp-app-credentials-${name}.json`);
+  return path.join(resolveEveDataRoot(), ".eve", `mcp-app-credentials-${name}.json`);
 }
 
 /** True when the provider needs a pre-registered OAuth app (not DCR). */

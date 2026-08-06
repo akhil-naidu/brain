@@ -226,7 +226,7 @@ export function ConnectionSetupDialog({
                   value={mcpUrl}
                 />
                 <p className="text-muted-foreground text-xs">
-                  Restart Brain after saving if tools still use an old URL.
+                  {`Example: https://<account>/api/v2/databases/…/schemas/…/mcp-servers/…`}
                 </p>
               </div>
             ) : null}

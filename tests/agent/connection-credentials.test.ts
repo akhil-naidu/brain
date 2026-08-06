@@ -7,6 +7,7 @@ import {
   getProviderCredentialSetupError,
   providerNeedsStaticAppCredentials,
   readStoredAppCredentials,
+  resolveEveDataRoot,
   resolveProviderAppCredentials,
   writeStoredAppCredentials,
 } from "@/agent/lib/connection-credentials";
@@ -55,6 +56,14 @@ describe("providerNeedsStaticAppCredentials", () => {
   it("is true for pre-registered OAuth apps and false for DCR", () => {
     expect(providerNeedsStaticAppCredentials(staticProvider)).toBe(true);
     expect(providerNeedsStaticAppCredentials(dcrProvider)).toBe(false);
+  });
+});
+
+describe("resolveEveDataRoot", () => {
+  it("keeps normal cwd and walks out of eve snapshot cwds", () => {
+    expect(resolveEveDataRoot("/tmp/brain-work")).toBe("/tmp/brain-work");
+    const snapshotCwd = path.join(originalCwd, ".eve/dev-runtime/snapshots/test-snap/source");
+    expect(resolveEveDataRoot(snapshotCwd)).toBe(originalCwd);
   });
 });
 
