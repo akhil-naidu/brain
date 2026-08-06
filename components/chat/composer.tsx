@@ -67,7 +67,9 @@ function AttachmentGlyph({
     <span className="bg-background/80 text-muted-foreground border-border/60 flex size-8 shrink-0 flex-col items-center justify-center rounded-md border">
       <Icon className="size-3.5" />
       {extension ? (
-        <span className="mt-px text-[8px] leading-none font-semibold tracking-wide">{extension}</span>
+        <span className="mt-px text-[8px] leading-none font-semibold tracking-wide">
+          {extension}
+        </span>
       ) : null}
     </span>
   );
@@ -228,7 +230,7 @@ export function ChatComposer({
   const form = (
     <form
       className={cn(
-        "border-border/70 bg-card/95 focus-within:border-foreground/25 focus-within:ring-foreground/10 dark:bg-muted/40 dark:focus-within:border-foreground/30 dark:focus-within:ring-white/10 min-w-0 rounded-2xl border shadow-sm transition-[border-color,box-shadow] focus-within:ring-2",
+        "border-border/70 bg-card/95 focus-within:border-foreground/25 focus-within:ring-foreground/10 dark:bg-muted/40 dark:focus-within:border-foreground/30 min-w-0 rounded-2xl border shadow-sm transition-[border-color,box-shadow] focus-within:ring-2 dark:focus-within:ring-white/10",
         className,
       )}
       aria-describedby={disabledReason ? disabledReasonId : undefined}
@@ -301,7 +303,7 @@ export function ChatComposer({
         value={value}
       />
       <div className="flex min-h-10 items-center justify-between gap-2 px-2.5 pt-0.5 pb-2 sm:gap-2.5 sm:px-3">
-        <div className="scrollbar-none flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
+        <div className="flex min-w-0 flex-1 scrollbar-none items-center gap-0.5 overflow-x-auto">
           {footerStart}
         </div>
         <div className="flex shrink-0 items-center gap-1">
@@ -309,7 +311,7 @@ export function ChatComposer({
             <span
               aria-live="polite"
               className={cn(
-                "mr-0.5 tabular-nums text-[11px] font-medium",
+                "mr-0.5 text-[11px] font-medium tabular-nums",
                 isOverMaxLength ? "text-destructive" : "text-muted-foreground/80",
               )}
             >
