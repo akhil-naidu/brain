@@ -1,6 +1,6 @@
 ## Purpose
 
-Defines Brain's official MCP connections (ClickUp, Slack, Asana, Gmail) and how OAuth credentials are obtained for user-scoped tool access without Vercel Connect.
+Defines Brain's official MCP connections (ClickUp, Slack, Asana, Gmail, dFlow, GitHub, Snowflake) and how OAuth credentials are obtained for user-scoped tool access without Vercel Connect.
 ## Requirements
 ### Requirement: ClickUp MCP connection with dynamic client registration
 The system MUST provide a ClickUp MCP connection using the official ClickUp MCP endpoint and OAuth with dynamic client registration. ClickUp MUST NOT require static client id/secret env vars.
@@ -55,4 +55,19 @@ The system MUST provide a dFlow MCP connection using the official dFlow Cloud MC
 #### Scenario: dFlow write tools require approval
 - **WHEN** the model calls a dFlow create/update or GitHub setup tool
 - **THEN** the connection approval policy requires user approval
+
+### Requirement: Snowflake MCP connection with account URL and OAuth client
+The system MUST provide a Snowflake-managed MCP connection. The MCP server URL MUST come from `SNOWFLAKE_MCP_URL`. OAuth app credentials MUST be resolvable from UI-stored host credentials or `SNOWFLAKE_MCP_CLIENT_ID` / `SNOWFLAKE_MCP_CLIENT_SECRET`, with stored credentials preferred. The connection MUST use Snowflake OAuth authorize and token-request endpoints derived from the MCP URL origin, and MUST NOT use Vercel Connect or dynamic client registration.
+
+#### Scenario: Snowflake connection is defined
+- **WHEN** the agent loads connections
+- **THEN** a Snowflake MCP connection is available for Cortex Agents, Analyst, Search, SQL, and custom tools via interactive Snowflake OAuth
+
+#### Scenario: Snowflake needs setup without MCP URL
+- **WHEN** `SNOWFLAKE_MCP_URL` is unset
+- **THEN** the status endpoint reports Snowflake as needs setup
+
+#### Scenario: Snowflake tools require approval by default
+- **WHEN** the model calls a Snowflake MCP tool
+- **THEN** the connection approval policy requires user approval (tool names are per-server)
 
