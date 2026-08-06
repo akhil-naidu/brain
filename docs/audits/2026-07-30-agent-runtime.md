@@ -45,7 +45,7 @@ and principal id (`node_modules/eve/dist/src/runtime/connections/types.d.ts:185-
 Here those values are identical for every request.
 
 **Proposed fix:** Replace the unconditional authenticator with a real
-self-hosted `AuthFn` (JWT/OIDC, Auth.js session, or API key) that returns a
+self-hosted `AuthFn` (JWT/OIDC, Better Auth session, or API key) that returns a
 stable, distinct user principal. If anonymous local mode is required, gate it
 on an explicit development flag and a loopback-host check equivalent to
 `localDev()`, and fail closed otherwise. Add per-session/user authorization if

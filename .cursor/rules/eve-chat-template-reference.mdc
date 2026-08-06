@@ -5,7 +5,7 @@ alwaysApply: true
 
 # eve-chat-template reference mirror
 
-Brain’s chat UI is adapted from [vercel-labs/eve-chat-template](https://github.com/vercel-labs/eve-chat-template), **without** Vercel Connect, Neon, Upstash, Better Auth, or AI Gateway.
+Brain’s chat UI is adapted from [vercel-labs/eve-chat-template](https://github.com/vercel-labs/eve-chat-template), **without** Vercel Connect, Neon, Upstash, AI Gateway, or the template’s Vercel-tied auth stack. Brain uses self-hosted Better Auth for login (see `lib/auth/`).
 
 ## Local clone (required reference)
 

@@ -22,7 +22,7 @@ This repo must stay **self-hostable and independent of Vercel’s platform**. Do
 | --- | --- |
 | Models | Direct AI SDK providers or third-party gateways (e.g. Command Code) with env keys |
 | Hosting | `eve build` + `eve start` (Nitro Node) or any non-Vercel host |
-| Route auth | JWT, OIDC, Clerk, Auth.js, API keys, or custom `AuthFn` — not `vercelOidc()` |
+| Route auth | Better Auth (self-hosted), JWT, OIDC, Clerk, API keys, or custom `AuthFn` — not `vercelOidc()` |
 | Connection OAuth | `defineInteractiveAuthorization` + your own token store, or static/user `getToken` |
 | MCP / APIs | Remote MCP with self-hosted auth, OpenAPI connections, or authored tools |
 | Sandbox | Local / Docker / microsandbox / custom backend — not Vercel Sandbox |

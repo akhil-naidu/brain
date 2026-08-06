@@ -11,7 +11,7 @@ context: |
   - Planned UI: Next.js + withEve() + useEveAgent from eve/react, adapted from eve-chat-template
 
   Hard constraints (never violate):
-  - No Vercel Connect, vercelOidc(), Neon/Drizzle chat persistence, Upstash, Better Auth / Sign in with Vercel
+  - No Vercel Connect, vercelOidc(), Neon/Drizzle chat persistence, Upstash, Sign in with Vercel
   - No AI Gateway string models as the primary path
   - Stay self-hostable: eve build / eve start or non-Vercel host
   - See .cursor/rules/no-vercel-infra.mdc and AGENTS.md
@@ -22,7 +22,7 @@ context: |
   - Design overview: docs/superpowers/specs/2026-07-29-brain-chat-ui-design.md
   - Template mirror: /Users/dev/github/tmp/eve-chat-template
 
-  Auth for browser UI: fixed anonymous user principal (principalType user) for local/trusted use so MCP OAuth works — not public-internet-ready.
+  Auth for browser UI: Better Auth email/password sessions (host SQLite) mapped to eve user principals; chats/MCP tokens are per signed-in user (no vercelOidc / Vercel Connect).
 
 rules:
   proposal:
@@ -43,7 +43,7 @@ operations:
   apply:
     guidance:
       - Execute docs/superpowers/plans in order; pass each Verifiable conclusion before the next
-      - Do not introduce better-auth, neon, upstash, or @vercel/connect
+      - Do not introduce neon, upstash, @vercel/connect, or vercelOidc()
   archive:
     guidance:
       - Ensure openspec/specs reflect shipped chat UI behavior
