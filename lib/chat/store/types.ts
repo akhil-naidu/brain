@@ -9,6 +9,7 @@ export type ChatSummary = {
   readonly updatedAt: string;
   readonly visibility: ChatVisibility;
   readonly userId: string;
+  readonly revision: number;
 };
 
 export type ChatRecord = ChatSummary & {
@@ -24,6 +25,8 @@ export type CreateChatInput = {
   readonly visibility?: ChatVisibility;
 };
 
+export type TurnLockAction = "acquire" | "release" | "heartbeat";
+
 export type UpdateChatInput = {
   readonly title?: string;
   readonly visibility?: ChatVisibility;
@@ -31,6 +34,10 @@ export type UpdateChatInput = {
   readonly appendEvents?: readonly HandleMessageStreamEvent[];
   /** When set, replaces the full event log (used for turn snapshots). */
   readonly events?: readonly HandleMessageStreamEvent[];
+  /** Optimistic concurrency token; required for shared chat content mutations. */
+  readonly expectedRevision?: number;
+  /** Shared-chat turn serialization. */
+  readonly turnLock?: TurnLockAction;
 };
 
 export type DeleteChatOptions = {

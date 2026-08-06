@@ -10,6 +10,7 @@ const chats: readonly ChatSummary[] = [
     updatedAt: "2026-08-04T00:00:00.000Z",
     visibility: "personal",
     userId: "user-a",
+    revision: 0,
   },
   {
     id: "2",
@@ -18,6 +19,7 @@ const chats: readonly ChatSummary[] = [
     updatedAt: "2026-08-04T00:00:00.000Z",
     visibility: "personal",
     userId: "user-a",
+    revision: 0,
   },
 ];
 

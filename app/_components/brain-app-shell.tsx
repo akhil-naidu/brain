@@ -139,12 +139,20 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
     async (chatId: string, title: string) => {
       if (handlers) {
         await handlers.onRenameChat(chatId, title);
+        const listed = await listChats().catch(() => null);
+        if (listed) {
+          setChats([...listed.chats]);
+        }
         return;
       }
-      const chat = await updateChat(chatId, { title: normalizeChatTitle(title) });
+      const existing = chats.find((chat) => chat.id === chatId);
+      const chat = await updateChat(chatId, {
+        title: normalizeChatTitle(title),
+        ...(existing?.visibility === "shared" ? { expectedRevision: existing.revision } : {}),
+      });
       setChats((current) => upsertChatSummary(current, chat));
     },
-    [handlers],
+    [chats, handlers],
   );
 
   const onShareChat = useCallback(async (chatId: string) => {

@@ -32,7 +32,7 @@ import {
   filesToPendingAttachments,
   type PendingAttachment,
 } from "@/lib/chat/attachments";
-import { createChat, updateChat } from "@/lib/chat/chats-api";
+import { createChat, getChat, isChatApiConflictError, updateChat } from "@/lib/chat/chats-api";
 import { takePendingChatVisibility } from "@/lib/chat/pending-chat-visibility";
 import { WELCOME_PROMPTS } from "@/lib/chat/welcome-prompts";
 import { getChatMessageLengthError } from "@/lib/chat/limits";
@@ -43,7 +43,7 @@ import {
   MISSING_COMMAND_CODE_API_KEY_TITLE,
 } from "@/lib/chat/provider-setup";
 import { fetchSetupStatus } from "@/lib/chat/setup-api";
-import type { ChatRecord, ChatSummary } from "@/lib/chat/store/types";
+import type { ChatRecord, ChatSummary, ChatVisibility } from "@/lib/chat/store/types";
 import { useSubagentChildFailures } from "@/lib/chat/subagent-child-failures";
 import { createFallbackTitle } from "@/lib/chat/title";
 import { copyTextToClipboard, messagesToMarkdown } from "@/lib/chat/export-markdown";
@@ -103,7 +103,9 @@ export function EphemeralAgentChat({
   chatId,
   draft,
   initialEvents,
+  initialRevision = 0,
   initialSession,
+  initialVisibility = "personal",
   onChatCreated,
   onChatUpdated,
   onDisposeReady,
@@ -115,7 +117,9 @@ export function EphemeralAgentChat({
   readonly chatId: string | null;
   readonly draft: string;
   readonly initialEvents?: readonly HandleMessageStreamEvent[];
+  readonly initialRevision?: number;
   readonly initialSession?: SessionState | null;
+  readonly initialVisibility?: ChatVisibility;
   readonly onChatCreated?: (chat: ChatRecord) => void;
   readonly onChatUpdated?: (chat: ChatSummary) => void;
   readonly onDisposeReady?: (dispose: DisposeEphemeralChat | null) => void;
@@ -136,6 +140,9 @@ export function EphemeralAgentChat({
   );
   const chatIdRef = useRef(chatId);
   chatIdRef.current = chatId;
+  const revisionRef = useRef(initialRevision);
+  const visibilityRef = useRef<ChatVisibility>(initialVisibility);
+  const turnLockHeldRef = useRef(false);
   const cancellationRef = useRef<Cancellation>({ requested: false });
   const agentStopRef = useRef<() => void>(() => undefined);
   const disposalBoundaryRef = useRef(false);
@@ -189,6 +196,15 @@ export function EphemeralAgentChat({
     setDismissedError(null);
   }, []);
 
+  const rememberChatMeta = useCallback(
+    (chat: ChatSummary) => {
+      revisionRef.current = chat.revision;
+      visibilityRef.current = chat.visibility;
+      onChatUpdated?.(chat);
+    },
+    [onChatUpdated],
+  );
+
   const ensureChat = useCallback(
     async (titleSource: string) => {
       if (chatIdRef.current) {
@@ -200,11 +216,50 @@ export function EphemeralAgentChat({
         visibility: takePendingChatVisibility(),
       });
       chatIdRef.current = chat.id;
+      revisionRef.current = chat.revision;
+      visibilityRef.current = chat.visibility;
       onChatCreated?.(chat);
       return chat.id;
     },
     [onChatCreated],
   );
+
+  const releaseTurnLock = useCallback(async () => {
+    const id = chatIdRef.current;
+    if (!id || !turnLockHeldRef.current) {
+      return;
+    }
+    turnLockHeldRef.current = false;
+    try {
+      const chat = await updateChat(id, { turnLock: "release" });
+      rememberChatMeta(chat);
+    } catch {
+      // Best-effort; TTL will expire an abandoned lock.
+    }
+  }, [rememberChatMeta]);
+
+  const acquireTurnLock = useCallback(async () => {
+    const id = chatIdRef.current;
+    if (!id || visibilityRef.current !== "shared") {
+      return;
+    }
+    try {
+      const chat = await updateChat(id, { turnLock: "acquire" });
+      turnLockHeldRef.current = true;
+      rememberChatMeta(chat);
+    } catch (error) {
+      if (isChatApiConflictError(error)) {
+        try {
+          const fresh = await getChat(id);
+          rememberChatMeta(fresh);
+        } catch {
+          // Ignore refresh failures; surface the conflict message.
+        }
+        showClientError(error.message);
+      }
+      throw error;
+    }
+  }, [rememberChatMeta, showClientError]);
 
   const persistChatUpdate = useCallback(
     async (input: {
@@ -218,13 +273,28 @@ export function EphemeralAgentChat({
       }
 
       try {
-        const chat = await updateChat(id, input);
-        onChatUpdated?.(chat);
-      } catch {
+        const shared = visibilityRef.current === "shared";
+        const chat = await updateChat(id, {
+          ...input,
+          ...(shared ? { expectedRevision: revisionRef.current } : {}),
+          ...(shared && turnLockHeldRef.current ? { turnLock: "heartbeat" as const } : {}),
+        });
+        rememberChatMeta(chat);
+      } catch (error) {
+        if (isChatApiConflictError(error)) {
+          try {
+            const fresh = await getChat(id);
+            rememberChatMeta(fresh);
+          } catch {
+            // Ignore refresh failures.
+          }
+          showClientError(error.message);
+          return;
+        }
         showClientError("Unable to save chat history.");
       }
     },
-    [onChatUpdated, showClientError],
+    [rememberChatMeta, showClientError],
   );
 
   const persistSession = useCallback(
@@ -544,15 +614,30 @@ export function EphemeralAgentChat({
       try {
         await ensureChat("Follow-up");
         prepareTurn();
-        await send({
-          inputResponses: [...responses],
-          clientContext: turnClientContext,
-        });
+        await acquireTurnLock();
+        try {
+          await send({
+            inputResponses: [...responses],
+            clientContext: turnClientContext,
+          });
+        } finally {
+          await releaseTurnLock();
+        }
       } catch (error) {
-        showClientError(toErrorMessage(error, "Failed to send response."));
+        if (!isChatApiConflictError(error)) {
+          showClientError(toErrorMessage(error, "Failed to send response."));
+        }
       }
     },
-    [ensureChat, prepareTurn, send, showClientError, turnClientContext],
+    [
+      acquireTurnLock,
+      ensureChat,
+      prepareTurn,
+      releaseTurnLock,
+      send,
+      showClientError,
+      turnClientContext,
+    ],
   );
   const handleInputResponsesRef = useRef(handleInputResponses);
   handleInputResponsesRef.current = handleInputResponses;
@@ -602,23 +687,32 @@ export function EphemeralAgentChat({
 
       try {
         await ensureChat(titleSource);
-        await send({
-          message: buildUserContentMessage(text, previousAttachments),
-          clientContext: turnClientContext,
-        });
+        await acquireTurnLock();
+        try {
+          await send({
+            message: buildUserContentMessage(text, previousAttachments),
+            clientContext: turnClientContext,
+          });
+        } finally {
+          await releaseTurnLock();
+        }
       } catch (error) {
         onDraftChange(previousDraft);
         setAttachments(previousAttachments);
-        showClientError(toErrorMessage(error, "Failed to send message."));
+        if (!isChatApiConflictError(error)) {
+          showClientError(toErrorMessage(error, "Failed to send message."));
+        }
       }
     },
     [
+      acquireTurnLock,
       attachments,
       ensureChat,
       missingApiKey,
       onDraftChange,
       onUserMessage,
       prepareTurn,
+      releaseTurnLock,
       send,
       showClientError,
       turnClientContext,

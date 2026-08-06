@@ -1,6 +1,11 @@
 import type { HandleMessageStreamEvent, SessionState } from "eve/client";
 import { z } from "zod";
-import type { ChatRecord, ChatSummary, ChatVisibility } from "@/lib/chat/store/types";
+import type {
+  ChatRecord,
+  ChatSummary,
+  ChatVisibility,
+  TurnLockAction,
+} from "@/lib/chat/store/types";
 import { parseSessionState, parseStreamEvent, sessionStateSchema } from "@/lib/chat/store/parse";
 
 const chatVisibilitySchema = z.enum(["personal", "shared"]);
@@ -12,6 +17,7 @@ const chatSummarySchema = z.object({
   updatedAt: z.string(),
   visibility: chatVisibilitySchema.default("personal"),
   userId: z.string().default(""),
+  revision: z.number().int().nonnegative().default(0),
 });
 
 const chatRecordSchema = chatSummarySchema.extend({
@@ -19,6 +25,20 @@ const chatRecordSchema = chatSummarySchema.extend({
   eveSession: sessionStateSchema.nullable(),
   events: z.array(z.unknown()),
 });
+
+export class ChatApiConflictError extends Error {
+  readonly code = "conflict" as const;
+  readonly status = 409;
+
+  constructor(message: string) {
+    super(message);
+    this.name = "ChatApiConflictError";
+  }
+}
+
+export function isChatApiConflictError(error: unknown): error is ChatApiConflictError {
+  return error instanceof ChatApiConflictError;
+}
 
 function toChatRecord(value: unknown): ChatRecord {
   const parsed = chatRecordSchema.parse(value);
@@ -29,6 +49,7 @@ function toChatRecord(value: unknown): ChatRecord {
     updatedAt: parsed.updatedAt,
     visibility: parsed.visibility,
     userId: parsed.userId,
+    revision: parsed.revision,
     workspaceId: parsed.workspaceId ?? "",
     eveSession: parsed.eveSession === null ? null : parseSessionState(parsed.eveSession),
     events: parsed.events.map(parseStreamEvent),
@@ -40,6 +61,24 @@ function toChatSummary(value: unknown): ChatSummary {
 }
 
 async function readBody(response: Response): Promise<unknown> {
+  if (response.status === 409) {
+    const text = await response.text().catch(() => "");
+    let message = "Chat was updated by another member. Refresh and try again.";
+    try {
+      const parsed: unknown = text ? JSON.parse(text) : null;
+      if (parsed && typeof parsed === "object" && "error" in parsed) {
+        const errorValue = Reflect.get(parsed, "error");
+        if (typeof errorValue === "string" && errorValue.trim()) {
+          message = errorValue;
+        }
+      }
+    } catch {
+      if (text.trim()) {
+        message = text;
+      }
+    }
+    throw new ChatApiConflictError(message);
+  }
   if (!response.ok) {
     const text = await response.text().catch(() => "");
     throw new Error(text || `Request failed (${response.status})`);
@@ -113,6 +152,8 @@ export async function updateChat(
     readonly eveSession?: SessionState | null;
     readonly appendEvents?: readonly HandleMessageStreamEvent[];
     readonly events?: readonly HandleMessageStreamEvent[];
+    readonly expectedRevision?: number;
+    readonly turnLock?: TurnLockAction;
   },
 ): Promise<ChatRecord> {
   const response = await fetch(`/api/chats/${encodeURIComponent(id)}`, {

@@ -7,7 +7,7 @@ Local durable chat history for Brain: create, list, open, delete, and resume con
 ## Requirements
 
 ### Requirement: Durable chat records on the host
-The system MUST persist each conversation as a durable chat record on the Brain host within the active workspace. Each record MUST include a stable chat id, the creating user id, the workspace id, a visibility of `personal` or `shared`, a display title, timestamps, the eve session cursor needed to continue the thread, and the ordered stream events needed to restore the UI. Personal chats are owned by the creating user. Shared chats are readable and continuable by any member of that workspace.
+The system MUST persist each conversation as a durable chat record on the Brain host within the active workspace. Each record MUST include a stable chat id, the creating user id, the workspace id, a visibility of `personal` or `shared`, a monotonic revision, a display title, timestamps, the eve session cursor needed to continue the thread, and the ordered stream events needed to restore the UI. Personal chats are owned by the creating user. Shared chats are readable and continuable by any member of that workspace.
 
 #### Scenario: First message creates a chat
 - **WHEN** a signed-in user sends the first message of a new conversation in a workspace
@@ -52,7 +52,14 @@ The system MUST expose same-origin HTTP APIs to list chats, create a chat, fetch
 
 #### Scenario: List chats
 - **WHEN** a signed-in client requests the chats collection for the active workspace
-- **THEN** it receives chat summaries (id, title, timestamps, visibility) for accessible chats only
+- **THEN** it receives chat summaries (id, title, timestamps, visibility, revision) for accessible chats only
+
+### Requirement: Updates may be rejected as conflicts
+Successful content mutations MUST advance the chat revision. Shared-chat updates that omit or mismatch `expectedRevision` MUST be rejected as a conflict without applying the mutation. Personal chats MAY omit `expectedRevision` (last-write-wins); when supplied, a mismatch MUST also be rejected as a conflict.
+
+#### Scenario: Shared update without revision is rejected
+- **WHEN** a client updates a shared chat without `expectedRevision`
+- **THEN** the system rejects the request as a conflict and leaves the stored chat unchanged
 
 #### Scenario: Fetch chat for resume
 - **WHEN** a signed-in client requests a specific chat id they can access in the active workspace

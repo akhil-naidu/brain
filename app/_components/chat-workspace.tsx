@@ -26,6 +26,8 @@ type ActiveChatState = {
   readonly title: string | null;
   readonly initialSession: SessionState | null;
   readonly initialEvents: readonly HandleMessageStreamEvent[];
+  readonly initialRevision: number;
+  readonly initialVisibility: ChatRecord["visibility"];
   readonly remountKey: number;
 };
 
@@ -35,6 +37,8 @@ function emptyActive(remountKey: number): ActiveChatState {
     title: null,
     initialSession: null,
     initialEvents: [],
+    initialRevision: 0,
+    initialVisibility: "personal",
     remountKey,
   };
 }
@@ -73,6 +77,8 @@ export function ChatWorkspace() {
             title: chat.title,
             initialSession: chat.eveSession,
             initialEvents: chat.events,
+            initialRevision: chat.revision,
+            initialVisibility: chat.visibility,
             remountKey: 0,
           });
         } catch {
@@ -192,6 +198,8 @@ export function ChatWorkspace() {
           title: chat.title,
           initialSession: chat.eveSession,
           initialEvents: chat.events,
+          initialRevision: chat.revision,
+          initialVisibility: chat.visibility,
           remountKey: current.remountKey + 1,
         }));
       });
@@ -215,9 +223,20 @@ export function ChatWorkspace() {
 
   const handleRenameChat = useCallback(async (chatId: string, title: string) => {
     try {
-      const chat = await updateChat(chatId, { title: normalizeChatTitle(title) });
-      setActive((current) =>
-        current.id === chat.id ? { ...current, title: chat.title } : current,
+      const current = await getChat(chatId);
+      const chat = await updateChat(chatId, {
+        title: normalizeChatTitle(title),
+        ...(current.visibility === "shared" ? { expectedRevision: current.revision } : {}),
+      });
+      setActive((currentActive) =>
+        currentActive.id === chat.id
+          ? {
+              ...currentActive,
+              title: chat.title,
+              initialRevision: chat.revision,
+              initialVisibility: chat.visibility,
+            }
+          : currentActive,
       );
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : "Unable to rename chat.");
@@ -230,11 +249,22 @@ export function ChatWorkspace() {
       ...current,
       id: chat.id,
       title: chat.title,
+      initialRevision: chat.revision,
+      initialVisibility: chat.visibility,
     }));
   }, []);
 
   const handleChatUpdated = useCallback((chat: ChatSummary) => {
-    setActive((current) => (current.id === chat.id ? { ...current, title: chat.title } : current));
+    setActive((current) =>
+      current.id === chat.id
+        ? {
+            ...current,
+            title: chat.title,
+            initialRevision: chat.revision,
+            initialVisibility: chat.visibility,
+          }
+        : current,
+    );
   }, []);
 
   const handleUserMessage = useCallback((text: string) => {
@@ -296,7 +326,9 @@ export function ChatWorkspace() {
       chatId={active.id}
       draft={draft}
       initialEvents={active.initialEvents}
+      initialRevision={active.initialRevision}
       initialSession={active.initialSession}
+      initialVisibility={active.initialVisibility}
       onChatCreated={handleChatCreated}
       onChatUpdated={handleChatUpdated}
       onDisposeReady={handleDisposeReady}

@@ -7,8 +7,14 @@ export type {
   ChatStore,
   ChatSummary,
   CreateChatInput,
+  TurnLockAction,
   UpdateChatInput,
 } from "@/lib/chat/store/types";
+export {
+  ChatConcurrencyError,
+  isChatConcurrencyError,
+  SHARED_TURN_LOCK_TTL_MS,
+} from "@/lib/chat/store/concurrency";
 export { resolveChatsDbPath, DEFAULT_CHATS_DB_PATH } from "@/lib/chat/store/path";
 export { createSqliteChatStore } from "@/lib/chat/store/sqlite-chat-store";
 

@@ -53,10 +53,14 @@ export const createChatBodySchema = z.object({
   visibility: chatVisibilitySchema.optional(),
 });
 
+export const turnLockActionSchema = z.enum(["acquire", "release", "heartbeat"]);
+
 export const updateChatBodySchema = z.object({
   title: z.string().optional(),
   visibility: chatVisibilitySchema.optional(),
   eveSession: sessionStateSchema.nullable().optional(),
   appendEvents: z.array(streamEventSchema).optional(),
   events: z.array(streamEventSchema).optional(),
+  expectedRevision: z.number().int().nonnegative().optional(),
+  turnLock: turnLockActionSchema.optional(),
 });

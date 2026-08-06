@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { ChatConcurrencyError } from "@/lib/chat/store/concurrency";
 import { createSqliteChatStore } from "@/lib/chat/store/sqlite-chat-store";
 import { parseStreamEvent } from "@/lib/chat/store/parse";
 import type { ChatStore } from "@/lib/chat/store/types";
@@ -103,8 +104,10 @@ describe("sqlite chat store", () => {
 
     const updated = store.updateChat("user-b", "ws-1", shared.id, {
       title: "Team thread updated",
+      expectedRevision: shared.revision,
     });
     expect(updated?.title).toBe("Team thread updated");
+    expect(updated?.revision).toBe(shared.revision + 1);
 
     expect(store.deleteChat("user-b", "ws-1", shared.id)).toBe(false);
     expect(store.deleteChat("user-b", "ws-1", shared.id, { moderateShared: true })).toBe(true);
@@ -136,5 +139,57 @@ describe("sqlite chat store", () => {
     expect(store.assignWorkspaceToUserChats("user-a", "ws-personal")).toBe(1);
     expect(store.getChat("user-a", "ws-personal", legacy.id)?.title).toBe("Old");
     expect(store.listChats("__legacy__", "__unset__")).toHaveLength(0);
+  });
+
+  it("rejects stale shared chat updates with a conflict", () => {
+    const store = openStore();
+    const shared = store.createChat("user-a", {
+      title: "Shared",
+      workspaceId: "ws-1",
+      visibility: "shared",
+    });
+
+    store.updateChat("user-a", "ws-1", shared.id, {
+      title: "Updated by A",
+      expectedRevision: shared.revision,
+    });
+
+    expect(() =>
+      store.updateChat("user-b", "ws-1", shared.id, {
+        title: "Stale by B",
+        expectedRevision: shared.revision,
+      }),
+    ).toThrow(ChatConcurrencyError);
+
+    expect(store.getChat("user-a", "ws-1", shared.id)?.title).toBe("Updated by A");
+  });
+
+  it("serializes shared chat turns with a lock", () => {
+    const store = openStore();
+    const shared = store.createChat("user-a", {
+      title: "Shared",
+      workspaceId: "ws-1",
+      visibility: "shared",
+    });
+
+    store.updateChat("user-a", "ws-1", shared.id, { turnLock: "acquire" });
+
+    expect(() => store.updateChat("user-b", "ws-1", shared.id, { turnLock: "acquire" })).toThrow(
+      ChatConcurrencyError,
+    );
+
+    expect(() =>
+      store.updateChat("user-a", "ws-1", shared.id, {
+        appendEvents: [fakeEvent("during turn")],
+        expectedRevision: shared.revision,
+      }),
+    ).not.toThrow();
+
+    const afterAppend = store.getChat("user-a", "ws-1", shared.id);
+    expect(afterAppend?.events).toHaveLength(1);
+    expect(afterAppend?.revision).toBe(shared.revision + 1);
+
+    store.updateChat("user-a", "ws-1", afterAppend!.id, { turnLock: "release" });
+    store.updateChat("user-b", "ws-1", shared.id, { turnLock: "acquire" });
   });
 });

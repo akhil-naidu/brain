@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireWorkspaceSession } from "@/lib/auth/require-workspace-session";
 import { isWorkspaceAdminRole } from "@/lib/auth/workspaces/types";
-import { getChatStore } from "@/lib/chat/store";
+import { getChatStore, isChatConcurrencyError } from "@/lib/chat/store";
 import { parseSessionState, parseStreamEvent, updateChatBodySchema } from "@/lib/chat/store/parse";
 
 export const runtime = "nodejs";
@@ -51,24 +51,38 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Unsharing a chat is not supported." }, { status: 400 });
   }
 
-  const chat = getChatStore().updateChat(session.session.userId, session.session.workspaceId, id, {
-    title: parsed.data.title,
-    visibility: parsed.data.visibility,
-    eveSession:
-      parsed.data.eveSession === undefined
-        ? undefined
-        : parsed.data.eveSession === null
-          ? null
-          : parseSessionState(parsed.data.eveSession),
-    appendEvents: parsed.data.appendEvents?.map(parseStreamEvent),
-    events: parsed.data.events?.map(parseStreamEvent),
-  });
+  try {
+    const chat = getChatStore().updateChat(
+      session.session.userId,
+      session.session.workspaceId,
+      id,
+      {
+        title: parsed.data.title,
+        visibility: parsed.data.visibility,
+        eveSession:
+          parsed.data.eveSession === undefined
+            ? undefined
+            : parsed.data.eveSession === null
+              ? null
+              : parseSessionState(parsed.data.eveSession),
+        appendEvents: parsed.data.appendEvents?.map(parseStreamEvent),
+        events: parsed.data.events?.map(parseStreamEvent),
+        expectedRevision: parsed.data.expectedRevision,
+        turnLock: parsed.data.turnLock,
+      },
+    );
 
-  if (!chat) {
-    return NextResponse.json({ error: "Chat not found" }, { status: 404 });
+    if (!chat) {
+      return NextResponse.json({ error: "Chat not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ chat });
+  } catch (error) {
+    if (isChatConcurrencyError(error)) {
+      return NextResponse.json({ error: error.message, code: error.code }, { status: 409 });
+    }
+    throw error;
   }
-
-  return NextResponse.json({ chat });
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
