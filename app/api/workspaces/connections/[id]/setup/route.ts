@@ -9,6 +9,7 @@ import {
   writeWorkspaceAppCredentials,
 } from "@/agent/lib/connection-credentials";
 import { getChatConnectionProvider } from "@/agent/lib/connection-status";
+import { assertByoaAllowed, resolveLicenseEntitlements } from "@/lib/auth/license";
 import { requireWorkspaceSession } from "@/lib/auth/require-workspace-session";
 import { isWorkspaceAdminRole } from "@/lib/auth/workspaces/types";
 import { resolvePublicOrigin } from "@/lib/http/public-origin";
@@ -75,6 +76,12 @@ export async function PUT(request: Request, context: RouteContext) {
       { error: "Only workspace owners or admins can manage workspace app credentials." },
       { status: 403 },
     );
+  }
+  try {
+    assertByoaAllowed(await resolveLicenseEntitlements());
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "License does not allow BYOA.";
+    return NextResponse.json({ error: message }, { status: 403 });
   }
 
   const { id } = await context.params;

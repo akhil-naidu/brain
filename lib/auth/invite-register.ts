@@ -1,4 +1,6 @@
+import { assertCanCreateUser, resolveLicenseEntitlements } from "@/lib/auth/license";
 import {
+  countAuthUsers,
   ensureAuthReady,
   getAuth,
   getWorkspaceStore,
@@ -37,6 +39,9 @@ export async function registerWithInvite(input: {
   if (input.password.length < 8) {
     throw new Error("Password must be at least 8 characters.");
   }
+
+  const entitlements = await resolveLicenseEntitlements();
+  assertCanCreateUser(entitlements, countAuthUsers());
 
   const result = await runWithInviteSignup(() =>
     getAuth().api.signUpEmail({

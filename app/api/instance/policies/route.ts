@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { assertSignupModeAllowed, resolveLicenseEntitlements } from "@/lib/auth/license";
 import { isOperatorUserId } from "@/lib/auth/require-operator-session";
 import { requireSessionUserId } from "@/lib/auth/require-session";
 import { ensureAuthReady, getWorkspaceStore } from "@/lib/auth/server";
@@ -48,6 +49,21 @@ export async function PUT(request: Request) {
   const parsed = patchSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
+  try {
+    const entitlements = await resolveLicenseEntitlements();
+    if (parsed.data.signupMode) {
+      assertSignupModeAllowed(entitlements, parsed.data.signupMode);
+    }
+    if (parsed.data.allowCreateWorkspace === true && !entitlements.multiWorkspace) {
+      return NextResponse.json(
+        { error: "This license does not allow creating additional workspaces." },
+        { status: 403 },
+      );
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "License does not allow this policy.";
+    return NextResponse.json({ error: message }, { status: 403 });
   }
   const policies = getWorkspaceStore().updatePolicies(parsed.data);
   return NextResponse.json({ policies });

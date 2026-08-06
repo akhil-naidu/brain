@@ -6,6 +6,7 @@ import { betterAuth } from "better-auth";
 import { APIError } from "better-auth/api";
 import { getMigrations } from "better-auth/db/migration";
 import { nextCookies } from "better-auth/next-js";
+import { assertCanCreateUser, resolveLicenseEntitlements } from "@/lib/auth/license";
 import { resolveAuthDbPath } from "@/lib/auth/users-path";
 import { createWorkspaceStore, type WorkspaceStore } from "@/lib/auth/workspaces/store";
 
@@ -94,23 +95,35 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
         create: {
           before: async () => {
             const gate = bootstrapSignupGate.getStore() ?? globalForSignupGate.brainSignupGate;
-            if (gate === "bootstrap" || gate === "open" || gate === "invite") {
-              return;
+            let userCount = 0;
+            try {
+              userCount = countFromRow(db.prepare("SELECT COUNT(*) AS count FROM user").get());
+            } catch {
+              userCount = 0;
             }
+
             // /setup holds a DB claim before signUpEmail; ALS often does not survive
             // Better Auth's async path under Next.js, so the claim is the reliable gate.
-            if (hasActiveBootstrapClaim()) {
-              try {
-                const userCount = countFromRow(
-                  db.prepare("SELECT COUNT(*) AS count FROM user").get(),
-                );
-                if (userCount === 0) {
-                  return;
-                }
-              } catch {
-                return;
-              }
+            const bootstrapAllowed =
+              gate === "bootstrap" || (hasActiveBootstrapClaim() && userCount === 0);
+            if (bootstrapAllowed && userCount === 0) {
+              return;
             }
+
+            try {
+              const entitlements = await resolveLicenseEntitlements();
+              assertCanCreateUser(entitlements, userCount);
+            } catch (error) {
+              throw new APIError("FORBIDDEN", {
+                message:
+                  error instanceof Error ? error.message : "User limit reached for this license.",
+              });
+            }
+
+            if (gate === "open" || gate === "invite") {
+              return;
+            }
+
             // Lazy policy check for Better Auth client sign-up (no ALS gate).
             const workspaces = createWorkspaceStore(db);
             if (workspaces.getPolicies().signupMode === "open") {

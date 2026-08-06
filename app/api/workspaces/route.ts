@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { assertMultiWorkspaceAllowed, resolveLicenseEntitlements } from "@/lib/auth/license";
 import { requireSessionUserId } from "@/lib/auth/require-session";
 import { ensureAuthReady, getWorkspaceStore } from "@/lib/auth/server";
 
@@ -19,6 +20,7 @@ export async function GET() {
   await ensureAuthReady();
   const workspaces = getWorkspaceStore();
   const policies = workspaces.getPolicies();
+  const entitlements = await resolveLicenseEntitlements();
   const active = workspaces.resolveActiveWorkspace(session.userId);
   const list = workspaces.listWorkspacesForUser(session.userId);
   const activeMembership = list.find((item) => item.id === active.id);
@@ -27,7 +29,8 @@ export async function GET() {
     workspaces: list,
     activeWorkspaceId: active.id,
     activeRole: activeMembership?.role ?? null,
-    canCreateWorkspace: policies.allowCreateWorkspace || isInstanceAdmin,
+    canCreateWorkspace:
+      entitlements.multiWorkspace && (policies.allowCreateWorkspace || isInstanceAdmin),
     isInstanceAdmin,
   });
 }
@@ -40,6 +43,12 @@ export async function POST(request: Request) {
   await ensureAuthReady();
   const workspaces = getWorkspaceStore();
   const policies = workspaces.getPolicies();
+  try {
+    assertMultiWorkspaceAllowed(await resolveLicenseEntitlements());
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "License does not allow workspaces.";
+    return NextResponse.json({ error: message }, { status: 403 });
+  }
   if (!policies.allowCreateWorkspace && !workspaces.isInstanceAdmin(session.userId)) {
     return NextResponse.json(
       { error: "Creating workspaces is disabled on this instance." },
