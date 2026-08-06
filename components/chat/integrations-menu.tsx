@@ -210,7 +210,7 @@ export function IntegrationsMenu({
       <DropdownMenuTrigger asChild>
         <button
           aria-label="Connections"
-          className="text-muted-foreground/75 hover:bg-muted/60 hover:text-foreground focus-visible:bg-muted/60 focus-visible:text-foreground dark:text-muted-foreground/60 inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors focus-visible:outline-none [&_*]:cursor-pointer"
+          className="text-muted-foreground/60 hover:bg-muted/50 hover:text-foreground focus-visible:bg-muted/50 focus-visible:text-foreground dark:text-muted-foreground/50 inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg transition-colors focus-visible:outline-none [&_*]:cursor-pointer"
           onPointerDown={() => {
             loadStatus();
           }}

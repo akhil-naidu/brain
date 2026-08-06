@@ -1,6 +1,14 @@
 "use client";
 
-import { ArrowUpIcon, Loader2Icon, PaperclipIcon, SquareIcon, XIcon } from "lucide-react";
+import {
+  ArrowUpIcon,
+  FileIcon,
+  FileTextIcon,
+  Loader2Icon,
+  PaperclipIcon,
+  SquareIcon,
+  XIcon,
+} from "lucide-react";
 import Image from "next/image";
 import {
   useCallback,
@@ -21,6 +29,7 @@ import { getChatMessageLength, MAX_CHAT_MESSAGE_CHARS } from "@/lib/chat/limits"
 import { cn } from "@/lib/utils";
 
 const EMPTY_ATTACHMENTS: readonly PendingAttachment[] = [];
+const LENGTH_WARN_RATIO = 0.85;
 
 function formatAttachmentSize(size: number): string {
   if (size < 1_024) {
@@ -30,6 +39,38 @@ function formatAttachmentSize(size: number): string {
     return `${(size / 1_024).toFixed(1)} KB`;
   }
   return `${(size / 1_048_576).toFixed(1)} MB`;
+}
+
+function attachmentExtension(filename: string): string | null {
+  const match = /\.([a-z0-9]{1,5})$/i.exec(filename.trim());
+  return match?.[1]?.toUpperCase() ?? null;
+}
+
+function AttachmentGlyph({
+  filename,
+  mediaType,
+}: {
+  readonly filename: string;
+  readonly mediaType: string;
+}) {
+  const extension = attachmentExtension(filename);
+  const isText =
+    mediaType.startsWith("text/") ||
+    mediaType === "application/pdf" ||
+    extension === "MD" ||
+    extension === "CSV" ||
+    extension === "TXT" ||
+    extension === "PDF";
+  const Icon = isText ? FileTextIcon : FileIcon;
+
+  return (
+    <span className="bg-background/80 text-muted-foreground border-border/60 flex size-8 shrink-0 flex-col items-center justify-center rounded-md border">
+      <Icon className="size-3.5" />
+      {extension ? (
+        <span className="mt-px text-[8px] leading-none font-semibold tracking-wide">{extension}</span>
+      ) : null}
+    </span>
+  );
 }
 
 export function ChatComposer({
@@ -75,7 +116,9 @@ export function ChatComposer({
   const textareaDisabled = disabled || isBusy || isPreparing;
   const shouldFocusOnMountRef = useRef(autoFocus && !textareaDisabled);
   const trimmedValue = value.trim();
-  const isOverMaxLength = getChatMessageLength(trimmedValue) > maxLength;
+  const messageLength = getChatMessageLength(trimmedValue);
+  const isOverMaxLength = messageLength > maxLength;
+  const showLengthHint = messageLength >= Math.floor(maxLength * LENGTH_WARN_RATIO);
   const canSubmit =
     canSubmitChatTurn(value, attachments) &&
     !disabled &&
@@ -185,7 +228,7 @@ export function ChatComposer({
   const form = (
     <form
       className={cn(
-        "border-border/80 bg-card/95 focus-within:border-border focus-within:ring-foreground/5 dark:bg-muted/45 min-w-0 rounded-[14px] border shadow-sm transition-colors focus-within:ring-[1px] dark:focus-within:ring-white/5",
+        "border-border/70 bg-card/95 focus-within:border-foreground/25 focus-within:ring-foreground/10 dark:bg-muted/40 dark:focus-within:border-foreground/30 dark:focus-within:ring-white/10 min-w-0 rounded-2xl border shadow-sm transition-[border-color,box-shadow] focus-within:ring-2",
         className,
       )}
       aria-describedby={disabledReason ? disabledReasonId : undefined}
@@ -193,28 +236,26 @@ export function ChatComposer({
       onSubmit={handleSubmit}
     >
       {attachments.length > 0 ? (
-        <ul className="flex flex-wrap gap-2 px-3 pt-3 sm:px-4">
+        <ul className="flex flex-wrap gap-2 px-3 pt-3 sm:px-3.5">
           {attachments.map((file) => (
             <li
-              className="border-border/70 bg-muted/40 flex max-w-full items-center gap-2 rounded-lg border px-2 py-1.5"
+              className="border-border/60 bg-muted/35 flex max-w-full items-center gap-2 rounded-xl border py-1.5 pr-1 pl-1.5"
               key={file.id}
             >
               {file.mediaType.startsWith("image/") ? (
                 <Image
                   alt=""
-                  className="size-8 shrink-0 rounded object-cover"
+                  className="size-8 shrink-0 rounded-md object-cover"
                   height={32}
                   src={file.dataUrl}
                   unoptimized
                   width={32}
                 />
               ) : (
-                <span className="bg-background text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded text-[10px] font-medium">
-                  FILE
-                </span>
+                <AttachmentGlyph filename={file.filename} mediaType={file.mediaType} />
               )}
               <span className="min-w-0">
-                <span className="text-foreground block max-w-[10rem] truncate text-xs font-medium">
+                <span className="text-foreground block max-w-40 truncate text-xs font-medium">
                   {file.filename}
                 </span>
                 <span className="text-muted-foreground block text-[11px]">
@@ -224,7 +265,7 @@ export function ChatComposer({
               {onRemoveAttachment ? (
                 <button
                   aria-label={`Remove ${file.filename}`}
-                  className="text-muted-foreground hover:text-foreground inline-flex size-6 shrink-0 items-center justify-center rounded-md"
+                  className="text-muted-foreground hover:bg-background/70 hover:text-foreground inline-flex size-7 shrink-0 items-center justify-center rounded-lg transition-colors"
                   onClick={() => onRemoveAttachment(file.id)}
                   type="button"
                 >
@@ -241,7 +282,7 @@ export function ChatComposer({
       </label>
       <textarea
         aria-describedby={disabledReason ? disabledReasonId : undefined}
-        className="placeholder:text-muted-foreground/45 dark:placeholder:text-muted-foreground/60 max-h-56 min-h-[5.5rem] w-full resize-none overflow-y-auto bg-transparent px-3 pt-3 pb-1 text-base leading-6 outline-none disabled:cursor-not-allowed disabled:opacity-60 sm:px-4 md:text-[15px]"
+        className="placeholder:text-muted-foreground/50 dark:placeholder:text-muted-foreground/55 max-h-56 min-h-11 w-full resize-none overflow-y-auto bg-transparent px-3.5 pt-3 pb-1.5 text-base leading-6 outline-none disabled:cursor-not-allowed disabled:opacity-60 sm:px-4 md:text-[15px]"
         data-chat-composer-input
         disabled={textareaDisabled}
         id={composerId}
@@ -256,12 +297,25 @@ export function ChatComposer({
         onPaste={handlePaste}
         placeholder={placeholder}
         ref={textareaRef}
-        rows={3}
+        rows={1}
         value={value}
       />
-      <div className="flex min-h-9 items-center justify-between gap-2 px-3 pt-1 pb-2 sm:gap-3 sm:px-4">
-        <div className="-ml-2 flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
-          {footerStart ?? <span className="block h-8" />}
+      <div className="flex min-h-10 items-center justify-between gap-2 px-2.5 pt-0.5 pb-2 sm:gap-2.5 sm:px-3">
+        <div className="scrollbar-none flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
+          {footerStart}
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          {showLengthHint ? (
+            <span
+              aria-live="polite"
+              className={cn(
+                "mr-0.5 tabular-nums text-[11px] font-medium",
+                isOverMaxLength ? "text-destructive" : "text-muted-foreground/80",
+              )}
+            >
+              {messageLength.toLocaleString("en-US")}/{maxLength.toLocaleString("en-US")}
+            </span>
+          ) : null}
           {onAddFiles ? (
             <>
               <input
@@ -279,7 +333,7 @@ export function ChatComposer({
               />
               <button
                 aria-label="Attach file"
-                className="text-muted-foreground/75 hover:bg-muted/60 hover:text-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-50"
+                className="text-muted-foreground/70 hover:bg-muted/55 hover:text-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors disabled:pointer-events-none disabled:opacity-50"
                 disabled={textareaDisabled}
                 onClick={() => fileInputRef.current?.click()}
                 title="Attach image, PDF, or text"
@@ -289,37 +343,35 @@ export function ChatComposer({
               </button>
             </>
           ) : null}
-        </div>
-        <div className="flex shrink-0 items-center">
           {isBusy ? (
             <Button
               aria-label={disabledReason === "Stopping…" ? "Stopping response" : "Stop response"}
-              className="bg-foreground/15 text-foreground hover:bg-foreground/25 size-6 cursor-pointer rounded-md shadow-none"
+              className="bg-foreground/15 text-foreground hover:bg-foreground/25 size-8 cursor-pointer rounded-lg shadow-none"
               onClick={onStop}
-              size="icon-xs"
+              size="icon-sm"
               type="button"
             >
-              <SquareIcon className="size-2.5 fill-current" />
+              <SquareIcon className="size-3 fill-current" />
             </Button>
           ) : isPreparing ? (
             <Button
               aria-label="Preparing chat"
-              className="bg-foreground/75 text-background size-6 rounded-md"
+              className="bg-foreground/80 text-background size-8 rounded-lg"
               disabled
-              size="icon-xs"
+              size="icon-sm"
               type="button"
             >
-              <Loader2Icon className="size-3 animate-spin" />
+              <Loader2Icon className="size-3.5 animate-spin" />
             </Button>
           ) : (
             <Button
               aria-label="Send message"
-              className="bg-foreground text-background hover:bg-foreground/90 size-6 cursor-pointer rounded-md disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-30"
+              className="bg-foreground text-background hover:bg-foreground/90 size-8 cursor-pointer rounded-lg shadow-sm disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-25 disabled:shadow-none"
               disabled={!canSubmit}
-              size="icon-xs"
+              size="icon-sm"
               type="submit"
             >
-              <ArrowUpIcon className="size-3.5" />
+              <ArrowUpIcon className="size-4" />
             </Button>
           )}
         </div>

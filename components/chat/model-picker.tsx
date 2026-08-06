@@ -25,7 +25,7 @@ export function ModelPicker({
     <Select disabled={disabled} onValueChange={onModelIdChange} value={selected.id}>
       <SelectTrigger
         aria-label="Model"
-        className="text-muted-foreground hover:text-foreground h-8 max-w-[13.5rem] border-0 bg-transparent px-2 shadow-none focus-visible:ring-0"
+        className="text-muted-foreground/75 hover:text-foreground h-8 max-w-44 truncate border-0 bg-transparent px-1.5 text-xs shadow-none focus-visible:ring-0"
         size="sm"
       >
         <SelectValue placeholder={selected.label} />

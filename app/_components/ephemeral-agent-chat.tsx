@@ -882,7 +882,7 @@ export function EphemeralAgentChat({
                     : undefined))
             }
             footerStart={
-              <div className="flex min-w-0 items-center gap-1">
+              <div className="flex min-w-0 items-center gap-0.5">
                 <IntegrationsMenu
                   enabledConnections={enabledConnections}
                   onConnectionEnabledChange={setConnectionEnabled}
