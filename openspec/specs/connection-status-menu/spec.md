@@ -26,6 +26,10 @@ The host MUST expose a status endpoint that reports each supported connection’
 - **WHEN** user A is connected for a connection and user B has no token for that connection
 - **THEN** user B’s status endpoint reports needs sign-in (or needs setup) for that connection, not connected
 
+#### Scenario: Unauthenticated status is rejected
+- **WHEN** a client without a valid session requests connection status
+- **THEN** the system rejects the request and does not report a shared anonymous principal’s state
+
 ### Requirement: Status visible in the integrations menu
 The integrations menu MUST show each connection’s status alongside the enable toggle.
 

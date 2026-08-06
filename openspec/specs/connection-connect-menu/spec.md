@@ -14,6 +14,10 @@ The host MUST expose an authorize endpoint that starts MCP OAuth for a supported
 - **WHEN** a connection requires client credentials that are not configured
 - **THEN** the authorize endpoint fails with a clear needs-setup error and does not return an authorize URL
 
+#### Scenario: Authorize rejects unauthenticated callers
+- **WHEN** a client without a valid session requests authorize
+- **THEN** the system rejects the request and does not start OAuth for a shared anonymous principal
+
 ### Requirement: Menu OAuth callback uses the public origin
 The authorize endpoint MUST build `redirect_uri` from the public Brain origin, not the internal listen address. Resolution MUST prefer `BRAIN_PUBLIC_URL` / `BRAIN_PUBLIC_ORIGIN` when set, then the request `Origin`/`Referer`, then forwarded host/proto headers, and only then the internal request URL origin.
 
@@ -64,6 +68,10 @@ The host MUST expose a disconnect endpoint that clears the stored OAuth token fo
 #### Scenario: Disconnect leaves another user’s pending intact
 - **WHEN** user A has an in-flight Menu authorize and user B disconnects the same connection
 - **THEN** user A’s pending authorize state remains available for A’s callback
+
+#### Scenario: Disconnect rejects unauthenticated callers
+- **WHEN** a client without a valid session requests disconnect
+- **THEN** the system rejects the request
 
 ### Requirement: Disconnect control in the integrations menu
 The integrations menu MUST offer Disconnect for connections that are connected.

@@ -4,28 +4,28 @@ Deliver Brain’s morning brief into a persisted chat on a local schedule while 
 
 ## Requirements
 
-### Requirement: Local schedule configuration
+### Requirement: Per-user morning brief schedule configuration
 
-Brain SHALL persist a morning-brief schedule under `.eve/scheduled-brief.json` with enabled flag, hour, minute, IANA timezone, weekdays-only option, and optional Slack delivery settings (`slackDeliveryEnabled`, `slackChannel`). Operators SHALL be able to read and update this configuration through an HTTP API.
+Brain SHALL persist a morning-brief schedule per signed-in user in host durable storage with enabled flag, hour, minute, IANA timezone, weekdays-only option, and optional Slack delivery settings (`slackDeliveryEnabled`, `slackChannel`). Users SHALL read and update only their own configuration through an authenticated HTTP API.
 
 #### Scenario: Save schedule settings
 
-- **WHEN** a client updates the schedule with a valid hour, minute, timezone, and enabled flag
-- **THEN** Brain persists those values and subsequent reads return them
+- **WHEN** a signed-in user updates their schedule with a valid hour, minute, timezone, and enabled flag
+- **THEN** Brain persists those values for that user and subsequent reads by that user return them
 
 #### Scenario: Save Slack delivery settings
 
-- **WHEN** a client enables Slack delivery with a non-empty channel target
-- **THEN** Brain persists `slackDeliveryEnabled` and `slackChannel`
+- **WHEN** a signed-in user enables Slack delivery with a non-empty channel target
+- **THEN** Brain persists `slackDeliveryEnabled` and `slackChannel` for that user
 
-### Requirement: Deliver brief into a chat
+### Requirement: Deliver brief into a chat for the owning user
 
-When a brief run is executed, Brain SHALL create a new persisted chat titled for that morning brief, start an eve session using the morning-brief prompt, and store the session plus stream events on that chat.
+When a brief run is executed for a user, Brain SHALL create a new persisted chat owned by that user, start an eve session as that user using the morning-brief prompt, and store the session plus stream events on that chat.
 
 #### Scenario: Forced run creates a chat
 
-- **WHEN** a client requests a forced brief run
-- **THEN** Brain creates a chat, runs the morning-brief prompt, and returns the chat id
+- **WHEN** a signed-in user requests a forced brief run
+- **THEN** Brain creates a chat for that user, runs the morning-brief prompt as that user, and returns the chat id
 
 #### Scenario: Due run skips after success the same local day
 
@@ -34,16 +34,16 @@ When a brief run is executed, Brain SHALL create a new persisted chat titled for
 
 ### Requirement: Optional Slack delivery after brief
 
-When Slack delivery is enabled and a channel target is configured, Brain SHALL attempt to post the completed morning-brief text to that Slack destination using the stored Slack OAuth token for the anonymous local chat principal. A Slack delivery failure SHALL NOT fail the chat brief run; Brain SHALL record the error for the schedule UI.
+When Slack delivery is enabled and a channel target is configured, Brain SHALL attempt to post the completed morning-brief text using the stored Slack OAuth token for the **owning user’s** principal. A Slack delivery failure SHALL NOT fail the chat brief run; Brain SHALL record the error for the schedule UI.
 
 #### Scenario: Successful Slack post
 
-- **WHEN** a brief run completes with assistant text and Slack delivery is enabled with a resolvable channel
-- **THEN** Brain posts that brief text to Slack and clears any previous Slack delivery error
+- **WHEN** a brief run completes with assistant text and Slack delivery is enabled with a resolvable channel for that user
+- **THEN** Brain posts that brief text to Slack using that user’s token and clears any previous Slack delivery error
 
 #### Scenario: Slack unavailable
 
-- **WHEN** Slack delivery is enabled but Slack is not signed in or the channel cannot be resolved
+- **WHEN** Slack delivery is enabled but Slack is not signed in or the channel cannot be resolved for that user
 - **THEN** Brain still persists the brief chat and records a Slack delivery error
 
 ### Requirement: Automatic dispatch while production eve runs
