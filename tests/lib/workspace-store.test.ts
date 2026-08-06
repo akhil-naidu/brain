@@ -78,4 +78,94 @@ describe("workspace store", () => {
     store.updatePolicies({ allowCreateWorkspace: false });
     expect(store.getPolicies().allowCreateWorkspace).toBe(false);
   });
+
+  it("lists members and updates roles with guards", () => {
+    const store = openStore();
+    const team = store.createWorkspace({
+      name: "Team",
+      kind: "team",
+      ownerUserId: "owner",
+    });
+    store.addMember(team.id, "member", "member");
+    store.addMember(team.id, "admin", "admin");
+
+    expect(store.listMembers(team.id)).toHaveLength(3);
+    expect(
+      store.updateMemberRole({
+        workspaceId: team.id,
+        actorUserId: "owner",
+        targetUserId: "member",
+        role: "admin",
+      }).role,
+    ).toBe("admin");
+
+    expect(() =>
+      store.updateMemberRole({
+        workspaceId: team.id,
+        actorUserId: "owner",
+        targetUserId: "owner",
+        role: "admin",
+      }),
+    ).toThrow(/owner/i);
+
+    expect(() =>
+      store.updateMemberRole({
+        workspaceId: team.id,
+        actorUserId: "admin",
+        targetUserId: "owner",
+        role: "member",
+      }),
+    ).toThrow(/owner/i);
+  });
+
+  it("removes members and blocks last-owner leave", () => {
+    const store = openStore();
+    const team = store.createWorkspace({
+      name: "Team",
+      kind: "team",
+      ownerUserId: "owner",
+    });
+    store.addMember(team.id, "member", "member");
+    store.addMember(team.id, "admin", "admin");
+    store.addMember(team.id, "admin-2", "admin");
+
+    store.removeMember({
+      workspaceId: team.id,
+      actorUserId: "admin",
+      targetUserId: "member",
+    });
+    expect(store.getMembership(team.id, "member")).toBeNull();
+
+    expect(() =>
+      store.removeMember({
+        workspaceId: team.id,
+        actorUserId: "admin",
+        targetUserId: "admin-2",
+      }),
+    ).toThrow(/cannot remove other admins/i);
+
+    store.removeMember({
+      workspaceId: team.id,
+      actorUserId: "admin",
+      targetUserId: "admin",
+    });
+    expect(store.getMembership(team.id, "admin")).toBeNull();
+
+    expect(() =>
+      store.removeMember({
+        workspaceId: team.id,
+        actorUserId: "owner",
+        targetUserId: "owner",
+      }),
+    ).toThrow(/last workspace owner/i);
+
+    const personal = store.ensurePersonalWorkspace("solo");
+    expect(() =>
+      store.removeMember({
+        workspaceId: personal.id,
+        actorUserId: "solo",
+        targetUserId: "solo",
+      }),
+    ).toThrow(/personal/i);
+  });
 });

@@ -15,6 +15,14 @@ export type WorkspaceMembership = {
   readonly role: WorkspaceRole;
 };
 
+export type WorkspaceMember = {
+  readonly userId: string;
+  readonly role: WorkspaceRole;
+  readonly email: string | null;
+  readonly name: string | null;
+  readonly createdAt: string;
+};
+
 export type WorkspaceListItem = Workspace & {
   readonly role: WorkspaceRole;
 };

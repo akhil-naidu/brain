@@ -7,6 +7,7 @@ import {
   type Workspace,
   type WorkspaceInvite,
   type WorkspaceListItem,
+  type WorkspaceMember,
   type WorkspaceRole,
 } from "@/lib/auth/workspaces/types";
 
@@ -315,6 +316,150 @@ export function createWorkspaceStore(db: DatabaseSync) {
     ).run(workspaceId, userId, role, nowIso());
   }
 
+  function countOwners(workspaceId: string): number {
+    const row = db
+      .prepare(
+        `SELECT COUNT(*) AS count FROM brain_workspace_member
+         WHERE workspace_id = ? AND role = 'owner'`,
+      )
+      .get(workspaceId) as SqlRow | undefined;
+    const value = row?.["count"];
+    if (typeof value === "number") {
+      return value;
+    }
+    if (typeof value === "bigint") {
+      return Number(value);
+    }
+    return 0;
+  }
+
+  function listMembers(workspaceId: string): readonly WorkspaceMember[] {
+    const orderBy = `
+      ORDER BY
+        CASE m.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 ELSE 2 END,
+        m.created_at ASC`;
+    let rows: SqlRow[];
+    try {
+      rows = db
+        .prepare(
+          `SELECT m.user_id AS user_id, m.role AS role, m.created_at AS created_at,
+                  u.email AS email, u.name AS name
+           FROM brain_workspace_member m
+           LEFT JOIN user u ON u.id = m.user_id
+           WHERE m.workspace_id = ?
+           ${orderBy}`,
+        )
+        .all(workspaceId);
+    } catch {
+      rows = db
+        .prepare(
+          `SELECT m.user_id AS user_id, m.role AS role, m.created_at AS created_at,
+                  NULL AS email, NULL AS name
+           FROM brain_workspace_member m
+           WHERE m.workspace_id = ?
+           ${orderBy}`,
+        )
+        .all(workspaceId);
+    }
+    return rows.map((row) => ({
+      userId: requireString(row, "user_id"),
+      role: parseRole(requireString(row, "role")),
+      email: optionalString(row, "email"),
+      name: optionalString(row, "name"),
+      createdAt: requireString(row, "created_at"),
+    }));
+  }
+
+  function clearActiveWorkspaceIfNeeded(userId: string, workspaceId: string): void {
+    const active = getActiveWorkspaceId(userId);
+    if (active === workspaceId) {
+      db.prepare("DELETE FROM brain_user_active_workspace WHERE user_id = ?").run(userId);
+    }
+  }
+
+  function updateMemberRole(input: {
+    readonly workspaceId: string;
+    readonly actorUserId: string;
+    readonly targetUserId: string;
+    readonly role: WorkspaceRole;
+  }): WorkspaceMember {
+    const workspace = getWorkspace(input.workspaceId);
+    if (!workspace) {
+      throw new Error("Workspace no longer exists.");
+    }
+    if (workspace.kind === "personal") {
+      throw new Error("Cannot change members on a personal workspace.");
+    }
+    if (input.role === "owner") {
+      throw new Error("Cannot assign owner through member role updates.");
+    }
+    const actorRole = getMembership(input.workspaceId, input.actorUserId);
+    if (!actorRole || !isWorkspaceAdminRole(actorRole)) {
+      throw new Error("Only workspace owners or admins can change roles.");
+    }
+    const targetRole = getMembership(input.workspaceId, input.targetUserId);
+    if (!targetRole) {
+      throw new Error("User is not a member of this workspace.");
+    }
+    if (targetRole === "owner") {
+      throw new Error("Cannot change an owner's role.");
+    }
+    if (
+      actorRole === "admin" &&
+      targetRole === "admin" &&
+      input.actorUserId !== input.targetUserId
+    ) {
+      throw new Error("Admins cannot change another admin's role.");
+    }
+    addMember(input.workspaceId, input.targetUserId, input.role);
+    const updated = listMembers(input.workspaceId).find(
+      (member) => member.userId === input.targetUserId,
+    );
+    if (!updated) {
+      throw new Error("User is not a member of this workspace.");
+    }
+    return updated;
+  }
+
+  function removeMember(input: {
+    readonly workspaceId: string;
+    readonly actorUserId: string;
+    readonly targetUserId: string;
+  }): void {
+    const workspace = getWorkspace(input.workspaceId);
+    if (!workspace) {
+      throw new Error("Workspace no longer exists.");
+    }
+    if (workspace.kind === "personal") {
+      throw new Error("Cannot change members on a personal workspace.");
+    }
+    const targetRole = getMembership(input.workspaceId, input.targetUserId);
+    if (!targetRole) {
+      throw new Error("User is not a member of this workspace.");
+    }
+    const isSelf = input.actorUserId === input.targetUserId;
+    if (!isSelf) {
+      const actorRole = getMembership(input.workspaceId, input.actorUserId);
+      if (!actorRole || !isWorkspaceAdminRole(actorRole)) {
+        throw new Error("Only workspace owners or admins can remove members.");
+      }
+      if (targetRole === "owner") {
+        throw new Error("Cannot remove a workspace owner.");
+      }
+      if (actorRole === "admin" && targetRole === "admin") {
+        throw new Error("Admins cannot remove other admins.");
+      }
+    }
+    if (targetRole === "owner" && countOwners(input.workspaceId) <= 1) {
+      throw new Error("Cannot remove the last workspace owner.");
+    }
+    db.prepare("DELETE FROM brain_workspace_member WHERE workspace_id = ? AND user_id = ?").run(
+      input.workspaceId,
+      input.targetUserId,
+    );
+    clearActiveWorkspaceIfNeeded(input.targetUserId, input.workspaceId);
+  }
+
   function createInvite(input: {
     readonly workspaceId: string;
     readonly createdByUserId: string;
@@ -453,6 +598,9 @@ export function createWorkspaceStore(db: DatabaseSync) {
     setActiveWorkspaceId,
     resolveActiveWorkspace,
     addMember,
+    listMembers,
+    updateMemberRole,
+    removeMember,
     createInvite,
     listInvites,
     getInviteByToken,
