@@ -39,6 +39,13 @@ Workspace owners and admins MUST be able to create invite links, copy them, and 
 - **WHEN** a workspace admin creates an invite
 - **THEN** the UI shows a shareable URL containing the invite token
 
+### Requirement: Invite UI shows email delivery result
+After creating an invite with an email, the workspace settings surface MUST indicate whether the invite email was sent or that the admin should copy the link instead.
+
+#### Scenario: Sent confirmation
+- **WHEN** invite creation reports email sent
+- **THEN** the UI shows a confirmation that mail was sent to the bound address
+
 ### Requirement: Workspace switcher and create dialog
 Signed-in users MUST see the active workspace and be able to switch among memberships. Creating a workspace MUST use an in-app dialog (not `window.prompt`) when create-workspace policy allows.
 

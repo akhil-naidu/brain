@@ -32,6 +32,13 @@ A workspace owner or admin MUST be able to create an invite for their workspace.
 - **WHEN** a workspace member without admin or owner role attempts to create an invite
 - **THEN** the system rejects the attempt
 
+### Requirement: Create invite reports email delivery status
+When creating an invite with a bound email, the create response MUST include whether an invite email was sent (and a short reason when not).
+
+#### Scenario: Status fields present
+- **WHEN** an admin creates an invite with an email
+- **THEN** the response includes `emailSent` boolean information for the UI
+
 ### Requirement: Accept invite joins workspace
 Accepting a valid, unexpired invite MUST add the accepting user as a member of the invite’s workspace with the invite’s role (or member if unspecified). If the invite binds an email, the accepting account’s email MUST match. Accepting MUST NOT remove the user’s Personal workspace membership.
 
