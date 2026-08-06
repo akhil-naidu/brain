@@ -19,6 +19,7 @@ This agent must stay **self-hostable and independent of Vercel infrastructure**.
 - dFlow: official Cloud MCP with self-hosted OAuth / DCR (`agent/connections/dflow.ts`)
 - Slack / Asana / Gmail / GitHub: official MCP with self-hosted OAuth + env client credentials (`agent/connections/{slack,asana,gmail,github}.ts`)
 - Snowflake: Snowflake-managed MCP (Cortex Agents/Analyst/Search) with account MCP URL + Snowflake OAuth security integration (`agent/connections/snowflake.ts`)
+- Zernio: hosted social/messaging/ads MCP with OAuth + DCR (`agent/connections/zernio.ts`) — https://docs.zernio.com/mcp
 
 See `.cursor/rules/no-vercel-infra.mdc`.
 

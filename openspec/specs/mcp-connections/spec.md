@@ -1,6 +1,6 @@
 ## Purpose
 
-Defines Brain's official MCP connections (ClickUp, Slack, Asana, Gmail, dFlow, GitHub, Snowflake) and how OAuth credentials are obtained for user-scoped tool access without Vercel Connect.
+Defines Brain's official MCP connections (ClickUp, Slack, Asana, Gmail, dFlow, GitHub, Snowflake, Zernio) and how OAuth credentials are obtained for user-scoped tool access without Vercel Connect.
 ## Requirements
 ### Requirement: ClickUp MCP connection with dynamic client registration
 The system MUST provide a ClickUp MCP connection using the official ClickUp MCP endpoint and OAuth with dynamic client registration. ClickUp MUST NOT require static client id/secret env vars.
@@ -70,4 +70,19 @@ The system MUST provide a Snowflake-managed MCP connection. The MCP server URL M
 #### Scenario: Snowflake tools require approval by default
 - **WHEN** the model calls a Snowflake MCP tool
 - **THEN** the connection approval policy requires user approval (tool names are per-server)
+
+### Requirement: Zernio MCP connection with dynamic client registration
+The system MUST provide a Zernio MCP connection using the official hosted MCP endpoint (`https://mcp.zernio.com/mcp`) and OAuth 2.1 with PKCE and dynamic client registration. Zernio MUST NOT require static client id/secret env vars.
+
+#### Scenario: Zernio connection is defined
+- **WHEN** the agent loads connections
+- **THEN** a Zernio MCP connection is available for posts, accounts, analytics, messaging, and ads tools via interactive OAuth / DCR
+
+#### Scenario: Zernio read tools do not require approval
+- **WHEN** the model calls a reviewed Zernio list/get/search tool
+- **THEN** the connection approval policy treats that tool as not requiring user approval
+
+#### Scenario: Zernio write tools require approval
+- **WHEN** the model calls a Zernio create/publish/message/ads tool (including `call_tool`)
+- **THEN** the connection approval policy requires user approval
 
