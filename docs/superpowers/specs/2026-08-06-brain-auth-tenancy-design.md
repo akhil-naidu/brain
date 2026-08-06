@@ -149,7 +149,7 @@ Instance policy/license may later: allow BYOA, require BYOA, hide platform apps.
 
 | Data | Ownership | Keying |
 | --- | --- | --- |
-| Chats | Personal within active workspace | `workspaceId + userId` (private) |
+| Chats | Personal by default; optional **shared** in team workspaces | personal: `workspaceId + userId`; shared: `workspaceId` (all members) |
 | Playbooks | Workspace shared library | `workspaceId` |
 | Schedules / morning brief | Workspace shared | `workspaceId`; runs use configured member Connect / run-as |
 | MCP Connect grants | Personal within workspace | `workspaceId + userId + provider` |
@@ -157,7 +157,7 @@ Instance policy/license may later: allow BYOA, require BYOA, hide platform apps.
 
 Personal workspace (single member): same schema; “shared” playbooks/schedules are effectively that user’s.
 
-**Not v1:** workspace-visible shared chat threads.
+Shared chats: team workspace members may create `visibility=shared` threads that all members can open and continue; personal chats stay private.
 
 ---
 

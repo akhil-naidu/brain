@@ -45,9 +45,12 @@ export function parseStreamEventJson(raw: string): HandleMessageStreamEvent {
   return parseStreamEvent(parsed);
 }
 
+export const chatVisibilitySchema = z.enum(["personal", "shared"]);
+
 export const createChatBodySchema = z.object({
   id: z.string().optional(),
   title: z.string().optional(),
+  visibility: chatVisibilitySchema.optional(),
 });
 
 export const updateChatBodySchema = z.object({

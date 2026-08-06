@@ -10,7 +10,9 @@ import type {
   ChatRecord,
   ChatStore,
   ChatSummary,
+  ChatVisibility,
   CreateChatInput,
+  DeleteChatOptions,
   UpdateChatInput,
 } from "@/lib/chat/store/types";
 
@@ -52,12 +54,18 @@ function requireNumber(row: SqlRow, key: string): number {
   throw new Error(`Expected numeric column ${key}`);
 }
 
+function parseVisibility(value: unknown): ChatVisibility {
+  return value === "shared" ? "shared" : "personal";
+}
+
 function toSummary(row: SqlRow): ChatSummary {
   return {
     id: requireString(row, "id"),
     title: requireString(row, "title"),
     createdAt: requireString(row, "created_at"),
     updatedAt: requireString(row, "updated_at"),
+    visibility: parseVisibility(row["visibility"]),
+    userId: requireString(row, "user_id"),
   };
 }
 
@@ -65,7 +73,6 @@ function toRecord(row: SqlRow, events: readonly HandleMessageStreamEvent[]): Cha
   const sessionRaw = optionalString(row, "eve_session");
   return {
     ...toSummary(row),
-    userId: requireString(row, "user_id"),
     workspaceId: requireString(row, "workspace_id"),
     eveSession: sessionRaw ? parseSessionStateJson(sessionRaw) : null,
     events,
@@ -87,9 +94,14 @@ function migrateSchema(db: DatabaseSync) {
       `ALTER TABLE chat ADD COLUMN workspace_id TEXT NOT NULL DEFAULT '${UNSET_WORKSPACE_ID}'`,
     );
   }
+  if (!names.has("visibility")) {
+    db.exec(`ALTER TABLE chat ADD COLUMN visibility TEXT NOT NULL DEFAULT 'personal'`);
+  }
   db.exec(`
     CREATE INDEX IF NOT EXISTS chat_user_workspace_updated_at_idx
       ON chat(user_id, workspace_id, updated_at DESC);
+    CREATE INDEX IF NOT EXISTS chat_workspace_visibility_updated_at_idx
+      ON chat(workspace_id, visibility, updated_at DESC);
   `);
 }
 
@@ -105,6 +117,7 @@ export function createSqliteChatStore(dbPath: string): ChatStore {
       id TEXT PRIMARY KEY NOT NULL,
       user_id TEXT NOT NULL,
       workspace_id TEXT NOT NULL,
+      visibility TEXT NOT NULL DEFAULT 'personal',
       title TEXT NOT NULL,
       eve_session TEXT,
       created_at TEXT NOT NULL,
@@ -122,8 +135,11 @@ export function createSqliteChatStore(dbPath: string): ChatStore {
   `);
   migrateSchema(db);
 
-  const selectChat = db.prepare(
-    "SELECT * FROM chat WHERE id = ? AND user_id = ? AND workspace_id = ?",
+  const selectAccessibleChat = db.prepare(
+    `SELECT * FROM chat
+     WHERE id = ?
+       AND workspace_id = ?
+       AND (user_id = ? OR visibility = 'shared')`,
   );
   const selectEvents = db.prepare(
     "SELECT event FROM chat_event WHERE chat_id = ? ORDER BY event_index ASC",
@@ -132,31 +148,30 @@ export function createSqliteChatStore(dbPath: string): ChatStore {
     "SELECT COALESCE(MAX(event_index) + 1, 0) AS next_index FROM chat_event WHERE chat_id = ?",
   );
   const listChatsStmt = db.prepare(
-    `SELECT id, title, eve_session, created_at, updated_at, user_id, workspace_id
+    `SELECT id, title, eve_session, created_at, updated_at, user_id, workspace_id, visibility
      FROM chat
-     WHERE user_id = ? AND workspace_id = ?
+     WHERE workspace_id = ?
+       AND (user_id = ? OR visibility = 'shared')
      ORDER BY updated_at DESC`,
   );
   const insertChat = db.prepare(
-    `INSERT INTO chat (id, user_id, workspace_id, title, eve_session, created_at, updated_at)
-     VALUES (?, ?, ?, ?, NULL, ?, ?)`,
+    `INSERT INTO chat (id, user_id, workspace_id, visibility, title, eve_session, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, NULL, ?, ?)`,
   );
   const updateTitle = db.prepare(
-    "UPDATE chat SET title = ?, updated_at = ? WHERE id = ? AND user_id = ? AND workspace_id = ?",
+    "UPDATE chat SET title = ?, updated_at = ? WHERE id = ? AND workspace_id = ?",
   );
   const updateSession = db.prepare(
-    "UPDATE chat SET eve_session = ?, updated_at = ? WHERE id = ? AND user_id = ? AND workspace_id = ?",
+    "UPDATE chat SET eve_session = ?, updated_at = ? WHERE id = ? AND workspace_id = ?",
   );
   const touchUpdated = db.prepare(
-    "UPDATE chat SET updated_at = ? WHERE id = ? AND user_id = ? AND workspace_id = ?",
+    "UPDATE chat SET updated_at = ? WHERE id = ? AND workspace_id = ?",
   );
   const insertEvent = db.prepare(
     "INSERT OR IGNORE INTO chat_event (chat_id, event_index, event) VALUES (?, ?, ?)",
   );
   const deleteEvents = db.prepare("DELETE FROM chat_event WHERE chat_id = ?");
-  const deleteChatStmt = db.prepare(
-    "DELETE FROM chat WHERE id = ? AND user_id = ? AND workspace_id = ?",
-  );
+  const deleteChatStmt = db.prepare("DELETE FROM chat WHERE id = ? AND workspace_id = ?");
   const reassignStmt = db.prepare("UPDATE chat SET user_id = ? WHERE user_id = ?");
   const assignWorkspaceStmt = db.prepare(
     `UPDATE chat SET workspace_id = ?
@@ -168,7 +183,7 @@ export function createSqliteChatStore(dbPath: string): ChatStore {
   }
 
   function getChatRow(userId: string, workspaceId: string, id: string): SqlRow | null {
-    return selectChat.get(id, userId, workspaceId) ?? null;
+    return selectAccessibleChat.get(id, workspaceId, userId) ?? null;
   }
 
   function getChat(userId: string, workspaceId: string, id: string): ChatRecord | null {
@@ -185,10 +200,11 @@ export function createSqliteChatStore(dbPath: string): ChatStore {
       if (!workspaceId) {
         throw new Error("workspaceId is required to create a chat.");
       }
+      const visibility: ChatVisibility = input.visibility === "shared" ? "shared" : "personal";
       const id = input.id?.trim() || randomUUID();
       const title = input.title?.trim() || DEFAULT_CHAT_TITLE;
       const createdAt = nowIso();
-      insertChat.run(id, userId, workspaceId, title, createdAt, createdAt);
+      insertChat.run(id, userId, workspaceId, visibility, title, createdAt, createdAt);
       const created = getChat(userId, workspaceId, id);
       if (!created) {
         throw new Error(`Failed to create chat ${id}`);
@@ -197,7 +213,7 @@ export function createSqliteChatStore(dbPath: string): ChatStore {
     },
 
     listChats(userId: string, workspaceId: string): readonly ChatSummary[] {
-      return listChatsStmt.all(userId, workspaceId).map(toSummary);
+      return listChatsStmt.all(workspaceId, userId).map(toSummary);
     },
 
     getChat,
@@ -218,13 +234,13 @@ export function createSqliteChatStore(dbPath: string): ChatStore {
 
       if (input.title !== undefined) {
         const title = input.title.trim() || DEFAULT_CHAT_TITLE;
-        updateTitle.run(title, updatedAt, id, userId, workspaceId);
+        updateTitle.run(title, updatedAt, id, workspaceId);
         touched = true;
       }
 
       if (input.eveSession !== undefined) {
         const sessionJson = input.eveSession === null ? null : JSON.stringify(input.eveSession);
-        updateSession.run(sessionJson, updatedAt, id, userId, workspaceId);
+        updateSession.run(sessionJson, updatedAt, id, workspaceId);
         touched = true;
       }
 
@@ -245,14 +261,33 @@ export function createSqliteChatStore(dbPath: string): ChatStore {
       }
 
       if (touched && input.title === undefined && input.eveSession === undefined) {
-        touchUpdated.run(updatedAt, id, userId, workspaceId);
+        touchUpdated.run(updatedAt, id, workspaceId);
       }
 
       return getChat(userId, workspaceId, id);
     },
 
-    deleteChat(userId: string, workspaceId: string, id: string): boolean {
-      const result = deleteChatStmt.run(id, userId, workspaceId);
+    deleteChat(
+      userId: string,
+      workspaceId: string,
+      id: string,
+      options?: DeleteChatOptions,
+    ): boolean {
+      const existing = getChatRow(userId, workspaceId, id);
+      if (!existing) {
+        return false;
+      }
+      const ownerId = requireString(existing, "user_id");
+      const visibility = parseVisibility(existing["visibility"]);
+      const isOwner = ownerId === userId;
+      if (visibility === "personal") {
+        if (!isOwner) {
+          return false;
+        }
+      } else if (!isOwner && !options?.moderateShared) {
+        return false;
+      }
+      const result = deleteChatStmt.run(id, workspaceId);
       return result.changes > 0;
     },
 
