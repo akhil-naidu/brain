@@ -2,10 +2,14 @@
 
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { authClient } from "@/lib/auth/client";
 import {
+  BRAIN_PLAYBOOKS_LEGACY_CLAIM_KEY,
   BRAIN_PLAYBOOKS_STORAGE_KEY,
   PLAYBOOKS_CHANGED_EVENT,
+  decideLegacyPlaybookImport,
   notifyPlaybooksChanged,
+  playbooksMigratedStorageKey,
   readStoredPlaybooks,
   type Playbook,
 } from "@/lib/chat/playbooks";
@@ -16,28 +20,38 @@ import {
   savePlaybookApi,
 } from "@/lib/chat/playbooks-api";
 
-const MIGRATED_KEY = "brain.playbooks.migrated.v1";
-
 export function usePlaybooks() {
   const pathname = usePathname();
+  const { data: session } = authClient.useSession();
+  const userId = session?.user.id ?? null;
   const [playbooks, setPlaybooks] = useState<readonly Playbook[]>([]);
   const [ready, setReady] = useState(false);
 
   const refresh = useCallback(async () => {
+    if (!userId) {
+      setPlaybooks([]);
+      setReady(false);
+      return;
+    }
+
     try {
       let listed = await listPlaybooksApi();
-      if (
-        listed.length === 0 &&
-        typeof window !== "undefined" &&
-        window.localStorage.getItem(MIGRATED_KEY) !== "1"
-      ) {
-        const legacy = readStoredPlaybooks();
-        if (legacy.length > 0) {
-          listed = await importPlaybooksApi(legacy);
-          window.localStorage.setItem(MIGRATED_KEY, "1");
+      if (typeof window !== "undefined") {
+        const migratedKey = playbooksMigratedStorageKey(userId);
+        const decision = decideLegacyPlaybookImport({
+          userId,
+          serverEmpty: listed.length === 0,
+          legacy: readStoredPlaybooks(),
+          migratedFlag: window.localStorage.getItem(migratedKey),
+          claimUserId: window.localStorage.getItem(BRAIN_PLAYBOOKS_LEGACY_CLAIM_KEY),
+        });
+        if (decision.action === "import") {
+          window.localStorage.setItem(BRAIN_PLAYBOOKS_LEGACY_CLAIM_KEY, userId);
+          listed = await importPlaybooksApi(decision.playbooks);
+          window.localStorage.setItem(migratedKey, "1");
           window.localStorage.removeItem(BRAIN_PLAYBOOKS_STORAGE_KEY);
-        } else {
-          window.localStorage.setItem(MIGRATED_KEY, "1");
+        } else if (decision.action === "mark_done") {
+          window.localStorage.setItem(migratedKey, "1");
         }
       }
       setPlaybooks(listed);
@@ -46,7 +60,7 @@ export function usePlaybooks() {
     } finally {
       setReady(true);
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     void refresh();
@@ -63,10 +77,9 @@ export function usePlaybooks() {
 
   const savePlaybook = useCallback(
     async (input: { readonly id?: string; readonly label: string; readonly prompt: string }) => {
-      const playbook = await savePlaybookApi(input);
+      await savePlaybookApi(input);
       await refresh();
       notifyPlaybooksChanged();
-      return playbook;
     },
     [refresh],
   );

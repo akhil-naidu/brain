@@ -671,11 +671,11 @@ export function getUserDataStore(): UserDataStore {
     globalForUserData.brainUserDataStorePath !== dbPath
   ) {
     globalForUserData.brainUserDataStore?.close();
-    const store = createSqliteUserDataStore(dbPath);
-    globalForUserData.brainUserDataStore = store;
+    globalForUserData.brainUserDataStore = createSqliteUserDataStore(dbPath);
     globalForUserData.brainUserDataStorePath = dbPath;
-    migrateHostSchedulesIntoStore(store);
   }
+  // Retry until operator exists / files are gone — store may open before bootstrap.
+  migrateHostSchedulesIntoStore(globalForUserData.brainUserDataStore);
   return globalForUserData.brainUserDataStore;
 }
 

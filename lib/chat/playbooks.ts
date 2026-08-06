@@ -1,9 +1,43 @@
 import { z } from "zod";
 
 export const BRAIN_PLAYBOOKS_STORAGE_KEY = "brain.playbooks.v1";
+/** Who claimed the shared legacy localStorage bag (one browser → one user). */
+export const BRAIN_PLAYBOOKS_LEGACY_CLAIM_KEY = "brain.playbooks.legacy-claim.v1";
 export const MAX_PLAYBOOKS = 12;
 export const MAX_PLAYBOOK_LABEL_CHARS = 60;
 export const MAX_PLAYBOOK_PROMPT_CHARS = 4_000;
+
+export function playbooksMigratedStorageKey(userId: string): string {
+  return `brain.playbooks.migrated.v1:${userId}`;
+}
+
+export type LegacyPlaybookImportDecision =
+  | { readonly action: "skip" }
+  | { readonly action: "mark_done" }
+  | { readonly action: "import"; readonly playbooks: readonly Playbook[] };
+
+/**
+ * Decide whether this signed-in user may import the shared legacy localStorage bag.
+ * Only one user per browser can claim it; others skip.
+ */
+export function decideLegacyPlaybookImport(input: {
+  readonly userId: string;
+  readonly serverEmpty: boolean;
+  readonly legacy: readonly Playbook[];
+  readonly migratedFlag: string | null;
+  readonly claimUserId: string | null;
+}): LegacyPlaybookImportDecision {
+  if (!input.serverEmpty || input.migratedFlag === "1") {
+    return { action: "skip" };
+  }
+  if (input.claimUserId && input.claimUserId !== input.userId) {
+    return { action: "mark_done" };
+  }
+  if (input.legacy.length === 0) {
+    return { action: "mark_done" };
+  }
+  return { action: "import", playbooks: input.legacy };
+}
 
 const playbookSchema = z
   .object({

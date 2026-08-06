@@ -118,4 +118,51 @@ describe("migrateHostSchedulesIntoStore", () => {
     expect(second).toEqual({ importedPlaybooks: 0, importedBrief: false });
     store.close();
   });
+
+  it("retries after an operator user appears", () => {
+    const playbooksPath = resolveScheduledPlaybooksPath(dir, process.env);
+    writeFileSync(
+      playbooksPath,
+      JSON.stringify({
+        schedules: [
+          {
+            id: "sched-late",
+            label: "Late",
+            prompt: "Import after bootstrap",
+            sourcePlaybookId: null,
+            enabled: true,
+            hour: 7,
+            minute: 0,
+            timezone: "UTC",
+            weekdaysOnly: true,
+            slackDeliveryEnabled: false,
+            slackChannel: null,
+            lastSlackError: null,
+            lastRunDateKey: null,
+            lastChatId: null,
+            lastRunAt: null,
+            runningSince: null,
+          },
+        ],
+      }),
+      "utf8",
+    );
+
+    delete process.env["BRAIN_OPERATOR_USER_ID"];
+    const store = createSqliteUserDataStore(path.join(dir, "chats.sqlite"));
+    expect(migrateHostSchedulesIntoStore(store, process.env, dir)).toEqual({
+      importedPlaybooks: 0,
+      importedBrief: false,
+    });
+    expect(existsSync(playbooksPath)).toBe(true);
+
+    process.env["BRAIN_OPERATOR_USER_ID"] = "operator-late";
+    expect(migrateHostSchedulesIntoStore(store, process.env, dir)).toEqual({
+      importedPlaybooks: 1,
+      importedBrief: false,
+    });
+    expect(store.listPlaybookSchedules("operator-late")).toHaveLength(1);
+    expect(existsSync(`${playbooksPath}.migrated`)).toBe(true);
+    store.close();
+  });
 });
