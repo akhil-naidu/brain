@@ -9,6 +9,7 @@ import {
   GitHubIcon,
   GmailIcon,
   SlackIcon,
+  SnowflakeIcon,
 } from "@/components/icons";
 import {
   ChatTourMock,
@@ -32,6 +33,7 @@ const CONNECTION_MARKS = [
   { id: "gmail", label: "Gmail", Icon: GmailIcon },
   { id: "dflow", label: "dFlow", Icon: DflowIcon },
   { id: "github", label: "GitHub", Icon: GitHubIcon },
+  { id: "snowflake", label: "Snowflake", Icon: SnowflakeIcon },
 ] as const;
 
 const SCENE_MOCKS: Record<(typeof HOME_TOUR_SCENES)[number]["id"], ReactNode> = {

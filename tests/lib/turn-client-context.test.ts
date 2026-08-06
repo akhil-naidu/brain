@@ -12,6 +12,7 @@ describe("createTurnClientContext", () => {
         github: false,
         gmail: true,
         slack: true,
+        snowflake: false,
       },
     });
 
@@ -31,6 +32,7 @@ describe("createTurnClientContext", () => {
         github: true,
         gmail: true,
         slack: true,
+        snowflake: true,
       },
     });
 

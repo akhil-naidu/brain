@@ -86,3 +86,23 @@ export function GitHubIcon({ className }: { readonly className?: string }) {
     </svg>
   );
 }
+
+/** Snowflake brand mark (simplified). */
+export function SnowflakeIcon({ className }: { readonly className?: string }) {
+  return (
+    <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
+      <path
+        d="M12 2.5v19M4.5 7.25l15 9.5M4.5 16.75l15-9.5"
+        stroke="#29B5E8"
+        strokeLinecap="round"
+        strokeWidth="1.75"
+      />
+      <path
+        d="M12 2.5 9.2 5.3M12 2.5l2.8 2.8M12 21.5l-2.8-2.8M12 21.5l2.8-2.8M4.5 7.25l3.4.35M4.5 7.25l.9 3.3M19.5 16.75l-3.4-.35M19.5 16.75l-.9-3.3M4.5 16.75l3.4-.35M4.5 16.75l.9-3.3M19.5 7.25l-3.4.35M19.5 7.25l-.9 3.3"
+        stroke="#29B5E8"
+        strokeLinecap="round"
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}

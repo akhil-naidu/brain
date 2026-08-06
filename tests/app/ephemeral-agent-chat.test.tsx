@@ -61,6 +61,7 @@ vi.mock("@/app/_components/chat-shell-context", () => ({
       github: true,
       gmail: true,
       slack: true,
+      snowflake: false,
     },
     selectedModelId: "deepseek/deepseek-v4-pro",
     setConnectionEnabled: vi.fn(),
