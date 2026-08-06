@@ -60,5 +60,6 @@ This repo uses [OpenSpec](https://github.com/Fission-AI/OpenSpec) for behavior s
 - Validate: `pnpm run openspec:validate`
 
 Ordered implementation checklists for the Brain chat UI live separately in
-`docs/superpowers/plans/` (do not relocate). Design overview:
-`docs/superpowers/specs/2026-07-29-brain-chat-ui-design.md`.
+`docs/superpowers/plans/` (do not relocate). Design overviews:
+`docs/superpowers/specs/2026-07-29-brain-chat-ui-design.md` (chat UI),
+`docs/superpowers/specs/2026-08-06-brain-auth-tenancy-design.md` (auth, workspaces, MCP tenancy).
