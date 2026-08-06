@@ -9,6 +9,11 @@ Brain SHALL persist zero or more playbook schedules in host durable storage scop
 - **WHEN** a signed-in workspace member creates a schedule with a label, prompt, and valid daily time settings in the active workspace
 - **THEN** Brain stores that schedule for that workspace and subsequent list reads by members of that workspace include it
 
+#### Scenario: Users are isolated
+
+- **WHEN** user A has schedules only in workspace W and user B is not a member of W
+- **THEN** user B’s schedule list does not include those schedules
+
 #### Scenario: Workspaces are isolated
 
 - **WHEN** workspace A has schedules and a user lists schedules with active workspace B

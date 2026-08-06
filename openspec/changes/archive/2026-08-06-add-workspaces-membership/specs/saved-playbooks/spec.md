@@ -15,6 +15,10 @@ The system MUST let a signed-in user save named playbooks (label + prompt text) 
 - **WHEN** a client without a valid session requests the playbooks collection
 - **THEN** the system rejects the request
 
+#### Scenario: Users are isolated
+- **WHEN** user A has playbooks only in workspace W and user B is not a member of W
+- **THEN** user B does not receive those playbooks
+
 #### Scenario: Workspaces are isolated
 - **WHEN** workspace A has playbooks and a user lists playbooks with active workspace B
 - **THEN** the list does not include workspace A’s playbooks

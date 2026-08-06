@@ -1,9 +1,7 @@
 ## Purpose
 
 Defines how the Brain eve agent runs locally and in production: model provider, HTTP channel auth posture, and infrastructure boundaries that keep the app self-hostable.
-
 ## Requirements
-
 ### Requirement: Command Code is the primary model path
 The agent MUST use Command Code (or another direct/third-party provider configured in `agent/agent.ts`) as the primary model path. The system MUST NOT require Vercel AI Gateway credentials or gateway string model IDs for normal operation.
 
@@ -23,11 +21,15 @@ The system MUST expose the eve HTTP channel so authenticated clients can create 
 - **THEN** the system rejects the request instead of authenticating as a shared anonymous user
 
 ### Requirement: Channel principal matches signed-in user
-For Brain browser chat, the eve channel AuthFn MUST resolve `principalType` user and a stable `principalId` from the authenticated Brain session so MCP OAuth and approvals attach to that user.
+For Brain browser chat, the eve channel AuthFn MUST resolve `principalType` user and a stable `principalId` from the authenticated Brain session so MCP OAuth and approvals attach to that user. Token and approval lookup for workspace-scoped grants MUST use the session’s **active workspace** together with that principal.
 
 #### Scenario: Turn uses session principal
 - **WHEN** a signed-in user starts a chat turn that needs a connection token
-- **THEN** the agent looks up tokens and approvals for that user’s principal id, not `anonymous`
+- **THEN** the agent looks up tokens and approvals for that user’s principal id in the active workspace, not `anonymous` and not another workspace’s grants
+
+#### Scenario: Workspace context on turn
+- **WHEN** the signed-in user’s active workspace is W
+- **THEN** MCP grant resolution for the turn uses workspace W
 
 ### Requirement: No Vercel platform dependency for core runtime
 Core agent runtime MUST remain operable without a Vercel account, Vercel project link, Vercel Connect, Vercel Sandbox, or Vercel OIDC authenticator.
@@ -42,3 +44,4 @@ Code execution sandbox configuration MUST use local/Docker/microsandbox (or equi
 #### Scenario: Sandbox backend is self-hostable
 - **WHEN** the agent is configured with a sandbox
 - **THEN** the configured backend is microsandbox, Docker, local, or another non-Vercel sandbox
+
