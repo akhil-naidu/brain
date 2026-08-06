@@ -43,6 +43,7 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [chats, setChats] = useState<readonly ChatSummary[]>([]);
   const [canCreateShared, setCanCreateShared] = useState(false);
+  const [viewerUserId, setViewerUserId] = useState<string | null>(null);
   const [searchFocusRequest, setSearchFocusRequest] = useState(0);
   const [urlChatId, setUrlChatId] = useState<string | null>(null);
 
@@ -66,11 +67,13 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
         if (!cancelled) {
           setChats([...listed.chats]);
           setCanCreateShared(listed.canCreateShared);
+          setViewerUserId(listed.viewerUserId);
         }
       } catch {
         if (!cancelled) {
           setChats([]);
           setCanCreateShared(false);
+          setViewerUserId(null);
         }
       }
     })();
@@ -144,6 +147,11 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
     [handlers],
   );
 
+  const onShareChat = useCallback(async (chatId: string) => {
+    const chat = await updateChat(chatId, { visibility: "shared" });
+    setChats((current) => upsertChatSummary(current, chat));
+  }, []);
+
   const onRunPlaybook = useCallback(
     (prompt: string) => {
       if (handlers) {
@@ -193,6 +201,7 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
       .then((listed) => {
         setChats([...listed.chats]);
         setCanCreateShared(listed.canCreateShared);
+        setViewerUserId(listed.viewerUserId);
         return undefined;
       })
       .catch(() => undefined);
@@ -269,9 +278,11 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
     onDeleteChat,
     onNewSharedChat,
     onRenameChat,
+    onShareChat,
     onRunPlaybook,
     searchFocusRequest,
     showChatDraft: pathname === "/chat",
+    viewerUserId,
   } as const;
 
   return (

@@ -119,11 +119,13 @@ export function ChatSidebar({
   onNewChat,
   onNewSharedChat,
   onRenameChat,
+  onShareChat,
   onRunPlaybook,
   onSelectChat,
   onToggleSidebar,
   searchFocusRequest = 0,
   showChatDraft = false,
+  viewerUserId = null,
 }: {
   readonly brand: ReactNode;
   readonly canCreateShared?: boolean;
@@ -136,12 +138,14 @@ export function ChatSidebar({
   readonly onNewChat: () => void;
   readonly onNewSharedChat?: () => void;
   readonly onRenameChat: (chatId: string, title: string) => void | Promise<void>;
+  readonly onShareChat?: (chatId: string) => void | Promise<void>;
   readonly onRunPlaybook?: (prompt: string) => void;
   readonly onSelectChat: (chatId: string) => void;
   readonly onToggleSidebar?: () => void;
   readonly searchFocusRequest?: number;
   /** When true, show the in-progress draft chat row if no chat is selected. */
   readonly showChatDraft?: boolean;
+  readonly viewerUserId?: string | null;
 }) {
   const pathname = usePathname();
   const chatsActive = pathname === "/chat";
@@ -499,6 +503,23 @@ export function ChatSidebar({
                       )}
                       {!editing ? (
                         <>
+                          {canCreateShared &&
+                          onShareChat &&
+                          chat.visibility === "personal" &&
+                          viewerUserId &&
+                          chat.userId === viewerUserId ? (
+                            <Button
+                              aria-label={`Share ${chat.title} with workspace`}
+                              className="text-muted-foreground/50 hover:text-foreground size-6 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                              onClick={() => void onShareChat(chat.id)}
+                              size="icon-sm"
+                              title="Share with workspace"
+                              type="button"
+                              variant="ghost"
+                            >
+                              <UsersIcon className="size-3" />
+                            </Button>
+                          ) : null}
                           <Button
                             aria-label={`Rename ${chat.title}`}
                             className="text-muted-foreground/50 hover:text-foreground size-6 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
