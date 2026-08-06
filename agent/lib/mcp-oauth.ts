@@ -86,6 +86,11 @@ export type McpOAuthProvider = {
   clientIdEnv?: string;
   /** Env var holding client secret (client_secret_post). */
   clientSecretEnv?: string;
+  /**
+   * When set, this env var must contain the remote MCP server URL before
+   * Connect is offered (account-specific hosts such as Snowflake).
+   */
+  mcpUrlEnv?: string;
   tokenAuthMethod: "none" | "client_secret_post";
   /** Extra authorize query params (e.g. Google access_type=offline). */
   authorizeExtraParams?: Record<string, string>;

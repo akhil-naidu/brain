@@ -134,11 +134,16 @@ export async function getProviderCredentialSetupError(
     | "displayName"
     | "clientIdEnv"
     | "clientSecretEnv"
+    | "mcpUrlEnv"
     | "registrationEndpoint"
     | "tokenAuthMethod"
   >,
   env: { readonly [key: string]: string | undefined } = process.env,
 ): Promise<string | null> {
+  if (provider.mcpUrlEnv && !env[provider.mcpUrlEnv]?.trim()) {
+    return `Set ${provider.mcpUrlEnv} to your ${provider.displayName} MCP server URL`;
+  }
+
   if (!providerNeedsStaticAppCredentials(provider)) {
     return null;
   }
