@@ -1,7 +1,11 @@
+# chat-persistence Specification
+
 ## Purpose
 
-Local durable chat history for Brain: create, list, open, delete, and resume conversations after refresh using host-local storage scoped to the signed-in user, without hosted cloud databases.
+Local durable chat history for Brain: create, list, open, delete, and resume conversations after refresh using host-local storage scoped to the signed-in user and active workspace, without hosted cloud databases.
+
 ## Requirements
+
 ### Requirement: Durable chat records on the host
 The system MUST persist each conversation as a durable chat record on the Brain host within the active workspace. Each record MUST include a stable chat id, the creating user id, the workspace id, a visibility of `personal` or `shared`, a display title, timestamps, the eve session cursor needed to continue the thread, and the ordered stream events needed to restore the UI. Personal chats are owned by the creating user. Shared chats are readable and continuable by any member of that workspace.
 
@@ -12,56 +16,6 @@ The system MUST persist each conversation as a durable chat record on the Brain 
 #### Scenario: Refresh restores an open chat
 - **WHEN** a signed-in user refreshes the page while a saved chat they can access in the active workspace is active
 - **THEN** prior messages for that chat are restored from durable storage and the thread can continue
-
-
-### Requirement: Sidebar history list
-The system MUST show a sidebar list of saved chats **owned by the signed-in user in the active workspace**, ordered by most recently updated. The list MUST allow opening a chat, deleting a chat, and starting a new chat. Chats owned by other users or belonging to other workspaces MUST NOT appear.
-
-#### Scenario: Open a past chat
-- **WHEN** the signed-in user selects a chat from the sidebar history
-- **THEN** the main pane shows that chat’s restored messages and uses that chat as the active conversation
-
-#### Scenario: Delete a chat
-- **WHEN** the signed-in user deletes a chat from the sidebar
-- **THEN** that chat is removed from durable storage and no longer appears in the history list
-
-#### Scenario: New chat
-- **WHEN** the signed-in user chooses New chat
-- **THEN** the main pane shows an empty conversation ready for a fresh thread that does not continue the previous chat’s session cursor
-
-#### Scenario: Other users’ chats are hidden
-- **WHEN** user A has saved chats in workspace W and user B signs in with active workspace W
-- **THEN** user B’s sidebar does not list user A’s chats
-
-#### Scenario: Other workspace chats are hidden
-- **WHEN** a user has chats in workspace A and switches active workspace to B
-- **THEN** the sidebar lists only that user’s chats for workspace B
-
-### Requirement: Local single-tenant storage only
-Chat history MUST be stored on the local host (or a path configured for that host) using the host-local store (SQLite by default). The system MUST NOT require Neon, Supabase, Redis, Elasticsearch, ClickHouse, Convex, or other hosted databases for this capability. Login sessions are required for access; hosted auth platforms are not.
-
-#### Scenario: History works without cloud DB credentials
-- **WHEN** the operator runs Brain with only local configuration and no hosted database credentials
-- **THEN** authenticated chat create/list/open/delete and resume still work against the host-local store
-
-### Requirement: Chat history HTTP API
-The system MUST expose same-origin HTTP APIs to list chats, create a chat, fetch one chat (including session cursor and events), update persistence fields during/after a turn, and delete a chat. Each API MUST require an authenticated session, an active workspace membership, and MUST only return or mutate chats owned by that user in that workspace.
-
-#### Scenario: List chats
-- **WHEN** a signed-in client requests the chats collection for the active workspace
-- **THEN** it receives chat summaries suitable for the sidebar (id, title, timestamps) for that user in that workspace only
-
-#### Scenario: Fetch chat for resume
-- **WHEN** a signed-in client requests a specific chat id they own in the active workspace
-- **THEN** the response includes the stored session cursor and ordered events needed to remount the agent UI
-
-#### Scenario: Fetch another user’s chat is denied
-- **WHEN** a signed-in client requests a chat id owned by a different user
-- **THEN** the system rejects the request or reports not found without leaking the other user’s content
-
-#### Scenario: Fetch other workspace chat is denied
-- **WHEN** a signed-in client requests a chat id that exists only in a workspace that is not active (or they do not belong to)
-- **THEN** the system rejects the request or reports not found without leaking content
 
 ### Requirement: Sidebar lists accessible chats
 The system MUST show a sidebar list of chats the signed-in user can access in the active workspace: their personal chats plus shared chats in that workspace, ordered by most recently updated. The list MUST allow opening a chat, deleting a chat when authorized, and starting a new chat. Chats the user cannot access MUST NOT appear.
@@ -85,6 +39,13 @@ The system MUST show a sidebar list of chats the signed-in user can access in th
 #### Scenario: Other workspace chats are hidden
 - **WHEN** a user has chats in workspace A and switches active workspace to B
 - **THEN** the sidebar lists only chats accessible in workspace B
+
+### Requirement: Local single-tenant storage only
+Chat history MUST be stored on the local host (or a path configured for that host) using the host-local store (SQLite by default). The system MUST NOT require Neon, Supabase, Redis, Elasticsearch, ClickHouse, Convex, or other hosted databases for this capability. Login sessions are required for access; hosted auth platforms are not.
+
+#### Scenario: History works without cloud DB credentials
+- **WHEN** the operator runs Brain with only local configuration and no hosted database credentials
+- **THEN** authenticated chat create/list/open/delete and resume still work against the host-local store
 
 ### Requirement: Chat persistence APIs enforce access
 The system MUST expose same-origin HTTP APIs to list chats, create a chat, fetch one chat (including session cursor and events), update persistence fields during/after a turn, and delete a chat. Each API MUST require an authenticated session and active workspace membership. Personal chats MUST only be returned or mutated for their owner. Shared chats MUST be readable and updatable by any member of the workspace; delete MUST follow shared-chat delete controls.
