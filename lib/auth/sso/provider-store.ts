@@ -5,6 +5,7 @@ import {
   domainsFromStored,
   parseEmailDomains,
 } from "@/lib/auth/sso/domains";
+import { createDomainVerificationStore } from "@/lib/auth/sso/domain-verification";
 import { oidcSsoCallbackPath, samlSsoCallbackPath } from "@/lib/auth/sso/paths";
 
 type SqlRow = Record<string, null | number | bigint | string | Uint8Array>;
@@ -20,6 +21,7 @@ export type PublicSsoProvider = {
   readonly samlCallbackPath: string;
   readonly hasClientSecret: boolean;
   readonly clientId: string | null;
+  readonly domainVerified: boolean;
 };
 
 type OidcUpsertInput = {
@@ -137,6 +139,10 @@ async function buildOidcConfigJson(input: {
   });
 }
 
+function asBool(value: unknown): boolean {
+  return value === 1 || value === true || value === "1";
+}
+
 function toPublic(row: SqlRow): PublicSsoProvider {
   const providerId = requireString(row, "providerId");
   const oidcConfig = parseJsonObject(optionalString(row, "oidcConfig"));
@@ -157,6 +163,7 @@ function toPublic(row: SqlRow): PublicSsoProvider {
     samlCallbackPath: samlSsoCallbackPath(providerId),
     hasClientSecret,
     clientId,
+    domainVerified: asBool(row["domainVerified"]),
   };
 }
 
@@ -167,10 +174,12 @@ function assertProviderId(providerId: string): void {
 }
 
 export function createSsoProviderStore(db: DatabaseSync) {
+  const domainVerification = createDomainVerificationStore(db);
+
   function listByWorkspace(workspaceId: string): PublicSsoProvider[] {
     const rows = db
       .prepare(
-        `SELECT id, providerId, issuer, domain, oidcConfig, samlConfig, organizationId
+        `SELECT id, providerId, issuer, domain, oidcConfig, samlConfig, organizationId, domainVerified
          FROM ssoProvider
          WHERE organizationId = ?
          ORDER BY providerId ASC`,
@@ -182,7 +191,7 @@ export function createSsoProviderStore(db: DatabaseSync) {
   function getByProviderId(providerId: string): SqlRow | null {
     const row = db
       .prepare(
-        `SELECT id, providerId, issuer, domain, oidcConfig, samlConfig, organizationId, userId
+        `SELECT id, providerId, issuer, domain, oidcConfig, samlConfig, organizationId, userId, domainVerified
          FROM ssoProvider WHERE providerId = ?`,
       )
       .get(providerId) as SqlRow | undefined;
@@ -242,14 +251,14 @@ export function createSsoProviderStore(db: DatabaseSync) {
     if (existing) {
       db.prepare(
         `UPDATE ssoProvider
-         SET issuer = ?, domain = ?, oidcConfig = ?, samlConfig = NULL, organizationId = ?
+         SET issuer = ?, domain = ?, oidcConfig = ?, samlConfig = NULL, organizationId = ?, domainVerified = 0
          WHERE providerId = ?`,
       ).run(input.issuer, domain, oidcConfig, input.workspaceId, input.providerId);
     } else {
       db.prepare(
         `INSERT INTO ssoProvider
-         (id, issuer, domain, oidcConfig, samlConfig, userId, providerId, organizationId)
-         VALUES (?, ?, ?, ?, NULL, ?, ?, ?)`,
+         (id, issuer, domain, oidcConfig, samlConfig, userId, providerId, organizationId, domainVerified)
+         VALUES (?, ?, ?, ?, NULL, ?, ?, ?, 0)`,
       ).run(
         randomUUID(),
         input.issuer,
@@ -260,6 +269,7 @@ export function createSsoProviderStore(db: DatabaseSync) {
         input.workspaceId,
       );
     }
+    domainVerification.markUnverified(input.providerId);
     const row = getByProviderId(input.providerId);
     if (!row) {
       throw new Error("Failed to persist OIDC SSO provider.");
@@ -306,14 +316,14 @@ export function createSsoProviderStore(db: DatabaseSync) {
     if (existing) {
       db.prepare(
         `UPDATE ssoProvider
-         SET issuer = ?, domain = ?, oidcConfig = NULL, samlConfig = ?, organizationId = ?
+         SET issuer = ?, domain = ?, oidcConfig = NULL, samlConfig = ?, organizationId = ?, domainVerified = 0
          WHERE providerId = ?`,
       ).run(input.issuer, domain, samlConfig, input.workspaceId, input.providerId);
     } else {
       db.prepare(
         `INSERT INTO ssoProvider
-         (id, issuer, domain, oidcConfig, samlConfig, userId, providerId, organizationId)
-         VALUES (?, ?, ?, NULL, ?, ?, ?, ?)`,
+         (id, issuer, domain, oidcConfig, samlConfig, userId, providerId, organizationId, domainVerified)
+         VALUES (?, ?, ?, NULL, ?, ?, ?, ?, 0)`,
       ).run(
         randomUUID(),
         input.issuer,
@@ -324,6 +334,7 @@ export function createSsoProviderStore(db: DatabaseSync) {
         input.workspaceId,
       );
     }
+    domainVerification.markUnverified(input.providerId);
     const row = getByProviderId(input.providerId);
     if (!row) {
       throw new Error("Failed to persist SAML SSO provider.");

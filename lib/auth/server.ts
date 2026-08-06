@@ -159,6 +159,9 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
       sso({
         // Workspace Settings API owns registration; block Better Auth's public register path.
         providersLimit: 0,
+        domainVerification: {
+          enabled: true,
+        },
         organizationProvisioning: {
           disabled: true,
         },
