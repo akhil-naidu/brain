@@ -1,21 +1,21 @@
 import { NextResponse } from "next/server";
-import { requireSessionUserId } from "@/lib/auth/require-session";
+import { requireWorkspaceSession } from "@/lib/auth/require-workspace-session";
 import { getChatStore } from "@/lib/chat/store";
 import { createChatBodySchema } from "@/lib/chat/store/parse";
 
 export const runtime = "nodejs";
 
 export async function GET() {
-  const session = await requireSessionUserId();
+  const session = await requireWorkspaceSession();
   if (!session.ok) {
     return session.response;
   }
-  const chats = getChatStore().listChats(session.userId);
+  const chats = getChatStore().listChats(session.session.userId, session.session.workspaceId);
   return NextResponse.json({ chats });
 }
 
 export async function POST(request: Request) {
-  const session = await requireSessionUserId();
+  const session = await requireWorkspaceSession();
   if (!session.ok) {
     return session.response;
   }
@@ -32,9 +32,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const chat = getChatStore().createChat(session.userId, {
+  const chat = getChatStore().createChat(session.session.userId, {
     id: parsed.data.id,
     title: parsed.data.title,
+    workspaceId: session.session.workspaceId,
   });
 
   return NextResponse.json({ chat }, { status: 201 });

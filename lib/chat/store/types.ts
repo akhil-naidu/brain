@@ -9,6 +9,7 @@ export type ChatSummary = {
 
 export type ChatRecord = ChatSummary & {
   readonly userId: string;
+  readonly workspaceId: string;
   readonly eveSession: SessionState | null;
   readonly events: readonly HandleMessageStreamEvent[];
 };
@@ -16,6 +17,7 @@ export type ChatRecord = ChatSummary & {
 export type CreateChatInput = {
   readonly id?: string;
   readonly title?: string;
+  readonly workspaceId: string;
 };
 
 export type UpdateChatInput = {
@@ -27,12 +29,19 @@ export type UpdateChatInput = {
 };
 
 export interface ChatStore {
-  createChat(userId: string, input?: CreateChatInput): ChatRecord;
-  listChats(userId: string): readonly ChatSummary[];
-  getChat(userId: string, id: string): ChatRecord | null;
-  updateChat(userId: string, id: string, input: UpdateChatInput): ChatRecord | null;
-  deleteChat(userId: string, id: string): boolean;
+  createChat(userId: string, input: CreateChatInput): ChatRecord;
+  listChats(userId: string, workspaceId: string): readonly ChatSummary[];
+  getChat(userId: string, workspaceId: string, id: string): ChatRecord | null;
+  updateChat(
+    userId: string,
+    workspaceId: string,
+    id: string,
+    input: UpdateChatInput,
+  ): ChatRecord | null;
+  deleteChat(userId: string, workspaceId: string, id: string): boolean;
   /** One-time migration helper: move chats from one owner id to another. */
   reassignOwner(fromUserId: string, toUserId: string): number;
+  /** Assign workspace_id for all chats owned by user that still lack one. */
+  assignWorkspaceToUserChats(userId: string, workspaceId: string): number;
   close(): void;
 }
