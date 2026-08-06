@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireSessionUserId } from "@/lib/auth/require-session";
 import {
   createScheduledPlaybook,
   createScheduledPlaybookBodySchema,
@@ -8,11 +9,20 @@ import {
 export const runtime = "nodejs";
 
 export async function GET() {
-  const schedules = await readScheduledPlaybooks();
+  const session = await requireSessionUserId();
+  if (!session.ok) {
+    return session.response;
+  }
+  const schedules = await readScheduledPlaybooks(session.userId);
   return NextResponse.json({ schedules });
 }
 
 export async function POST(request: Request) {
+  const session = await requireSessionUserId();
+  if (!session.ok) {
+    return session.response;
+  }
+
   let body: unknown = {};
   try {
     body = await request.json();
@@ -26,7 +36,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const schedule = await createScheduledPlaybook(parsed.data);
+    const schedule = await createScheduledPlaybook(session.userId, parsed.data);
     return NextResponse.json({ schedule }, { status: 201 });
   } catch (error) {
     return NextResponse.json(

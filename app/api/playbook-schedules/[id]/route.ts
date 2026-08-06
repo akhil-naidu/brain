@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireSessionUserId } from "@/lib/auth/require-session";
 import {
   deleteScheduledPlaybook,
   updateScheduledPlaybook,
@@ -12,6 +13,10 @@ type RouteContext = {
 };
 
 export async function PATCH(request: Request, context: RouteContext) {
+  const session = await requireSessionUserId();
+  if (!session.ok) {
+    return session.response;
+  }
   const { id } = await context.params;
   let body: unknown = {};
   try {
@@ -26,7 +31,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   try {
-    const schedule = await updateScheduledPlaybook(id, parsed.data);
+    const schedule = await updateScheduledPlaybook(session.userId, id, parsed.data);
     return NextResponse.json({ schedule });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to update schedule.";
@@ -36,8 +41,12 @@ export async function PATCH(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
+  const session = await requireSessionUserId();
+  if (!session.ok) {
+    return session.response;
+  }
   const { id } = await context.params;
-  const deleted = await deleteScheduledPlaybook(id);
+  const deleted = await deleteScheduledPlaybook(session.userId, id);
   if (!deleted) {
     return NextResponse.json({ error: "Schedule not found." }, { status: 404 });
   }

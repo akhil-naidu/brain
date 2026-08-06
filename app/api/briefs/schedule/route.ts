@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireSessionUserId } from "@/lib/auth/require-session";
 import {
   isScheduledBriefDue,
   readScheduledBriefConfig,
@@ -9,7 +10,11 @@ import {
 export const runtime = "nodejs";
 
 export async function GET() {
-  const config = await readScheduledBriefConfig();
+  const session = await requireSessionUserId();
+  if (!session.ok) {
+    return session.response;
+  }
+  const config = await readScheduledBriefConfig(session.userId);
   return NextResponse.json({
     schedule: config,
     due: isScheduledBriefDue(config),
@@ -17,6 +22,11 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
+  const session = await requireSessionUserId();
+  if (!session.ok) {
+    return session.response;
+  }
+
   let body: unknown = {};
   try {
     body = await request.json();
@@ -30,7 +40,7 @@ export async function PUT(request: Request) {
   }
 
   try {
-    const schedule = await writeScheduledBriefConfig(parsed.data);
+    const schedule = await writeScheduledBriefConfig(session.userId, parsed.data);
     return NextResponse.json({
       schedule,
       due: isScheduledBriefDue(schedule),

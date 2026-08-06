@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireSessionUserId } from "@/lib/auth/require-session";
 import { runScheduledPlaybookBodySchema } from "@/lib/chat/scheduled-playbooks";
 import { runDueScheduledPlaybooks, runScheduledPlaybook } from "@/lib/chat/run-scheduled-playbook";
 
@@ -19,9 +20,14 @@ export async function POST(request: Request) {
 
   try {
     if (parsed.data.id) {
+      const session = await requireSessionUserId();
+      if (!session.ok) {
+        return session.response;
+      }
       const result = await runScheduledPlaybook({
         id: parsed.data.id,
         force: parsed.data.force === true,
+        userId: session.userId,
       });
       if (result.skipped) {
         return NextResponse.json(result);
@@ -29,6 +35,7 @@ export async function POST(request: Request) {
       return NextResponse.json(result, { status: 201 });
     }
 
+    // Cron due sweep across all users (no session).
     const results = await runDueScheduledPlaybooks();
     return NextResponse.json({ results });
   } catch (error) {
