@@ -335,6 +335,36 @@ export default function WorkspaceSettingsPage() {
     }
   }
 
+  async function onTransfer(userId: string) {
+    setPending(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/workspaces/transfer", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      const data: unknown = await response.json();
+      if (!response.ok) {
+        setError(
+          typeof data === "object" &&
+            data !== null &&
+            "error" in data &&
+            typeof data.error === "string"
+            ? data.error
+            : "Unable to transfer ownership.",
+        );
+        setPending(false);
+        return;
+      }
+      setPending(false);
+      await refresh();
+    } catch {
+      setPending(false);
+      setError("Unable to transfer ownership.");
+    }
+  }
+
   const isTeam = workspaceKind === "team";
   const ownerCount = members.filter((member) => member.role === "owner").length;
 
@@ -369,6 +399,8 @@ export default function WorkspaceSettingsPage() {
                   : canManage &&
                     member.role !== "owner" &&
                     !(viewerRole === "admin" && member.role === "admin"));
+              const canTransfer =
+                isTeam && viewerRole === "owner" && !isSelf && member.role !== "owner";
               return (
                 <li
                   className="border-border flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between"
@@ -396,6 +428,19 @@ export default function WorkspaceSettingsPage() {
                         <option value="member">Member</option>
                         <option value="admin">Admin</option>
                       </select>
+                    ) : null}
+                    {canTransfer ? (
+                      <Button
+                        disabled={pending}
+                        onClick={() => {
+                          void onTransfer(member.userId);
+                        }}
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
+                        Make owner
+                      </Button>
                     ) : null}
                     {canRemove ? (
                       <Button
