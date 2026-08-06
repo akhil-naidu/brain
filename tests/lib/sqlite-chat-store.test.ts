@@ -112,6 +112,23 @@ describe("sqlite chat store", () => {
     expect(store.getChat("user-a", "ws-1", personal.id)?.visibility).toBe("personal");
   });
 
+  it("lets the owner promote a personal chat to shared", () => {
+    const store = openStore();
+    const personal = store.createChat("user-a", {
+      title: "Later share",
+      workspaceId: "ws-1",
+      visibility: "personal",
+    });
+
+    expect(store.updateChat("user-b", "ws-1", personal.id, { visibility: "shared" })).toBeNull();
+    expect(store.getChat("user-b", "ws-1", personal.id)).toBeNull();
+
+    const shared = store.updateChat("user-a", "ws-1", personal.id, { visibility: "shared" });
+    expect(shared?.visibility).toBe("shared");
+    expect(store.getChat("user-b", "ws-1", personal.id)?.title).toBe("Later share");
+    expect(store.updateChat("user-a", "ws-1", personal.id, { visibility: "personal" })).toBeNull();
+  });
+
   it("reassigns legacy ownership and assigns workspace", () => {
     const store = openStore();
     const legacy = store.createChat("__legacy__", { title: "Old", workspaceId: "__unset__" });

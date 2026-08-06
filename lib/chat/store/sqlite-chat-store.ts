@@ -161,6 +161,9 @@ export function createSqliteChatStore(dbPath: string): ChatStore {
   const updateTitle = db.prepare(
     "UPDATE chat SET title = ?, updated_at = ? WHERE id = ? AND workspace_id = ?",
   );
+  const updateVisibility = db.prepare(
+    "UPDATE chat SET visibility = ?, updated_at = ? WHERE id = ? AND workspace_id = ?",
+  );
   const updateSession = db.prepare(
     "UPDATE chat SET eve_session = ?, updated_at = ? WHERE id = ? AND workspace_id = ?",
   );
@@ -236,6 +239,19 @@ export function createSqliteChatStore(dbPath: string): ChatStore {
         const title = input.title.trim() || DEFAULT_CHAT_TITLE;
         updateTitle.run(title, updatedAt, id, workspaceId);
         touched = true;
+      }
+
+      if (input.visibility !== undefined) {
+        const ownerId = requireString(existing, "user_id");
+        const currentVisibility = parseVisibility(existing["visibility"]);
+        // Only the creator may promote personal → shared (idempotent if already shared).
+        if (ownerId !== userId || input.visibility !== "shared") {
+          return null;
+        }
+        if (currentVisibility !== "shared") {
+          updateVisibility.run("shared", updatedAt, id, workspaceId);
+          touched = true;
+        }
       }
 
       if (input.eveSession !== undefined) {

@@ -26,6 +26,7 @@ export type CreateChatInput = {
 
 export type UpdateChatInput = {
   readonly title?: string;
+  readonly visibility?: ChatVisibility;
   readonly eveSession?: SessionState | null;
   readonly appendEvents?: readonly HandleMessageStreamEvent[];
   /** When set, replaces the full event log (used for turn snapshots). */

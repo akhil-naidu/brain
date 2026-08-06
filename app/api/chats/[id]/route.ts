@@ -41,8 +41,19 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
+  if (parsed.data.visibility === "shared" && session.session.workspace.kind !== "team") {
+    return NextResponse.json(
+      { error: "Shared chats are only available in team workspaces." },
+      { status: 400 },
+    );
+  }
+  if (parsed.data.visibility === "personal") {
+    return NextResponse.json({ error: "Unsharing a chat is not supported." }, { status: 400 });
+  }
+
   const chat = getChatStore().updateChat(session.session.userId, session.session.workspaceId, id, {
     title: parsed.data.title,
+    visibility: parsed.data.visibility,
     eveSession:
       parsed.data.eveSession === undefined
         ? undefined

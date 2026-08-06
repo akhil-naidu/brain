@@ -54,6 +54,7 @@ async function readBody(response: Response): Promise<unknown> {
 export type ListChatsResult = {
   readonly chats: readonly ChatSummary[];
   readonly canCreateShared: boolean;
+  readonly viewerUserId: string | null;
 };
 
 export async function listChats(): Promise<ListChatsResult> {
@@ -63,11 +64,13 @@ export async function listChats(): Promise<ListChatsResult> {
     .object({
       chats: z.array(z.unknown()),
       canCreateShared: z.boolean().optional(),
+      viewerUserId: z.string().optional(),
     })
     .parse(data);
   return {
     chats: parsed.chats.map(toChatSummary),
     canCreateShared: Boolean(parsed.canCreateShared),
+    viewerUserId: parsed.viewerUserId?.trim() || null,
   };
 }
 
@@ -106,6 +109,7 @@ export async function updateChat(
   id: string,
   input: {
     readonly title?: string;
+    readonly visibility?: ChatVisibility;
     readonly eveSession?: SessionState | null;
     readonly appendEvents?: readonly HandleMessageStreamEvent[];
     readonly events?: readonly HandleMessageStreamEvent[];

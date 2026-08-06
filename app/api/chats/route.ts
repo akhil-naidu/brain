@@ -14,6 +14,7 @@ export async function GET() {
   return NextResponse.json({
     chats,
     canCreateShared: session.session.workspace.kind === "team",
+    viewerUserId: session.session.userId,
   });
 }
 
