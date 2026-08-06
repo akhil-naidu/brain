@@ -1,4 +1,5 @@
 import { chmod, mkdir, open, readFile, rename, rm } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
@@ -8,6 +9,8 @@ const storedAppCredentialsSchema = z
   .object({
     clientId: z.string().min(1),
     clientSecret: z.string().min(1).optional(),
+    /** Account-specific MCP server URL (e.g. Snowflake). */
+    mcpUrl: z.string().url().optional(),
     updatedAt: z.number().finite(),
   })
   .strict();
@@ -17,6 +20,7 @@ export type StoredAppCredentials = z.infer<typeof storedAppCredentialsSchema>;
 export type ResolvedAppCredentials = {
   readonly clientId: string;
   readonly clientSecret?: string;
+  readonly mcpUrl?: string;
   readonly source: "stored" | "env";
 };
 
@@ -53,16 +57,28 @@ export async function readStoredAppCredentials(
 
 export async function writeStoredAppCredentials(
   connectionId: string,
-  input: { readonly clientId: string; readonly clientSecret?: string },
+  input: {
+    readonly clientId: string;
+    readonly clientSecret?: string;
+    readonly mcpUrl?: string;
+  },
 ): Promise<StoredAppCredentials> {
   const clientId = input.clientId.trim();
   if (!clientId) {
     throw new Error("Client ID is required.");
   }
   const clientSecret = input.clientSecret?.trim();
+  const mcpUrl = input.mcpUrl?.trim();
+  if (mcpUrl && !URL.canParse(mcpUrl)) {
+    throw new Error("MCP server URL must be a valid http(s) URL.");
+  }
+  if (mcpUrl && !/^https?:\/\//i.test(mcpUrl)) {
+    throw new Error("MCP server URL must start with http:// or https://.");
+  }
   const value: StoredAppCredentials = {
     clientId,
     ...(clientSecret ? { clientSecret } : {}),
+    ...(mcpUrl ? { mcpUrl } : {}),
     updatedAt: Date.now(),
   };
 
@@ -98,7 +114,7 @@ export async function deleteStoredAppCredentials(connectionId: string): Promise<
 }
 
 function credentialsFromEnv(
-  provider: Pick<McpOAuthProvider, "clientIdEnv" | "clientSecretEnv">,
+  provider: Pick<McpOAuthProvider, "clientIdEnv" | "clientSecretEnv" | "mcpUrlEnv">,
   env: { readonly [key: string]: string | undefined },
 ): ResolvedAppCredentials | null {
   const clientId = provider.clientIdEnv ? env[provider.clientIdEnv]?.trim() : undefined;
@@ -108,12 +124,13 @@ function credentialsFromEnv(
   const clientSecret = provider.clientSecretEnv
     ? env[provider.clientSecretEnv]?.trim() || undefined
     : undefined;
-  return { clientId, clientSecret, source: "env" };
+  const mcpUrl = provider.mcpUrlEnv ? env[provider.mcpUrlEnv]?.trim() || undefined : undefined;
+  return { clientId, clientSecret, mcpUrl, source: "env" };
 }
 
 /** Prefer UI-stored app credentials, then process env. */
 export async function resolveProviderAppCredentials(
-  provider: Pick<McpOAuthProvider, "name" | "clientIdEnv" | "clientSecretEnv">,
+  provider: Pick<McpOAuthProvider, "name" | "clientIdEnv" | "clientSecretEnv" | "mcpUrlEnv">,
   env: { readonly [key: string]: string | undefined } = process.env,
 ): Promise<ResolvedAppCredentials | null> {
   const stored = await readStoredAppCredentials(provider.name);
@@ -121,10 +138,33 @@ export async function resolveProviderAppCredentials(
     return {
       clientId: stored.clientId,
       clientSecret: stored.clientSecret,
+      mcpUrl: stored.mcpUrl ?? (provider.mcpUrlEnv ? env[provider.mcpUrlEnv]?.trim() : undefined),
       source: "stored",
     };
   }
   return credentialsFromEnv(provider, env);
+}
+
+/**
+ * Resolve an account-specific MCP URL: UI-stored first, then env.
+ * Sync variant for provider construction (status / authorize).
+ */
+export function resolveProviderMcpUrlSync(
+  provider: Pick<McpOAuthProvider, "name" | "mcpUrlEnv">,
+  env: { readonly [key: string]: string | undefined } = process.env,
+): string | null {
+  try {
+    const raw = readFileSync(credentialsPath(provider.name), "utf8");
+    const parsed: unknown = JSON.parse(raw);
+    const result = storedAppCredentialsSchema.safeParse(parsed);
+    if (result.success && result.data.mcpUrl?.trim()) {
+      return result.data.mcpUrl.trim();
+    }
+  } catch {
+    // Missing or corrupt store — fall through to env.
+  }
+  const fromEnv = provider.mcpUrlEnv ? env[provider.mcpUrlEnv]?.trim() : undefined;
+  return fromEnv || null;
 }
 
 export async function getProviderCredentialSetupError(
@@ -140,8 +180,8 @@ export async function getProviderCredentialSetupError(
   >,
   env: { readonly [key: string]: string | undefined } = process.env,
 ): Promise<string | null> {
-  if (provider.mcpUrlEnv && !env[provider.mcpUrlEnv]?.trim()) {
-    return `Set ${provider.mcpUrlEnv} to your ${provider.displayName} MCP server URL`;
+  if (provider.mcpUrlEnv && !resolveProviderMcpUrlSync(provider, env)) {
+    return `Set up ${provider.displayName} with your MCP server URL`;
   }
 
   if (!providerNeedsStaticAppCredentials(provider)) {

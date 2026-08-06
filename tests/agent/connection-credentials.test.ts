@@ -144,4 +144,37 @@ describe("getProviderCredentialSetupError", () => {
     });
     await expect(getProviderCredentialSetupError(staticProvider, {})).resolves.toBeNull();
   });
+
+  it("accepts a stored MCP URL when the provider requires one", async () => {
+    await useTemporaryWorkingDirectory();
+    const snowflakeLike: Pick<
+      McpOAuthProvider,
+      | "name"
+      | "displayName"
+      | "clientIdEnv"
+      | "clientSecretEnv"
+      | "mcpUrlEnv"
+      | "registrationEndpoint"
+      | "tokenAuthMethod"
+    > = {
+      name: "snowflake",
+      displayName: "Snowflake",
+      clientIdEnv: "SNOWFLAKE_MCP_CLIENT_ID",
+      clientSecretEnv: "SNOWFLAKE_MCP_CLIENT_SECRET",
+      mcpUrlEnv: "SNOWFLAKE_MCP_URL",
+      tokenAuthMethod: "client_secret_post",
+    };
+
+    await expect(getProviderCredentialSetupError(snowflakeLike, {})).resolves.toMatch(
+      /MCP server URL/,
+    );
+
+    await writeStoredAppCredentials("snowflake", {
+      clientId: "id",
+      clientSecret: "secret",
+      mcpUrl:
+        "https://myorg-myaccount.snowflakecomputing.com/api/v2/databases/A/schemas/B/mcp-servers/C",
+    });
+    await expect(getProviderCredentialSetupError(snowflakeLike, {})).resolves.toBeNull();
+  });
 });

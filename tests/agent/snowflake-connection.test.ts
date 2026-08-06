@@ -49,7 +49,7 @@ describe("Snowflake MCP connection", () => {
 
   it("requires MCP URL before Connect", async () => {
     await expect(getProviderCredentialSetupError(createSnowflakeProvider({}), {})).resolves.toMatch(
-      /SNOWFLAKE_MCP_URL/,
+      /MCP server URL/,
     );
   });
 

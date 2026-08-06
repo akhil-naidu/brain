@@ -39,15 +39,19 @@ export function approvalForTool(
 export function defineMcpOAuthConnection(opts: {
   provider: McpOAuthProvider;
   description: string;
+  /** When set, auth flows re-read provider settings (e.g. Snowflake MCP URL). */
+  resolveProvider?: () => McpOAuthProvider;
 }) {
-  const { provider, description } = opts;
-  const fileHint = authorizeUrlPath(provider.name);
+  const resolve = () => opts.resolveProvider?.() ?? opts.provider;
+  const initial = resolve();
+  const fileHint = authorizeUrlPath(initial.name);
 
   return defineMcpClientConnection({
-    url: provider.mcpUrl,
-    description,
+    url: initial.mcpUrl,
+    description: opts.description,
     auth: defineInteractiveAuthorization<McpOAuthResume>({
       async getToken({ principal }) {
+        const provider = resolve();
         const cached = await getStoredAccessToken(provider, principal);
         if (!cached) {
           throw new ConnectionAuthorizationRequiredError(provider.name);
@@ -55,6 +59,7 @@ export function defineMcpOAuthConnection(opts: {
         return { token: cached.token, expiresAt: cached.expiresAt };
       },
       async evict({ principal }) {
+        const provider = resolve();
         try {
           await deleteStoredToken(provider, principal);
         } catch {
@@ -62,6 +67,7 @@ export function defineMcpOAuthConnection(opts: {
         }
       },
       async startAuthorization({ callbackUrl }) {
+        const provider = resolve();
         const { verifier, challenge } = makePkce();
         const state = generateOAuthState();
         const { url, clientId, clientSecret } = await buildAuthorizeUrl(provider, {
@@ -80,6 +86,7 @@ export function defineMcpOAuthConnection(opts: {
         };
       },
       async completeAuthorization({ principal, callbackUrl, resume, callback }) {
+        const provider = resolve();
         if (!resume) {
           throw new ConnectionAuthorizationFailedError(provider.name, {
             reason: "missing_resume_state",
@@ -137,7 +144,9 @@ export function defineMcpOAuthConnection(opts: {
         }
       },
     }),
-    approval: ({ toolName }) =>
-      approvalForTool(provider.name, provider.safeReadOnlyTools, toolName),
+    approval: ({ toolName }) => {
+      const provider = resolve();
+      return approvalForTool(provider.name, provider.safeReadOnlyTools, toolName);
+    },
   });
 }
