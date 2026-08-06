@@ -16,6 +16,7 @@ import {
   replaceChatUrl,
   updateChat,
 } from "@/lib/chat/chats-api";
+import { stashPendingChatVisibility } from "@/lib/chat/pending-chat-visibility";
 import { stashPendingPlaybookRun } from "@/lib/chat/pending-playbook-run";
 import { createFallbackTitle, normalizeChatTitle } from "@/lib/chat/title";
 import type { ChatRecord, ChatSummary } from "@/lib/chat/store/types";
@@ -153,6 +154,16 @@ export function ChatWorkspace() {
 
   const handleNewChat = useCallback(() => {
     void runWithDisposal(() => {
+      stashPendingChatVisibility("personal");
+      replaceChatUrl(null);
+      setDraft("");
+      setActive((current) => emptyActive(current.remountKey + 1));
+    });
+  }, [runWithDisposal]);
+
+  const handleNewSharedChat = useCallback(() => {
+    void runWithDisposal(() => {
+      stashPendingChatVisibility("shared");
       replaceChatUrl(null);
       setDraft("");
       setActive((current) => emptyActive(current.remountKey + 1));
@@ -242,6 +253,7 @@ export function ChatWorkspace() {
       onCopyChat: handleCopyChat,
       onDeleteChat: handleDeleteChat,
       onNewChat: handleNewChat,
+      onNewSharedChat: handleNewSharedChat,
       onRenameChat: handleRenameChat,
       onRunPlaybook: handleRunPlaybook,
       onSelectChat: handleSelectChat,
@@ -254,6 +266,7 @@ export function ChatWorkspace() {
     handleCopyChat,
     handleDeleteChat,
     handleNewChat,
+    handleNewSharedChat,
     handleRenameChat,
     handleRunPlaybook,
     handleSelectChat,

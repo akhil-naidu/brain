@@ -42,6 +42,7 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [chats, setChats] = useState<readonly ChatSummary[]>([]);
+  const [canCreateShared, setCanCreateShared] = useState(false);
   const [searchFocusRequest, setSearchFocusRequest] = useState(0);
   const [urlChatId, setUrlChatId] = useState<string | null>(null);
 
@@ -63,11 +64,13 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
       try {
         const listed = await listChats();
         if (!cancelled) {
-          setChats([...listed]);
+          setChats([...listed.chats]);
+          setCanCreateShared(listed.canCreateShared);
         }
       } catch {
         if (!cancelled) {
           setChats([]);
+          setCanCreateShared(false);
         }
       }
     })();
@@ -88,6 +91,14 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
   const onNewChat = useCallback(() => {
     if (handlers) {
       handlers.onNewChat();
+      return;
+    }
+    router.push("/chat");
+  }, [handlers, router]);
+
+  const onNewSharedChat = useCallback(() => {
+    if (handlers?.onNewSharedChat) {
+      handlers.onNewSharedChat();
       return;
     }
     router.push("/chat");
@@ -179,7 +190,11 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
     }
     // Refresh list when returning from chat workspace remounts / title changes.
     void listChats()
-      .then((listed) => setChats([...listed]))
+      .then((listed) => {
+        setChats([...listed.chats]);
+        setCanCreateShared(listed.canCreateShared);
+        return undefined;
+      })
       .catch(() => undefined);
   }, [handlers?.activeChatId, handlers?.currentTitle, handlers]);
 
@@ -248,9 +263,11 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
 
   const sidebarProps = {
     activeChatId,
+    canCreateShared,
     chats,
     currentTitle: pathname === "/chat" ? currentTitle : null,
     onDeleteChat,
+    onNewSharedChat,
     onRenameChat,
     onRunPlaybook,
     searchFocusRequest,
@@ -285,6 +302,10 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
             closeMobileDrawer();
             onNewChat();
           }}
+          onNewSharedChat={() => {
+            closeMobileDrawer();
+            onNewSharedChat();
+          }}
           onSelectChat={(chatId) => {
             closeMobileDrawer();
             onSelectChat(chatId);
@@ -312,6 +333,10 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
               onNewChat={() => {
                 closeMobileDrawer();
                 onNewChat();
+              }}
+              onNewSharedChat={() => {
+                closeMobileDrawer();
+                onNewSharedChat();
               }}
               onSelectChat={(chatId) => {
                 closeMobileDrawer();

@@ -33,6 +33,7 @@ import {
   type PendingAttachment,
 } from "@/lib/chat/attachments";
 import { createChat, updateChat } from "@/lib/chat/chats-api";
+import { takePendingChatVisibility } from "@/lib/chat/pending-chat-visibility";
 import { WELCOME_PROMPTS } from "@/lib/chat/welcome-prompts";
 import { getChatMessageLengthError } from "@/lib/chat/limits";
 import {
@@ -194,7 +195,10 @@ export function EphemeralAgentChat({
         return chatIdRef.current;
       }
 
-      const chat = await createChat({ title: createFallbackTitle(titleSource) });
+      const chat = await createChat({
+        title: createFallbackTitle(titleSource),
+        visibility: takePendingChatVisibility(),
+      });
       chatIdRef.current = chat.id;
       onChatCreated?.(chat);
       return chat.id;

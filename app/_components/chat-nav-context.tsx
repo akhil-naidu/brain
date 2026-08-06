@@ -11,6 +11,7 @@ export type ChatNavHandlers = {
   readonly onCopyChat: () => void;
   readonly onDeleteChat: (chatId: string) => void;
   readonly onNewChat: () => void;
+  readonly onNewSharedChat?: () => void;
   readonly onRenameChat: (chatId: string, title: string) => void | Promise<void>;
   readonly onRunPlaybook: (prompt: string) => void;
   readonly onSelectChat: (chatId: string) => void;

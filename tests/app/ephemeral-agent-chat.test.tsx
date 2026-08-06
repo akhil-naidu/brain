@@ -92,12 +92,18 @@ vi.mock("@/lib/chat/chats-api", () => ({
     id: "chat-1",
     title: "Summarize ClickUp",
     updatedAt: new Date().toISOString(),
+    userId: "user-a",
+    visibility: "personal" as const,
+    workspaceId: "ws-1",
   })),
   updateChat: vi.fn(async (id: string) => ({
     createdAt: new Date().toISOString(),
     id,
     title: "Summarize ClickUp",
     updatedAt: new Date().toISOString(),
+    userId: "user-a",
+    visibility: "personal" as const,
+    workspaceId: "ws-1",
   })),
 }));
 

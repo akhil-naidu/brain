@@ -84,6 +84,34 @@ describe("sqlite chat store", () => {
     expect(store.getChat("user-a", "ws-1", a.id)?.title).toBe("A only");
   });
 
+  it("shares workspace chats with other members while keeping personal private", () => {
+    const store = openStore();
+    const personal = store.createChat("user-a", {
+      title: "Private",
+      workspaceId: "ws-1",
+      visibility: "personal",
+    });
+    const shared = store.createChat("user-a", {
+      title: "Team thread",
+      workspaceId: "ws-1",
+      visibility: "shared",
+    });
+
+    expect(store.listChats("user-b", "ws-1").map((chat) => chat.id)).toEqual([shared.id]);
+    expect(store.getChat("user-b", "ws-1", personal.id)).toBeNull();
+    expect(store.getChat("user-b", "ws-1", shared.id)?.title).toBe("Team thread");
+
+    const updated = store.updateChat("user-b", "ws-1", shared.id, {
+      title: "Team thread updated",
+    });
+    expect(updated?.title).toBe("Team thread updated");
+
+    expect(store.deleteChat("user-b", "ws-1", shared.id)).toBe(false);
+    expect(store.deleteChat("user-b", "ws-1", shared.id, { moderateShared: true })).toBe(true);
+    expect(store.getChat("user-a", "ws-1", shared.id)).toBeNull();
+    expect(store.getChat("user-a", "ws-1", personal.id)?.visibility).toBe("personal");
+  });
+
   it("reassigns legacy ownership and assigns workspace", () => {
     const store = openStore();
     const legacy = store.createChat("__legacy__", { title: "Old", workspaceId: "__unset__" });

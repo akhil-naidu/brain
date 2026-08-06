@@ -11,6 +11,7 @@ import {
   PlusIcon,
   SearchIcon,
   Trash2Icon,
+  UsersIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -108,6 +109,7 @@ function compactNavClass(active: boolean) {
 
 export function ChatSidebar({
   brand,
+  canCreateShared = false,
   chats,
   className,
   activeChatId,
@@ -115,6 +117,7 @@ export function ChatSidebar({
   currentTitle,
   onDeleteChat,
   onNewChat,
+  onNewSharedChat,
   onRenameChat,
   onRunPlaybook,
   onSelectChat,
@@ -123,6 +126,7 @@ export function ChatSidebar({
   showChatDraft = false,
 }: {
   readonly brand: ReactNode;
+  readonly canCreateShared?: boolean;
   readonly chats: readonly ChatSummary[];
   readonly className?: string;
   readonly activeChatId: string | null;
@@ -130,6 +134,7 @@ export function ChatSidebar({
   readonly currentTitle: string | null;
   readonly onDeleteChat: (chatId: string) => void;
   readonly onNewChat: () => void;
+  readonly onNewSharedChat?: () => void;
   readonly onRenameChat: (chatId: string, title: string) => void | Promise<void>;
   readonly onRunPlaybook?: (prompt: string) => void;
   readonly onSelectChat: (chatId: string) => void;
@@ -286,6 +291,19 @@ export function ChatSidebar({
           >
             <PlusIcon className="size-4" />
           </Button>
+          {canCreateShared && onNewSharedChat ? (
+            <Button
+              aria-label="New shared chat"
+              className="text-muted-foreground mt-1"
+              onClick={onNewSharedChat}
+              size="icon-sm"
+              title="New shared chat"
+              type="button"
+              variant="ghost"
+            >
+              <UsersIcon className="size-4" />
+            </Button>
+          ) : null}
           <Button
             aria-current={chatsActive ? "page" : undefined}
             aria-label="Chats"
@@ -359,17 +377,32 @@ export function ChatSidebar({
       <div className="flex min-h-0 flex-1 flex-col">
         <SidebarSection
           actions={
-            <Button
-              aria-label={`New chat (${shortcutLabel})`}
-              className="text-muted-foreground/70 hover:text-foreground size-6"
-              onClick={onNewChat}
-              size="icon-sm"
-              title={`New chat (${shortcutLabel})`}
-              type="button"
-              variant="ghost"
-            >
-              <PlusIcon className="size-3.5" />
-            </Button>
+            <>
+              {canCreateShared && onNewSharedChat ? (
+                <Button
+                  aria-label="New shared chat"
+                  className="text-muted-foreground/70 hover:text-foreground size-6"
+                  onClick={onNewSharedChat}
+                  size="icon-sm"
+                  title="New shared chat"
+                  type="button"
+                  variant="ghost"
+                >
+                  <UsersIcon className="size-3.5" />
+                </Button>
+              ) : null}
+              <Button
+                aria-label={`New chat (${shortcutLabel})`}
+                className="text-muted-foreground/70 hover:text-foreground size-6"
+                onClick={onNewChat}
+                size="icon-sm"
+                title={`New chat (${shortcutLabel})`}
+                type="button"
+                variant="ghost"
+              >
+                <PlusIcon className="size-3.5" />
+              </Button>
+            </>
           }
           active={chatsActive}
           className={cn(sections.chats && "min-h-0 flex-1")}
@@ -451,7 +484,17 @@ export function ChatSidebar({
                           onClick={() => onSelectChat(chat.id)}
                           type="button"
                         >
-                          <span className="line-clamp-1">{chat.title}</span>
+                          <span className="flex min-w-0 items-center gap-1.5">
+                            <span className="line-clamp-1 min-w-0 flex-1">{chat.title}</span>
+                            {chat.visibility === "shared" ? (
+                              <span
+                                className="text-muted-foreground/70 shrink-0 text-[10px] tracking-wide uppercase"
+                                title="Shared with workspace"
+                              >
+                                Shared
+                              </span>
+                            ) : null}
+                          </span>
                         </button>
                       )}
                       {!editing ? (

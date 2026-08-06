@@ -8,12 +8,16 @@ const chats: readonly ChatSummary[] = [
     title: "ClickUp standup notes",
     createdAt: "2026-08-04T00:00:00.000Z",
     updatedAt: "2026-08-04T00:00:00.000Z",
+    visibility: "personal",
+    userId: "user-a",
   },
   {
     id: "2",
     title: "Gmail triage",
     createdAt: "2026-08-04T00:00:00.000Z",
     updatedAt: "2026-08-04T00:00:00.000Z",
+    visibility: "personal",
+    userId: "user-a",
   },
 ];
 
