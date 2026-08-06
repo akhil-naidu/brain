@@ -106,6 +106,7 @@ describe("sso provider store", () => {
     expect(listed).toHaveLength(1);
     expect(listed[0]?.domains).toEqual(["acme.com"]);
     expect(listed[0]?.organizationId).toBe(teamA.id);
+    expect(listed[0]?.domainVerified).toBe(false);
     expect(workspaces.getMembership(teamA.id, userId)).toBe("owner");
   });
 });
