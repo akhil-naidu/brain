@@ -421,6 +421,33 @@ export function createWorkspaceStore(db: DatabaseSync) {
     return updated;
   }
 
+  function transferOwnership(input: {
+    readonly workspaceId: string;
+    readonly actorUserId: string;
+    readonly targetUserId: string;
+  }): void {
+    const workspace = getWorkspace(input.workspaceId);
+    if (!workspace) {
+      throw new Error("Workspace no longer exists.");
+    }
+    if (workspace.kind === "personal") {
+      throw new Error("Cannot transfer ownership of a personal workspace.");
+    }
+    if (input.actorUserId === input.targetUserId) {
+      throw new Error("Already the workspace owner.");
+    }
+    const actorRole = getMembership(input.workspaceId, input.actorUserId);
+    if (actorRole !== "owner") {
+      throw new Error("Only the workspace owner can transfer ownership.");
+    }
+    const targetRole = getMembership(input.workspaceId, input.targetUserId);
+    if (!targetRole) {
+      throw new Error("User is not a member of this workspace.");
+    }
+    addMember(input.workspaceId, input.targetUserId, "owner");
+    addMember(input.workspaceId, input.actorUserId, "admin");
+  }
+
   function removeMember(input: {
     readonly workspaceId: string;
     readonly actorUserId: string;
@@ -600,6 +627,7 @@ export function createWorkspaceStore(db: DatabaseSync) {
     addMember,
     listMembers,
     updateMemberRole,
+    transferOwnership,
     removeMember,
     createInvite,
     listInvites,

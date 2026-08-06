@@ -118,6 +118,41 @@ describe("workspace store", () => {
     ).toThrow(/owner/i);
   });
 
+  it("transfers ownership to another member", () => {
+    const store = openStore();
+    const team = store.createWorkspace({
+      name: "Team",
+      kind: "team",
+      ownerUserId: "owner",
+    });
+    store.addMember(team.id, "member", "member");
+
+    store.transferOwnership({
+      workspaceId: team.id,
+      actorUserId: "owner",
+      targetUserId: "member",
+    });
+    expect(store.getMembership(team.id, "member")).toBe("owner");
+    expect(store.getMembership(team.id, "owner")).toBe("admin");
+
+    expect(() =>
+      store.transferOwnership({
+        workspaceId: team.id,
+        actorUserId: "owner",
+        targetUserId: "member",
+      }),
+    ).toThrow(/only the workspace owner/i);
+
+    const personal = store.ensurePersonalWorkspace("solo");
+    expect(() =>
+      store.transferOwnership({
+        workspaceId: personal.id,
+        actorUserId: "solo",
+        targetUserId: "someone",
+      }),
+    ).toThrow(/personal/i);
+  });
+
   it("removes members and blocks last-owner leave", () => {
     const store = openStore();
     const team = store.createWorkspace({
