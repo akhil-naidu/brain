@@ -1,9 +1,11 @@
 import { timingSafeEqual } from "node:crypto";
 import { LEGACY_CHAT_OWNER_ID } from "@/lib/auth/principal";
 import {
+  claimFirstBootstrap,
   countAuthUsers,
   ensureAuthReady,
   getAuth,
+  releaseBootstrapClaim,
   runWithBootstrapSignup,
 } from "@/lib/auth/server";
 import { getChatStore } from "@/lib/chat/store";
@@ -16,6 +18,9 @@ function secretsEqual(a: string, b: string): boolean {
   }
   return timingSafeEqual(left, right);
 }
+
+/** Serialize bootstrap attempts in this process (pairs with SQLite claim). */
+let bootstrapChain: Promise<unknown> = Promise.resolve();
 
 export function isBootstrapAllowed(env: Record<string, string | undefined> = process.env): boolean {
   return countAuthUsers(env) === 0;
@@ -41,7 +46,7 @@ export type BootstrappedUser = {
   readonly email: string;
 };
 
-export async function bootstrapFirstUser(input: {
+async function bootstrapFirstUserUnlocked(input: {
   readonly email: string;
   readonly password: string;
 }): Promise<BootstrappedUser> {
@@ -58,26 +63,50 @@ export async function bootstrapFirstUser(input: {
     throw new Error("Password must be at least 8 characters.");
   }
 
-  const result = await runWithBootstrapSignup(() =>
-    getAuth().api.signUpEmail({
-      body: {
-        email,
-        password: input.password,
-        name: email,
-      },
-    }),
-  );
-
-  const userId = result.user.id;
-  // Best-effort: older in-memory store singletons (HMR) may lack reassignOwner.
-  try {
-    getChatStore().reassignOwner(LEGACY_CHAT_OWNER_ID, userId);
-  } catch {
-    // Existing chats stay under LEGACY_CHAT_OWNER_ID until process restart.
+  if (!claimFirstBootstrap()) {
+    throw new Error("Bootstrap is only available when no users exist.");
   }
 
-  return {
-    id: userId,
-    email: result.user.email,
-  };
+  try {
+    const result = await runWithBootstrapSignup(() =>
+      getAuth().api.signUpEmail({
+        body: {
+          email,
+          password: input.password,
+          name: email,
+        },
+      }),
+    );
+
+    const userId = result.user.id;
+    // Best-effort: older in-memory store singletons (HMR) may lack reassignOwner.
+    try {
+      getChatStore().reassignOwner(LEGACY_CHAT_OWNER_ID, userId);
+    } catch {
+      // Existing chats stay under LEGACY_CHAT_OWNER_ID until process restart.
+    }
+
+    return {
+      id: userId,
+      email: result.user.email,
+    };
+  } catch (error) {
+    releaseBootstrapClaim();
+    throw error;
+  }
+}
+
+export async function bootstrapFirstUser(input: {
+  readonly email: string;
+  readonly password: string;
+}): Promise<BootstrappedUser> {
+  const run = bootstrapChain.then(
+    () => bootstrapFirstUserUnlocked(input),
+    () => bootstrapFirstUserUnlocked(input),
+  );
+  bootstrapChain = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
 }

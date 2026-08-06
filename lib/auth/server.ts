@@ -83,6 +83,14 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
 
   const ready = getMigrations(auth.options).then(({ runMigrations }) => runMigrations());
 
+  const ensureBootstrapClaimTable = () => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS brain_bootstrap_claim (
+        id INTEGER PRIMARY KEY CHECK (id = 1)
+      );
+    `);
+  };
+
   return {
     auth,
     ready,
@@ -102,6 +110,24 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
         return typeof id === "string" && id.trim() ? id : null;
       } catch {
         return null;
+      }
+    },
+    /** Single-row claim so parallel /setup cannot create two first users. */
+    claimFirstBootstrap() {
+      ensureBootstrapClaimTable();
+      try {
+        db.prepare("INSERT INTO brain_bootstrap_claim (id) VALUES (1)").run();
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    releaseBootstrapClaim() {
+      try {
+        ensureBootstrapClaimTable();
+        db.prepare("DELETE FROM brain_bootstrap_claim WHERE id = 1").run();
+      } catch {
+        // ignore
       }
     },
   };
@@ -151,6 +177,16 @@ export function firstAuthUserId(
 
 export async function runWithBootstrapSignup<T>(fn: () => Promise<T>): Promise<T> {
   return bootstrapSignupGate.run(true, fn);
+}
+
+export function claimFirstBootstrap(
+  env: Record<string, string | undefined> = process.env,
+): boolean {
+  return getBrainAuthBundle(env).claimFirstBootstrap();
+}
+
+export function releaseBootstrapClaim(env: Record<string, string | undefined> = process.env): void {
+  getBrainAuthBundle(env).releaseBootstrapClaim();
 }
 
 /** Test helper: replace the in-process auth singleton. */

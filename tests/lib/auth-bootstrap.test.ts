@@ -88,4 +88,17 @@ describe("better auth bootstrap", () => {
       }),
     ).toBe(false);
   });
+
+  it("serializes parallel bootstrap so only one first user is created", async () => {
+    const results = await Promise.allSettled([
+      bootstrapFirstUser({ email: "a@brain.local", password: "password12345" }),
+      bootstrapFirstUser({ email: "b@brain.local", password: "password12345" }),
+    ]);
+
+    const fulfilled = results.filter((result) => result.status === "fulfilled");
+    const rejected = results.filter((result) => result.status === "rejected");
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect(countAuthUsers()).toBe(1);
+  });
 });
