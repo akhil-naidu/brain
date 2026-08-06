@@ -6,7 +6,9 @@ import { betterAuth } from "better-auth";
 import { APIError } from "better-auth/api";
 import { getMigrations } from "better-auth/db/migration";
 import { nextCookies } from "better-auth/next-js";
+import { genericOAuth } from "better-auth/plugins";
 import { assertCanCreateUser, resolveLicenseEntitlements } from "@/lib/auth/license";
+import { resolveOidcEnvConfig } from "@/lib/auth/oidc";
 import { resolveAuthDbPath } from "@/lib/auth/users-path";
 import { createWorkspaceStore, type WorkspaceStore } from "@/lib/auth/workspaces/store";
 
@@ -60,6 +62,7 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
   const db = new DatabaseSync(dbPath);
   const secret = resolveAuthSecret(env);
   const baseURL = resolveAuthBaseURL(env);
+  const oidc = resolveOidcEnvConfig(env);
 
   const ensureBootstrapClaimTable = () => {
     db.exec(`
@@ -124,14 +127,15 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
               return;
             }
 
-            // Lazy policy check for Better Auth client sign-up (no ALS gate).
+            // Lazy policy check for Better Auth client / OIDC JIT sign-up (no ALS gate).
             const workspaces = createWorkspaceStore(db);
-            if (workspaces.getPolicies().signupMode === "open") {
+            const signupMode = workspaces.getPolicies().signupMode;
+            if (signupMode === "open" || signupMode === "sso-only") {
               return;
             }
             throw new APIError("FORBIDDEN", {
               message:
-                "Signup is disabled. Use an invite or ask the instance admin to enable open signup.",
+                "Signup is disabled. Use an invite, SSO (when allowed), or ask the instance admin to enable open signup.",
             });
           },
           after: async (user) => {
@@ -147,7 +151,33 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
         },
       },
     },
-    plugins: [nextCookies()],
+    account: oidc
+      ? {
+          accountLinking: {
+            enabled: true,
+            trustedProviders: [oidc.providerId],
+          },
+        }
+      : undefined,
+    plugins: [
+      nextCookies(),
+      ...(oidc
+        ? [
+            genericOAuth({
+              config: [
+                {
+                  providerId: oidc.providerId,
+                  discoveryUrl: oidc.discoveryUrl,
+                  clientId: oidc.clientId,
+                  clientSecret: oidc.clientSecret,
+                  scopes: [...oidc.scopes],
+                  pkce: true,
+                },
+              ],
+            }),
+          ]
+        : []),
+    ],
   });
 
   const ready = getMigrations(auth.options).then(async ({ runMigrations }) => {
@@ -213,7 +243,11 @@ const globalForAuth = globalThis as typeof globalThis & {
 };
 
 function authBundleKey(env: Record<string, string | undefined>): string {
-  return `${resolveAuthDbPath(env)}|${resolveAuthBaseURL(env)}`;
+  const oidc = resolveOidcEnvConfig(env);
+  const oidcKey = oidc
+    ? `${oidc.providerId}|${oidc.discoveryUrl}|${oidc.clientId}|${oidc.scopes.join(" ")}`
+    : "no-oidc";
+  return `${resolveAuthDbPath(env)}|${resolveAuthBaseURL(env)}|${oidcKey}`;
 }
 
 function getBrainAuthBundle(
