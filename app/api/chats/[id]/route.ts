@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireSessionUserId } from "@/lib/auth/require-session";
 import { getChatStore } from "@/lib/chat/store";
 import { parseSessionState, parseStreamEvent, updateChatBodySchema } from "@/lib/chat/store/parse";
 
@@ -9,8 +10,12 @@ type RouteContext = {
 };
 
 export async function GET(_request: Request, context: RouteContext) {
+  const session = await requireSessionUserId();
+  if (!session.ok) {
+    return session.response;
+  }
   const { id } = await context.params;
-  const chat = getChatStore().getChat(id);
+  const chat = getChatStore().getChat(session.userId, id);
   if (!chat) {
     return NextResponse.json({ error: "Chat not found" }, { status: 404 });
   }
@@ -18,6 +23,10 @@ export async function GET(_request: Request, context: RouteContext) {
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
+  const session = await requireSessionUserId();
+  if (!session.ok) {
+    return session.response;
+  }
   const { id } = await context.params;
   let body: unknown;
   try {
@@ -31,7 +40,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const chat = getChatStore().updateChat(id, {
+  const chat = getChatStore().updateChat(session.userId, id, {
     title: parsed.data.title,
     eveSession:
       parsed.data.eveSession === undefined
@@ -51,8 +60,12 @@ export async function PATCH(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
+  const session = await requireSessionUserId();
+  if (!session.ok) {
+    return session.response;
+  }
   const { id } = await context.params;
-  const deleted = getChatStore().deleteChat(id);
+  const deleted = getChatStore().deleteChat(session.userId, id);
   if (!deleted) {
     return NextResponse.json({ error: "Chat not found" }, { status: 404 });
   }

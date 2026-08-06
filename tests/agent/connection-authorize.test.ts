@@ -8,15 +8,16 @@ import {
   menuConnectionCallbackUrl,
   startMenuConnectionAuthorization,
 } from "@/agent/lib/connection-authorize";
-import { ANONYMOUS_CHAT_PRINCIPAL } from "@/agent/lib/connection-status";
 import {
   getStoredAccessToken,
   storeAccessToken,
   type McpOAuthProvider,
 } from "@/agent/lib/mcp-oauth";
+import { brainUserPrincipal } from "@/lib/auth/principal";
 
 const originalCwd = process.cwd();
 const temporaryDirectories: string[] = [];
+const principal = brainUserPrincipal("user-a");
 
 const provider: McpOAuthProvider = {
   name: "authorize-test",
@@ -61,6 +62,7 @@ describe("startMenuConnectionAuthorization", () => {
       startMenuConnectionAuthorization(
         provider,
         "http://localhost:3000/api/connections/authorize-test/callback",
+        principal,
         {},
       ),
     ).rejects.toThrow("Set up Authorize Test to continue");
@@ -71,7 +73,7 @@ describe("startMenuConnectionAuthorization", () => {
     vi.stubEnv("AUTHORIZE_TEST_CLIENT_ID", "client-id");
     vi.stubEnv("AUTHORIZE_TEST_CLIENT_SECRET", "client-secret");
     const callbackUrl = "http://localhost:3000/api/connections/authorize-test/callback";
-    const result = await startMenuConnectionAuthorization(provider, callbackUrl);
+    const result = await startMenuConnectionAuthorization(provider, callbackUrl, principal);
 
     expect(result.displayName).toBe("Authorize Test");
     expect(result.callbackUrl).toBe(callbackUrl);
@@ -84,12 +86,12 @@ describe("startMenuConnectionAuthorization", () => {
 });
 
 describe("completeMenuConnectionAuthorization", () => {
-  it("exchanges a code and stores the token", async () => {
+  it("exchanges a code and stores the token for the signed-in principal", async () => {
     await useTemporaryWorkingDirectory();
     vi.stubEnv("AUTHORIZE_TEST_CLIENT_ID", "client-id");
     vi.stubEnv("AUTHORIZE_TEST_CLIENT_SECRET", "client-secret");
     const callbackUrl = "http://localhost:3000/api/connections/authorize-test/callback";
-    const started = await startMenuConnectionAuthorization(provider, callbackUrl);
+    const started = await startMenuConnectionAuthorization(provider, callbackUrl, principal);
     const state = new URL(started.authorizeUrl).searchParams.get("state");
     expect(state).toBeTruthy();
 
@@ -109,9 +111,10 @@ describe("completeMenuConnectionAuthorization", () => {
       state: state!,
     });
     expect(result).toEqual({ ok: true, displayName: "Authorize Test" });
-    await expect(getStoredAccessToken(provider, ANONYMOUS_CHAT_PRINCIPAL)).resolves.toMatchObject({
+    await expect(getStoredAccessToken(provider, principal)).resolves.toMatchObject({
       token: "menu-token",
     });
+    await expect(getStoredAccessToken(provider, brainUserPrincipal("user-b"))).resolves.toBeNull();
   });
 
   it("rejects mismatched state", async () => {
@@ -119,7 +122,7 @@ describe("completeMenuConnectionAuthorization", () => {
     vi.stubEnv("AUTHORIZE_TEST_CLIENT_ID", "client-id");
     vi.stubEnv("AUTHORIZE_TEST_CLIENT_SECRET", "client-secret");
     const callbackUrl = "http://localhost:3000/api/connections/authorize-test/callback";
-    await startMenuConnectionAuthorization(provider, callbackUrl);
+    await startMenuConnectionAuthorization(provider, callbackUrl, principal);
 
     const result = await completeMenuConnectionAuthorization(provider, {
       code: "auth-code",
@@ -132,19 +135,19 @@ describe("completeMenuConnectionAuthorization", () => {
 describe("disconnectMenuConnection", () => {
   it("removes a stored token and is idempotent", async () => {
     await useTemporaryWorkingDirectory();
-    await storeAccessToken(provider, ANONYMOUS_CHAT_PRINCIPAL, {
+    await storeAccessToken(provider, principal, {
       accessToken: "to-remove",
       expiresAt: Date.now() + 120_000,
     });
-    await expect(getStoredAccessToken(provider, ANONYMOUS_CHAT_PRINCIPAL)).resolves.toMatchObject({
+    await expect(getStoredAccessToken(provider, principal)).resolves.toMatchObject({
       token: "to-remove",
     });
 
-    await expect(disconnectMenuConnection(provider)).resolves.toEqual({
+    await expect(disconnectMenuConnection(provider, principal)).resolves.toEqual({
       displayName: "Authorize Test",
     });
-    await expect(getStoredAccessToken(provider, ANONYMOUS_CHAT_PRINCIPAL)).resolves.toBeNull();
-    await expect(disconnectMenuConnection(provider)).resolves.toEqual({
+    await expect(getStoredAccessToken(provider, principal)).resolves.toBeNull();
+    await expect(disconnectMenuConnection(provider, principal)).resolves.toEqual({
       displayName: "Authorize Test",
     });
   });

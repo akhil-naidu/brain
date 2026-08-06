@@ -2,7 +2,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { ConnectionPrincipal } from "eve/connections";
 import { z } from "zod";
-import { ANONYMOUS_CHAT_PRINCIPAL } from "./connection-status";
+import { BRAIN_AUTH_ISSUER } from "@/lib/auth/principal";
 import { getProviderCredentialSetupError } from "./connection-credentials";
 import {
   authorizeUrlPath,
@@ -24,6 +24,8 @@ const pendingAuthorizationSchema = z
     state: z.string().min(1),
     callbackUrl: z.string().url(),
     createdAt: z.number().finite(),
+    principalId: z.string().min(1),
+    principalIssuer: z.string().min(1).default(BRAIN_AUTH_ISSUER),
   })
   .strict();
 
@@ -88,6 +90,7 @@ async function writeMenuAuthorizeHint(
 export async function startMenuConnectionAuthorization(
   provider: McpOAuthProvider,
   callbackUrl: string,
+  principal: Extract<ConnectionPrincipal, { readonly type: "user" }>,
   env: { readonly [key: string]: string | undefined } = process.env,
 ): Promise<MenuAuthorizeStartResult> {
   const setupError = await getProviderCredentialSetupError(provider, env);
@@ -110,6 +113,8 @@ export async function startMenuConnectionAuthorization(
     state,
     callbackUrl,
     createdAt: Date.now(),
+    principalId: principal.id,
+    principalIssuer: principal.issuer ?? BRAIN_AUTH_ISSUER,
   });
   await writeMenuAuthorizeHint(provider, url, callbackUrl);
 
@@ -123,12 +128,17 @@ export async function startMenuConnectionAuthorization(
 export async function completeMenuConnectionAuthorization(
   provider: McpOAuthProvider,
   params: Readonly<Record<string, string>>,
-  principal: ConnectionPrincipal = ANONYMOUS_CHAT_PRINCIPAL,
 ): Promise<MenuAuthorizeCompleteResult> {
   const pending = await readPending(provider.name);
   if (!pending) {
     return { ok: false, error: "No pending sign-in for this connection.", retryable: true };
   }
+
+  const principal: ConnectionPrincipal = {
+    type: "user",
+    id: pending.principalId,
+    issuer: pending.principalIssuer,
+  };
 
   if (params.error) {
     await clearPending(provider.name);
@@ -172,10 +182,10 @@ export function menuConnectionCallbackUrl(origin: string, connectionId: string):
   return new URL(`/api/connections/${connectionId}/callback`, origin).toString();
 }
 
-/** Clear the local chat principal token (and any pending menu OAuth) for a connection. */
+/** Clear the signed-in principal token (and any pending menu OAuth) for a connection. */
 export async function disconnectMenuConnection(
   provider: McpOAuthProvider,
-  principal: ConnectionPrincipal = ANONYMOUS_CHAT_PRINCIPAL,
+  principal: Extract<ConnectionPrincipal, { readonly type: "user" }>,
 ): Promise<{ readonly displayName: string }> {
   await deleteStoredToken(provider, principal);
   await clearPending(provider.name);

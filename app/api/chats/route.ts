@@ -1,15 +1,25 @@
 import { NextResponse } from "next/server";
+import { requireSessionUserId } from "@/lib/auth/require-session";
 import { getChatStore } from "@/lib/chat/store";
 import { createChatBodySchema } from "@/lib/chat/store/parse";
 
 export const runtime = "nodejs";
 
-export function GET() {
-  const chats = getChatStore().listChats();
+export async function GET() {
+  const session = await requireSessionUserId();
+  if (!session.ok) {
+    return session.response;
+  }
+  const chats = getChatStore().listChats(session.userId);
   return NextResponse.json({ chats });
 }
 
 export async function POST(request: Request) {
+  const session = await requireSessionUserId();
+  if (!session.ok) {
+    return session.response;
+  }
+
   let body: unknown = {};
   try {
     body = await request.json();
@@ -22,7 +32,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const chat = getChatStore().createChat({
+  const chat = getChatStore().createChat(session.userId, {
     id: parsed.data.id,
     title: parsed.data.title,
   });

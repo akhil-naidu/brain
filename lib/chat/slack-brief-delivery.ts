@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { ANONYMOUS_CHAT_PRINCIPAL } from "@/agent/lib/connection-status";
+import { brainUserPrincipal } from "@/lib/auth/principal";
+import { requireOperatorUserId } from "@/lib/auth/operator";
 import { getStoredAccessToken } from "@/agent/lib/mcp-oauth";
 import { slackProvider } from "@/agent/connections/slack";
 
@@ -156,7 +157,10 @@ export async function postMorningBriefToSlack(input: {
 }): Promise<SlackBriefDeliveryResult> {
   const fetchImpl = input.fetchImpl ?? fetch;
   try {
-    const stored = await getStoredAccessToken(slackProvider, ANONYMOUS_CHAT_PRINCIPAL);
+    const stored = await getStoredAccessToken(
+      slackProvider,
+      brainUserPrincipal(requireOperatorUserId()),
+    );
     if (!stored) {
       return {
         ok: false,

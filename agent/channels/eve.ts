@@ -1,19 +1,20 @@
 import { eveChannel } from "eve/channels/eve";
 import type { AuthFn } from "eve/channels/auth";
+import { withAuthChallenges } from "eve/channels/auth";
+import { resolveBrainSessionAuthFromRequest } from "@/lib/auth/session-from-request";
 
 /**
- * SECURITY: Every caller shares one principal and all of its OAuth grants.
- * This channel is safe only behind a trusted local boundary, never on the public internet.
+ * Brain browser chat auth: Better Auth session cookie (or internal operator bearer).
+ * Unauthenticated callers receive 401 — there is no shared anonymous principal.
  */
-const anonymousUser: AuthFn = () => ({
-  attributes: {},
-  authenticator: "anonymous",
-  issuer: "local",
-  principalId: "anonymous",
-  principalType: "user",
-});
+const brainSessionAuth: AuthFn = withAuthChallenges(
+  async (request) => {
+    return resolveBrainSessionAuthFromRequest(request);
+  },
+  [{ scheme: "Bearer" }],
+);
 
 export default eveChannel({
-  auth: [anonymousUser],
+  auth: [brainSessionAuth],
   uploadPolicy: "disabled",
 });

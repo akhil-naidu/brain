@@ -1,4 +1,5 @@
 import { Client } from "eve/client";
+import { requireOperatorUserId, resolveInternalOperatorToken } from "@/lib/auth/operator";
 import { createConnectionClientContext } from "@/lib/chat/connection-context";
 import { resolveEveHttpHost } from "@/lib/chat/eve-http-host";
 import { postMorningBriefToSlack } from "@/lib/chat/slack-brief-delivery";
@@ -62,12 +63,19 @@ export async function runScheduledPromptTurn(input: {
   readonly message: string;
   readonly slack: ScheduledSlackResult;
 }> {
+  const userId = requireOperatorUserId();
   const store = getChatStore();
-  const chat = store.createChat({ title: input.title });
+  const chat = store.createChat(userId, { title: input.title });
+
+  const internalToken = resolveInternalOperatorToken();
+  if (!internalToken) {
+    throw new Error("Set BRAIN_INTERNAL_TOKEN so scheduled runs can authenticate to eve.");
+  }
 
   const client = new Client({
     host: resolveEveHttpHost(),
     preserveCompletedSessions: true,
+    auth: { bearer: internalToken },
   });
   const session = client.session();
   const response = await session.send({
@@ -75,7 +83,7 @@ export async function runScheduledPromptTurn(input: {
     clientContext: [createConnectionClientContext(SCHEDULED_CONNECTIONS)],
   });
 
-  store.updateChat(chat.id, {
+  store.updateChat(userId, chat.id, {
     eveSession: {
       sessionId: response.sessionId,
       continuationToken: response.continuationToken,
@@ -84,7 +92,7 @@ export async function runScheduledPromptTurn(input: {
   });
 
   const result = await response.result();
-  const updated = store.updateChat(chat.id, {
+  const updated = store.updateChat(userId, chat.id, {
     eveSession: session.state,
     events: result.events,
   });

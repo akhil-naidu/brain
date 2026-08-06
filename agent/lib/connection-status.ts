@@ -8,13 +8,6 @@ import { slackProvider } from "../connections/slack";
 import { getProviderCredentialSetupError } from "./connection-credentials";
 import { getStoredTokenAuthState, type McpOAuthProvider } from "./mcp-oauth";
 
-/** Matches the anonymous chat channel principal in `agent/channels/eve.ts`. */
-export const ANONYMOUS_CHAT_PRINCIPAL: ConnectionPrincipal = {
-  type: "user",
-  id: "anonymous",
-  issuer: "local",
-};
-
 export type ConnectionAuthStatus = "connected" | "needs_sign_in" | "needs_setup";
 
 export type ConnectionStatusItem = {
@@ -39,7 +32,7 @@ export function getChatConnectionProvider(id: string): McpOAuthProvider | undefi
 
 export async function resolveConnectionAuthStatus(
   provider: McpOAuthProvider,
-  principal: ConnectionPrincipal = ANONYMOUS_CHAT_PRINCIPAL,
+  principal: ConnectionPrincipal,
   env: { readonly [key: string]: string | undefined } = process.env,
 ): Promise<ConnectionStatusItem> {
   const setupError = await getProviderCredentialSetupError(provider, env);
@@ -61,7 +54,7 @@ export async function resolveConnectionAuthStatus(
 }
 
 export async function listChatConnectionStatuses(
-  principal: ConnectionPrincipal = ANONYMOUS_CHAT_PRINCIPAL,
+  principal: ConnectionPrincipal,
   env: { readonly [key: string]: string | undefined } = process.env,
 ): Promise<readonly ConnectionStatusItem[]> {
   return Promise.all(

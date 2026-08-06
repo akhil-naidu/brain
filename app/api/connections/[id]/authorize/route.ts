@@ -4,6 +4,8 @@ import {
   startMenuConnectionAuthorization,
 } from "@/agent/lib/connection-authorize";
 import { getChatConnectionProvider } from "@/agent/lib/connection-status";
+import { brainUserPrincipal } from "@/lib/auth/principal";
+import { requireSessionUserId } from "@/lib/auth/require-session";
 import { resolvePublicOrigin } from "@/lib/http/public-origin";
 
 export const runtime = "nodejs";
@@ -13,6 +15,11 @@ type RouteContext = {
 };
 
 export async function POST(request: Request, context: RouteContext) {
+  const session = await requireSessionUserId();
+  if (!session.ok) {
+    return session.response;
+  }
+
   const { id } = await context.params;
   const provider = getChatConnectionProvider(id);
   if (!provider) {
@@ -21,7 +28,11 @@ export async function POST(request: Request, context: RouteContext) {
 
   const callbackUrl = menuConnectionCallbackUrl(resolvePublicOrigin(request), id);
   try {
-    const result = await startMenuConnectionAuthorization(provider, callbackUrl);
+    const result = await startMenuConnectionAuthorization(
+      provider,
+      callbackUrl,
+      brainUserPrincipal(session.userId),
+    );
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to start sign-in.";

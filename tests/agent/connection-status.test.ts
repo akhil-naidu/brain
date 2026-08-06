@@ -2,14 +2,13 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  ANONYMOUS_CHAT_PRINCIPAL,
-  resolveConnectionAuthStatus,
-} from "@/agent/lib/connection-status";
+import { resolveConnectionAuthStatus } from "@/agent/lib/connection-status";
 import { storeAccessToken, type McpOAuthProvider } from "@/agent/lib/mcp-oauth";
+import { brainUserPrincipal } from "@/lib/auth/principal";
 
 const originalCwd = process.cwd();
 const temporaryDirectories: string[] = [];
+const principal = brainUserPrincipal("user-a");
 
 const provider: McpOAuthProvider = {
   name: "status-test",
@@ -42,7 +41,7 @@ afterEach(async () => {
 describe("resolveConnectionAuthStatus", () => {
   it("reports needs_setup when client credentials are missing", async () => {
     await useTemporaryWorkingDirectory();
-    const status = await resolveConnectionAuthStatus(provider, ANONYMOUS_CHAT_PRINCIPAL, {});
+    const status = await resolveConnectionAuthStatus(provider, principal, {});
     expect(status).toMatchObject({
       id: "status-test",
       status: "needs_setup",
@@ -57,29 +56,35 @@ describe("resolveConnectionAuthStatus", () => {
       clientId: "stored-id",
       clientSecret: "stored-secret",
     });
-    const status = await resolveConnectionAuthStatus(provider, ANONYMOUS_CHAT_PRINCIPAL, {});
+    const status = await resolveConnectionAuthStatus(provider, principal, {});
     expect(status.status).toBe("needs_sign_in");
   });
 
   it("reports needs_sign_in when setup is complete but no token exists", async () => {
     await useTemporaryWorkingDirectory();
-    const status = await resolveConnectionAuthStatus(provider, ANONYMOUS_CHAT_PRINCIPAL, {
+    const status = await resolveConnectionAuthStatus(provider, principal, {
       STATUS_TEST_CLIENT_ID: "id",
       STATUS_TEST_CLIENT_SECRET: "secret",
     });
     expect(status.status).toBe("needs_sign_in");
   });
 
-  it("reports connected when a usable token exists", async () => {
+  it("reports connected when a usable token exists for that user", async () => {
     await useTemporaryWorkingDirectory();
-    await storeAccessToken(provider, ANONYMOUS_CHAT_PRINCIPAL, {
+    await storeAccessToken(provider, principal, {
       accessToken: "access",
       expiresAt: Date.now() + 120_000,
     });
-    const status = await resolveConnectionAuthStatus(provider, ANONYMOUS_CHAT_PRINCIPAL, {
+    const status = await resolveConnectionAuthStatus(provider, principal, {
       STATUS_TEST_CLIENT_ID: "id",
       STATUS_TEST_CLIENT_SECRET: "secret",
     });
     expect(status.status).toBe("connected");
+
+    const other = await resolveConnectionAuthStatus(provider, brainUserPrincipal("user-b"), {
+      STATUS_TEST_CLIENT_ID: "id",
+      STATUS_TEST_CLIENT_SECRET: "secret",
+    });
+    expect(other.status).toBe("needs_sign_in");
   });
 });

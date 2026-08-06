@@ -9,6 +9,7 @@ import {
   writeStoredAppCredentials,
 } from "@/agent/lib/connection-credentials";
 import { getChatConnectionProvider } from "@/agent/lib/connection-status";
+import { requireSessionUserId } from "@/lib/auth/require-session";
 import { resolvePublicOrigin } from "@/lib/http/public-origin";
 
 export const runtime = "nodejs";
@@ -25,6 +26,10 @@ const putBodySchema = z
   .strict();
 
 export async function GET(request: Request, context: RouteContext) {
+  const session = await requireSessionUserId();
+  if (!session.ok) {
+    return session.response;
+  }
   const { id } = await context.params;
   const provider = getChatConnectionProvider(id);
   if (!provider) {
@@ -57,6 +62,10 @@ export async function GET(request: Request, context: RouteContext) {
 }
 
 export async function PUT(request: Request, context: RouteContext) {
+  const session = await requireSessionUserId();
+  if (!session.ok) {
+    return session.response;
+  }
   const { id } = await context.params;
   const provider = getChatConnectionProvider(id);
   if (!provider) {
@@ -95,6 +104,10 @@ export async function PUT(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
+  const session = await requireSessionUserId();
+  if (!session.ok) {
+    return session.response;
+  }
   const { id } = await context.params;
   const provider = getChatConnectionProvider(id);
   if (!provider) {
