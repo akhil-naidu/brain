@@ -38,6 +38,7 @@
     "lib/**/*.ts",
     "tests/**/*.ts",
     "tests/**/*.tsx",
+    "types/**/*.d.ts",
     ".eve/**/*.d.ts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"

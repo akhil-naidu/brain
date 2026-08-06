@@ -1,0 +1,160 @@
+import { AsyncLocalStorage } from "node:async_hooks";
+import { mkdirSync } from "node:fs";
+import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
+import { betterAuth } from "better-auth";
+import { APIError } from "better-auth/api";
+import { getMigrations } from "better-auth/db/migration";
+import { nextCookies } from "better-auth/next-js";
+import { resolveAuthDbPath } from "@/lib/auth/users-path";
+
+type SqlRow = Record<string, null | number | bigint | string | Uint8Array>;
+
+const bootstrapSignupGate = new AsyncLocalStorage<boolean>();
+
+function resolveAuthSecret(env: Record<string, string | undefined> = process.env): string {
+  const secret = env["BETTER_AUTH_SECRET"]?.trim();
+  if (secret) {
+    return secret;
+  }
+  if (
+    env["VITEST"] ||
+    env["NODE_ENV"] === "test" ||
+    process.env["VITEST"] ||
+    process.env["NODE_ENV"] === "test"
+  ) {
+    return "test-only-better-auth-secret-32chars!!";
+  }
+  throw new Error("Missing BETTER_AUTH_SECRET. Generate one with: openssl rand -base64 32");
+}
+
+function resolveAuthBaseURL(env: Record<string, string | undefined> = process.env): string {
+  return (
+    env["BETTER_AUTH_URL"]?.trim() || env["BRAIN_PUBLIC_URL"]?.trim() || "http://localhost:3000"
+  );
+}
+
+function countFromRow(row: SqlRow | undefined): number {
+  const value = row?.["count"];
+  if (typeof value === "number") {
+    return value;
+  }
+  if (typeof value === "bigint") {
+    return Number(value);
+  }
+  return 0;
+}
+
+function createBrainAuth(env: Record<string, string | undefined> = process.env) {
+  const dbPath = resolveAuthDbPath(env);
+  if (dbPath !== ":memory:") {
+    mkdirSync(path.dirname(dbPath), { recursive: true });
+  }
+  const db = new DatabaseSync(dbPath);
+  const secret = resolveAuthSecret(env);
+  const baseURL = resolveAuthBaseURL(env);
+
+  const auth = betterAuth({
+    database: db,
+    secret,
+    baseURL,
+    trustedOrigins: [baseURL],
+    emailAndPassword: {
+      enabled: true,
+      minPasswordLength: 8,
+      disableSignUp: false,
+      autoSignIn: true,
+    },
+    databaseHooks: {
+      user: {
+        create: {
+          before: async () => {
+            if (!bootstrapSignupGate.getStore()) {
+              throw new APIError("FORBIDDEN", {
+                message: "Signup is disabled. Use /setup to create the first operator account.",
+              });
+            }
+          },
+        },
+      },
+    },
+    plugins: [nextCookies()],
+  });
+
+  const ready = getMigrations(auth.options).then(({ runMigrations }) => runMigrations());
+
+  return {
+    auth,
+    ready,
+    countUsers() {
+      try {
+        const row = db.prepare("SELECT COUNT(*) AS count FROM user").get() as SqlRow | undefined;
+        return countFromRow(row);
+      } catch {
+        return 0;
+      }
+    },
+    firstUserId() {
+      try {
+        const row = db.prepare("SELECT id FROM user ORDER BY createdAt ASC LIMIT 1").get() as
+          SqlRow | undefined;
+        const id = row?.["id"];
+        return typeof id === "string" && id.trim() ? id : null;
+      } catch {
+        return null;
+      }
+    },
+  };
+}
+
+type BrainAuthBundle = ReturnType<typeof createBrainAuth>;
+
+const globalForAuth = globalThis as typeof globalThis & {
+  brainAuthBundle?: BrainAuthBundle;
+  brainAuthBundleKey?: string;
+};
+
+function authBundleKey(env: Record<string, string | undefined>): string {
+  return `${resolveAuthDbPath(env)}|${resolveAuthBaseURL(env)}`;
+}
+
+function getBrainAuthBundle(
+  env: Record<string, string | undefined> = process.env,
+): BrainAuthBundle {
+  const key = authBundleKey(env);
+  if (!globalForAuth.brainAuthBundle || globalForAuth.brainAuthBundleKey !== key) {
+    globalForAuth.brainAuthBundle = createBrainAuth(env);
+    globalForAuth.brainAuthBundleKey = key;
+  }
+  return globalForAuth.brainAuthBundle;
+}
+
+export function getAuth(env: Record<string, string | undefined> = process.env) {
+  return getBrainAuthBundle(env).auth;
+}
+
+export async function ensureAuthReady(
+  env: Record<string, string | undefined> = process.env,
+): Promise<void> {
+  await getBrainAuthBundle(env).ready;
+}
+
+export function countAuthUsers(env: Record<string, string | undefined> = process.env): number {
+  return getBrainAuthBundle(env).countUsers();
+}
+
+export function firstAuthUserId(
+  env: Record<string, string | undefined> = process.env,
+): string | null {
+  return getBrainAuthBundle(env).firstUserId();
+}
+
+export async function runWithBootstrapSignup<T>(fn: () => Promise<T>): Promise<T> {
+  return bootstrapSignupGate.run(true, fn);
+}
+
+/** Test helper: replace the in-process auth singleton. */
+export function resetBrainAuthForTests(): void {
+  delete globalForAuth.brainAuthBundle;
+  delete globalForAuth.brainAuthBundleKey;
+}
