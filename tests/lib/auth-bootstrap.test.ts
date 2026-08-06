@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { bootstrapFirstUser, isBootstrapAllowed, verifyBootstrapToken } from "@/lib/auth/bootstrap";
 import {
+  claimFirstBootstrap,
   countAuthUsers,
   ensureAuthReady,
   getAuth,
@@ -67,6 +68,28 @@ describe("better auth bootstrap", () => {
       });
     });
     expect(countAuthUsers()).toBe(1);
+  });
+
+  it("allows first-user signup when bootstrap claim is held without ALS", async () => {
+    expect(claimFirstBootstrap()).toBe(true);
+    await getAuth().api.signUpEmail({
+      body: {
+        email: "ops@brain.local",
+        password: "password12345",
+        name: "ops",
+      },
+    });
+    expect(countAuthUsers()).toBe(1);
+
+    await expect(
+      getAuth().api.signUpEmail({
+        body: {
+          email: "stranger@example.com",
+          password: "password12345",
+          name: "stranger",
+        },
+      }),
+    ).rejects.toThrow(/Signup is disabled/i);
   });
 
   it("requires bootstrap token in production when configured", () => {

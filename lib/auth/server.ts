@@ -13,6 +13,11 @@ type SqlRow = Record<string, null | number | bigint | string | Uint8Array>;
 
 const bootstrapSignupGate = new AsyncLocalStorage<"bootstrap" | "open" | "invite">();
 
+/** Survives ALS loss across Next/Better Auth async boundaries (and duplicate module copies). */
+const globalForSignupGate = globalThis as typeof globalThis & {
+  brainSignupGate?: "bootstrap" | "open" | "invite";
+};
+
 function resolveAuthSecret(env: Record<string, string | undefined> = process.env): string {
   const secret = env["BETTER_AUTH_SECRET"]?.trim();
   if (secret) {
@@ -55,6 +60,24 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
   const secret = resolveAuthSecret(env);
   const baseURL = resolveAuthBaseURL(env);
 
+  const ensureBootstrapClaimTable = () => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS brain_bootstrap_claim (
+        id INTEGER PRIMARY KEY CHECK (id = 1)
+      );
+    `);
+  };
+
+  const hasActiveBootstrapClaim = () => {
+    try {
+      ensureBootstrapClaimTable();
+      const row = db.prepare("SELECT id FROM brain_bootstrap_claim WHERE id = 1").get();
+      return Boolean(row);
+    } catch {
+      return false;
+    }
+  };
+
   const auth = betterAuth({
     database: db,
     secret,
@@ -70,9 +93,23 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
       user: {
         create: {
           before: async () => {
-            const gate = bootstrapSignupGate.getStore();
+            const gate = bootstrapSignupGate.getStore() ?? globalForSignupGate.brainSignupGate;
             if (gate === "bootstrap" || gate === "open" || gate === "invite") {
               return;
+            }
+            // /setup holds a DB claim before signUpEmail; ALS often does not survive
+            // Better Auth's async path under Next.js, so the claim is the reliable gate.
+            if (hasActiveBootstrapClaim()) {
+              try {
+                const userCount = countFromRow(
+                  db.prepare("SELECT COUNT(*) AS count FROM user").get(),
+                );
+                if (userCount === 0) {
+                  return;
+                }
+              } catch {
+                return;
+              }
             }
             // Lazy policy check for Better Auth client sign-up (no ALS gate).
             const workspaces = createWorkspaceStore(db);
@@ -105,14 +142,6 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
     createWorkspaceStore(db);
     return undefined;
   });
-
-  const ensureBootstrapClaimTable = () => {
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS brain_bootstrap_claim (
-        id INTEGER PRIMARY KEY CHECK (id = 1)
-      );
-    `);
-  };
 
   let workspaceStore: WorkspaceStore | undefined;
 
@@ -205,16 +234,29 @@ export function firstAuthUserId(
   return getBrainAuthBundle(env).firstUserId();
 }
 
+async function runWithSignupGate<T>(
+  gate: "bootstrap" | "open" | "invite",
+  fn: () => Promise<T>,
+): Promise<T> {
+  const previous = globalForSignupGate.brainSignupGate;
+  globalForSignupGate.brainSignupGate = gate;
+  try {
+    return await bootstrapSignupGate.run(gate, fn);
+  } finally {
+    globalForSignupGate.brainSignupGate = previous;
+  }
+}
+
 export async function runWithBootstrapSignup<T>(fn: () => Promise<T>): Promise<T> {
-  return bootstrapSignupGate.run("bootstrap", fn);
+  return runWithSignupGate("bootstrap", fn);
 }
 
 export async function runWithOpenSignup<T>(fn: () => Promise<T>): Promise<T> {
-  return bootstrapSignupGate.run("open", fn);
+  return runWithSignupGate("open", fn);
 }
 
 export async function runWithInviteSignup<T>(fn: () => Promise<T>): Promise<T> {
-  return bootstrapSignupGate.run("invite", fn);
+  return runWithSignupGate("invite", fn);
 }
 
 export function getWorkspaceStore(
