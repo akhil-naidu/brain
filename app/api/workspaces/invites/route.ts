@@ -1,8 +1,11 @@
+import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { isWorkspaceAdminRole } from "@/lib/auth/workspaces/types";
+import { isSmtpConfigured, sendInviteEmail } from "@/lib/auth/email/smtp";
 import { requireWorkspaceSession } from "@/lib/auth/require-workspace-session";
-import { ensureAuthReady, getWorkspaceStore } from "@/lib/auth/server";
+import { ensureAuthReady, getAuth, getWorkspaceStore } from "@/lib/auth/server";
+import { isWorkspaceAdminRole } from "@/lib/auth/workspaces/types";
+import { resolvePublicOrigin } from "@/lib/http/public-origin";
 
 export const runtime = "nodejs";
 
@@ -23,7 +26,7 @@ export async function GET() {
   }
   await ensureAuthReady();
   const invites = getWorkspaceStore().listInvites(session.session.workspaceId);
-  return NextResponse.json({ invites });
+  return NextResponse.json({ invites, smtpConfigured: isSmtpConfigured() });
 }
 
 export async function POST(request: Request) {
@@ -49,7 +52,50 @@ export async function POST(request: Request) {
       email: parsed.data.email,
       role: parsed.data.role,
     });
-    return NextResponse.json({ invite }, { status: 201 });
+
+    let emailSent = false;
+    let emailSkipReason: string | null = null;
+    const boundEmail = invite.email?.trim();
+    if (boundEmail) {
+      if (!isSmtpConfigured()) {
+        emailSkipReason = "smtp-not-configured";
+      } else {
+        const origin = resolvePublicOrigin(request);
+        const inviteLink = new URL(`/invite/${invite.token}`, origin).toString();
+        const workspaceName = session.session.workspace.name;
+        let inviterLabel: string | null = null;
+        try {
+          const authSession = await getAuth().api.getSession({
+            headers: await headers(),
+          });
+          inviterLabel =
+            authSession?.user?.name?.trim() || authSession?.user?.email?.trim() || null;
+        } catch {
+          inviterLabel = null;
+        }
+        const sent = await sendInviteEmail({
+          to: boundEmail,
+          inviteUrl: inviteLink,
+          workspaceName,
+          inviterLabel,
+        });
+        if (sent.ok) {
+          emailSent = true;
+        } else {
+          emailSkipReason = sent.reason;
+        }
+      }
+    }
+
+    return NextResponse.json(
+      {
+        invite,
+        emailSent,
+        emailSkipReason,
+        smtpConfigured: isSmtpConfigured(),
+      },
+      { status: 201 },
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to create invite.";
     return NextResponse.json({ error: message }, { status: 403 });
