@@ -18,11 +18,17 @@ export async function GET() {
   }
   await ensureAuthReady();
   const workspaces = getWorkspaceStore();
+  const policies = workspaces.getPolicies();
   const active = workspaces.resolveActiveWorkspace(session.userId);
   const list = workspaces.listWorkspacesForUser(session.userId);
+  const activeMembership = list.find((item) => item.id === active.id);
+  const isInstanceAdmin = workspaces.isInstanceAdmin(session.userId);
   return NextResponse.json({
     workspaces: list,
     activeWorkspaceId: active.id,
+    activeRole: activeMembership?.role ?? null,
+    canCreateWorkspace: policies.allowCreateWorkspace || isInstanceAdmin,
+    isInstanceAdmin,
   });
 }
 
