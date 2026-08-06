@@ -202,6 +202,17 @@ export function isScheduleRunLocked(
   return now.getTime() - started < staleMs;
 }
 
+/** Timestamps for atomic schedule run claims (compare-and-swap on `runningSince`). */
+export function scheduleRunClaimTimestamps(
+  now: Date = new Date(),
+  staleMs: number = SCHEDULED_BRIEF_STALE_RUN_MS,
+): { readonly runningSince: string; readonly staleBefore: string } {
+  return {
+    runningSince: now.toISOString(),
+    staleBefore: new Date(now.getTime() - staleMs).toISOString(),
+  };
+}
+
 export function isScheduledBriefRunning(
   config: ScheduledBriefConfig,
   now: Date = new Date(),

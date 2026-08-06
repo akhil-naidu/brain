@@ -1,8 +1,8 @@
+import { scheduleRunClaimTimestamps } from "@/lib/chat/scheduled-brief";
 import { getUserDataStore } from "@/lib/chat/user-data/sqlite-user-data-store";
 import { runScheduledPromptTurn, type ScheduledSlackResult } from "@/lib/chat/run-scheduled-prompt";
 import {
   isScheduledPlaybookDue,
-  isScheduledPlaybookRunning,
   markPlaybookScheduleCompleted,
   replaceScheduledPlaybook,
   scheduledPlaybookChatTitle,
@@ -52,14 +52,16 @@ export async function runScheduledPlaybook(options: {
     return { ok: true, skipped: true, reason: "not_due", schedule };
   }
 
-  if (isScheduledPlaybookRunning(schedule, now)) {
+  const claimed = getUserDataStore().tryClaimPlaybookScheduleRun(
+    userId,
+    options.id,
+    scheduleRunClaimTimestamps(now),
+  );
+  if (!claimed) {
     return { ok: true, skipped: true, reason: "already_running", schedule };
   }
-
-  schedule = await replaceScheduledPlaybook(userId, {
-    ...schedule,
-    runningSince: now.toISOString(),
-  });
+  const { userId: _claimedOwner, ...claimedSchedule } = claimed;
+  schedule = claimedSchedule;
 
   const title = scheduledPlaybookChatTitle(schedule.label, now, schedule.timezone);
 

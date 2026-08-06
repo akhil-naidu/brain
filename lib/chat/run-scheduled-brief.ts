@@ -1,15 +1,16 @@
 import {
   isScheduledBriefDue,
-  isScheduledBriefRunning,
   listScheduledBriefConfigs,
   localDateKey,
   morningBriefChatTitle,
   readScheduledBriefConfig,
   replaceScheduledBriefConfig,
+  scheduleRunClaimTimestamps,
   type ScheduledBriefConfig,
 } from "@/lib/chat/scheduled-brief";
 import { runScheduledPromptTurn, type ScheduledSlackResult } from "@/lib/chat/run-scheduled-prompt";
 import type { ChatRecord } from "@/lib/chat/store/types";
+import { getUserDataStore } from "@/lib/chat/user-data/sqlite-user-data-store";
 import { MORNING_BRIEF_PROMPT } from "@/lib/chat/welcome-prompts";
 
 export type ScheduledBriefSlackResult = ScheduledSlackResult;
@@ -50,14 +51,14 @@ export async function runScheduledBrief(options: {
     return { ok: true, skipped: true, reason: "not_due", config, userId };
   }
 
-  if (isScheduledBriefRunning(config, now)) {
+  const claimed = getUserDataStore().tryClaimMorningBriefRun(
+    userId,
+    scheduleRunClaimTimestamps(now),
+  );
+  if (!claimed) {
     return { ok: true, skipped: true, reason: "already_running", config, userId };
   }
-
-  config = await replaceScheduledBriefConfig(userId, {
-    ...config,
-    runningSince: now.toISOString(),
-  });
+  config = claimed;
 
   const title = morningBriefChatTitle(now, config.timezone);
 

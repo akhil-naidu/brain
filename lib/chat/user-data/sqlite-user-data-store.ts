@@ -229,11 +229,25 @@ export type UserDataStore = {
     userId: string,
     schedule: StoredScheduledPlaybook,
   ): StoredScheduledPlaybook;
+  /**
+   * Atomically claim a schedule run by setting `runningSince` only when unlocked
+   * or stale (`running_since` null or <= staleBefore). Returns null if another
+   * runner already holds a fresh lock.
+   */
+  tryClaimPlaybookScheduleRun(
+    userId: string,
+    id: string,
+    claim: { readonly runningSince: string; readonly staleBefore: string },
+  ): (StoredScheduledPlaybook & { readonly userId: string }) | null;
 
   getMorningBrief(userId: string): ScheduledBriefConfig;
   listMorningBriefs(): readonly (ScheduledBriefConfig & { readonly userId: string })[];
   updateMorningBrief(userId: string, update: ScheduledBriefUpdate): ScheduledBriefConfig;
   replaceMorningBrief(userId: string, config: ScheduledBriefConfig): ScheduledBriefConfig;
+  tryClaimMorningBriefRun(
+    userId: string,
+    claim: { readonly runningSince: string; readonly staleBefore: string },
+  ): ScheduledBriefConfig | null;
 
   close(): void;
 };
@@ -367,9 +381,28 @@ export function createSqliteUserDataStore(dbPath: string): UserDataStore {
   const deleteScheduleStmt = db.prepare(
     "DELETE FROM playbook_schedule WHERE user_id = ? AND id = ?",
   );
+  const claimScheduleRunStmt = db.prepare(`
+    UPDATE playbook_schedule
+    SET running_since = ?
+    WHERE user_id = ? AND id = ?
+      AND (running_since IS NULL OR running_since <= ?)
+  `);
 
   const getBriefStmt = db.prepare("SELECT * FROM morning_brief_schedule WHERE user_id = ?");
   const listBriefsStmt = db.prepare("SELECT * FROM morning_brief_schedule");
+  const ensureBriefRowStmt = db.prepare(`
+    INSERT INTO morning_brief_schedule (
+      user_id, enabled, hour, minute, timezone, weekdays_only, slack_delivery_enabled,
+      slack_channel, last_slack_error, last_run_date_key, last_chat_id, last_run_at, running_since
+    ) VALUES (?, 0, ?, ?, ?, 1, 0, NULL, NULL, NULL, NULL, NULL, NULL)
+    ON CONFLICT(user_id) DO NOTHING
+  `);
+  const claimBriefRunStmt = db.prepare(`
+    UPDATE morning_brief_schedule
+    SET running_since = ?
+    WHERE user_id = ?
+      AND (running_since IS NULL OR running_since <= ?)
+  `);
   const upsertBriefStmt = db.prepare(`
     INSERT INTO morning_brief_schedule (
       user_id, enabled, hour, minute, timezone, weekdays_only, slack_delivery_enabled,
@@ -614,6 +647,15 @@ export function createSqliteUserDataStore(dbPath: string): UserDataStore {
       return schedule;
     },
 
+    tryClaimPlaybookScheduleRun(userId, id, claim) {
+      const result = claimScheduleRunStmt.run(claim.runningSince, userId, id, claim.staleBefore);
+      if (Number(result.changes ?? 0) === 0) {
+        return null;
+      }
+      const row = findScheduleForUserStmt.get(userId, id);
+      return row ? toScheduledPlaybook(requireRow(row)) : null;
+    },
+
     getMorningBrief(userId) {
       const row = getBriefStmt.get(userId);
       if (!row) {
@@ -651,6 +693,16 @@ export function createSqliteUserDataStore(dbPath: string): UserDataStore {
     replaceMorningBrief(userId, config) {
       writeBriefRow(userId, config);
       return config;
+    },
+
+    tryClaimMorningBriefRun(userId, claim) {
+      const defaults = defaultScheduledBriefConfig();
+      ensureBriefRowStmt.run(userId, defaults.hour, defaults.minute, defaults.timezone);
+      const result = claimBriefRunStmt.run(claim.runningSince, userId, claim.staleBefore);
+      if (Number(result.changes ?? 0) === 0) {
+        return null;
+      }
+      return this.getMorningBrief(userId);
     },
 
     close() {
