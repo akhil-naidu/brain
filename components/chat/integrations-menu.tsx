@@ -74,7 +74,14 @@ export function shouldOfferConnectionDisconnect(status: ConnectionStatus | undef
 }
 
 export function shouldOfferConnectionConfigure(status: ConnectionStatus | undefined): boolean {
-  return status?.status === "needs_setup";
+  if (!status) {
+    return false;
+  }
+  if (status.status === "needs_setup") {
+    return true;
+  }
+  // After Connect / Set up, keep Edit available for credential-backed providers.
+  return status.configurable ?? false;
 }
 
 /** Users can only turn a connection on after it is signed in. */
@@ -99,7 +106,7 @@ export function IntegrationsMenu({
   const [connectingId, setConnectingId] = useState<keyof EnabledConnections | null>(null);
   const [disconnectingId, setDisconnectingId] = useState<keyof EnabledConnections | null>(null);
   const [connectError, setConnectError] = useState<string | null>(null);
-  const [configureId, setConfigureId] = useState<string | null>(null);
+  const [configureId, setConfigureId] = useState<keyof EnabledConnections | null>(null);
   const enabledConnectionsRef = useRef(enabledConnections);
   enabledConnectionsRef.current = enabledConnections;
 
@@ -162,11 +169,7 @@ export function IntegrationsMenu({
     }
     for (const { key } of CONNECTION_ITEMS) {
       const status = statusById.get(key);
-      if (
-        enabledConnectionsRef.current[key] &&
-        status &&
-        status.status !== "connected"
-      ) {
+      if (enabledConnectionsRef.current[key] && status && status.status !== "connected") {
         onConnectionEnabledChange(key, false);
       }
     }
@@ -334,7 +337,7 @@ export function IntegrationsMenu({
                   }}
                   type="button"
                 >
-                  Set up
+                  {status?.status === "needs_setup" ? "Set up" : "Edit"}
                 </button>
               ) : null}
               {showConnect ? (
@@ -402,7 +405,13 @@ export function IntegrationsMenu({
           }
         }}
         onSaved={() => {
+          const savedId = configureId;
           loadStatus();
+          if (savedId) {
+            // PAT providers become connected immediately; OAuth still needs Connect,
+            // and the status sync effect will turn the toggle off until then.
+            onConnectionEnabledChange(savedId, true);
+          }
         }}
         open={configureId !== null}
       />

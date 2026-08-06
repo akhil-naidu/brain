@@ -146,28 +146,38 @@ export function ConnectionSetupDialog({
   };
 
   const isPat = info?.authKind === "pat" || info?.requiresAccessToken;
+  const hasStored = Boolean(info?.hasStoredCredentials);
 
   const canSave =
-    (!info?.requiresClientId || clientId.trim().length > 0) &&
-    (!info?.requiresClientSecret || clientSecret.trim().length > 0) &&
-    (!info?.requiresAccessToken || accessToken.trim().length > 0) &&
+    (!info?.requiresClientId || clientId.trim().length > 0 || hasStored) &&
+    (!info?.requiresClientSecret || clientSecret.trim().length > 0 || hasStored) &&
+    (!info?.requiresAccessToken || accessToken.trim().length > 0 || hasStored) &&
     (!info?.requiresMcpUrl || mcpUrl.trim().length > 0) &&
     !saving &&
     !loading;
 
   const appName = info?.displayName ?? "this app";
+  const dialogVerb = hasStored ? "Edit" : "Set up";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{info ? `Set up ${info.displayName}` : "Set up connection"}</DialogTitle>
+          <DialogTitle>
+            {info ? `${dialogVerb} ${info.displayName}` : "Set up connection"}
+          </DialogTitle>
           <DialogDescription>
             {isPat
-              ? `Paste your ${appName} MCP server URL and Programmatic Access Token (same as Cursor). They stay on this computer.`
+              ? hasStored
+                ? `Update the ${appName} MCP server URL or paste a new Programmatic Access Token. Leave the token blank to keep the saved one.`
+                : `Paste your ${appName} MCP server URL and Programmatic Access Token (same as Cursor). They stay on this computer.`
               : info?.requiresMcpUrl
-                ? `Enter the MCP server URL plus the OAuth app ID and secret from your ${appName} account. They stay on this computer.`
-                : `Enter the app ID and secret from your ${appName} account settings so Brain can connect. They stay on this computer.`}
+                ? hasStored
+                  ? `Update the MCP server URL or app credentials for ${appName}. Leave secret fields blank to keep saved values.`
+                  : `Enter the MCP server URL plus the OAuth app ID and secret from your ${appName} account. They stay on this computer.`
+                : hasStored
+                  ? `Update the app ID or secret for ${appName}. Leave a field blank to keep the saved value.`
+                  : `Enter the app ID and secret from your ${appName} account settings so Brain can connect. They stay on this computer.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -233,7 +243,9 @@ export function ConnectionSetupDialog({
                   autoComplete="off"
                   id="connection-setup-access-token"
                   onChange={(event) => setAccessToken(event.target.value)}
-                  placeholder="Paste PAT from Snowsight"
+                  placeholder={
+                    hasStored ? "Leave blank to keep saved token" : "Paste PAT from Snowsight"
+                  }
                   spellCheck={false}
                   type="password"
                   value={accessToken}
@@ -275,7 +287,7 @@ export function ConnectionSetupDialog({
                   autoComplete="off"
                   id="connection-setup-client-secret"
                   onChange={(event) => setClientSecret(event.target.value)}
-                  placeholder="Paste app secret"
+                  placeholder={hasStored ? "Leave blank to keep saved secret" : "Paste app secret"}
                   spellCheck={false}
                   type="password"
                   value={clientSecret}
@@ -283,9 +295,9 @@ export function ConnectionSetupDialog({
               </div>
             ) : null}
 
-            {info?.hasStoredCredentials ? (
+            {hasStored ? (
               <p className="text-muted-foreground text-xs">
-                Details are already saved here. Saving replaces them.
+                Details are already saved here. Blank secret fields keep the current values.
               </p>
             ) : null}
 

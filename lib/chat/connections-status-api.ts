@@ -5,6 +5,7 @@ const connectionStatusSchema = z.object({
   displayName: z.string(),
   status: z.enum(["connected", "needs_sign_in", "needs_setup"]),
   detail: z.string().optional(),
+  configurable: z.boolean().optional(),
 });
 
 const responseSchema = z.object({

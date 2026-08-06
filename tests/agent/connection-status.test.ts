@@ -47,6 +47,7 @@ describe("resolveConnectionAuthStatus", () => {
       id: "status-test",
       status: "needs_setup",
       detail: "Set up Status Test to continue",
+      configurable: true,
     });
   });
 
@@ -58,7 +59,7 @@ describe("resolveConnectionAuthStatus", () => {
       clientSecret: "stored-secret",
     });
     const status = await resolveConnectionAuthStatus(provider, ANONYMOUS_CHAT_PRINCIPAL, {});
-    expect(status.status).toBe("needs_sign_in");
+    expect(status).toMatchObject({ status: "needs_sign_in", configurable: true });
   });
 
   it("reports needs_sign_in when setup is complete but no token exists", async () => {
@@ -67,7 +68,7 @@ describe("resolveConnectionAuthStatus", () => {
       STATUS_TEST_CLIENT_ID: "id",
       STATUS_TEST_CLIENT_SECRET: "secret",
     });
-    expect(status.status).toBe("needs_sign_in");
+    expect(status).toMatchObject({ status: "needs_sign_in", configurable: true });
   });
 
   it("reports connected when a usable token exists", async () => {
@@ -80,6 +81,6 @@ describe("resolveConnectionAuthStatus", () => {
       STATUS_TEST_CLIENT_ID: "id",
       STATUS_TEST_CLIENT_SECRET: "secret",
     });
-    expect(status.status).toBe("connected");
+    expect(status).toMatchObject({ status: "connected", configurable: true });
   });
 });

@@ -92,10 +92,13 @@ export async function writeStoredAppCredentials(
     readonly mcpUrl?: string;
   },
 ): Promise<StoredAppCredentials> {
-  const clientId = input.clientId?.trim();
-  const clientSecret = input.clientSecret?.trim();
-  const accessToken = input.accessToken?.trim();
-  const mcpUrl = input.mcpUrl?.trim();
+  const existing = await readStoredAppCredentials(connectionId);
+  // Blank fields keep the previously saved value so reconfigure can change
+  // only MCP URL / client id without re-pasting secrets.
+  const clientId = input.clientId?.trim() || existing?.clientId;
+  const clientSecret = input.clientSecret?.trim() || existing?.clientSecret;
+  const accessToken = input.accessToken?.trim() || existing?.accessToken;
+  const mcpUrl = input.mcpUrl?.trim() || existing?.mcpUrl;
 
   if (!clientId && !accessToken) {
     throw new Error("Client ID or access token is required.");

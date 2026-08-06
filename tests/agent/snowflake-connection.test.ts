@@ -82,6 +82,7 @@ describe("Snowflake MCP connection", () => {
     expect(status).toMatchObject({
       id: "snowflake",
       status: "connected",
+      configurable: true,
     });
   });
 

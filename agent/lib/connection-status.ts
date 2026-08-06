@@ -7,7 +7,11 @@ import { gmailProvider } from "../connections/gmail";
 import { slackProvider } from "../connections/slack";
 import { createSnowflakeProvider } from "../connections/snowflake";
 import { zernioProvider } from "../connections/zernio";
-import { getProviderCredentialSetupError, providerUsesPatAuth } from "./connection-credentials";
+import {
+  getProviderCredentialSetupError,
+  providerNeedsCredentialSetup,
+  providerUsesPatAuth,
+} from "./connection-credentials";
 import { getStoredTokenAuthState, type McpOAuthProvider } from "./mcp-oauth";
 
 /** Matches the anonymous chat channel principal in `agent/channels/eve.ts`. */
@@ -24,6 +28,8 @@ export type ConnectionStatusItem = {
   readonly displayName: string;
   readonly status: ConnectionAuthStatus;
   readonly detail?: string;
+  /** True when Brain can collect/edit host credentials (Set up / Edit). */
+  readonly configurable: boolean;
 };
 
 export function listChatConnectionProviders(
@@ -56,6 +62,7 @@ export async function resolveConnectionAuthStatus(
   principal: ConnectionPrincipal = ANONYMOUS_CHAT_PRINCIPAL,
   env: { readonly [key: string]: string | undefined } = process.env,
 ): Promise<ConnectionStatusItem> {
+  const configurable = providerNeedsCredentialSetup(provider);
   const setupError = await getProviderCredentialSetupError(provider, env);
   if (setupError) {
     return {
@@ -63,6 +70,7 @@ export async function resolveConnectionAuthStatus(
       displayName: provider.displayName,
       status: "needs_setup",
       detail: setupError,
+      configurable,
     };
   }
 
@@ -72,6 +80,7 @@ export async function resolveConnectionAuthStatus(
       id: provider.name,
       displayName: provider.displayName,
       status: "connected",
+      configurable,
     };
   }
 
@@ -80,6 +89,7 @@ export async function resolveConnectionAuthStatus(
     id: provider.name,
     displayName: provider.displayName,
     status: tokenState,
+    configurable,
   };
 }
 

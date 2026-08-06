@@ -92,37 +92,42 @@ export async function PUT(request: Request, context: RouteContext) {
   }
 
   const usesPat = providerUsesPatAuth(provider);
+  const existing = await readStoredAppCredentials(provider.name);
+  const nextAccessToken = parsed.data.accessToken?.trim() || existing?.accessToken;
+  const nextClientId = parsed.data.clientId?.trim() || existing?.clientId;
+  const nextClientSecret = parsed.data.clientSecret?.trim() || existing?.clientSecret;
+  const nextMcpUrl = parsed.data.mcpUrl?.trim() || existing?.mcpUrl;
 
   if (usesPat) {
-    if (!parsed.data.accessToken?.trim()) {
+    if (!nextAccessToken) {
       return NextResponse.json(
         { error: "Programmatic Access Token is required." },
         { status: 400 },
       );
     }
-  } else if (!parsed.data.clientId?.trim()) {
+  } else if (!nextClientId) {
     return NextResponse.json({ error: "Client ID is required." }, { status: 400 });
   }
 
-  if (!usesPat && provider.clientSecretEnv && !parsed.data.clientSecret?.trim()) {
+  if (!usesPat && provider.clientSecretEnv && !nextClientSecret) {
     return NextResponse.json({ error: "Client secret is required." }, { status: 400 });
   }
 
-  if (provider.mcpUrlEnv && !parsed.data.mcpUrl?.trim()) {
+  if (provider.mcpUrlEnv && !nextMcpUrl) {
     return NextResponse.json({ error: "MCP server URL is required." }, { status: 400 });
   }
 
   try {
     await writeStoredAppCredentials(provider.name, {
-      clientId: usesPat ? undefined : parsed.data.clientId,
-      clientSecret: usesPat ? undefined : parsed.data.clientSecret,
-      accessToken: usesPat ? parsed.data.accessToken : undefined,
-      mcpUrl: parsed.data.mcpUrl,
+      clientId: usesPat ? undefined : nextClientId,
+      clientSecret: usesPat ? undefined : nextClientSecret,
+      accessToken: usesPat ? nextAccessToken : undefined,
+      mcpUrl: nextMcpUrl,
     });
     // Eve bakes MCP urls at compile time — rewrite the generated binding so
     // snowflake.ts recompiles with the account-specific server path.
-    if (provider.name === "snowflake") {
-      await writeSnowflakeConnectionMcpUrlBinding(parsed.data.mcpUrl);
+    if (provider.name === "snowflake" && nextMcpUrl) {
+      await writeSnowflakeConnectionMcpUrlBinding(nextMcpUrl);
     }
     return NextResponse.json({
       ok: true,

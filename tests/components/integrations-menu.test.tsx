@@ -144,12 +144,21 @@ describe("shouldOfferConnectionDisconnect", () => {
 });
 
 describe("shouldOfferConnectionConfigure", () => {
-  it("offers Configure only when setup is needed", () => {
+  it("offers Set up when needed, and Edit when credentials stay configurable", () => {
     expect(
       shouldOfferConnectionConfigure({
         id: "asana",
         displayName: "Asana",
         status: "needs_setup",
+        configurable: true,
+      }),
+    ).toBe(true);
+    expect(
+      shouldOfferConnectionConfigure({
+        id: "snowflake",
+        displayName: "Snowflake",
+        status: "connected",
+        configurable: true,
       }),
     ).toBe(true);
     expect(
@@ -157,13 +166,23 @@ describe("shouldOfferConnectionConfigure", () => {
         id: "slack",
         displayName: "Slack",
         status: "needs_sign_in",
+        configurable: true,
       }),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       shouldOfferConnectionConfigure({
         id: "clickup",
         displayName: "ClickUp",
         status: "connected",
+        configurable: false,
+      }),
+    ).toBe(false);
+    expect(
+      shouldOfferConnectionConfigure({
+        id: "zernio",
+        displayName: "Zernio",
+        status: "needs_sign_in",
+        configurable: false,
       }),
     ).toBe(false);
     expect(shouldOfferConnectionConfigure(undefined)).toBe(false);

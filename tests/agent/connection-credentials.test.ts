@@ -78,6 +78,22 @@ describe("stored app credentials", () => {
     expect(await readFile(filePath, "utf8")).toContain('"clientId": "id"');
   });
 
+  it("keeps previous secrets when reconfigure omits them", async () => {
+    await useTemporaryWorkingDirectory();
+    await writeStoredAppCredentials("slack", {
+      clientId: "id",
+      clientSecret: "secret",
+    });
+    await writeStoredAppCredentials("slack", {
+      clientId: "new-id",
+    });
+
+    expect(await readStoredAppCredentials("slack")).toMatchObject({
+      clientId: "new-id",
+      clientSecret: "secret",
+    });
+  });
+
   it("prefers stored credentials over env", async () => {
     await useTemporaryWorkingDirectory();
     await writeStoredAppCredentials("slack", {
