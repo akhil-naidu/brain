@@ -1,4 +1,5 @@
 import type { ConnectionPrincipal } from "eve/connections";
+import { workspaceIdFromIssuer } from "@/lib/auth/principal";
 import { asanaProvider } from "../connections/asana";
 import { clickupProvider } from "../connections/clickup";
 import { dflowProvider } from "../connections/dflow";
@@ -35,7 +36,8 @@ export async function resolveConnectionAuthStatus(
   principal: ConnectionPrincipal,
   env: { readonly [key: string]: string | undefined } = process.env,
 ): Promise<ConnectionStatusItem> {
-  const setupError = await getProviderCredentialSetupError(provider, env);
+  const workspaceId = principal.type === "user" ? workspaceIdFromIssuer(principal.issuer) : null;
+  const setupError = await getProviderCredentialSetupError(provider, env, workspaceId);
   if (setupError) {
     return {
       id: provider.name,

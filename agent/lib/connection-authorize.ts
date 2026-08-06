@@ -2,7 +2,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { ConnectionPrincipal } from "eve/connections";
 import { z } from "zod";
-import { BRAIN_AUTH_ISSUER } from "@/lib/auth/principal";
+import { BRAIN_AUTH_ISSUER, workspaceIdFromIssuer } from "@/lib/auth/principal";
 import { getProviderCredentialSetupError } from "./connection-credentials";
 import {
   authorizeUrlPath,
@@ -256,7 +256,8 @@ export async function startMenuConnectionAuthorization(
   principal: Extract<ConnectionPrincipal, { readonly type: "user" }>,
   env: { readonly [key: string]: string | undefined } = process.env,
 ): Promise<MenuAuthorizeStartResult> {
-  const setupError = await getProviderCredentialSetupError(provider, env);
+  const workspaceId = workspaceIdFromIssuer(principal.issuer);
+  const setupError = await getProviderCredentialSetupError(provider, env, workspaceId);
   if (setupError) {
     throw new Error(setupError);
   }
@@ -267,6 +268,7 @@ export async function startMenuConnectionAuthorization(
     callbackUrl,
     codeChallenge: challenge,
     state,
+    workspaceId,
   });
 
   await writePendingForUser(provider.name, principal.id, {

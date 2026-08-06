@@ -10,6 +10,19 @@ export function brainAuthIssuer(workspaceId?: string | null): string {
   return trimmed ? `${BRAIN_AUTH_ISSUER}:${trimmed}` : BRAIN_AUTH_ISSUER;
 }
 
+/** Extract workspace id from a `brain:{workspaceId}` principal issuer. */
+export function workspaceIdFromIssuer(issuer: string | null | undefined): string | null {
+  if (typeof issuer !== "string") {
+    return null;
+  }
+  const prefix = `${BRAIN_AUTH_ISSUER}:`;
+  if (!issuer.startsWith(prefix)) {
+    return null;
+  }
+  const workspaceId = issuer.slice(prefix.length).trim();
+  return workspaceId || null;
+}
+
 export function brainUserPrincipal(
   userId: string,
   workspaceId?: string | null,

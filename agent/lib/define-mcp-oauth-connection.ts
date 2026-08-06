@@ -4,6 +4,7 @@ import {
   defineInteractiveAuthorization,
   defineMcpClientConnection,
 } from "eve/connections";
+import { workspaceIdFromIssuer } from "@/lib/auth/principal";
 import {
   authorizeUrlPath,
   buildAuthorizeUrl,
@@ -61,13 +62,18 @@ export function defineMcpOAuthConnection(opts: {
           console.error(`Could not evict the stored ${provider.displayName} OAuth token.`);
         }
       },
-      async startAuthorization({ callbackUrl }) {
+      async startAuthorization({ callbackUrl, principal }) {
         const { verifier, challenge } = makePkce();
         const state = generateOAuthState();
+        const workspaceId =
+          principal && typeof principal === "object" && "issuer" in principal
+            ? workspaceIdFromIssuer(typeof principal.issuer === "string" ? principal.issuer : null)
+            : null;
         const { url, clientId, clientSecret } = await buildAuthorizeUrl(provider, {
           callbackUrl,
           codeChallenge: challenge,
           state,
+          workspaceId,
         });
         await publishAuthorizeUrl(provider, url, callbackUrl);
         return {

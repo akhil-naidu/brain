@@ -9,6 +9,7 @@ import {
   readStoredAppCredentials,
   resolveProviderAppCredentials,
   writeStoredAppCredentials,
+  writeWorkspaceAppCredentials,
 } from "@/agent/lib/connection-credentials";
 import type { McpOAuthProvider } from "@/agent/lib/mcp-oauth";
 
@@ -109,6 +110,46 @@ describe("stored app credentials", () => {
     });
   });
 
+  it("prefers workspace BYOA over host stored and env", async () => {
+    await useTemporaryWorkingDirectory();
+    await writeStoredAppCredentials("slack", {
+      clientId: "host-id",
+      clientSecret: "host-secret",
+    });
+    await writeWorkspaceAppCredentials("ws-1", "slack", {
+      clientId: "workspace-id",
+      clientSecret: "workspace-secret",
+    });
+
+    const resolved = await resolveProviderAppCredentials(
+      staticProvider,
+      {
+        SLACK_MCP_CLIENT_ID: "env-id",
+        SLACK_MCP_CLIENT_SECRET: "env-secret",
+      },
+      "ws-1",
+    );
+    expect(resolved).toEqual({
+      clientId: "workspace-id",
+      clientSecret: "workspace-secret",
+      source: "workspace",
+    });
+
+    const otherWorkspace = await resolveProviderAppCredentials(
+      staticProvider,
+      {
+        SLACK_MCP_CLIENT_ID: "env-id",
+        SLACK_MCP_CLIENT_SECRET: "env-secret",
+      },
+      "ws-2",
+    );
+    expect(otherWorkspace).toEqual({
+      clientId: "host-id",
+      clientSecret: "host-secret",
+      source: "stored",
+    });
+  });
+
   it("deletes stored credentials", async () => {
     await useTemporaryWorkingDirectory();
     await writeStoredAppCredentials("slack", {
@@ -143,5 +184,17 @@ describe("getProviderCredentialSetupError", () => {
       clientSecret: "secret",
     });
     await expect(getProviderCredentialSetupError(staticProvider, {})).resolves.toBeNull();
+  });
+
+  it("accepts workspace-only credentials for setup checks", async () => {
+    await useTemporaryWorkingDirectory();
+    await writeWorkspaceAppCredentials("ws-1", "slack", {
+      clientId: "id",
+      clientSecret: "secret",
+    });
+    await expect(getProviderCredentialSetupError(staticProvider, {}, "ws-1")).resolves.toBeNull();
+    await expect(getProviderCredentialSetupError(staticProvider, {})).resolves.toBe(
+      "Set up Slack to continue",
+    );
   });
 });

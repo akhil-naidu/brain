@@ -14,14 +14,26 @@ const storedAppCredentialsSchema = z
 
 export type StoredAppCredentials = z.infer<typeof storedAppCredentialsSchema>;
 
+export type AppCredentialSource = "workspace" | "stored" | "env";
+
 export type ResolvedAppCredentials = {
   readonly clientId: string;
   readonly clientSecret?: string;
-  readonly source: "stored" | "env";
+  readonly source: AppCredentialSource;
 };
 
-function credentialsPath(name: string): string {
+function hostCredentialsPath(name: string): string {
   return path.join(process.cwd(), ".eve", `mcp-app-credentials-${name}.json`);
+}
+
+function workspaceCredentialsPath(workspaceId: string, name: string): string {
+  return path.join(
+    process.cwd(),
+    ".eve",
+    "workspaces",
+    workspaceId,
+    `mcp-app-credentials-${name}.json`,
+  );
 }
 
 /** True when the provider needs a pre-registered OAuth app (not DCR). */
@@ -31,11 +43,9 @@ export function providerNeedsStaticAppCredentials(
   return Boolean(provider.clientIdEnv) && !provider.registrationEndpoint;
 }
 
-export async function readStoredAppCredentials(
-  connectionId: string,
-): Promise<StoredAppCredentials | null> {
+async function readCredentialsFile(filePath: string): Promise<StoredAppCredentials | null> {
   try {
-    const raw = await readFile(credentialsPath(connectionId), "utf8");
+    const raw = await readFile(filePath, "utf8");
     const parsed = storedAppCredentialsSchema.safeParse(JSON.parse(raw) as unknown);
     return parsed.success ? parsed.data : null;
   } catch (error) {
@@ -51,8 +61,8 @@ export async function readStoredAppCredentials(
   }
 }
 
-export async function writeStoredAppCredentials(
-  connectionId: string,
+async function writeCredentialsFile(
+  destination: string,
   input: { readonly clientId: string; readonly clientSecret?: string },
 ): Promise<StoredAppCredentials> {
   const clientId = input.clientId.trim();
@@ -66,7 +76,6 @@ export async function writeStoredAppCredentials(
     updatedAt: Date.now(),
   };
 
-  const destination = credentialsPath(connectionId);
   const directory = path.dirname(destination);
   await mkdir(directory, { recursive: true, mode: 0o700 });
   await chmod(directory, 0o700);
@@ -93,8 +102,55 @@ export async function writeStoredAppCredentials(
   return value;
 }
 
+export async function readStoredAppCredentials(
+  connectionId: string,
+): Promise<StoredAppCredentials | null> {
+  return readCredentialsFile(hostCredentialsPath(connectionId));
+}
+
+export async function writeStoredAppCredentials(
+  connectionId: string,
+  input: { readonly clientId: string; readonly clientSecret?: string },
+): Promise<StoredAppCredentials> {
+  return writeCredentialsFile(hostCredentialsPath(connectionId), input);
+}
+
 export async function deleteStoredAppCredentials(connectionId: string): Promise<void> {
-  await rm(credentialsPath(connectionId), { force: true });
+  await rm(hostCredentialsPath(connectionId), { force: true });
+}
+
+export async function readWorkspaceAppCredentials(
+  workspaceId: string,
+  connectionId: string,
+): Promise<StoredAppCredentials | null> {
+  const trimmed = workspaceId.trim();
+  if (!trimmed) {
+    return null;
+  }
+  return readCredentialsFile(workspaceCredentialsPath(trimmed, connectionId));
+}
+
+export async function writeWorkspaceAppCredentials(
+  workspaceId: string,
+  connectionId: string,
+  input: { readonly clientId: string; readonly clientSecret?: string },
+): Promise<StoredAppCredentials> {
+  const trimmed = workspaceId.trim();
+  if (!trimmed) {
+    throw new Error("Workspace id is required.");
+  }
+  return writeCredentialsFile(workspaceCredentialsPath(trimmed, connectionId), input);
+}
+
+export async function deleteWorkspaceAppCredentials(
+  workspaceId: string,
+  connectionId: string,
+): Promise<void> {
+  const trimmed = workspaceId.trim();
+  if (!trimmed) {
+    return;
+  }
+  await rm(workspaceCredentialsPath(trimmed, connectionId), { force: true });
 }
 
 function credentialsFromEnv(
@@ -111,11 +167,26 @@ function credentialsFromEnv(
   return { clientId, clientSecret, source: "env" };
 }
 
-/** Prefer UI-stored app credentials, then process env. */
+/**
+ * Prefer workspace BYOA, then UI-stored host credentials, then process env.
+ */
 export async function resolveProviderAppCredentials(
   provider: Pick<McpOAuthProvider, "name" | "clientIdEnv" | "clientSecretEnv">,
   env: { readonly [key: string]: string | undefined } = process.env,
+  workspaceId?: string | null,
 ): Promise<ResolvedAppCredentials | null> {
+  const trimmedWorkspace = workspaceId?.trim();
+  if (trimmedWorkspace) {
+    const workspace = await readWorkspaceAppCredentials(trimmedWorkspace, provider.name);
+    if (workspace?.clientId) {
+      return {
+        clientId: workspace.clientId,
+        clientSecret: workspace.clientSecret,
+        source: "workspace",
+      };
+    }
+  }
+
   const stored = await readStoredAppCredentials(provider.name);
   if (stored?.clientId) {
     return {
@@ -138,12 +209,13 @@ export async function getProviderCredentialSetupError(
     | "tokenAuthMethod"
   >,
   env: { readonly [key: string]: string | undefined } = process.env,
+  workspaceId?: string | null,
 ): Promise<string | null> {
   if (!providerNeedsStaticAppCredentials(provider)) {
     return null;
   }
 
-  const credentials = await resolveProviderAppCredentials(provider, env);
+  const credentials = await resolveProviderAppCredentials(provider, env, workspaceId);
   if (!credentials?.clientId) {
     return `Set up ${provider.displayName} to continue`;
   }

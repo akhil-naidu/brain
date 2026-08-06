@@ -454,8 +454,9 @@ async function refreshStoredToken(
 async function resolveClient(
   provider: McpOAuthProvider,
   redirectUri: string,
+  workspaceId?: string | null,
 ): Promise<{ clientId: string; clientSecret?: string }> {
-  const appCredentials = await resolveProviderAppCredentials(provider);
+  const appCredentials = await resolveProviderAppCredentials(provider, process.env, workspaceId);
   if (appCredentials?.clientId) {
     return {
       clientId: appCredentials.clientId,
@@ -504,9 +505,14 @@ async function resolveClient(
 
 export async function buildAuthorizeUrl(
   provider: McpOAuthProvider,
-  opts: { callbackUrl: string; codeChallenge: string; state: string },
+  opts: {
+    callbackUrl: string;
+    codeChallenge: string;
+    state: string;
+    workspaceId?: string | null;
+  },
 ): Promise<{ url: string; clientId: string; clientSecret?: string }> {
-  const client = await resolveClient(provider, opts.callbackUrl);
+  const client = await resolveClient(provider, opts.callbackUrl, opts.workspaceId);
   const url = new URL(provider.authorizationEndpoint);
   url.searchParams.set("response_type", "code");
   url.searchParams.set("client_id", client.clientId);
