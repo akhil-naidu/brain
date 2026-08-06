@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { access, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -6,6 +6,7 @@ import {
   completeMenuConnectionAuthorization,
   disconnectMenuConnection,
   menuConnectionCallbackUrl,
+  sanitizeUserIdForPendingPath,
   startMenuConnectionAuthorization,
 } from "@/agent/lib/connection-authorize";
 import {
@@ -18,6 +19,22 @@ import { brainUserPrincipal } from "@/lib/auth/principal";
 const originalCwd = process.cwd();
 const temporaryDirectories: string[] = [];
 const principal = brainUserPrincipal("user-a");
+const principalB = brainUserPrincipal("user-b");
+
+async function pendingFileExists(connectionName: string, userId: string): Promise<boolean> {
+  try {
+    await access(
+      path.join(
+        process.cwd(),
+        ".eve",
+        `mcp-oauth-pending-${connectionName}-${sanitizeUserIdForPendingPath(userId)}.json`,
+      ),
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 const provider: McpOAuthProvider = {
   name: "authorize-test",
@@ -150,5 +167,77 @@ describe("disconnectMenuConnection", () => {
     await expect(disconnectMenuConnection(provider, principal)).resolves.toEqual({
       displayName: "Authorize Test",
     });
+  });
+
+  it("does not clear another user’s pending authorize", async () => {
+    await useTemporaryWorkingDirectory();
+    vi.stubEnv("AUTHORIZE_TEST_CLIENT_ID", "client-id");
+    vi.stubEnv("AUTHORIZE_TEST_CLIENT_SECRET", "client-secret");
+    const callbackUrl = "http://localhost:3000/api/connections/authorize-test/callback";
+    const startedA = await startMenuConnectionAuthorization(provider, callbackUrl, principal);
+    await startMenuConnectionAuthorization(provider, callbackUrl, principalB);
+    const stateA = new URL(startedA.authorizeUrl).searchParams.get("state");
+    expect(stateA).toBeTruthy();
+
+    await disconnectMenuConnection(provider, principalB);
+    expect(await pendingFileExists(provider.name, "user-a")).toBe(true);
+    expect(await pendingFileExists(provider.name, "user-b")).toBe(false);
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ access_token: "menu-token-a", expires_in: 3600 }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          }),
+      ),
+    );
+    const result = await completeMenuConnectionAuthorization(provider, {
+      code: "auth-code",
+      state: stateA!,
+    });
+    expect(result).toEqual({ ok: true, displayName: "Authorize Test" });
+    await expect(getStoredAccessToken(provider, principal)).resolves.toMatchObject({
+      token: "menu-token-a",
+    });
+  });
+});
+
+describe("per-user pending authorize", () => {
+  it("keeps concurrent pending states isolated", async () => {
+    await useTemporaryWorkingDirectory();
+    vi.stubEnv("AUTHORIZE_TEST_CLIENT_ID", "client-id");
+    vi.stubEnv("AUTHORIZE_TEST_CLIENT_SECRET", "client-secret");
+    const callbackUrl = "http://localhost:3000/api/connections/authorize-test/callback";
+    const startedA = await startMenuConnectionAuthorization(provider, callbackUrl, principal);
+    const startedB = await startMenuConnectionAuthorization(provider, callbackUrl, principalB);
+    const stateA = new URL(startedA.authorizeUrl).searchParams.get("state");
+    const stateB = new URL(startedB.authorizeUrl).searchParams.get("state");
+    expect(stateA).toBeTruthy();
+    expect(stateB).toBeTruthy();
+    expect(stateA).not.toBe(stateB);
+    expect(await pendingFileExists(provider.name, "user-a")).toBe(true);
+    expect(await pendingFileExists(provider.name, "user-b")).toBe(true);
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ access_token: "token-b", expires_in: 3600 }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          }),
+      ),
+    );
+    await expect(
+      completeMenuConnectionAuthorization(provider, { code: "code-b", state: stateB! }),
+    ).resolves.toEqual({ ok: true, displayName: "Authorize Test" });
+    expect(await pendingFileExists(provider.name, "user-a")).toBe(true);
+    expect(await pendingFileExists(provider.name, "user-b")).toBe(false);
+    await expect(getStoredAccessToken(provider, principalB)).resolves.toMatchObject({
+      token: "token-b",
+    });
+    await expect(getStoredAccessToken(provider, principal)).resolves.toBeNull();
   });
 });

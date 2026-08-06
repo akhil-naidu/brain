@@ -29,6 +29,12 @@ const pendingAuthorizationSchema = z
   })
   .strict();
 
+const pendingIndexSchema = z
+  .object({
+    byState: z.record(z.string(), z.string()),
+  })
+  .strict();
+
 export type PendingMenuAuthorization = z.infer<typeof pendingAuthorizationSchema>;
 
 export type MenuAuthorizeStartResult = {
@@ -41,19 +47,53 @@ export type MenuAuthorizeCompleteResult =
   | { readonly ok: true; readonly displayName: string }
   | { readonly ok: false; readonly error: string; readonly retryable: boolean };
 
-function pendingPath(name: string): string {
+/** Safe fragment for pending filenames (Better Auth ids are usually opaque alphanumerics). */
+export function sanitizeUserIdForPendingPath(userId: string): string {
+  const trimmed = userId.trim();
+  const sanitized = trimmed.replace(/[^a-zA-Z0-9._-]/g, "_");
+  return sanitized.slice(0, 128) || "user";
+}
+
+function legacyPendingPath(name: string): string {
   return path.join(process.cwd(), ".eve", `mcp-oauth-pending-${name}.json`);
 }
 
-async function writePending(name: string, pending: PendingMenuAuthorization): Promise<void> {
-  const file = pendingPath(name);
-  await mkdir(path.dirname(file), { recursive: true });
-  await writeFile(file, `${JSON.stringify(pending, null, 2)}\n`, "utf8");
+function pendingPathForUser(name: string, userId: string): string {
+  return path.join(
+    process.cwd(),
+    ".eve",
+    `mcp-oauth-pending-${name}-${sanitizeUserIdForPendingPath(userId)}.json`,
+  );
 }
 
-async function readPending(name: string): Promise<PendingMenuAuthorization | null> {
+function pendingIndexPath(name: string): string {
+  return path.join(process.cwd(), ".eve", `mcp-oauth-pending-index-${name}.json`);
+}
+
+async function readPendingIndex(name: string): Promise<Record<string, string>> {
   try {
-    const raw = await readFile(pendingPath(name), "utf8");
+    const raw = await readFile(pendingIndexPath(name), "utf8");
+    const parsed: unknown = JSON.parse(raw);
+    const result = pendingIndexSchema.safeParse(parsed);
+    return result.success ? result.data.byState : {};
+  } catch {
+    return {};
+  }
+}
+
+async function writePendingIndex(name: string, byState: Record<string, string>): Promise<void> {
+  const file = pendingIndexPath(name);
+  await mkdir(path.dirname(file), { recursive: true });
+  if (Object.keys(byState).length === 0) {
+    await rm(file, { force: true });
+    return;
+  }
+  await writeFile(file, `${JSON.stringify({ byState }, null, 2)}\n`, "utf8");
+}
+
+async function readPendingFile(filePath: string): Promise<PendingMenuAuthorization | null> {
+  try {
+    const raw = await readFile(filePath, "utf8");
     const parsed: unknown = JSON.parse(raw);
     const result = pendingAuthorizationSchema.safeParse(parsed);
     return result.success ? result.data : null;
@@ -62,8 +102,91 @@ async function readPending(name: string): Promise<PendingMenuAuthorization | nul
   }
 }
 
-async function clearPending(name: string): Promise<void> {
-  await rm(pendingPath(name), { force: true });
+async function writePendingForUser(
+  name: string,
+  userId: string,
+  pending: PendingMenuAuthorization,
+): Promise<void> {
+  const file = pendingPathForUser(name, userId);
+  await mkdir(path.dirname(file), { recursive: true });
+  await writeFile(file, `${JSON.stringify(pending, null, 2)}\n`, "utf8");
+
+  const byState = await readPendingIndex(name);
+  for (const [state, owner] of Object.entries(byState)) {
+    if (owner === userId) {
+      delete byState[state];
+    }
+  }
+  byState[pending.state] = userId;
+  await writePendingIndex(name, byState);
+
+  // Drop legacy shared pending if it belonged to this user (or always after per-user write).
+  const legacy = await readPendingFile(legacyPendingPath(name));
+  if (legacy && legacy.principalId === userId) {
+    await rm(legacyPendingPath(name), { force: true });
+  }
+}
+
+async function readPendingForUser(
+  name: string,
+  userId: string,
+): Promise<PendingMenuAuthorization | null> {
+  const perUser = await readPendingFile(pendingPathForUser(name, userId));
+  if (perUser) {
+    return perUser;
+  }
+  const legacy = await readPendingFile(legacyPendingPath(name));
+  if (legacy && legacy.principalId === userId) {
+    return legacy;
+  }
+  return null;
+}
+
+async function readPendingByState(
+  name: string,
+  state: string | undefined,
+): Promise<PendingMenuAuthorization | null> {
+  if (!state) {
+    return null;
+  }
+
+  const byState = await readPendingIndex(name);
+  const userId = byState[state];
+  if (userId) {
+    const pending = await readPendingFile(pendingPathForUser(name, userId));
+    if (pending && verifyOAuthState(pending.state, state)) {
+      return pending;
+    }
+  }
+
+  const legacy = await readPendingFile(legacyPendingPath(name));
+  if (legacy && verifyOAuthState(legacy.state, state)) {
+    return legacy;
+  }
+
+  return null;
+}
+
+async function clearPendingForUser(name: string, userId: string): Promise<void> {
+  const pending = await readPendingForUser(name, userId);
+  await rm(pendingPathForUser(name, userId), { force: true });
+
+  const byState = await readPendingIndex(name);
+  let changed = false;
+  for (const [state, owner] of Object.entries(byState)) {
+    if (owner === userId || (pending && state === pending.state)) {
+      delete byState[state];
+      changed = true;
+    }
+  }
+  if (changed) {
+    await writePendingIndex(name, byState);
+  }
+
+  const legacy = await readPendingFile(legacyPendingPath(name));
+  if (legacy && legacy.principalId === userId) {
+    await rm(legacyPendingPath(name), { force: true });
+  }
 }
 
 /** Write redirect URI hint without opening a system browser (UI opens the URL). */
@@ -106,7 +229,7 @@ export async function startMenuConnectionAuthorization(
     state,
   });
 
-  await writePending(provider.name, {
+  await writePendingForUser(provider.name, principal.id, {
     verifier,
     clientId,
     clientSecret,
@@ -129,7 +252,7 @@ export async function completeMenuConnectionAuthorization(
   provider: McpOAuthProvider,
   params: Readonly<Record<string, string>>,
 ): Promise<MenuAuthorizeCompleteResult> {
-  const pending = await readPending(provider.name);
+  const pending = await readPendingByState(provider.name, params.state);
   if (!pending) {
     return { ok: false, error: "No pending sign-in for this connection.", retryable: true };
   }
@@ -140,8 +263,12 @@ export async function completeMenuConnectionAuthorization(
     issuer: pending.principalIssuer,
   };
 
+  const clearThis = async () => {
+    await clearPendingForUser(provider.name, pending.principalId);
+  };
+
   if (params.error) {
-    await clearPending(provider.name);
+    await clearThis();
     const accessDenied = params.error === "access_denied";
     return {
       ok: false,
@@ -151,13 +278,13 @@ export async function completeMenuConnectionAuthorization(
   }
 
   if (!verifyOAuthState(pending.state, params.state)) {
-    await clearPending(provider.name);
+    await clearThis();
     return { ok: false, error: "Sign-in state mismatch. Try Connect again.", retryable: true };
   }
 
   const code = params.code;
   if (!code) {
-    await clearPending(provider.name);
+    await clearThis();
     return { ok: false, error: "Missing authorization code.", retryable: true };
   }
 
@@ -170,10 +297,10 @@ export async function completeMenuConnectionAuthorization(
       clientSecret: pending.clientSecret,
     });
     await storeAccessToken(provider, principal, token);
-    await clearPending(provider.name);
+    await clearThis();
     return { ok: true, displayName: provider.displayName };
   } catch {
-    await clearPending(provider.name);
+    await clearThis();
     return { ok: false, error: "Could not finish sign-in. Try Connect again.", retryable: true };
   }
 }
@@ -182,12 +309,12 @@ export function menuConnectionCallbackUrl(origin: string, connectionId: string):
   return new URL(`/api/connections/${connectionId}/callback`, origin).toString();
 }
 
-/** Clear the signed-in principal token (and any pending menu OAuth) for a connection. */
+/** Clear the signed-in principal token (and that user’s pending menu OAuth) for a connection. */
 export async function disconnectMenuConnection(
   provider: McpOAuthProvider,
   principal: Extract<ConnectionPrincipal, { readonly type: "user" }>,
 ): Promise<{ readonly displayName: string }> {
   await deleteStoredToken(provider, principal);
-  await clearPending(provider.name);
+  await clearPendingForUser(provider.name, principal.id);
   return { displayName: provider.displayName };
 }
