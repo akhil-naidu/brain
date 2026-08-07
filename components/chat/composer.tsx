@@ -77,16 +77,17 @@ function AttachmentGlyph({
 
 export function ChatComposer({
   attachments = EMPTY_ATTACHMENTS,
-  autoFocus = true,
   className,
   disabled = false,
   disabledReason,
+  focusOnMount = true,
   footerStart,
   isBusy = false,
   isPreparing = false,
   maxLength = MAX_CHAT_MESSAGE_CHARS,
   onAddFiles,
   onChange,
+  onFocusChange,
   onRemoveAttachment,
   onStop,
   onSubmit,
@@ -94,16 +95,18 @@ export function ChatComposer({
   value,
 }: {
   readonly attachments?: readonly PendingAttachment[];
-  readonly autoFocus?: boolean;
   readonly className?: string;
   readonly disabled?: boolean;
   readonly disabledReason?: string;
+  readonly focusOnMount?: boolean;
   readonly footerStart?: ReactNode;
   readonly isBusy?: boolean;
   readonly isPreparing?: boolean;
   readonly maxLength?: number;
   readonly onAddFiles?: (files: readonly File[]) => void;
   readonly onChange: (value: string) => void;
+  /** Fires when the message textarea gains or loses focus (not toolbar menus). */
+  readonly onFocusChange?: (focused: boolean) => void;
   readonly onRemoveAttachment?: (id: string) => void;
   readonly onStop: () => void;
   readonly onSubmit: (value: string) => void | Promise<void>;
@@ -116,7 +119,7 @@ export function ChatComposer({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaDisabled = disabled || isBusy || isPreparing;
-  const shouldFocusOnMountRef = useRef(autoFocus && !textareaDisabled);
+  const shouldFocusOnMountRef = useRef(focusOnMount && !textareaDisabled);
   const trimmedValue = value.trim();
   const messageLength = getChatMessageLength(trimmedValue);
   const isOverMaxLength = messageLength > maxLength;
@@ -230,7 +233,7 @@ export function ChatComposer({
   const form = (
     <form
       className={cn(
-        "border-border/50 bg-muted/30 focus-within:border-border/80 focus-within:bg-muted/40 dark:bg-muted/25 dark:focus-within:bg-muted/35 min-w-0 rounded-3xl border shadow-md transition-[border-color,background-color,box-shadow]",
+        "border-border/50 bg-muted/30 dark:bg-muted/25 has-[[data-chat-composer-input]:focus]:border-border/80 has-[[data-chat-composer-input]:focus]:bg-muted/40 dark:has-[[data-chat-composer-input]:focus]:bg-muted/35 min-w-0 rounded-3xl border shadow-md transition-[border-color,background-color,box-shadow] duration-300 ease-out has-[[data-chat-composer-input]:focus]:shadow-lg",
         className,
       )}
       aria-describedby={disabledReason ? disabledReasonId : undefined}
@@ -284,10 +287,13 @@ export function ChatComposer({
       </label>
       <textarea
         aria-describedby={disabledReason ? disabledReasonId : undefined}
-        className="placeholder:text-muted-foreground/50 max-h-56 min-h-12 w-full resize-none overflow-y-auto bg-transparent px-4 pt-3.5 pb-2 text-base leading-6 outline-none disabled:cursor-not-allowed disabled:opacity-60 md:text-[15px]"
+        className="placeholder:text-muted-foreground/50 max-h-56 min-h-12 w-full resize-none overflow-y-auto bg-transparent px-4 pt-3.5 pb-2 text-base leading-6 outline-none transition-[min-height] duration-300 ease-out focus:min-h-16 disabled:cursor-not-allowed disabled:opacity-60 md:text-[15px]"
         data-chat-composer-input
         disabled={textareaDisabled}
         id={composerId}
+        onBlur={() => {
+          onFocusChange?.(false);
+        }}
         onChange={(event) => onChange(event.target.value)}
         onDragOver={(event) => {
           if (onAddFiles && !textareaDisabled) {
@@ -295,6 +301,9 @@ export function ChatComposer({
           }
         }}
         onDrop={handleDrop}
+        onFocus={() => {
+          onFocusChange?.(true);
+        }}
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
         placeholder={placeholder}

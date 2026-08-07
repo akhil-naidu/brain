@@ -168,7 +168,7 @@ function ComposerHarness({
 
   return (
     <ChatComposer
-      autoFocus={false}
+      focusOnMount={false}
       maxLength={maxLength}
       onChange={setValue}
       onStop={() => undefined}

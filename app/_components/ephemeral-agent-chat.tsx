@@ -57,7 +57,7 @@ import {
 import { timestampForTurn } from "@/lib/chat/message-timestamp";
 import { canOfferRetry, getLastUserMessage, getRetryableUserPrompt } from "@/lib/chat/retry-prompt";
 import { createTurnClientContext } from "@/lib/chat/turn-client-context";
-
+import { cn } from "@/lib/utils";
 type CancellationState = "idle" | "requested" | "cancelling";
 
 type Cancellation = {
@@ -133,6 +133,7 @@ export function EphemeralAgentChat({
   const { playbooks, savePlaybook, deletePlaybook } = usePlaybooks();
   const [schedulesOpen, setSchedulesOpen] = useState(false);
   const [schedulesRefreshKey, setSchedulesRefreshKey] = useState(0);
+  const [composerFocused, setComposerFocused] = useState(false);
   const [attachments, setAttachments] = useState<readonly PendingAttachment[]>([]);
   const seedEvents = initialEvents ?? EMPTY_EVENTS;
   const [session] = useState(() =>
@@ -867,8 +868,11 @@ export function EphemeralAgentChat({
     }
   }, [visibleError]);
 
+  const isEmptyThread = messages.length === 0;
+  const dimEmptyChrome = isEmptyThread && composerFocused && !missingApiKey;
+
   return (
-    <div className="bg-background text-foreground flex h-full min-h-0 flex-1 flex-col">
+    <div className="bg-background text-foreground relative flex h-full min-h-0 flex-1 flex-col">
       {visibleError ? (
         <ErrorToast
           message={visibleError.message}
@@ -879,12 +883,12 @@ export function EphemeralAgentChat({
       <ChatConversation className="min-h-0 flex-1">
         <ChatConversationContent
           className={
-            messages.length === 0
+            isEmptyThread
               ? "mx-auto flex min-h-full w-full max-w-3xl flex-col justify-center px-4 py-8 sm:px-6"
               : "mx-auto w-full max-w-3xl gap-5 px-4 py-5 sm:px-6"
           }
         >
-          {messages.length === 0 ? (
+          {isEmptyThread ? (
             <div className="relative flex flex-1 items-center justify-center">
               <div
                 aria-hidden
@@ -911,30 +915,37 @@ export function EphemeralAgentChat({
                     <p className="text-muted-foreground mx-auto mt-2 max-w-sm text-sm leading-relaxed">
                       Ask across your connected work apps — tasks, mail, Slack, deploys, and more.
                     </p>
-                    <WelcomePrompts
-                      className="mt-8"
-                      onSelect={(prompt) => {
-                        void handleSubmit(prompt);
-                      }}
-                      prompts={WELCOME_PROMPTS}
-                    />
-                    <PlaybooksPanel
-                      className="mt-7"
-                      onDelete={deletePlaybook}
-                      onRun={(prompt) => {
-                        void handleSubmit(prompt);
-                      }}
-                      onSave={savePlaybook}
-                      onScheduled={
-                        onOpenChat
-                          ? () => {
-                              setSchedulesRefreshKey((value) => value + 1);
-                              setSchedulesOpen(true);
-                            }
-                          : undefined
-                      }
-                      playbooks={playbooks}
-                    />
+                    <div
+                      className={cn(
+                        "transition-opacity duration-300 ease-out",
+                        dimEmptyChrome && "opacity-70",
+                      )}
+                    >
+                      <WelcomePrompts
+                        className="mt-8"
+                        onSelect={(prompt) => {
+                          void handleSubmit(prompt);
+                        }}
+                        prompts={WELCOME_PROMPTS}
+                      />
+                      <PlaybooksPanel
+                        className="mt-7"
+                        onDelete={deletePlaybook}
+                        onRun={(prompt) => {
+                          void handleSubmit(prompt);
+                        }}
+                        onSave={savePlaybook}
+                        onScheduled={
+                          onOpenChat
+                            ? () => {
+                                setSchedulesRefreshKey((value) => value + 1);
+                                setSchedulesOpen(true);
+                              }
+                            : undefined
+                        }
+                        playbooks={playbooks}
+                      />
+                    </div>
                   </>
                 )}
               </div>
@@ -997,6 +1008,7 @@ export function EphemeralAgentChat({
                     ? "Stopping…"
                     : undefined))
             }
+            focusOnMount={!isEmptyThread}
             footerStart={
               <div className="flex min-w-0 items-center gap-0.5">
                 <IntegrationsMenu
@@ -1037,6 +1049,9 @@ export function EphemeralAgentChat({
             isBusy={isBusy}
             onAddFiles={handleAddFiles}
             onChange={onDraftChange}
+            onFocusChange={(focused) => {
+              setComposerFocused(isEmptyThread ? focused : false);
+            }}
             onRemoveAttachment={(id) => {
               setAttachments((previous) => previous.filter((item) => item.id !== id));
             }}
