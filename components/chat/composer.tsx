@@ -230,7 +230,7 @@ export function ChatComposer({
   const form = (
     <form
       className={cn(
-        "border-border/70 bg-card/95 focus-within:border-foreground/25 focus-within:ring-foreground/10 dark:bg-muted/40 dark:focus-within:border-foreground/30 min-w-0 rounded-2xl border shadow-sm transition-[border-color,box-shadow] focus-within:ring-2 dark:focus-within:ring-white/10",
+        "border-border/50 bg-muted/30 focus-within:border-border/80 focus-within:bg-muted/40 dark:bg-muted/25 dark:focus-within:bg-muted/35 min-w-0 rounded-3xl border shadow-md transition-[border-color,background-color,box-shadow]",
         className,
       )}
       aria-describedby={disabledReason ? disabledReasonId : undefined}
@@ -238,10 +238,10 @@ export function ChatComposer({
       onSubmit={handleSubmit}
     >
       {attachments.length > 0 ? (
-        <ul className="flex flex-wrap gap-2 px-3 pt-3 sm:px-3.5">
+        <ul className="flex flex-wrap gap-2 px-3.5 pt-3.5 sm:px-4">
           {attachments.map((file) => (
             <li
-              className="border-border/60 bg-muted/35 flex max-w-full items-center gap-2 rounded-xl border py-1.5 pr-1 pl-1.5"
+              className="border-border/50 bg-background/50 flex max-w-full items-center gap-2 rounded-2xl border py-1.5 pr-1 pl-1.5"
               key={file.id}
             >
               {file.mediaType.startsWith("image/") ? (
@@ -284,7 +284,7 @@ export function ChatComposer({
       </label>
       <textarea
         aria-describedby={disabledReason ? disabledReasonId : undefined}
-        className="placeholder:text-muted-foreground/50 dark:placeholder:text-muted-foreground/55 max-h-56 min-h-11 w-full resize-none overflow-y-auto bg-transparent px-3.5 pt-3 pb-1.5 text-base leading-6 outline-none disabled:cursor-not-allowed disabled:opacity-60 sm:px-4 md:text-[15px]"
+        className="placeholder:text-muted-foreground/50 max-h-56 min-h-12 w-full resize-none overflow-y-auto bg-transparent px-4 pt-3.5 pb-2 text-base leading-6 outline-none disabled:cursor-not-allowed disabled:opacity-60 md:text-[15px]"
         data-chat-composer-input
         disabled={textareaDisabled}
         id={composerId}
@@ -302,7 +302,7 @@ export function ChatComposer({
         rows={1}
         value={value}
       />
-      <div className="flex min-h-10 items-center justify-between gap-2 px-2.5 pt-0.5 pb-2 sm:gap-2.5 sm:px-3">
+      <div className="flex items-center justify-between gap-2 px-2.5 pt-0.5 pb-2.5 sm:px-3">
         <div className="flex min-w-0 flex-1 scrollbar-none items-center gap-0.5 overflow-x-auto">
           {footerStart}
         </div>
@@ -336,7 +336,7 @@ export function ChatComposer({
               <IconTooltip label="Attach image, PDF, or text" side="top">
                 <button
                   aria-label="Attach file"
-                  className="text-muted-foreground/70 hover:bg-muted/55 hover:text-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors disabled:pointer-events-none disabled:opacity-50"
+                  className="text-muted-foreground/65 hover:bg-background/45 hover:text-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-full transition-colors disabled:pointer-events-none disabled:opacity-50"
                   disabled={textareaDisabled}
                   onClick={() => fileInputRef.current?.click()}
                   type="button"
@@ -350,7 +350,7 @@ export function ChatComposer({
             <IconTooltip label={disabledReason === "Stopping…" ? "Stopping…" : "Stop"} side="top">
               <Button
                 aria-label={disabledReason === "Stopping…" ? "Stopping response" : "Stop response"}
-                className="bg-foreground/15 text-foreground hover:bg-foreground/25 size-8 cursor-pointer rounded-lg shadow-none"
+                className="bg-foreground/12 text-foreground hover:bg-foreground/20 size-8 cursor-pointer rounded-full shadow-none"
                 onClick={onStop}
                 size="icon-sm"
                 type="button"
@@ -362,7 +362,7 @@ export function ChatComposer({
             <IconTooltip label="Preparing…" side="top">
               <Button
                 aria-label="Preparing chat"
-                className="bg-foreground/80 text-background size-8 rounded-lg"
+                className="bg-foreground/80 text-background size-8 rounded-full"
                 disabled
                 size="icon-sm"
                 type="button"
@@ -374,7 +374,7 @@ export function ChatComposer({
             <IconTooltip label="Send" side="top">
               <Button
                 aria-label="Send message"
-                className="bg-foreground text-background hover:bg-foreground/90 size-8 cursor-pointer rounded-lg shadow-sm disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-25 disabled:shadow-none"
+                className="bg-foreground text-background hover:bg-foreground/90 disabled:bg-foreground/12 disabled:text-muted-foreground size-8 cursor-pointer rounded-full shadow-none disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-100"
                 disabled={!canSubmit}
                 size="icon-sm"
                 type="submit"

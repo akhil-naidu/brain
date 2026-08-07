@@ -59,7 +59,7 @@ export function PlaybooksMenu({
             <button
               aria-label="Playbooks"
               className={cn(
-                "text-muted-foreground/60 hover:bg-muted/50 hover:text-foreground focus-visible:bg-muted/50 focus-visible:text-foreground dark:text-muted-foreground/50 inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50",
+                "text-muted-foreground/65 hover:bg-background/45 hover:text-foreground focus-visible:bg-background/45 focus-visible:text-foreground dark:text-muted-foreground/55 inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50",
               )}
               disabled={disabled}
               type="button"
