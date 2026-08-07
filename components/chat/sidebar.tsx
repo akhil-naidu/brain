@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  ArrowUpRightIcon,
   BookmarkIcon,
   CalendarClockIcon,
   ChevronDownIcon,
@@ -13,11 +12,12 @@ import {
   SearchIcon,
   Trash2Icon,
   UsersIcon,
+  XIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { usePlaybooks } from "@/components/chat/use-playbooks";
+import { WorkspaceSwitcher } from "@/components/chat/workspace-switcher";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
@@ -27,78 +27,16 @@ import {
   newChatShortcutLabel,
   toggleSidebarShortcutLabel,
 } from "@/lib/chat/keyboard";
-import { formatScheduleTimeValue } from "@/lib/chat/schedule-defaults";
-import { fetchScheduledBrief } from "@/lib/chat/scheduled-brief-api";
-import { listScheduledPlaybooks, type ScheduledPlaybook } from "@/lib/chat/scheduled-playbooks-api";
-import { WorkspaceSwitcher } from "@/components/chat/workspace-switcher";
-import { SCHEDULES_CHANGED_EVENT } from "@/lib/chat/schedule-events";
 import {
-  DEFAULT_SIDEBAR_SECTIONS,
-  readSidebarSections,
-  writeSidebarSections,
-  type SidebarSectionsState,
-} from "@/lib/chat/sidebar-sections";
+  DEFAULT_SIDEBAR_RECENT,
+  clampSidebarRecentHeight,
+  readSidebarRecent,
+  writeSidebarRecent,
+  type SidebarRecentState,
+} from "@/lib/chat/sidebar-recent";
 import { DEFAULT_CHAT_TITLE } from "@/lib/chat/title";
 import type { ChatSummary } from "@/lib/chat/store/types";
 import { cn } from "@/lib/utils";
-
-const SIDEBAR_LIST_PREVIEW = 3;
-
-function SidebarSection({
-  actions,
-  active = false,
-  children,
-  className,
-  contentClassName,
-  onOpenChange,
-  open,
-  title,
-}: {
-  readonly actions?: ReactNode;
-  readonly active?: boolean;
-  readonly children: ReactNode;
-  readonly className?: string;
-  readonly contentClassName?: string;
-  readonly onOpenChange: (open: boolean) => void;
-  readonly open: boolean;
-  readonly title: string;
-}) {
-  return (
-    <Collapsible
-      className={cn("border-border/50 flex min-h-0 flex-col border-b", className)}
-      onOpenChange={onOpenChange}
-      open={open}
-    >
-      <div
-        className={cn(
-          "flex h-7 shrink-0 items-center gap-0.5 px-0.5",
-          active ? "bg-muted/45" : "bg-muted/25",
-        )}
-      >
-        <CollapsibleTrigger
-          className={cn(
-            "hover:text-foreground flex min-w-0 flex-1 cursor-pointer items-center gap-1 rounded-sm px-1.5 py-1 text-left text-[11px] font-semibold tracking-wide uppercase",
-            active ? "text-foreground" : "text-muted-foreground",
-          )}
-        >
-          <ChevronDownIcon
-            className={cn(
-              "size-3.5 shrink-0 opacity-70 transition-transform",
-              open ? "rotate-0" : "-rotate-90",
-            )}
-          />
-          <span className="truncate">{title}</span>
-        </CollapsibleTrigger>
-        {actions ? (
-          <div className="flex shrink-0 items-center gap-0.5 pr-0.5">{actions}</div>
-        ) : null}
-      </div>
-      <CollapsibleContent className={cn("min-h-0 data-[state=closed]:hidden", contentClassName)}>
-        {children}
-      </CollapsibleContent>
-    </Collapsible>
-  );
-}
 
 function compactNavClass(active: boolean) {
   return cn(
@@ -106,6 +44,34 @@ function compactNavClass(active: boolean) {
     active
       ? "bg-muted text-foreground hover:bg-muted hover:text-foreground"
       : "text-muted-foreground",
+  );
+}
+
+function SidebarNavLink({
+  active,
+  href,
+  icon: Icon,
+  label,
+}: {
+  readonly active: boolean;
+  readonly href: string;
+  readonly icon: typeof BookmarkIcon;
+  readonly label: string;
+}) {
+  return (
+    <Link
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "flex h-8 items-center gap-2 rounded-md px-2 text-[13px] transition-colors",
+        active
+          ? "bg-muted text-foreground font-medium"
+          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+      )}
+      href={href}
+    >
+      <Icon className="size-3.5 shrink-0 opacity-80" />
+      <span className="truncate">{label}</span>
+    </Link>
   );
 }
 
@@ -123,7 +89,6 @@ export function ChatSidebar({
   onNewSharedChat,
   onRenameChat,
   onShareChat,
-  onRunPlaybook,
   onSelectChat,
   onToggleSidebar,
   searchFocusRequest = 0,
@@ -159,65 +124,48 @@ export function ChatSidebar({
   const showDraftRow = showChatDraft && !activeChatId;
   const draftTitle =
     currentTitle?.trim() || (draftVisibility === "shared" ? "New shared chat" : DEFAULT_CHAT_TITLE);
-  const shortcutLabel = newChatShortcutLabel();
-  const searchShortcutLabel = focusChatSearchShortcutLabel();
-  const sidebarShortcutLabel = toggleSidebarShortcutLabel();
+  const [mounted, setMounted] = useState(false);
   const [query, setQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [recent, setRecent] = useState<SidebarRecentState>(DEFAULT_SIDEBAR_RECENT);
+  const [resizingRecent, setResizingRecent] = useState(false);
   const editingIdRef = useRef<string | null>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const recentDragRef = useRef<{ startY: number; startHeight: number } | null>(null);
   const filteredChats = filterChatsByTitle(chats, query);
   const hasActiveQuery = query.trim().length > 0;
-  const { playbooks } = usePlaybooks();
-  const [schedules, setSchedules] = useState<readonly ScheduledPlaybook[]>([]);
-  const [morningBriefEnabled, setMorningBriefEnabled] = useState(false);
-  const [sections, setSections] = useState<SidebarSectionsState>(DEFAULT_SIDEBAR_SECTIONS);
+  // Defer platform-specific labels to avoid SSR/client hydration mismatches.
+  const shortcutLabel = mounted ? newChatShortcutLabel() : "";
+  const searchShortcutLabel = mounted ? focusChatSearchShortcutLabel() : "";
+  const sidebarShortcutLabel = mounted ? toggleSidebarShortcutLabel() : "";
+  const newChatLabel = shortcutLabel ? `New chat (${shortcutLabel})` : "New chat";
+  const collapseLabel = sidebarShortcutLabel
+    ? `Collapse sidebar (${sidebarShortcutLabel})`
+    : "Collapse sidebar";
+  const expandLabel = sidebarShortcutLabel
+    ? `Expand sidebar (${sidebarShortcutLabel})`
+    : "Expand sidebar";
+  const searchTitle = searchShortcutLabel
+    ? `Search chats (${searchShortcutLabel})`
+    : "Search chats";
 
-  useEffect(() => {
-    setSections(readSidebarSections());
-  }, []);
-
-  const setSectionOpen = (key: keyof SidebarSectionsState, open: boolean) => {
-    setSections((previous) => {
-      const next = { ...previous, [key]: open };
-      writeSidebarSections(next);
+  const updateRecent = (patch: Partial<SidebarRecentState>) => {
+    setRecent((previous) => {
+      const next = {
+        open: patch.open ?? previous.open,
+        heightPx: clampSidebarRecentHeight(patch.heightPx ?? previous.heightPx),
+      };
+      writeSidebarRecent(next);
       return next;
     });
   };
 
   useEffect(() => {
-    let cancelled = false;
-    const refreshSchedules = () => {
-      void (async () => {
-        try {
-          const [listed, brief] = await Promise.all([
-            listScheduledPlaybooks(),
-            fetchScheduledBrief(),
-          ]);
-          if (cancelled) {
-            return;
-          }
-          setSchedules(listed);
-          setMorningBriefEnabled(brief.schedule.enabled);
-        } catch {
-          if (!cancelled) {
-            setSchedules([]);
-            setMorningBriefEnabled(false);
-          }
-        }
-      })();
-    };
-    refreshSchedules();
-    window.addEventListener(SCHEDULES_CHANGED_EVENT, refreshSchedules);
-    window.addEventListener("focus", refreshSchedules);
-    return () => {
-      cancelled = true;
-      window.removeEventListener(SCHEDULES_CHANGED_EVENT, refreshSchedules);
-      window.removeEventListener("focus", refreshSchedules);
-    };
-  }, [pathname, sections.schedules]);
+    setMounted(true);
+    setRecent(readSidebarRecent());
+  }, []);
 
   useEffect(() => {
     if (!editingId) {
@@ -231,7 +179,14 @@ export function ChatSidebar({
     if (searchFocusRequest <= 0) {
       return undefined;
     }
-    setSectionOpen("chats", true);
+    setRecent((previous) => {
+      if (previous.open) {
+        return previous;
+      }
+      const next = { ...previous, open: true };
+      writeSidebarRecent(next);
+      return next;
+    });
     const frame = window.requestAnimationFrame(() => {
       searchInputRef.current?.focus();
       searchInputRef.current?.select();
@@ -240,6 +195,39 @@ export function ChatSidebar({
       window.cancelAnimationFrame(frame);
     };
   }, [searchFocusRequest]);
+
+  useEffect(() => {
+    if (!resizingRecent) {
+      return undefined;
+    }
+    const onMove = (event: PointerEvent) => {
+      const drag = recentDragRef.current;
+      if (!drag) {
+        return;
+      }
+      // Dragging the handle upward increases the recent panel height.
+      const nextHeight = clampSidebarRecentHeight(drag.startHeight + (drag.startY - event.clientY));
+      setRecent((previous) => ({ ...previous, heightPx: nextHeight }));
+    };
+    const onUp = () => {
+      recentDragRef.current = null;
+      setResizingRecent(false);
+      setRecent((previous) => {
+        writeSidebarRecent(previous);
+        return previous;
+      });
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    document.body.style.cursor = "row-resize";
+    document.body.style.userSelect = "none";
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [resizingRecent]);
 
   const beginRename = (chat: ChatSummary) => {
     editingIdRef.current = chat.id;
@@ -262,9 +250,6 @@ export function ChatSidebar({
     void onRenameChat(chatId, next);
   };
 
-  const previewPlaybooks = playbooks.slice(0, SIDEBAR_LIST_PREVIEW);
-  const previewSchedules = schedules.slice(0, SIDEBAR_LIST_PREVIEW);
-
   if (compact) {
     return (
       <aside
@@ -280,11 +265,11 @@ export function ChatSidebar({
         <div className="flex w-full flex-col items-center px-1 py-2">
           {onToggleSidebar ? (
             <Button
-              aria-label={`Expand sidebar (${sidebarShortcutLabel})`}
+              aria-label={expandLabel}
               className="text-muted-foreground/55 hover:text-muted-foreground"
               onClick={onToggleSidebar}
               size="icon-sm"
-              title={`Expand sidebar (${sidebarShortcutLabel})`}
+              title={expandLabel}
               type="button"
               variant="ghost"
             >
@@ -292,11 +277,11 @@ export function ChatSidebar({
             </Button>
           ) : null}
           <Button
-            aria-label={`New chat (${shortcutLabel})`}
+            aria-label={newChatLabel}
             className="text-muted-foreground mt-1"
             onClick={onNewChat}
             size="icon-sm"
-            title={`New chat (${shortcutLabel})`}
+            title={newChatLabel}
             type="button"
             variant="ghost"
           >
@@ -379,326 +364,290 @@ export function ChatSidebar({
         className,
       )}
     >
-      <div className="border-border/50 flex shrink-0 flex-col gap-2 border-b px-2 py-2">
-        <div className="flex items-center justify-between gap-1">
+      <div className="flex shrink-0 flex-col px-3 pt-3 pb-3">
+        <div className="flex h-8 items-center justify-between gap-1">
           <div className="text-foreground min-w-0 flex-1 text-sm font-medium">{brand}</div>
           {onToggleSidebar ? (
             <Button
-              aria-label={`Collapse sidebar (${sidebarShortcutLabel})`}
-              className="text-muted-foreground/55 hover:text-muted-foreground shrink-0"
+              aria-label={collapseLabel}
+              className="text-muted-foreground/55 hover:text-muted-foreground size-7 shrink-0"
               onClick={onToggleSidebar}
               size="icon-sm"
-              title={`Collapse sidebar (${sidebarShortcutLabel})`}
+              title={collapseLabel}
               type="button"
               variant="ghost"
             >
-              <PanelLeftIcon className="size-4" />
+              <PanelLeftIcon className="size-3.5" />
             </Button>
           ) : null}
         </div>
-        <WorkspaceSwitcher />
+
+        <div className="mt-2.5">
+          <WorkspaceSwitcher />
+        </div>
+
+        <div className="mt-4 flex items-center gap-1.5">
+          <Button
+            aria-label={newChatLabel}
+            className="border-border/80 bg-muted/40 hover:bg-muted/70 text-foreground h-8 min-w-0 flex-1 justify-start gap-1.5 rounded-md px-2.5 text-[13px] shadow-none"
+            onClick={onNewChat}
+            title={newChatLabel}
+            type="button"
+            variant="outline"
+          >
+            <PlusIcon className="size-3.5" />
+            <span className="min-w-0 flex-1 truncate text-left">New chat</span>
+          </Button>
+          {canCreateShared && onNewSharedChat ? (
+            <Button
+              aria-label="New shared chat"
+              className="text-muted-foreground border-border/80 bg-muted/25 hover:bg-muted/50 size-8 shrink-0 rounded-md shadow-none"
+              onClick={onNewSharedChat}
+              size="icon-sm"
+              title="New shared chat"
+              type="button"
+              variant="outline"
+            >
+              <UsersIcon className="size-3.5" />
+            </Button>
+          ) : null}
+        </div>
+
+        <nav aria-label="Workspace" className="mt-4 flex flex-col gap-0.5">
+          <SidebarNavLink
+            active={chatsActive}
+            href="/chat"
+            icon={MessageSquareIcon}
+            label="Chats"
+          />
+          <SidebarNavLink
+            active={playbooksActive}
+            href="/playbooks"
+            icon={BookmarkIcon}
+            label="Playbooks"
+          />
+          <SidebarNavLink
+            active={schedulesActive}
+            href="/schedules"
+            icon={CalendarClockIcon}
+            label="Schedules"
+          />
+          <SidebarNavLink active={toolsActive} href="/tools" icon={HammerIcon} label="Tools" />
+        </nav>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col">
-        <SidebarSection
-          actions={
-            <>
-              {canCreateShared && onNewSharedChat ? (
-                <Button
-                  aria-label="New shared chat"
-                  className="text-muted-foreground/70 hover:text-foreground size-6"
-                  onClick={onNewSharedChat}
-                  size="icon-sm"
-                  title="New shared chat"
+      <div aria-hidden className="min-h-2 flex-1" />
+
+      <Collapsible
+        className="border-border/60 relative shrink-0 border-t"
+        onOpenChange={(open) => updateRecent({ open })}
+        open={recent.open}
+      >
+        {recent.open ? (
+          <div
+            aria-label="Resize recent chats"
+            aria-orientation="horizontal"
+            className={cn(
+              "absolute -top-1.5 right-0 left-0 z-10 h-3 cursor-row-resize",
+              resizingRecent && "bg-border/40",
+            )}
+            onPointerDown={(event) => {
+              event.preventDefault();
+              recentDragRef.current = {
+                startY: event.clientY,
+                startHeight: recent.heightPx,
+              };
+              setResizingRecent(true);
+            }}
+            role="separator"
+            title="Drag to resize"
+          />
+        ) : null}
+
+        <div className="flex items-center gap-1 px-3 py-2">
+          <CollapsibleTrigger asChild>
+            <button
+              aria-label={recent.open ? "Collapse recent chats" : "Expand recent chats"}
+              className="text-muted-foreground hover:text-foreground flex min-w-0 flex-1 cursor-pointer items-center gap-1 rounded-md px-0.5 py-0.5 text-left"
+              type="button"
+            >
+              <span className="text-[11px] font-medium tracking-wide uppercase">Recent</span>
+              <ChevronDownIcon
+                className={cn(
+                  "size-3.5 shrink-0 transition-transform",
+                  recent.open ? "rotate-0" : "-rotate-90",
+                )}
+              />
+            </button>
+          </CollapsibleTrigger>
+        </div>
+
+        <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-none data-[state=open]:animate-none">
+          <div className="flex flex-col px-3 pb-3" style={{ height: recent.heightPx }}>
+            <div className="relative mb-2.5 shrink-0">
+              <SearchIcon className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
+              <Input
+                aria-label="Search chats"
+                className={cn(
+                  "border-border/80 bg-muted/25 hover:bg-muted/40 focus-visible:bg-background h-8 rounded-md pl-8 text-xs shadow-none",
+                  hasActiveQuery ? "pr-8" : searchShortcutLabel ? "pr-10" : "pr-3",
+                )}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search chats"
+                ref={searchInputRef}
+                title={searchTitle}
+                type="search"
+                value={query}
+              />
+              {hasActiveQuery ? (
+                <button
+                  aria-label="Clear search"
+                  className="text-muted-foreground hover:text-foreground absolute top-1/2 right-1.5 inline-flex size-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md"
+                  onClick={() => {
+                    setQuery("");
+                    searchInputRef.current?.focus();
+                  }}
                   type="button"
-                  variant="ghost"
                 >
-                  <UsersIcon className="size-3.5" />
-                </Button>
-              ) : null}
-              <Button
-                aria-label={`New chat (${shortcutLabel})`}
-                className="text-muted-foreground/70 hover:text-foreground size-6"
-                onClick={onNewChat}
-                size="icon-sm"
-                title={`New chat (${shortcutLabel})`}
-                type="button"
-                variant="ghost"
-              >
-                <PlusIcon className="size-3.5" />
-              </Button>
-            </>
-          }
-          active={chatsActive}
-          className={cn(sections.chats && "min-h-0 flex-1")}
-          contentClassName="flex min-h-0 flex-1 flex-col"
-          onOpenChange={(open) => setSectionOpen("chats", open)}
-          open={sections.chats}
-          title="Chats"
-        >
-          <div className="relative shrink-0 px-2 pt-2 pb-1.5">
-            <SearchIcon className="text-muted-foreground pointer-events-none absolute top-1/2 left-4 size-3.5 -translate-y-1/2" />
-            <Input
-              aria-label="Search chats"
-              className="border-border/60 bg-background/50 h-7 pr-11 pl-8 text-xs shadow-none"
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search"
-              ref={searchInputRef}
-              title={`Search chats (${searchShortcutLabel})`}
-              type="search"
-              value={query}
-            />
-            <span className="text-muted-foreground/50 pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-[10px] tracking-wide">
-              {searchShortcutLabel}
-            </span>
-          </div>
-          <div className="min-h-0 flex-1 overflow-y-auto px-1 pb-1">
-            {showDraftRow ? (
-              <div
-                aria-current="page"
-                className="bg-muted/60 text-foreground mb-0.5 rounded-sm px-2 py-1.5 text-[13px]"
-              >
-                <span className="flex min-w-0 items-center gap-1.5">
-                  <span className="line-clamp-1 min-w-0 flex-1">{draftTitle}</span>
-                  {draftVisibility === "shared" ? (
-                    <span
-                      className="text-muted-foreground/70 shrink-0 text-[10px] tracking-wide uppercase"
-                      title="Shared with workspace"
-                    >
-                      Shared
-                    </span>
-                  ) : null}
+                  <XIcon className="size-3.5" />
+                </button>
+              ) : searchShortcutLabel ? (
+                <span className="text-muted-foreground/50 pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-[10px] tracking-wide">
+                  {searchShortcutLabel}
                 </span>
-              </div>
-            ) : null}
-            {chats.length === 0 && !showDraftRow && !hasActiveQuery ? (
-              <p className="text-muted-foreground/70 px-2 py-2 text-xs">No chats yet</p>
-            ) : null}
-            {hasActiveQuery && filteredChats.length === 0 ? (
-              <p className="text-muted-foreground/70 px-2 py-2 text-xs">No chats match</p>
-            ) : null}
-            <ul className="flex flex-col">
-              {filteredChats.map((chat) => {
-                const selected = chat.id === activeChatId;
-                const editing = editingId === chat.id;
-                return (
-                  <li key={chat.id}>
-                    <div
-                      className={cn(
-                        "group flex items-center gap-0.5 rounded-sm",
-                        selected ? "bg-muted/70" : "hover:bg-muted/40",
-                      )}
-                    >
-                      {editing ? (
-                        <input
-                          aria-label={`Rename ${chat.title}`}
-                          className="border-border bg-background text-foreground focus-visible:ring-ring/50 mx-1 my-0.5 min-w-0 flex-1 rounded-sm border px-1.5 py-1 text-[13px] outline-none focus-visible:ring-2"
-                          onBlur={() => commitRename(chat.id)}
-                          onChange={(event) => setEditValue(event.target.value)}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter") {
-                              event.preventDefault();
-                              commitRename(chat.id);
-                            } else if (event.key === "Escape") {
-                              event.preventDefault();
-                              cancelRename();
-                            }
-                          }}
-                          ref={renameInputRef}
-                          value={editValue}
-                        />
-                      ) : (
-                        <button
-                          aria-current={selected ? "page" : undefined}
-                          className={cn(
-                            "min-w-0 flex-1 cursor-pointer px-2 py-1.5 text-left text-[13px]",
-                            selected
-                              ? "text-foreground"
-                              : "text-muted-foreground hover:text-foreground",
-                          )}
-                          onClick={() => onSelectChat(chat.id)}
-                          type="button"
-                        >
-                          <span className="flex min-w-0 items-center gap-1.5">
-                            <span className="line-clamp-1 min-w-0 flex-1">{chat.title}</span>
-                            {chat.visibility === "shared" ? (
-                              <span
-                                className="text-muted-foreground/70 shrink-0 text-[10px] tracking-wide uppercase"
-                                title="Shared with workspace"
+              ) : null}
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto px-0.5">
+              {showDraftRow ? (
+                <div
+                  aria-current="page"
+                  className="bg-muted text-foreground mb-0.5 rounded-md px-2 py-1.5 text-[13px]"
+                >
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span className="line-clamp-1 min-w-0 flex-1">{draftTitle}</span>
+                    {draftVisibility === "shared" ? (
+                      <span
+                        className="text-muted-foreground/70 shrink-0 text-[10px] tracking-wide uppercase"
+                        title="Shared with workspace"
+                      >
+                        Shared
+                      </span>
+                    ) : null}
+                  </span>
+                </div>
+              ) : null}
+              {chats.length === 0 && !showDraftRow && !hasActiveQuery ? (
+                <p className="text-muted-foreground/70 px-2.5 py-3 text-xs">No chats yet</p>
+              ) : null}
+              {hasActiveQuery && filteredChats.length === 0 ? (
+                <p className="text-muted-foreground/70 px-2.5 py-3 text-xs">No chats match</p>
+              ) : null}
+              <ul className="flex flex-col gap-0.5">
+                {filteredChats.map((chat) => {
+                  const selected = chat.id === activeChatId;
+                  const editing = editingId === chat.id;
+                  return (
+                    <li key={chat.id}>
+                      <div
+                        className={cn(
+                          "group flex items-center gap-0.5 rounded-md",
+                          selected ? "bg-muted" : "hover:bg-muted/45",
+                        )}
+                      >
+                        {editing ? (
+                          <input
+                            aria-label={`Rename ${chat.title}`}
+                            className="border-border bg-background text-foreground focus-visible:ring-ring/50 mx-1 my-0.5 min-w-0 flex-1 rounded-md border px-1.5 py-1 text-[13px] outline-none focus-visible:ring-2"
+                            onBlur={() => commitRename(chat.id)}
+                            onChange={(event) => setEditValue(event.target.value)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") {
+                                event.preventDefault();
+                                commitRename(chat.id);
+                              } else if (event.key === "Escape") {
+                                event.preventDefault();
+                                cancelRename();
+                              }
+                            }}
+                            ref={renameInputRef}
+                            value={editValue}
+                          />
+                        ) : (
+                          <button
+                            aria-current={selected ? "page" : undefined}
+                            className={cn(
+                              "min-w-0 flex-1 cursor-pointer px-2 py-1.5 text-left text-[13px]",
+                              selected
+                                ? "text-foreground"
+                                : "text-muted-foreground hover:text-foreground",
+                            )}
+                            onClick={() => onSelectChat(chat.id)}
+                            type="button"
+                          >
+                            <span className="flex min-w-0 items-center gap-1.5">
+                              <span className="line-clamp-1 min-w-0 flex-1">{chat.title}</span>
+                              {chat.visibility === "shared" ? (
+                                <span
+                                  className="text-muted-foreground/70 shrink-0 text-[10px] tracking-wide uppercase"
+                                  title="Shared with workspace"
+                                >
+                                  Shared
+                                </span>
+                              ) : null}
+                            </span>
+                          </button>
+                        )}
+                        {!editing ? (
+                          <>
+                            {canCreateShared &&
+                            onShareChat &&
+                            chat.visibility === "personal" &&
+                            viewerUserId &&
+                            chat.userId === viewerUserId ? (
+                              <Button
+                                aria-label={`Share ${chat.title} with workspace`}
+                                className="text-muted-foreground/50 hover:text-foreground size-6 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                                onClick={() => void onShareChat(chat.id)}
+                                size="icon-sm"
+                                title="Share with workspace"
+                                type="button"
+                                variant="ghost"
                               >
-                                Shared
-                              </span>
+                                <UsersIcon className="size-3" />
+                              </Button>
                             ) : null}
-                          </span>
-                        </button>
-                      )}
-                      {!editing ? (
-                        <>
-                          {canCreateShared &&
-                          onShareChat &&
-                          chat.visibility === "personal" &&
-                          viewerUserId &&
-                          chat.userId === viewerUserId ? (
                             <Button
-                              aria-label={`Share ${chat.title} with workspace`}
+                              aria-label={`Rename ${chat.title}`}
                               className="text-muted-foreground/50 hover:text-foreground size-6 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                              onClick={() => void onShareChat(chat.id)}
+                              onClick={() => beginRename(chat)}
                               size="icon-sm"
-                              title="Share with workspace"
                               type="button"
                               variant="ghost"
                             >
-                              <UsersIcon className="size-3" />
+                              <PencilIcon className="size-3" />
                             </Button>
-                          ) : null}
-                          <Button
-                            aria-label={`Rename ${chat.title}`}
-                            className="text-muted-foreground/50 hover:text-foreground size-6 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                            onClick={() => beginRename(chat)}
-                            size="icon-sm"
-                            type="button"
-                            variant="ghost"
-                          >
-                            <PencilIcon className="size-3" />
-                          </Button>
-                          <Button
-                            aria-label={`Delete ${chat.title}`}
-                            className="text-muted-foreground/50 hover:text-foreground mr-0.5 size-6 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                            onClick={() => onDeleteChat(chat.id)}
-                            size="icon-sm"
-                            type="button"
-                            variant="ghost"
-                          >
-                            <Trash2Icon className="size-3" />
-                          </Button>
-                        </>
-                      ) : null}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+                            <Button
+                              aria-label={`Delete ${chat.title}`}
+                              className="text-muted-foreground/50 hover:text-foreground mr-0.5 size-6 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                              onClick={() => onDeleteChat(chat.id)}
+                              size="icon-sm"
+                              type="button"
+                              variant="ghost"
+                            >
+                              <Trash2Icon className="size-3" />
+                            </Button>
+                          </>
+                        ) : null}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           </div>
-        </SidebarSection>
-
-        <SidebarSection
-          actions={
-            <Button
-              aria-label="Open playbooks"
-              asChild
-              className={cn(
-                "size-6",
-                playbooksActive
-                  ? "text-foreground"
-                  : "text-muted-foreground/70 hover:text-foreground",
-              )}
-              size="icon-sm"
-              title="Open playbooks"
-              variant="ghost"
-            >
-              <Link aria-current={playbooksActive ? "page" : undefined} href="/playbooks">
-                <ArrowUpRightIcon className="size-3.5" />
-              </Link>
-            </Button>
-          }
-          active={playbooksActive}
-          className="shrink-0"
-          contentClassName="max-h-36 overflow-y-auto"
-          onOpenChange={(open) => setSectionOpen("playbooks", open)}
-          open={sections.playbooks}
-          title="Playbooks"
-        >
-          {previewPlaybooks.length === 0 ? (
-            <p className="text-muted-foreground/70 px-2.5 py-2 text-xs">None yet</p>
-          ) : (
-            <ul className="flex flex-col px-1 py-0.5">
-              {previewPlaybooks.map((item) => (
-                <li key={item.id}>
-                  <button
-                    className="text-muted-foreground hover:bg-muted/40 hover:text-foreground w-full cursor-pointer rounded-sm px-2 py-1.5 text-left text-[13px]"
-                    onClick={() => onRunPlaybook?.(item.prompt)}
-                    type="button"
-                  >
-                    <span className="line-clamp-1">{item.label}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </SidebarSection>
-
-        <SidebarSection
-          actions={
-            <Button
-              aria-label="Open schedules"
-              asChild
-              className={cn(
-                "size-6",
-                schedulesActive
-                  ? "text-foreground"
-                  : "text-muted-foreground/70 hover:text-foreground",
-              )}
-              size="icon-sm"
-              title="Open schedules"
-              variant="ghost"
-            >
-              <Link aria-current={schedulesActive ? "page" : undefined} href="/schedules">
-                <ArrowUpRightIcon className="size-3.5" />
-              </Link>
-            </Button>
-          }
-          active={schedulesActive}
-          className="shrink-0"
-          contentClassName="max-h-40 overflow-y-auto"
-          onOpenChange={(open) => setSectionOpen("schedules", open)}
-          open={sections.schedules}
-          title="Schedules"
-        >
-          <ul className="flex flex-col px-1 py-0.5">
-            <li>
-              <Link
-                className="text-muted-foreground hover:bg-muted/40 hover:text-foreground block rounded-sm px-2 py-1.5 text-[13px] transition-colors"
-                href="/schedules"
-              >
-                <span className="line-clamp-1">
-                  Morning brief · {morningBriefEnabled ? "On" : "Off"}
-                </span>
-              </Link>
-            </li>
-            {previewSchedules.map((schedule) => (
-              <li key={schedule.id}>
-                <Link
-                  className="text-muted-foreground hover:bg-muted/40 hover:text-foreground block rounded-sm px-2 py-1.5 text-[13px] transition-colors"
-                  href="/schedules"
-                >
-                  <span className="line-clamp-1">
-                    {schedule.label}
-                    {" · "}
-                    {formatScheduleTimeValue(schedule.hour, schedule.minute)}
-                    {schedule.enabled ? "" : " · Off"}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </SidebarSection>
-
-        <div className="border-border/50 shrink-0 border-t px-1 py-2">
-          <Link
-            aria-current={toolsActive ? "page" : undefined}
-            className={cn(
-              "flex items-center gap-2 rounded-sm px-2 py-1.5 text-[13px] transition-colors",
-              toolsActive
-                ? "bg-muted/60 text-foreground"
-                : "text-muted-foreground hover:bg-muted/40 hover:text-foreground",
-            )}
-            href="/tools"
-          >
-            <HammerIcon className="size-3.5 shrink-0" />
-            <span>Tools</span>
-          </Link>
-        </div>
-      </div>
+        </CollapsibleContent>
+      </Collapsible>
     </aside>
   );
 }

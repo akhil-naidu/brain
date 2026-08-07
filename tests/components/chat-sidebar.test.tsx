@@ -7,64 +7,6 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/chat",
 }));
 
-vi.mock("@/components/chat/use-playbooks", () => ({
-  usePlaybooks: () => ({
-    playbooks: [
-      {
-        id: "pb-1",
-        label: "Triage inbox",
-        prompt: "Triage my inbox",
-        updatedAt: 1,
-      },
-    ],
-    ready: true,
-    savePlaybook: vi.fn(),
-    deletePlaybook: vi.fn(),
-  }),
-}));
-
-vi.mock("@/lib/chat/scheduled-playbooks-api", () => ({
-  listScheduledPlaybooks: vi.fn(async () => [
-    {
-      id: "sch-1",
-      label: "Daily standup",
-      prompt: "Standup",
-      sourcePlaybookId: null,
-      enabled: true,
-      hour: 9,
-      minute: 0,
-      timezone: "UTC",
-      weekdaysOnly: true,
-      slackDeliveryEnabled: false,
-      slackChannel: null,
-      lastSlackError: null,
-      lastRunDateKey: null,
-      lastChatId: null,
-      lastRunAt: null,
-      runningSince: null,
-    },
-  ]),
-}));
-
-vi.mock("@/lib/chat/scheduled-brief-api", () => ({
-  fetchScheduledBrief: vi.fn(async () => ({
-    schedule: {
-      enabled: false,
-      hour: 9,
-      minute: 0,
-      timezone: "UTC",
-      weekdaysOnly: true,
-      slackDeliveryEnabled: false,
-      slackChannel: null,
-      lastSlackError: null,
-      lastRunDateKey: null,
-      lastChatId: null,
-      lastRunAt: null,
-      runningSince: null,
-    },
-  })),
-}));
-
 afterEach(cleanup);
 
 const chats: readonly ChatSummary[] = [
@@ -133,37 +75,29 @@ describe("ChatSidebar rename", () => {
   });
 });
 
-describe("ChatSidebar mini lists", () => {
-  it("shows playbook and schedule previews with open-page actions", async () => {
+describe("ChatSidebar navigation", () => {
+  it("exposes destination links for playbooks, schedules, and tools", () => {
     renderSidebar();
-    expect(await screen.findByRole("button", { name: "Triage inbox" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Open playbooks" }).getAttribute("href")).toBe(
-      "/playbooks",
-    );
-    expect(screen.getByRole("link", { name: "Open schedules" }).getAttribute("href")).toBe(
-      "/schedules",
-    );
-    expect(screen.getByRole("link", { name: /Morning brief/i }).getAttribute("href")).toBe(
-      "/schedules",
-    );
-    expect(screen.getByRole("link", { name: /Daily standup/i }).getAttribute("href")).toBe(
-      "/schedules",
-    );
+    expect(screen.getByRole("link", { name: "Playbooks" }).getAttribute("href")).toBe("/playbooks");
+    expect(screen.getByRole("link", { name: "Schedules" }).getAttribute("href")).toBe("/schedules");
+    expect(screen.getByRole("link", { name: "Tools" }).getAttribute("href")).toBe("/tools");
+    expect(screen.getByRole("link", { name: "Chats" }).getAttribute("href")).toBe("/chat");
+    expect(screen.getByRole("link", { name: "Chats" }).getAttribute("aria-current")).toBe("page");
   });
 });
 
 describe("ChatSidebar new chat shortcut hint", () => {
-  it("exposes the new chat shortcut on the New chat control", () => {
+  it("exposes the new chat shortcut on the New chat control", async () => {
     renderSidebar();
 
-    const button = screen.getByRole("button", { name: /New chat/i });
+    const button = await screen.findByRole("button", { name: /New chat \(/i });
     expect(button.getAttribute("title")).toMatch(/New chat \(.+\)/);
     expect(button.getAttribute("aria-label")).toMatch(/New chat \(.+\)/);
   });
 });
 
 describe("ChatSidebar toggle shortcut hint", () => {
-  it("exposes the sidebar toggle shortcut on the collapse control", () => {
+  it("exposes the sidebar toggle shortcut on the collapse control", async () => {
     render(
       <ChatSidebar
         activeChatId="chat-1"
@@ -178,7 +112,7 @@ describe("ChatSidebar toggle shortcut hint", () => {
       />,
     );
 
-    const button = screen.getByRole("button", { name: /Collapse sidebar/i });
+    const button = await screen.findByRole("button", { name: /Collapse sidebar \(/i });
     expect(button.getAttribute("title")).toMatch(/Collapse sidebar \(.+\)/);
   });
 });
@@ -242,6 +176,61 @@ describe("ChatSidebar search focus", () => {
       expect(document.activeElement).toBe(search);
     });
   });
+
+  it("reopens recent chats before focusing search", async () => {
+    const { rerender } = render(
+      <ChatSidebar
+        activeChatId="chat-1"
+        brand={<span>Brain</span>}
+        chats={chats}
+        currentTitle="First chat"
+        onDeleteChat={vi.fn()}
+        onNewChat={vi.fn()}
+        onRenameChat={vi.fn()}
+        onSelectChat={vi.fn()}
+        searchFocusRequest={0}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Collapse recent chats" }));
+    expect(screen.queryByRole("searchbox", { name: "Search chats" })).toBeNull();
+
+    rerender(
+      <ChatSidebar
+        activeChatId="chat-1"
+        brand={<span>Brain</span>}
+        chats={chats}
+        currentTitle="First chat"
+        onDeleteChat={vi.fn()}
+        onNewChat={vi.fn()}
+        onRenameChat={vi.fn()}
+        onSelectChat={vi.fn()}
+        searchFocusRequest={1}
+      />,
+    );
+
+    await waitFor(() => {
+      const search = screen.getByRole("searchbox", { name: "Search chats" });
+      expect(document.activeElement).toBe(search);
+    });
+  });
+});
+
+describe("ChatSidebar recent panel", () => {
+  it("collapses and expands recent chats", () => {
+    renderSidebar();
+
+    expect(screen.getByRole("searchbox", { name: "Search chats" })).toBeDefined();
+    expect(screen.getByRole("separator", { name: "Resize recent chats" })).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: "Collapse recent chats" }));
+    expect(screen.queryByRole("searchbox", { name: "Search chats" })).toBeNull();
+    expect(screen.queryByRole("separator", { name: "Resize recent chats" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Expand recent chats" }));
+    expect(screen.getByRole("searchbox", { name: "Search chats" })).toBeDefined();
+    expect(screen.getByRole("separator", { name: "Resize recent chats" })).toBeDefined();
+  });
 });
 
 describe("ChatSidebar search", () => {
@@ -266,5 +255,17 @@ describe("ChatSidebar search", () => {
     expect(screen.getByText("No chats match")).toBeDefined();
     expect(screen.queryByText("First chat")).toBeNull();
     expect(screen.queryByText("ClickUp planning")).toBeNull();
+  });
+
+  it("clears the query from the clear control", () => {
+    renderSidebar();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search chats" }), {
+      target: { value: "clickup" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Clear search" }));
+
+    expect(screen.getByRole("searchbox", { name: "Search chats" }).getAttribute("value")).toBe("");
+    expect(screen.getByText("First chat")).toBeDefined();
   });
 });
