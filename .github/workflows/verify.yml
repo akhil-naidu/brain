@@ -13,7 +13,26 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: brain
+          POSTGRES_PASSWORD: brain
+          POSTGRES_DB: brain
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U brain -d brain"
+          --health-interval 3s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      BRAIN_DATABASE_URL: postgres://brain:brain@127.0.0.1:5432/brain
+      BETTER_AUTH_SECRET: test-only-better-auth-secret-32chars!!
 
     steps:
       - uses: actions/checkout@v6

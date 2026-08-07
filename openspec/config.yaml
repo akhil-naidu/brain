@@ -22,7 +22,7 @@ context: |
   - Design overview: docs/superpowers/specs/2026-07-29-brain-chat-ui-design.md
   - Template mirror: /Users/dev/github/tmp/eve-chat-template
 
-  Auth for browser UI: Better Auth email/password sessions (host SQLite) mapped to eve user principals; chats/MCP tokens are per signed-in user (no vercelOidc / Vercel Connect).
+  Auth for browser UI: Better Auth email/password sessions (Postgres via BRAIN_DATABASE_URL) mapped to eve user principals; chats/MCP tokens are per signed-in user (no vercelOidc / Vercel Connect).
 
 rules:
   proposal:

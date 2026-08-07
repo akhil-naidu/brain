@@ -12,7 +12,7 @@ This agent must stay **self-hostable and independent of Vercel infrastructure**.
 
 - Models: Command Code (or other direct/third-party providers) — not Vercel AI Gateway
 - Hosting: `eve build` + `eve start` (or any non-Vercel host)
-- Auth: Better Auth email/password sessions (self-hosted SQLite) — never `vercelOidc()` or Vercel Connect
+- Auth: Better Auth email/password sessions (self-hosted Postgres) — never `vercelOidc()` or Vercel Connect
 - Sandbox: microsandbox / Docker / local — not Vercel Sandbox
 - OAuth for connections: `defineInteractiveAuthorization` or your own `getToken`
 - ClickUp: official MCP with self-hosted OAuth / DCR (`agent/connections/clickup.ts`)
@@ -44,9 +44,9 @@ runs the same chain plus `pnpm run build`.
 
 - Run `pnpm run dev` (Next.js + `withEve()`) for the Brain browser chat UI — primary workflow
 - Agent terminal (`eve dev` / `pnpm run dev:eve`) is optional for debugging only
-- Login required: Better Auth email/password + host-local SQLite (`.eve/brain-auth.sqlite`); chats and MCP tokens are per signed-in user
+- Login required: Better Auth + Postgres (`BRAIN_DATABASE_URL`); chats and MCP tokens are per signed-in user
+- Local DB: `docker compose up -d db` then set `BRAIN_DATABASE_URL=postgres://brain:brain@127.0.0.1:5432/brain`
 - First host: open `/setup` (or `node scripts/bootstrap-operator.mjs`) to create the operator account; set `BETTER_AUTH_SECRET`
-- Chat history stays on host SQLite (`.eve/brain-chats.sqlite`); Postgres / remote DB is deferred
 - Template reference mirror: `/Users/dev/github/tmp/eve-chat-template` (see `.cursor/rules/eve-chat-template-reference.mdc`)
 
 ## OpenSpec
