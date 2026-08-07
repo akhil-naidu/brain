@@ -23,7 +23,7 @@ import {
   type ReactNode,
 } from "react";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { IconTooltip, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { canSubmitChatTurn, type PendingAttachment } from "@/lib/chat/attachments";
 import { getChatMessageLength, MAX_CHAT_MESSAGE_CHARS } from "@/lib/chat/limits";
 import { cn } from "@/lib/utils";
@@ -333,48 +333,55 @@ export function ChatComposer({
                 ref={fileInputRef}
                 type="file"
               />
-              <button
-                aria-label="Attach file"
-                className="text-muted-foreground/70 hover:bg-muted/55 hover:text-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors disabled:pointer-events-none disabled:opacity-50"
-                disabled={textareaDisabled}
-                onClick={() => fileInputRef.current?.click()}
-                title="Attach image, PDF, or text"
-                type="button"
-              >
-                <PaperclipIcon className="size-4" />
-              </button>
+              <IconTooltip label="Attach image, PDF, or text" side="top">
+                <button
+                  aria-label="Attach file"
+                  className="text-muted-foreground/70 hover:bg-muted/55 hover:text-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors disabled:pointer-events-none disabled:opacity-50"
+                  disabled={textareaDisabled}
+                  onClick={() => fileInputRef.current?.click()}
+                  type="button"
+                >
+                  <PaperclipIcon className="size-4" />
+                </button>
+              </IconTooltip>
             </>
           ) : null}
           {isBusy ? (
-            <Button
-              aria-label={disabledReason === "Stopping…" ? "Stopping response" : "Stop response"}
-              className="bg-foreground/15 text-foreground hover:bg-foreground/25 size-8 cursor-pointer rounded-lg shadow-none"
-              onClick={onStop}
-              size="icon-sm"
-              type="button"
-            >
-              <SquareIcon className="size-3 fill-current" />
-            </Button>
+            <IconTooltip label={disabledReason === "Stopping…" ? "Stopping…" : "Stop"} side="top">
+              <Button
+                aria-label={disabledReason === "Stopping…" ? "Stopping response" : "Stop response"}
+                className="bg-foreground/15 text-foreground hover:bg-foreground/25 size-8 cursor-pointer rounded-lg shadow-none"
+                onClick={onStop}
+                size="icon-sm"
+                type="button"
+              >
+                <SquareIcon className="size-3 fill-current" />
+              </Button>
+            </IconTooltip>
           ) : isPreparing ? (
-            <Button
-              aria-label="Preparing chat"
-              className="bg-foreground/80 text-background size-8 rounded-lg"
-              disabled
-              size="icon-sm"
-              type="button"
-            >
-              <Loader2Icon className="size-3.5 animate-spin" />
-            </Button>
+            <IconTooltip label="Preparing…" side="top">
+              <Button
+                aria-label="Preparing chat"
+                className="bg-foreground/80 text-background size-8 rounded-lg"
+                disabled
+                size="icon-sm"
+                type="button"
+              >
+                <Loader2Icon className="size-3.5 animate-spin" />
+              </Button>
+            </IconTooltip>
           ) : (
-            <Button
-              aria-label="Send message"
-              className="bg-foreground text-background hover:bg-foreground/90 size-8 cursor-pointer rounded-lg shadow-sm disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-25 disabled:shadow-none"
-              disabled={!canSubmit}
-              size="icon-sm"
-              type="submit"
-            >
-              <ArrowUpIcon className="size-4" />
-            </Button>
+            <IconTooltip label="Send" side="top">
+              <Button
+                aria-label="Send message"
+                className="bg-foreground text-background hover:bg-foreground/90 size-8 cursor-pointer rounded-lg shadow-sm disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-25 disabled:shadow-none"
+                disabled={!canSubmit}
+                size="icon-sm"
+                type="submit"
+              >
+                <ArrowUpIcon className="size-4" />
+              </Button>
+            </IconTooltip>
           )}
         </div>
       </div>

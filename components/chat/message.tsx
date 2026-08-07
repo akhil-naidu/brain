@@ -22,6 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { IconTooltip } from "@/components/ui/tooltip";
 import { copyTextToClipboard, messageToMarkdown } from "@/lib/chat/export-markdown";
 import { formatMessageTimestamp } from "@/lib/chat/message-timestamp";
 import { canUseSpeechSynthesis, speakText } from "@/lib/chat/read-aloud";
@@ -285,95 +286,100 @@ function AgentMessageView({
             )}
           >
             {canCopy ? (
-              <Button
-                aria-label={
-                  copyState === "copied"
-                    ? "Copied"
-                    : copyState === "error"
-                      ? "Copy failed"
-                      : "Copy message"
+              <IconTooltip
+                label={
+                  copyState === "copied" ? "Copied" : copyState === "error" ? "Copy failed" : "Copy"
                 }
-                className={cn(
-                  actionButtonClass,
-                  copyState === "error" ? "text-destructive hover:text-destructive" : undefined,
-                )}
-                onClick={handleCopy}
-                size="icon-xs"
-                title={
-                  copyState === "copied"
-                    ? "Copied"
-                    : copyState === "error"
-                      ? "Copy failed"
-                      : "Copy message"
-                }
-                type="button"
-                variant="ghost"
+                side="bottom"
               >
-                {copyState === "copied" ? (
-                  <CheckIcon className="size-3.5" />
-                ) : (
-                  <CopyIcon className="size-3.5" />
-                )}
-              </Button>
+                <Button
+                  aria-label={
+                    copyState === "copied"
+                      ? "Copied"
+                      : copyState === "error"
+                        ? "Copy failed"
+                        : "Copy message"
+                  }
+                  className={cn(
+                    actionButtonClass,
+                    copyState === "error" ? "text-destructive hover:text-destructive" : undefined,
+                  )}
+                  onClick={handleCopy}
+                  size="icon-xs"
+                  type="button"
+                  variant="ghost"
+                >
+                  {copyState === "copied" ? (
+                    <CheckIcon className="size-3.5" />
+                  ) : (
+                    <CopyIcon className="size-3.5" />
+                  )}
+                </Button>
+              </IconTooltip>
             ) : null}
             {canRegenerate ? (
-              <Button
-                aria-label="Regenerate response"
-                className={actionButtonClass}
-                onClick={() => {
-                  void onRegenerate?.();
-                }}
-                size="icon-xs"
-                title="Regenerate"
-                type="button"
-                variant="ghost"
-              >
-                <RefreshCwIcon className="size-3.5" />
-              </Button>
+              <IconTooltip label="Regenerate" side="bottom">
+                <Button
+                  aria-label="Regenerate response"
+                  className={actionButtonClass}
+                  onClick={() => {
+                    void onRegenerate?.();
+                  }}
+                  size="icon-xs"
+                  type="button"
+                  variant="ghost"
+                >
+                  <RefreshCwIcon className="size-3.5" />
+                </Button>
+              </IconTooltip>
             ) : null}
             {canReadAloud ? (
-              <Button
-                aria-label={isSpeaking ? "Stop reading aloud" : "Read aloud"}
-                className={actionButtonClass}
-                onClick={handleReadAloud}
-                size="icon-xs"
-                title={isSpeaking ? "Stop" : "Read aloud"}
-                type="button"
-                variant="ghost"
-              >
-                {isSpeaking ? (
-                  <VolumeXIcon className="size-3.5" />
-                ) : (
-                  <Volume2Icon className="size-3.5" />
-                )}
-              </Button>
+              <IconTooltip label={isSpeaking ? "Stop" : "Read aloud"} side="bottom">
+                <Button
+                  aria-label={isSpeaking ? "Stop reading aloud" : "Read aloud"}
+                  className={actionButtonClass}
+                  onClick={handleReadAloud}
+                  size="icon-xs"
+                  type="button"
+                  variant="ghost"
+                >
+                  {isSpeaking ? (
+                    <VolumeXIcon className="size-3.5" />
+                  ) : (
+                    <Volume2Icon className="size-3.5" />
+                  )}
+                </Button>
+              </IconTooltip>
             ) : null}
             {canEdit && onEditResend ? (
-              <Button
-                aria-label="Edit message"
-                className={actionButtonClass}
-                onClick={beginEdit}
-                size="icon-xs"
-                type="button"
-                variant="ghost"
-              >
-                <PencilIcon className="size-3.5" />
-              </Button>
+              <IconTooltip label="Edit" side="bottom">
+                <Button
+                  aria-label="Edit message"
+                  className={actionButtonClass}
+                  onClick={beginEdit}
+                  size="icon-xs"
+                  type="button"
+                  variant="ghost"
+                >
+                  <PencilIcon className="size-3.5" />
+                </Button>
+              </IconTooltip>
             ) : null}
             {showMoreMenu ? (
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    aria-label="More message actions"
-                    className={actionButtonClass}
-                    size="icon-xs"
-                    title="More"
-                    type="button"
-                    variant="ghost"
-                  >
-                    <MoreHorizontalIcon className="size-3.5" />
-                  </Button>
-                </DropdownMenuTrigger>
+                <IconTooltip label="More" side="bottom">
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      aria-label="More message actions"
+                      className={actionButtonClass}
+                      size="icon-xs"
+                      type="button"
+                      variant="ghost"
+                    >
+                      <MoreHorizontalIcon className="size-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                </IconTooltip>
                 <DropdownMenuContent align="start" className="min-w-44">
                   {timestampLabel ? (
                     <>
