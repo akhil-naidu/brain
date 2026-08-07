@@ -83,10 +83,12 @@ describe("invite register", () => {
 
     const registered = await registerWithInvite({
       token: invite.token,
+      name: "Member",
       email: "member@example.com",
       password: "password12345",
     });
     expect(registered.email).toBe("member@example.com");
+    expect(registered.name).toBe("Member");
     expect(registered.workspaceId).toBe(team.id);
     expect(countAuthUsers()).toBe(2);
     expect(store.getMembership(team.id, registered.id)).toBe("member");
@@ -97,6 +99,7 @@ describe("invite register", () => {
     await expect(
       registerWithInvite({
         token: "not-a-real-token",
+        name: "Member",
         email: "member@example.com",
         password: "password12345",
       }),

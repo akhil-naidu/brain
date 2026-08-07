@@ -39,10 +39,12 @@ describe("better auth bootstrap", () => {
   it("allows bootstrap only when no users exist", async () => {
     expect(isBootstrapAllowed()).toBe(true);
     const user = await bootstrapFirstUser({
+      name: "Ops",
       email: "ops@brain.local",
       password: "password12345",
     });
     expect(user.email).toBe("ops@brain.local");
+    expect(user.name).toBe("Ops");
     expect(countAuthUsers()).toBe(1);
     expect(isBootstrapAllowed()).toBe(false);
   });
@@ -114,8 +116,8 @@ describe("better auth bootstrap", () => {
 
   it("serializes parallel bootstrap so only one first user is created", async () => {
     const results = await Promise.allSettled([
-      bootstrapFirstUser({ email: "a@brain.local", password: "password12345" }),
-      bootstrapFirstUser({ email: "b@brain.local", password: "password12345" }),
+      bootstrapFirstUser({ name: "A", email: "a@brain.local", password: "password12345" }),
+      bootstrapFirstUser({ name: "B", email: "b@brain.local", password: "password12345" }),
     ]);
 
     const fulfilled = results.filter((result) => result.status === "fulfilled");

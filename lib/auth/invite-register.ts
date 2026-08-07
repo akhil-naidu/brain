@@ -1,3 +1,4 @@
+import { displayNameErrorMessage, parseDisplayName } from "@/lib/auth/display-name";
 import { assertCanCreateUser, resolveLicenseEntitlements } from "@/lib/auth/license";
 import {
   countAuthUsers,
@@ -10,6 +11,7 @@ import {
 export type InviteRegisteredUser = {
   readonly id: string;
   readonly email: string;
+  readonly name: string;
   readonly workspaceId: string;
   readonly workspaceName: string;
 };
@@ -18,6 +20,7 @@ export async function registerWithInvite(input: {
   readonly token: string;
   readonly email: string;
   readonly password: string;
+  readonly name: string;
 }): Promise<InviteRegisteredUser> {
   await ensureAuthReady();
   const workspaces = getWorkspaceStore();
@@ -29,6 +32,10 @@ export async function registerWithInvite(input: {
     throw new Error("Invite has expired.");
   }
 
+  const name = parseDisplayName(input.name);
+  if (!name) {
+    throw new Error(displayNameErrorMessage());
+  }
   const email = input.email.trim().toLowerCase();
   if (!email || !email.includes("@")) {
     throw new Error("A valid email is required.");
@@ -48,7 +55,7 @@ export async function registerWithInvite(input: {
       body: {
         email,
         password: input.password,
-        name: email,
+        name,
       },
     }),
   );
@@ -60,6 +67,7 @@ export async function registerWithInvite(input: {
   return {
     id: userId,
     email: result.user.email,
+    name,
     workspaceId: workspace.id,
     workspaceName: workspace.name,
   };

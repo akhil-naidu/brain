@@ -1,12 +1,21 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { bootstrapFirstUser, isBootstrapAllowed, verifyBootstrapToken } from "@/lib/auth/bootstrap";
+import {
+  DISPLAY_NAME_MAX_LENGTH,
+  displayNameErrorMessage,
+  parseDisplayName,
+} from "@/lib/auth/display-name";
 import { ensureAuthReady } from "@/lib/auth/server";
 
 export const runtime = "nodejs";
 
 const bodySchema = z
   .object({
+    name: z
+      .string()
+      .min(1)
+      .max(DISPLAY_NAME_MAX_LENGTH + 8),
     email: z.string().email(),
     password: z.string().min(8),
     bootstrapToken: z.string().optional(),
@@ -40,9 +49,14 @@ export async function POST(request: Request) {
   const parsed = bodySchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Provide a valid email and a password of at least 8 characters." },
+      {
+        error: "Provide a name, a valid email, and a password of at least 8 characters.",
+      },
       { status: 400 },
     );
+  }
+  if (!parseDisplayName(parsed.data.name)) {
+    return NextResponse.json({ error: displayNameErrorMessage() }, { status: 400 });
   }
 
   if (!verifyBootstrapToken(parsed.data.bootstrapToken)) {
@@ -51,10 +65,14 @@ export async function POST(request: Request) {
 
   try {
     const user = await bootstrapFirstUser({
+      name: parsed.data.name,
       email: parsed.data.email,
       password: parsed.data.password,
     });
-    return NextResponse.json({ user: { id: user.id, email: user.email } }, { status: 201 });
+    return NextResponse.json(
+      { user: { id: user.id, email: user.email, name: user.name } },
+      { status: 201 },
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to create account.";
     return NextResponse.json({ error: message }, { status: 400 });

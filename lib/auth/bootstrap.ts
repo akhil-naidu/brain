@@ -1,4 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
+import { displayNameErrorMessage, parseDisplayName } from "@/lib/auth/display-name";
 import { LEGACY_CHAT_OWNER_ID } from "@/lib/auth/principal";
 import {
   claimFirstBootstrap,
@@ -45,17 +46,23 @@ export function verifyBootstrapToken(
 export type BootstrappedUser = {
   readonly id: string;
   readonly email: string;
+  readonly name: string;
 };
 
 async function bootstrapFirstUserUnlocked(input: {
   readonly email: string;
   readonly password: string;
+  readonly name: string;
 }): Promise<BootstrappedUser> {
   await ensureAuthReady();
   if (!isBootstrapAllowed()) {
     throw new Error("Bootstrap is only available when no users exist.");
   }
 
+  const name = parseDisplayName(input.name);
+  if (!name) {
+    throw new Error(displayNameErrorMessage());
+  }
   const email = input.email.trim().toLowerCase();
   if (!email || !email.includes("@")) {
     throw new Error("A valid email is required.");
@@ -74,7 +81,7 @@ async function bootstrapFirstUserUnlocked(input: {
         body: {
           email,
           password: input.password,
-          name: email,
+          name,
         },
       }),
     );
@@ -96,6 +103,7 @@ async function bootstrapFirstUserUnlocked(input: {
     return {
       id: userId,
       email: result.user.email,
+      name,
     };
   } catch (error) {
     releaseBootstrapClaim();
@@ -106,6 +114,7 @@ async function bootstrapFirstUserUnlocked(input: {
 export async function bootstrapFirstUser(input: {
   readonly email: string;
   readonly password: string;
+  readonly name: string;
 }): Promise<BootstrappedUser> {
   const run = bootstrapChain.then(
     () => bootstrapFirstUserUnlocked(input),
