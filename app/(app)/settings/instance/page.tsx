@@ -9,6 +9,7 @@ import {
   SettingsShell,
 } from "@/components/settings/settings-shell";
 import { Button } from "@/components/ui/button";
+import { Field, FieldDescription, FieldLabel, FieldSelect } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { parseInstancePolicies } from "@/lib/auth/parse-policies";
@@ -345,36 +346,37 @@ export default function InstanceSettingsPage() {
       >
         <SettingsPanel className="divide-border/70 divide-y">
           <div className="space-y-3 p-5">
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="signup-mode">
-                Signup mode
-              </label>
-              <select
-                className="border-border bg-background h-9 w-full max-w-md rounded-md border px-3 text-sm"
+            <Field className="max-w-md">
+              <FieldLabel htmlFor="signup-mode">Signup mode</FieldLabel>
+              <FieldSelect
                 disabled={!canManage || pending}
                 id="signup-mode"
-                onChange={(event) => {
-                  const value = event.target.value;
+                onValueChange={(value) => {
                   if (value === "open" || value === "invite-only" || value === "sso-only") {
                     setSaved(false);
                     setPolicies({ ...policies, signupMode: value });
                   }
                 }}
+                options={[
+                  { value: "invite-only", label: "Invite only" },
+                  {
+                    value: "open",
+                    label: "Open signup",
+                    disabled: entitlements?.openSignup === false,
+                  },
+                  {
+                    value: "sso-only",
+                    label: entitlements?.sso ? "SSO only" : "SSO only (locked by license)",
+                    disabled: entitlements?.sso === false,
+                  },
+                ]}
                 value={policies.signupMode}
-              >
-                <option value="invite-only">Invite only</option>
-                <option disabled={entitlements?.openSignup === false} value="open">
-                  Open signup
-                </option>
-                <option disabled={entitlements?.sso === false} value="sso-only">
-                  SSO only {entitlements?.sso ? "" : "(locked by license)"}
-                </option>
-              </select>
-              <p className="text-muted-foreground text-xs">
+              />
+              <FieldDescription>
                 Invite only is the self-host default. Open signup enables account creation for
                 anyone when the license allows it.
-              </p>
-            </div>
+              </FieldDescription>
+            </Field>
           </div>
 
           <div className="flex items-center justify-between gap-6 p-5">

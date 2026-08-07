@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
   clearConnectionSetup,
@@ -194,13 +195,8 @@ export function ConnectionSetupDialog({
 
             {canManage ? (
               <>
-                <div className="flex flex-col gap-1.5">
-                  <label
-                    className="text-foreground text-sm font-medium"
-                    htmlFor="connection-setup-client-id"
-                  >
-                    App ID
-                  </label>
+                <Field>
+                  <FieldLabel htmlFor="connection-setup-client-id">App ID</FieldLabel>
                   <Input
                     autoComplete="off"
                     id="connection-setup-client-id"
@@ -209,16 +205,11 @@ export function ConnectionSetupDialog({
                     spellCheck={false}
                     value={clientId}
                   />
-                </div>
+                </Field>
 
                 {info?.requiresClientSecret ? (
-                  <div className="flex flex-col gap-1.5">
-                    <label
-                      className="text-foreground text-sm font-medium"
-                      htmlFor="connection-setup-client-secret"
-                    >
-                      App secret
-                    </label>
+                  <Field>
+                    <FieldLabel htmlFor="connection-setup-client-secret">App secret</FieldLabel>
                     <Input
                       autoComplete="off"
                       id="connection-setup-client-secret"
@@ -228,7 +219,7 @@ export function ConnectionSetupDialog({
                       type="password"
                       value={clientSecret}
                     />
-                  </div>
+                  </Field>
                 ) : null}
 
                 {info?.hasStoredCredentials ? (

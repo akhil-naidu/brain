@@ -10,7 +10,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   MAX_PLAYBOOK_LABEL_CHARS,
   MAX_PLAYBOOK_PROMPT_CHARS,
@@ -58,10 +60,8 @@ export function PlaybookEditorDialog({
         </DialogHeader>
 
         <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-foreground text-sm font-medium" htmlFor="playbook-label">
-              Name
-            </label>
+          <Field>
+            <FieldLabel htmlFor="playbook-label">Name</FieldLabel>
             <Input
               autoComplete="off"
               id="playbook-label"
@@ -70,20 +70,17 @@ export function PlaybookEditorDialog({
               placeholder="e.g. Triage inbox"
               value={label}
             />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-foreground text-sm font-medium" htmlFor="playbook-prompt">
-              Prompt
-            </label>
-            <textarea
-              className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 min-h-28 w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-[3px]"
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="playbook-prompt">Prompt</FieldLabel>
+            <Textarea
               id="playbook-prompt"
               maxLength={MAX_PLAYBOOK_PROMPT_CHARS}
               onChange={(event) => setPrompt(event.target.value)}
               placeholder="What should Brain do when you run this?"
               value={prompt}
             />
-          </div>
+          </Field>
           {error ? (
             <p className="text-destructive text-sm" role="alert">
               {error}

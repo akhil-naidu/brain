@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 type SsoProvider = {
   readonly providerId: string;
@@ -557,18 +559,15 @@ export function WorkspaceSsoSection(props: {
               value={entryPoint}
             />
           </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium" htmlFor="sso-saml-cert">
-              IdP certificate
-            </label>
-            <textarea
-              className="border-border bg-background min-h-24 w-full rounded-md border px-3 py-2 text-sm"
+          <Field>
+            <FieldLabel htmlFor="sso-saml-cert">IdP certificate</FieldLabel>
+            <Textarea
               id="sso-saml-cert"
               onChange={(e) => setCert(e.target.value)}
               placeholder="IdP X.509 certificate"
               value={cert}
             />
-          </div>
+          </Field>
           <div className="flex gap-2">
             <Button
               disabled={pending}

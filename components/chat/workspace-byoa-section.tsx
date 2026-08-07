@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
   clearWorkspaceConnectionSetup,
@@ -139,22 +140,18 @@ function ByoaProviderCard({ connectionId }: { readonly connectionId: string }) {
       </div>
       {info.canManageCredentials ? (
         <>
-          <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor={`byoa-${connectionId}-id`}>
-              Client ID
-            </label>
+          <Field>
+            <FieldLabel htmlFor={`byoa-${connectionId}-id`}>Client ID</FieldLabel>
             <Input
               id={`byoa-${connectionId}-id`}
               onChange={(event) => setClientId(event.target.value)}
               placeholder="Workspace OAuth client id"
               value={clientId}
             />
-          </div>
+          </Field>
           {info.requiresClientSecret ? (
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor={`byoa-${connectionId}-secret`}>
-                Client secret
-              </label>
+            <Field>
+              <FieldLabel htmlFor={`byoa-${connectionId}-secret`}>Client secret</FieldLabel>
               <Input
                 id={`byoa-${connectionId}-secret`}
                 onChange={(event) => setClientSecret(event.target.value)}
@@ -162,7 +159,7 @@ function ByoaProviderCard({ connectionId }: { readonly connectionId: string }) {
                 type="password"
                 value={clientSecret}
               />
-            </div>
+            </Field>
           ) : null}
           <div className="flex flex-wrap gap-2">
             <Button

@@ -4,6 +4,7 @@ import { LoaderCircleIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Field, FieldLabel, FieldSelect } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import type { Playbook } from "@/lib/chat/playbooks";
@@ -164,27 +165,19 @@ export function ScheduledPlaybooksPanel({
 
       {adding ? (
         <div className="border-border/60 flex flex-col gap-3 border-t px-4 py-3.5">
-          <label
-            className="flex flex-col gap-1 text-sm"
-            htmlFor={fieldId("schedule-playbook-select")}
-          >
-            Playbook
-            <select
-              className="border-input bg-background h-9 rounded-md border px-2 text-sm"
+          <Field>
+            <FieldLabel htmlFor={fieldId("schedule-playbook-select")}>Playbook</FieldLabel>
+            <FieldSelect
               disabled={disabled || creating}
               id={fieldId("schedule-playbook-select")}
-              onChange={(event) => {
-                setSelectedPlaybookId(event.target.value);
-              }}
+              onValueChange={setSelectedPlaybookId}
+              options={playbooks.map((item) => ({
+                value: item.id,
+                label: item.label,
+              }))}
               value={selectedPlaybookId}
-            >
-              {playbooks.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-          </label>
+            />
+          </Field>
           <div className="flex items-center justify-between gap-3 text-sm">
             <label htmlFor={fieldId("schedule-playbook-time")}>Time</label>
             <Input
