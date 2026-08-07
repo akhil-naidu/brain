@@ -1,7 +1,6 @@
 "use client";
 
-import { Building2Icon, ChevronsUpDownIcon, PlusIcon, SettingsIcon } from "lucide-react";
-import Link from "next/link";
+import { Building2Icon, ChevronsUpDownIcon, PlusIcon } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { WORKSPACES_CHANGED_EVENT, notifyWorkspacesChanged } from "@/lib/auth/workspace-events";
@@ -66,8 +65,6 @@ export function WorkspaceSwitcher({
   const [workspaces, setWorkspaces] = useState<readonly WorkspaceListItem[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [canCreate, setCanCreate] = useState(false);
-  const [isInstanceAdmin, setIsInstanceAdmin] = useState(false);
-  const [activeRole, setActiveRole] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -99,10 +96,6 @@ export function WorkspaceSwitcher({
       }
       if (typeof data === "object" && data !== null) {
         setCanCreate("canCreateWorkspace" in data && Boolean(data.canCreateWorkspace));
-        setIsInstanceAdmin("isInstanceAdmin" in data && Boolean(data.isInstanceAdmin));
-        setActiveRole(
-          "activeRole" in data && typeof data.activeRole === "string" ? data.activeRole : null,
-        );
       }
     } catch {
       // ignore
@@ -185,7 +178,6 @@ export function WorkspaceSwitcher({
   }
 
   const active = workspaces.find((workspace) => workspace.id === activeId);
-  const canManageInvites = activeRole === "owner" || activeRole === "admin";
   const label = active ? workspaceLabel(active) : "Workspace";
 
   return (
@@ -261,27 +253,6 @@ export function WorkspaceSwitcher({
                 <PlusIcon className="size-4" />
                 New workspace
               </DropdownMenuItem>
-            </>
-          ) : null}
-          {canManageInvites || isInstanceAdmin ? (
-            <>
-              <DropdownMenuSeparator />
-              {canManageInvites ? (
-                <DropdownMenuItem asChild>
-                  <Link href="/settings/workspace">
-                    <SettingsIcon className="size-4" />
-                    Workspace settings
-                  </Link>
-                </DropdownMenuItem>
-              ) : null}
-              {isInstanceAdmin ? (
-                <DropdownMenuItem asChild>
-                  <Link href="/settings/instance">
-                    <SettingsIcon className="size-4" />
-                    Instance settings
-                  </Link>
-                </DropdownMenuItem>
-              ) : null}
             </>
           ) : null}
         </DropdownMenuContent>

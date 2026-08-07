@@ -1,14 +1,14 @@
 "use client";
 
-import { CheckIcon, CopyIcon, LogOutIcon } from "lucide-react";
+import { CheckIcon, CopyIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { authClient } from "@/lib/auth/client";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { ChatNavProvider, useChatNav } from "@/app/_components/chat-nav-context";
 import { ChatShellProvider } from "@/app/_components/chat-shell-context";
 import { BrainMark } from "@/components/brain-mark";
 import { ChatSidebar } from "@/components/chat/sidebar";
+import { UserProfileMenu } from "@/components/chat/user-profile-menu";
 import { Button } from "@/components/ui/button";
 import {
   chatUrl,
@@ -402,23 +402,7 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
               )}
             </Button>
           ) : null}
-          <Button
-            aria-label="Sign out"
-            className="text-muted-foreground"
-            onClick={() => {
-              void (async () => {
-                await authClient.signOut();
-                router.replace("/sign-in");
-                router.refresh();
-              })();
-            }}
-            size="icon-sm"
-            title="Sign out"
-            type="button"
-            variant="ghost"
-          >
-            <LogOutIcon className="size-4" />
-          </Button>
+          <UserProfileMenu />
         </header>
         <div className="min-h-0 flex-1">{children}</div>
       </div>
