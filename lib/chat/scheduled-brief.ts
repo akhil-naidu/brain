@@ -75,7 +75,7 @@ export function resolveScheduledBriefPath(
   cwd: string = process.cwd(),
   env: Record<string, string | undefined> = process.env,
 ): string {
-  // Legacy host JSON path (one-time migrate into SQLite). Prefer SQLite APIs.
+  // Legacy host JSON path (one-time migrate into Postgres user-data store).
   const configured = env["BRAIN_SCHEDULED_BRIEF_PATH"]?.trim();
   if (configured) {
     return path.isAbsolute(configured) ? configured : path.resolve(cwd, configured);

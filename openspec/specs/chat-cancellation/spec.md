@@ -1,3 +1,9 @@
+# chat-cancellation Specification
+
+## Purpose
+
+Defines cooperative Stop and navigation dispose so streaming turns cancel at a session boundary instead of a local stream abort pretending success.
+
 ## Requirements
 
 ### Requirement: Stop waits for cancellation boundary

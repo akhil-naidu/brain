@@ -1,3 +1,9 @@
+# chat-stream-rendering Specification
+
+## Purpose
+
+Keeps settled chat message rows stable while a turn streams so historical markdown and tool trees do not thrash from parent re-renders.
+
 ## Requirements
 
 ### Requirement: Settled messages skip stream-driven re-renders

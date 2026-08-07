@@ -1,3 +1,9 @@
+# system-theme Specification
+
+## Purpose
+
+Applies the user’s system color preference on first paint so dark mode does not flash light theme before hydration.
+
 ## Requirements
 
 ### Requirement: System dark theme without first-paint flash

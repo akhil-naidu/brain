@@ -1,3 +1,9 @@
+# chat-shell-layout Specification
+
+## Purpose
+
+Defines how the chat shell presents history and navigation chrome across desktop and narrow viewports.
+
 ## Requirements
 
 ### Requirement: Mobile history is reachable

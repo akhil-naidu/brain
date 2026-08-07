@@ -52,7 +52,7 @@ Do **not** use “org / organization” in product copy. Prefer **workspace** ev
 | Default signup mode | `open` | `invite-only` | `sso-only` |
 | Open signup if enabled | Yes | **Yes** (policy) | **Yes** if license/policy allow |
 | Join workspace | Invite and/or create | Invite and/or create (if policy) | SSO placement, invite, and/or create |
-| Data plane | Managed DB (future) | Local SQLite / volume (today) | Customer DB / VPC (future) |
+| Data plane | Managed DB (future) | Operator Postgres (`BRAIN_DATABASE_URL`) + `.eve/` volume for MCP tokens | Customer DB / VPC (future) |
 
 ---
 
@@ -165,7 +165,8 @@ Shared chats: team workspace members may create `visibility=shared` threads that
 
 Ship before full license UI, SSO, and cloud multi-tenant DB:
 
-1. **Workspaces + membership** on current self-host (SQLite) — Model B personal workspace, create/switch workspace, migrate today’s per-user data into a default workspace  
+1. **Workspaces + membership** on operator Postgres — Model B personal workspace, create/switch workspace, scope per-user data into a default workspace  
+
 2. **Invites** + signup-mode policy (`open` / `invite-only`) — no SSO yet  
 3. **Scope data** to `workspaceId` (chats personal; playbooks/schedules workspace-shared)  
 4. **MCP:** keep platform/env + host setup; add workspace BYOA when ready  
