@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { notifyWorkspacesChanged } from "@/lib/auth/workspace-events";
 import { WorkspaceScimSection } from "@/components/chat/workspace-scim-section";
 import { WorkspaceSsoSection } from "@/components/chat/workspace-sso-section";
@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel, FieldSelect } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { useTabSearchParam } from "@/lib/navigation/use-tab-search-param";
 
 type InviteRow = {
   readonly id: string;
@@ -95,7 +96,7 @@ function memberLabel(member: MemberRow): string {
   return member.email ?? member.name ?? member.userId.slice(0, 8);
 }
 
-export default function WorkspaceSettingsPage() {
+function WorkspaceSettingsPage() {
   const [workspaceName, setWorkspaceName] = useState<string | null>(null);
   const [workspaceKind, setWorkspaceKind] = useState<"personal" | "team" | null>(null);
   const [viewerUserId, setViewerUserId] = useState<string | null>(null);
@@ -111,7 +112,6 @@ export default function WorkspaceSettingsPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
   const [emailDeliveryNote, setEmailDeliveryNote] = useState<string | null>(null);
-  const [tab, setTab] = useState("people");
   const copiedResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const markCopied = useCallback((id: string) => {
@@ -465,11 +465,12 @@ export default function WorkspaceSettingsPage() {
     return items;
   }, [isTeam]);
 
-  useEffect(() => {
-    if (!tabs.some((item) => item.id === tab)) {
-      setTab("people");
-    }
-  }, [tab, tabs]);
+  const tabIds = useMemo(() => tabs.map((item) => item.id), [tabs]);
+  const [tab, setTab] = useTabSearchParam({
+    defaultTab: "people",
+    ready: workspaceKind !== null,
+    tabs: tabIds,
+  });
 
   return (
     <SettingsShell
@@ -752,5 +753,24 @@ export default function WorkspaceSettingsPage() {
         </div>
       ) : null}
     </SettingsShell>
+  );
+}
+
+export default function WorkspaceSettingsRoute() {
+  return (
+    <Suspense
+      fallback={
+        <SettingsShell
+          description="Manage who can access this workspace and how they sign in."
+          title="Workspace"
+        >
+          <SettingsPanel>
+            <SettingsRowsSkeleton rows={4} />
+          </SettingsPanel>
+        </SettingsShell>
+      }
+    >
+      <WorkspaceSettingsPage />
+    </Suspense>
   );
 }

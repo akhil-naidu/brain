@@ -30,11 +30,17 @@ import {
   startConnectionAuthorize,
   type ConnectionStatus,
 } from "@/lib/chat/connections-status-api";
+import { useTabSearchParam } from "@/lib/navigation/use-tab-search-param";
 import { cn } from "@/lib/utils";
+
+const TOOLS_TABS = ["mcp", "workspace-apps"] as const;
 
 export function ToolsPage() {
   const { enabledConnections, setConnectionEnabled } = useChatShell();
-  const [tab, setTab] = useState("mcp");
+  const [tab, setTab] = useTabSearchParam({
+    defaultTab: "mcp",
+    tabs: TOOLS_TABS,
+  });
   const [statusById, setStatusById] = useState<ReadonlyMap<string, ConnectionStatus> | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
