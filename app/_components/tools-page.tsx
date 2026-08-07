@@ -315,7 +315,7 @@ export function ToolsPage() {
                                 if (checked && !allowEnable) {
                                   setActionError(
                                     status?.status === "needs_setup"
-                                      ? `Ask the host operator to set up ${label}, then connect it.`
+                                      ? `Set up ${label} app credentials first (Set up or Workspace apps), then connect it.`
                                       : status?.status === "needs_sign_in"
                                         ? `Connect ${label} before turning it on.`
                                         : `Wait for ${label} status, then connect it.`,
