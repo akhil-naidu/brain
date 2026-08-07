@@ -96,14 +96,20 @@ export function UserProfileMenu() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/settings/workspace">
+          <Link
+            aria-current={pathname.startsWith("/settings/workspace") ? "page" : undefined}
+            href="/settings/workspace"
+          >
             <SettingsIcon className="size-4" />
             Workspace settings
           </Link>
         </DropdownMenuItem>
         {isInstanceAdmin ? (
           <DropdownMenuItem asChild>
-            <Link href="/settings/instance">
+            <Link
+              aria-current={pathname.startsWith("/settings/instance") ? "page" : undefined}
+              href="/settings/instance"
+            >
               <ShieldIcon className="size-4" />
               Instance settings
             </Link>

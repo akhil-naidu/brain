@@ -21,6 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -276,10 +277,8 @@ export function WorkspaceSwitcher({
               Create a team workspace. You will be the owner and it becomes your active workspace.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="workspace-name">
-              Name
-            </label>
+          <Field>
+            <FieldLabel htmlFor="workspace-name">Name</FieldLabel>
             <Input
               id="workspace-name"
               maxLength={80}
@@ -293,7 +292,7 @@ export function WorkspaceSwitcher({
               placeholder="Acme team"
               value={newName}
             />
-          </div>
+          </Field>
           {error ? (
             <p className="text-destructive text-sm" role="alert">
               {error}

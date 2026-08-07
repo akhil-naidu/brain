@@ -299,17 +299,15 @@ export default function InstanceSettingsPage() {
 
           {canManage ? (
             <div className="border-border/70 space-y-3 border-t pt-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="license-key">
-                  License key
-                </label>
+              <Field>
+                <FieldLabel htmlFor="license-key">License key</FieldLabel>
                 <Input
                   id="license-key"
                   onChange={(event) => setLicenseKey(event.target.value)}
                   placeholder="BRAIN1...."
                   value={licenseKey}
                 />
-              </div>
+              </Field>
               <div className="flex flex-wrap gap-2">
                 <Button
                   disabled={pending || !licenseKey.trim()}
