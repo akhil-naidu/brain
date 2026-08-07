@@ -37,6 +37,23 @@ dokku config:set brain \
 browser `Origin` / `X-Forwarded-*` headers; set the env explicitly on Dokku so
 callbacks never collapse to `http://localhost:3000`.
 
+## Persistent data (`/app/.eve`)
+
+Chat history, OAuth tokens, Snowflake Set up, and eve workflow data live under
+`/app/.eve`. Mount a Dokku/dflow volume there so redeploys do not wipe state:
+
+| Host path | Container path |
+| --- | --- |
+| `/var/lib/dokku/data/storage/brain/default` | `/app/.eve` |
+
+The image entrypoint chowns that mount to uid/gid `1001` (`nextjs`) on start.
+If an older deploy crash-loops with `EACCES` on `/app/.eve/.workflow-data`
+before this entrypoint is live, fix the host directory once:
+
+```bash
+sudo chown -R 1001:1001 /var/lib/dokku/data/storage/brain/default
+dokku ps:restart brain
+```
 
 Redeploy from GitHub / dflow after the `Dockerfile` is on `main`.
 

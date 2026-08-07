@@ -27,7 +27,7 @@ ENV EVE_NEXT_PRODUCTION_PORT=4274
 ENV HOME=/home/nextjs
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates \
+  && apt-get install -y --no-install-recommends ca-certificates gosu \
   && rm -rf /var/lib/apt/lists/* \
   && groupadd --gid 1001 nodejs \
   && useradd --uid 1001 --gid nodejs --create-home --home-dir /home/nextjs nextjs \
@@ -45,7 +45,12 @@ COPY --from=builder --chown=nextjs:nodejs /app/next.config.ts ./next.config.ts
 COPY --from=builder --chown=nextjs:nodejs /app/tsconfig.json ./tsconfig.json
 COPY --from=builder --chown=nextjs:nodejs /app/next-env.d.ts ./next-env.d.ts
 COPY --from=builder --chown=nextjs:nodejs /app/postcss.config.mjs ./postcss.config.mjs
+COPY --from=builder /app/scripts/docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
-USER nextjs
+# Entrypoint runs as root so a Dokku/dflow volume mounted at /app/.eve can be
+# chown'd to nextjs, then drops privileges before starting the app.
+USER root
 EXPOSE 3000
+ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["node", "scripts/start-production.mjs"]
