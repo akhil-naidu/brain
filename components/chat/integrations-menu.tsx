@@ -10,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { IconTooltip } from "@/components/ui/tooltip";
 import type { EnabledConnections } from "@/app/_components/chat-shell-context";
 import { CONNECTION_ITEMS } from "@/lib/chat/connection-catalog";
 import { canEnableConnection, integrationStatusText } from "@/lib/chat/connection-ui";
@@ -95,18 +96,20 @@ export function IntegrationsMenu({
         }
       }}
     >
-      <DropdownMenuTrigger asChild>
-        <button
-          aria-label="Tools"
-          className="text-muted-foreground/60 hover:bg-muted/50 hover:text-foreground focus-visible:bg-muted/50 focus-visible:text-foreground dark:text-muted-foreground/50 inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg transition-colors focus-visible:outline-none [&_*]:cursor-pointer"
-          onPointerDown={() => {
-            loadStatus();
-          }}
-          type="button"
-        >
-          <HammerIcon className="size-4 shrink-0 cursor-pointer" />
-        </button>
-      </DropdownMenuTrigger>
+      <IconTooltip label="Tools" side="top">
+        <DropdownMenuTrigger asChild>
+          <button
+            aria-label="Tools"
+            className="text-muted-foreground/60 hover:bg-muted/50 hover:text-foreground focus-visible:bg-muted/50 focus-visible:text-foreground dark:text-muted-foreground/50 inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg transition-colors focus-visible:outline-none [&_*]:cursor-pointer"
+            onPointerDown={() => {
+              loadStatus();
+            }}
+            type="button"
+          >
+            <HammerIcon className="size-4 shrink-0 cursor-pointer" />
+          </button>
+        </DropdownMenuTrigger>
+      </IconTooltip>
       <DropdownMenuContent
         align="start"
         className="border-border bg-popover w-72 rounded-md p-1"

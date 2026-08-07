@@ -6,6 +6,7 @@ import { useState } from "react";
 import { PlaybookEditorDialog } from "@/components/chat/playbook-editor-dialog";
 import { SchedulePlaybookDialog } from "@/components/chat/schedule-playbook-dialog";
 import { Button } from "@/components/ui/button";
+import { IconTooltip } from "@/components/ui/tooltip";
 import { MAX_PLAYBOOKS, type Playbook } from "@/lib/chat/playbooks";
 import { listScheduledPlaybooks } from "@/lib/chat/scheduled-playbooks-api";
 import { cn } from "@/lib/utils";
@@ -60,21 +61,36 @@ export function PlaybooksPanel({
               <Link href="/playbooks">Manage</Link>
             </Button>
           ) : null}
-          <Button
-            className="text-muted-foreground h-7 px-2 text-xs"
-            disabled={atLimit}
-            onClick={() => {
-              setEditing(null);
-              setEditorOpen(true);
-            }}
-            size="sm"
-            title={atLimit ? `You can save up to ${MAX_PLAYBOOKS} playbooks.` : "Add playbook"}
-            type="button"
-            variant="ghost"
-          >
-            <PlusIcon className="size-3.5" />
-            Add
-          </Button>
+          {atLimit ? (
+            <IconTooltip label={`You can save up to ${MAX_PLAYBOOKS} playbooks.`} side="top">
+              <span className="inline-flex">
+                <Button
+                  className="text-muted-foreground h-7 px-2 text-xs"
+                  disabled
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  <PlusIcon className="size-3.5" />
+                  Add
+                </Button>
+              </span>
+            </IconTooltip>
+          ) : (
+            <Button
+              className="text-muted-foreground h-7 px-2 text-xs"
+              onClick={() => {
+                setEditing(null);
+                setEditorOpen(true);
+              }}
+              size="sm"
+              type="button"
+              variant="ghost"
+            >
+              <PlusIcon className="size-3.5" />
+              Add
+            </Button>
+          )}
         </div>
       </div>
 

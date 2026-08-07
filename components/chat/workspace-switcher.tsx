@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { IconTooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 type WorkspaceListItem = {
@@ -184,33 +185,35 @@ export function WorkspaceSwitcher({
   return (
     <div className={cn("min-w-0", compact ? "flex justify-center" : "w-full", className)}>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          {compact ? (
-            <Button
-              aria-label={label}
-              className="text-muted-foreground hover:text-foreground size-9"
-              disabled={pending || workspaces.length === 0}
-              size="icon-sm"
-              title={label}
-              type="button"
-              variant="ghost"
-            >
-              {active ? (
-                <span className="bg-muted text-foreground flex size-6 items-center justify-center rounded-md text-[11px] font-semibold">
-                  {workspaceInitial(active)}
-                </span>
-              ) : (
-                <Building2Icon className="size-4" />
-              )}
-            </Button>
-          ) : (
+        {compact ? (
+          <IconTooltip label={label} side="right">
+            <DropdownMenuTrigger asChild>
+              <Button
+                aria-label={label}
+                className="text-muted-foreground hover:text-foreground size-9"
+                disabled={pending || workspaces.length === 0}
+                size="icon-sm"
+                type="button"
+                variant="ghost"
+              >
+                {active ? (
+                  <span className="bg-muted text-foreground flex size-6 items-center justify-center rounded-md text-[11px] font-semibold">
+                    {workspaceInitial(active)}
+                  </span>
+                ) : (
+                  <Building2Icon className="size-4" />
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+          </IconTooltip>
+        ) : (
+          <DropdownMenuTrigger asChild>
             <button
               className={cn(
                 "border-border/70 bg-muted/30 hover:bg-muted/55 focus-visible:ring-ring/40 flex h-8 w-full min-w-0 cursor-pointer items-center gap-1.5 rounded-md border px-1.5 text-left outline-none focus-visible:ring-2",
                 (pending || workspaces.length === 0) && "pointer-events-none opacity-50",
               )}
               disabled={pending || workspaces.length === 0}
-              title={label}
               type="button"
             >
               <span className="bg-background text-foreground flex size-5 shrink-0 items-center justify-center rounded text-[10px] font-semibold">
@@ -219,8 +222,8 @@ export function WorkspaceSwitcher({
               <span className="min-w-0 flex-1 truncate text-xs font-medium">{label}</span>
               <ChevronsUpDownIcon className="text-muted-foreground size-3 shrink-0" />
             </button>
-          )}
-        </DropdownMenuTrigger>
+          </DropdownMenuTrigger>
+        )}
         <DropdownMenuContent align={compact ? "center" : "start"} className="w-60">
           <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
           {workspaces.map((workspace) => (

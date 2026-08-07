@@ -15,6 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { IconTooltip } from "@/components/ui/tooltip";
 
 function userInitial(name: string | null | undefined, email: string | null | undefined): string {
   const source = name?.trim() || email?.trim() || "?";
@@ -72,20 +73,21 @@ export function UserProfileMenu() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          aria-label="Account menu"
-          className="text-muted-foreground hover:text-foreground size-8 rounded-full p-0"
-          size="icon-sm"
-          title={displayName}
-          type="button"
-          variant="ghost"
-        >
-          <span className="bg-primary/12 text-foreground flex size-7 items-center justify-center rounded-full text-[11px] font-semibold">
-            {initial}
-          </span>
-        </Button>
-      </DropdownMenuTrigger>
+      <IconTooltip label={displayName} side="bottom">
+        <DropdownMenuTrigger asChild>
+          <Button
+            aria-label="Account menu"
+            className="text-muted-foreground hover:text-foreground size-8 rounded-full p-0"
+            size="icon-sm"
+            type="button"
+            variant="ghost"
+          >
+            <span className="bg-primary/12 text-foreground flex size-7 items-center justify-center rounded-full text-[11px] font-semibold">
+              {initial}
+            </span>
+          </Button>
+        </DropdownMenuTrigger>
+      </IconTooltip>
       <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuLabel className="font-normal">
           <div className="flex items-center gap-2.5 py-0.5">

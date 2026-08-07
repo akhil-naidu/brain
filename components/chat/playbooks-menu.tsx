@@ -19,6 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { IconTooltip } from "@/components/ui/tooltip";
 import { MAX_PLAYBOOKS, type Playbook } from "@/lib/chat/playbooks";
 import { listScheduledPlaybooks } from "@/lib/chat/scheduled-playbooks-api";
 import { cn } from "@/lib/utils";
@@ -53,19 +54,20 @@ export function PlaybooksMenu({
   return (
     <>
       <DropdownMenu onOpenChange={setMenuOpen} open={menuOpen}>
-        <DropdownMenuTrigger asChild>
-          <button
-            aria-label="Playbooks"
-            className={cn(
-              "text-muted-foreground/60 hover:bg-muted/50 hover:text-foreground focus-visible:bg-muted/50 focus-visible:text-foreground dark:text-muted-foreground/50 inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50",
-            )}
-            disabled={disabled}
-            title="Playbooks"
-            type="button"
-          >
-            <BookmarkIcon className="size-4" />
-          </button>
-        </DropdownMenuTrigger>
+        <IconTooltip label="Playbooks" side="top">
+          <DropdownMenuTrigger asChild>
+            <button
+              aria-label="Playbooks"
+              className={cn(
+                "text-muted-foreground/60 hover:bg-muted/50 hover:text-foreground focus-visible:bg-muted/50 focus-visible:text-foreground dark:text-muted-foreground/50 inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50",
+              )}
+              disabled={disabled}
+              type="button"
+            >
+              <BookmarkIcon className="size-4" />
+            </button>
+          </DropdownMenuTrigger>
+        </IconTooltip>
         <DropdownMenuContent
           align="start"
           className="border-border bg-popover w-[min(18rem,calc(100vw-1.5rem))] rounded-md p-1"
