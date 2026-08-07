@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireWorkspaceSession } from "@/lib/auth/require-workspace-session";
 import { MAX_PLAYBOOK_LABEL_CHARS, MAX_PLAYBOOK_PROMPT_CHARS } from "@/lib/chat/playbooks";
-import { getUserDataStore } from "@/lib/chat/user-data/sqlite-user-data-store";
+import { getUserDataStore } from "@/lib/chat/user-data/postgres-user-data-store";
 
 export const runtime = "nodejs";
 
@@ -34,7 +34,7 @@ export async function GET() {
   if (!auth.ok) {
     return auth.response;
   }
-  const playbooks = getUserDataStore().listPlaybooks(auth.session.workspaceId);
+  const playbooks = await getUserDataStore().listPlaybooks(auth.session.workspaceId);
   return NextResponse.json({ playbooks });
 }
 
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid playbooks import body" }, { status: 400 });
     }
-    const playbooks = getUserDataStore().importPlaybooks(
+    const playbooks = await getUserDataStore().importPlaybooks(
       auth.session.workspaceId,
       auth.session.userId,
       parsed.data.playbooks,
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const playbook = getUserDataStore().upsertPlaybook(
+    const playbook = await getUserDataStore().upsertPlaybook(
       auth.session.workspaceId,
       auth.session.userId,
       parsed.data,

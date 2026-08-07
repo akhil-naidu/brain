@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireWorkspaceSession } from "@/lib/auth/require-workspace-session";
-import { getUserDataStore } from "@/lib/chat/user-data/sqlite-user-data-store";
+import { getUserDataStore } from "@/lib/chat/user-data/postgres-user-data-store";
 
 export const runtime = "nodejs";
 
@@ -14,7 +14,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     return auth.response;
   }
   const { id } = await context.params;
-  const deleted = getUserDataStore().deletePlaybook(auth.session.workspaceId, id);
+  const deleted = await getUserDataStore().deletePlaybook(auth.session.workspaceId, id);
   if (!deleted) {
     return NextResponse.json({ error: "Playbook not found." }, { status: 404 });
   }

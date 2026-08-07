@@ -46,19 +46,24 @@ export type DeleteChatOptions = {
 };
 
 export interface ChatStore {
-  createChat(userId: string, input: CreateChatInput): ChatRecord;
-  listChats(userId: string, workspaceId: string): readonly ChatSummary[];
-  getChat(userId: string, workspaceId: string, id: string): ChatRecord | null;
+  createChat(userId: string, input: CreateChatInput): Promise<ChatRecord>;
+  listChats(userId: string, workspaceId: string): Promise<readonly ChatSummary[]>;
+  getChat(userId: string, workspaceId: string, id: string): Promise<ChatRecord | null>;
   updateChat(
     userId: string,
     workspaceId: string,
     id: string,
     input: UpdateChatInput,
-  ): ChatRecord | null;
-  deleteChat(userId: string, workspaceId: string, id: string, options?: DeleteChatOptions): boolean;
+  ): Promise<ChatRecord | null>;
+  deleteChat(
+    userId: string,
+    workspaceId: string,
+    id: string,
+    options?: DeleteChatOptions,
+  ): Promise<boolean>;
   /** One-time migration helper: move chats from one owner id to another. */
-  reassignOwner(fromUserId: string, toUserId: string): number;
+  reassignOwner(fromUserId: string, toUserId: string): Promise<number>;
   /** Assign workspace_id for all chats owned by user that still lack one. */
-  assignWorkspaceToUserChats(userId: string, workspaceId: string): number;
+  assignWorkspaceToUserChats(userId: string, workspaceId: string): Promise<number>;
   close(): void;
 }

@@ -13,7 +13,7 @@ import {
   resolveScheduledPlaybooksPath,
   SCHEDULED_PLAYBOOKS_FILENAME,
 } from "@/lib/chat/user-data/migrate-host-schedules";
-import { getUserDataStore } from "@/lib/chat/user-data/sqlite-user-data-store";
+import { getUserDataStore } from "@/lib/chat/user-data/postgres-user-data-store";
 
 export { MAX_SCHEDULED_PLAYBOOKS, resolveScheduledPlaybooksPath, SCHEDULED_PLAYBOOKS_FILENAME };
 

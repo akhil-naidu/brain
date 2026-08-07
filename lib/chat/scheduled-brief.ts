@@ -1,6 +1,6 @@
 import path from "node:path";
 import { z } from "zod";
-import { getUserDataStore } from "@/lib/chat/user-data/sqlite-user-data-store";
+import { getUserDataStore } from "@/lib/chat/user-data/postgres-user-data-store";
 
 export const SCHEDULED_BRIEF_FILENAME = "scheduled-brief.json";
 export const DEFAULT_SCHEDULED_BRIEF_HOUR = 9;
@@ -235,7 +235,7 @@ export async function readScheduledBriefConfig(
   runAsUserId: string,
 ): Promise<ScheduledBriefConfig> {
   const store = getUserDataStore();
-  const config = store.getMorningBrief(workspaceId, runAsUserId);
+  const config = await store.getMorningBrief(workspaceId, runAsUserId);
   // Drop locks left behind by crashed / interrupted runs once they go stale.
   if (config.runningSince && !isScheduleRunLocked(config.runningSince)) {
     const cleared = { ...config, runningSince: null };

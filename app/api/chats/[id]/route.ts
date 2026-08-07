@@ -16,7 +16,11 @@ export async function GET(_request: Request, context: RouteContext) {
     return session.response;
   }
   const { id } = await context.params;
-  const chat = getChatStore().getChat(session.session.userId, session.session.workspaceId, id);
+  const chat = await getChatStore().getChat(
+    session.session.userId,
+    session.session.workspaceId,
+    id,
+  );
   if (!chat) {
     return NextResponse.json({ error: "Chat not found" }, { status: 404 });
   }
@@ -52,7 +56,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   try {
-    const chat = getChatStore().updateChat(
+    const chat = await getChatStore().updateChat(
       session.session.userId,
       session.session.workspaceId,
       id,
@@ -91,7 +95,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     return session.response;
   }
   const { id } = await context.params;
-  const deleted = getChatStore().deleteChat(
+  const deleted = await getChatStore().deleteChat(
     session.session.userId,
     session.session.workspaceId,
     id,

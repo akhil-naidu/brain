@@ -79,7 +79,7 @@ export async function runScheduledPromptTurn(input: {
     throw new Error("Scheduled runs require a workspace id.");
   }
   const store = getChatStore();
-  const chat = store.createChat(userId, { title: input.title, workspaceId });
+  const chat = await store.createChat(userId, { title: input.title, workspaceId });
 
   const internalToken = resolveInternalOperatorToken();
   if (!internalToken) {
@@ -101,7 +101,7 @@ export async function runScheduledPromptTurn(input: {
     clientContext: [createConnectionClientContext(SCHEDULED_CONNECTIONS)],
   });
 
-  store.updateChat(userId, workspaceId, chat.id, {
+  await store.updateChat(userId, workspaceId, chat.id, {
     eveSession: {
       sessionId: response.sessionId,
       continuationToken: response.continuationToken,
@@ -110,7 +110,7 @@ export async function runScheduledPromptTurn(input: {
   });
 
   const result = await response.result();
-  const updated = store.updateChat(userId, workspaceId, chat.id, {
+  const updated = await store.updateChat(userId, workspaceId, chat.id, {
     eveSession: session.state,
     events: result.events,
   });

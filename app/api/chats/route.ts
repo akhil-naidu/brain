@@ -10,7 +10,7 @@ export async function GET() {
   if (!session.ok) {
     return session.response;
   }
-  const chats = getChatStore().listChats(session.session.userId, session.session.workspaceId);
+  const chats = await getChatStore().listChats(session.session.userId, session.session.workspaceId);
   return NextResponse.json({
     chats,
     canCreateShared: session.session.workspace.kind === "team",
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const chat = getChatStore().createChat(session.session.userId, {
+  const chat = await getChatStore().createChat(session.session.userId, {
     id: parsed.data.id,
     title: parsed.data.title,
     workspaceId: session.session.workspaceId,

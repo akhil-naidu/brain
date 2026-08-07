@@ -10,7 +10,7 @@ import {
 } from "@/lib/chat/scheduled-brief";
 import { runScheduledPromptTurn, type ScheduledSlackResult } from "@/lib/chat/run-scheduled-prompt";
 import type { ChatRecord } from "@/lib/chat/store/types";
-import { getUserDataStore } from "@/lib/chat/user-data/sqlite-user-data-store";
+import { getUserDataStore } from "@/lib/chat/user-data/postgres-user-data-store";
 import { MORNING_BRIEF_PROMPT } from "@/lib/chat/welcome-prompts";
 
 export type ScheduledBriefSlackResult = ScheduledSlackResult;
@@ -55,7 +55,7 @@ export async function runScheduledBrief(options: {
     return { ok: true, skipped: true, reason: "not_due", config, workspaceId, runAsUserId };
   }
 
-  const claimed = getUserDataStore().tryClaimMorningBriefRun(
+  const claimed = await getUserDataStore().tryClaimMorningBriefRun(
     workspaceId,
     runAsUserId,
     scheduleRunClaimTimestamps(now),

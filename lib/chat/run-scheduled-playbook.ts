@@ -1,5 +1,5 @@
 import { scheduleRunClaimTimestamps } from "@/lib/chat/scheduled-brief";
-import { getUserDataStore } from "@/lib/chat/user-data/sqlite-user-data-store";
+import { getUserDataStore } from "@/lib/chat/user-data/postgres-user-data-store";
 import { runScheduledPromptTurn, type ScheduledSlackResult } from "@/lib/chat/run-scheduled-prompt";
 import {
   isScheduledPlaybookDue,
@@ -33,7 +33,7 @@ export async function runScheduledPlaybook(options: {
 }): Promise<RunScheduledPlaybookResult> {
   const now = options.now ?? new Date();
   const force = options.force === true;
-  const found = getUserDataStore().getPlaybookSchedule(options.id);
+  const found = await getUserDataStore().getPlaybookSchedule(options.id);
   if (!found) {
     return { ok: true, skipped: true, reason: "not_found" };
   }
@@ -52,7 +52,7 @@ export async function runScheduledPlaybook(options: {
     return { ok: true, skipped: true, reason: "not_due", schedule };
   }
 
-  const claimed = getUserDataStore().tryClaimPlaybookScheduleRun(
+  const claimed = await getUserDataStore().tryClaimPlaybookScheduleRun(
     workspaceId,
     options.id,
     scheduleRunClaimTimestamps(now),
@@ -87,7 +87,7 @@ export async function runScheduledPlaybook(options: {
 
     return { ok: true, skipped: false, schedule: completed, chat, slack };
   } catch (error) {
-    const latest = getUserDataStore().getPlaybookSchedule(options.id);
+    const latest = await getUserDataStore().getPlaybookSchedule(options.id);
     if (latest) {
       const { workspaceId: latestWorkspace, runAsUserId: latestUser, ...rest } = latest;
       await replaceScheduledPlaybook(latestWorkspace, latestUser, {
@@ -115,7 +115,7 @@ async function runDueQueue(
 export async function runDueScheduledPlaybooks(
   now: Date = new Date(),
 ): Promise<readonly RunScheduledPlaybookResult[]> {
-  const schedules = getUserDataStore().listAllPlaybookSchedules();
+  const schedules = await getUserDataStore().listAllPlaybookSchedules();
   const dueIds = schedules
     .filter((item) => isScheduledPlaybookDue(item, now))
     .map((item) => item.id);

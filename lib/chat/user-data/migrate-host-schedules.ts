@@ -6,7 +6,7 @@ import { MAX_SCHEDULED_PLAYBOOKS } from "@/lib/chat/scheduled-playbooks-limits";
 import type {
   ScheduledBriefConfig,
   UserDataStore,
-} from "@/lib/chat/user-data/sqlite-user-data-store";
+} from "@/lib/chat/user-data/postgres-user-data-store";
 
 export const SCHEDULED_PLAYBOOKS_FILENAME = "scheduled-playbooks.json";
 export const SCHEDULED_BRIEF_FILENAME = "scheduled-brief.json";
@@ -86,17 +86,13 @@ function readJsonFile(filePath: string): unknown {
 }
 
 function renameMigrated(filePath: string): void {
-  if (!existsSync(filePath)) {
-    return;
-  }
+  if (!existsSync(filePath)) return;
   renameSync(filePath, `${filePath}.migrated`);
 }
 
 function parseBriefConfig(value: unknown): ScheduledBriefConfig | null {
   const parsed = briefSchema.safeParse(value);
-  if (!parsed.success) {
-    return null;
-  }
+  if (!parsed.success) return null;
   try {
     new Intl.DateTimeFormat("en-US", { timeZone: parsed.data.timezone }).format(new Date());
   } catch {
@@ -121,14 +117,17 @@ function parseBriefConfig(value: unknown): ScheduledBriefConfig | null {
 
 /**
  * One-time import of host-wide `.eve/scheduled-*.json` into the operator/first user
- * when SQLite schedule tables are empty. Renames source files to `*.migrated`.
+ * when schedule tables are empty. Renames source files to `*.migrated`.
  */
-export function migrateHostSchedulesIntoStore(
+export async function migrateHostSchedulesIntoStore(
   store: UserDataStore,
   env: Record<string, string | undefined> = process.env,
   cwd: string = process.cwd(),
-): { readonly importedPlaybooks: number; readonly importedBrief: boolean } {
-  if (store.listAllPlaybookSchedules().length > 0 || store.listMorningBriefs().length > 0) {
+): Promise<{ readonly importedPlaybooks: number; readonly importedBrief: boolean }> {
+  if (
+    (await store.listAllPlaybookSchedules()).length > 0 ||
+    (await store.listMorningBriefs()).length > 0
+  ) {
     return { importedPlaybooks: 0, importedBrief: false };
   }
 
@@ -153,10 +152,12 @@ export function migrateHostSchedulesIntoStore(
     const raw = readJsonFile(playbooksPath);
     const parsed = playbooksStoreSchema.safeParse(raw);
     if (parsed.success) {
-      for (const schedule of parsed.data.schedules) {
-        store.replacePlaybookSchedule(workspaceId, userId, schedule);
-        importedPlaybooks += 1;
-      }
+      await Promise.all(
+        parsed.data.schedules.map((schedule) =>
+          store.replacePlaybookSchedule(workspaceId, userId, schedule),
+        ),
+      );
+      importedPlaybooks = parsed.data.schedules.length;
       renameMigrated(playbooksPath);
     }
   }
@@ -165,7 +166,7 @@ export function migrateHostSchedulesIntoStore(
   if (briefExists) {
     const brief = parseBriefConfig(readJsonFile(briefPath));
     if (brief) {
-      store.replaceMorningBrief(workspaceId, userId, brief);
+      await store.replaceMorningBrief(workspaceId, userId, brief);
       importedBrief = true;
       renameMigrated(briefPath);
     }
