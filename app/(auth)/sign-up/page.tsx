@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
+import { AuthFooterNote, AuthLink, AuthPanel, AuthPanelHeader } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth/client";
 
@@ -78,86 +80,96 @@ export default function SignUpPage() {
   }
 
   if (status === null) {
-    return <p className="text-muted-foreground text-sm">Checking signup…</p>;
+    return (
+      <>
+        <p className="text-muted-foreground auth-fade-up text-sm">Checking signup…</p>
+      </>
+    );
   }
 
   if (status.bootstrapAllowed) {
     return (
-      <div className="border-border bg-card w-full max-w-sm space-y-3 rounded-2xl border p-6 text-center shadow-sm">
-        <h1 className="text-lg font-semibold">Create the first account</h1>
-        <p className="text-muted-foreground text-sm">
-          This host has no users yet. Use setup to create the operator account.
-        </p>
-        <Button asChild className="w-full">
-          <Link href="/setup">Go to setup</Link>
-        </Button>
-      </div>
+      <>
+        <AuthPanel>
+          <AuthPanelHeader
+            description="This host has no users yet. Use setup to create the operator account."
+            title="Create the first account"
+          />
+          <Button asChild className="h-11 w-full">
+            <Link href="/setup">Go to setup</Link>
+          </Button>
+        </AuthPanel>
+      </>
     );
   }
 
   if (!status.openSignupAllowed) {
     return (
-      <div className="border-border bg-card w-full max-w-sm space-y-3 rounded-2xl border p-6 text-center shadow-sm">
-        <h1 className="text-lg font-semibold">Signup closed</h1>
-        <p className="text-muted-foreground text-sm">
-          This host is {status.signupMode === "sso-only" ? "SSO-only" : "invite-only"}. Ask an admin
-          for an invite link, or sign in if you already have an account.
-        </p>
-        <Button asChild className="w-full">
-          <Link href="/sign-in">Sign in</Link>
-        </Button>
-      </div>
+      <>
+        <AuthPanel>
+          <AuthPanelHeader
+            description={
+              <>
+                This host is {status.signupMode === "sso-only" ? "SSO-only" : "invite-only"}. Ask an
+                admin for an invite link, or sign in if you already have an account.
+              </>
+            }
+            title="Signup closed"
+          />
+          <Button asChild className="h-11 w-full">
+            <Link href="/sign-in">Sign in</Link>
+          </Button>
+        </AuthPanel>
+      </>
     );
   }
 
   return (
-    <form
-      className="border-border bg-card w-full max-w-sm space-y-4 rounded-2xl border p-6 shadow-sm"
-      onSubmit={(event) => {
-        void onSubmit(event);
-      }}
-    >
-      <div className="space-y-1">
-        <h1 className="text-lg font-semibold tracking-tight">Create account</h1>
-        <p className="text-muted-foreground text-sm">Sign up for Brain on this host.</p>
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm font-medium" htmlFor="email">
-          Email
-        </label>
-        <Input
-          autoComplete="username"
-          id="email"
-          onChange={(event) => setEmail(event.target.value)}
-          required
-          type="email"
-          value={email}
-        />
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm font-medium" htmlFor="password">
-          Password
-        </label>
-        <Input
-          autoComplete="new-password"
-          id="password"
-          minLength={8}
-          onChange={(event) => setPassword(event.target.value)}
-          required
-          type="password"
-          value={password}
-        />
-      </div>
-      {error ? <p className="text-destructive text-sm">{error}</p> : null}
-      <Button className="w-full" disabled={pending} type="submit">
-        {pending ? "Creating…" : "Create account"}
-      </Button>
-      <p className="text-muted-foreground text-center text-xs">
-        Already have an account?{" "}
-        <Link className="text-foreground underline underline-offset-2" href="/sign-in">
-          Sign in
-        </Link>
-      </p>
-    </form>
+    <>
+      <AuthPanel
+        onSubmit={(event) => {
+          void onSubmit(event);
+        }}
+      >
+        <AuthPanelHeader description="Create your account on this host." title="Create account" />
+        <Field>
+          <FieldLabel htmlFor="email">Email</FieldLabel>
+          <Input
+            autoComplete="username"
+            className="h-11"
+            id="email"
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="you@company.com"
+            required
+            type="email"
+            value={email}
+          />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="password">Password</FieldLabel>
+          <Input
+            autoComplete="new-password"
+            className="h-11"
+            id="password"
+            minLength={8}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+            type="password"
+            value={password}
+          />
+        </Field>
+        {error ? (
+          <p className="text-destructive text-sm" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <Button className="h-11 w-full" disabled={pending} type="submit">
+          {pending ? "Creating…" : "Create account"}
+        </Button>
+        <AuthFooterNote>
+          Already have an account? <AuthLink href="/sign-in">Sign in</AuthLink>
+        </AuthFooterNote>
+      </AuthPanel>
+    </>
   );
 }
