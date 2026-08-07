@@ -26,6 +26,25 @@ The system MUST provide a way to sign out that clears the browser session so sub
 - **WHEN** a signed-in user signs out
 - **THEN** chat history and connection APIs treat the caller as unauthenticated until they sign in again
 
+### Requirement: User can manage active sessions
+The system MUST let a signed-in user list their active Better Auth sessions and revoke individual other sessions, all other sessions, or every session (including the current one). The current session MUST be identifiable in the UI. The system MUST NOT require a third-party device-management service for this capability.
+
+#### Scenario: List sessions
+- **WHEN** a signed-in user opens the sessions surface
+- **THEN** the UI shows their active sessions with enough detail to distinguish devices (for example user agent summary and last active time)
+
+#### Scenario: Revoke another session
+- **WHEN** a signed-in user revokes a session that is not the current one
+- **THEN** that session can no longer access protected APIs and the current session remains signed in
+
+#### Scenario: Sign out other devices
+- **WHEN** a signed-in user chooses to revoke all other sessions
+- **THEN** other sessions end while the current browser session remains authenticated
+
+#### Scenario: Sign out everywhere
+- **WHEN** a signed-in user revokes all sessions including the current one
+- **THEN** the current browser becomes unauthenticated and must sign in again
+
 ### Requirement: Unauthenticated access is denied for protected surfaces
 Chat history APIs, eve browser chat sessions, and connection authorize/status/disconnect endpoints MUST require an authenticated session. Unauthenticated callers MUST NOT act as a shared anonymous chat principal.
 

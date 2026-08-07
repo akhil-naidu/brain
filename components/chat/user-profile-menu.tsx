@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOutIcon, SettingsIcon, ShieldIcon } from "lucide-react";
+import { LogOutIcon, MonitorSmartphoneIcon, SettingsIcon, ShieldIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -110,6 +110,15 @@ export function UserProfileMenu() {
           >
             <SettingsIcon className="size-4" />
             Workspace settings
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link
+            aria-current={pathname.startsWith("/settings/account") ? "page" : undefined}
+            href="/settings/account"
+          >
+            <MonitorSmartphoneIcon className="size-4" />
+            Sessions
           </Link>
         </DropdownMenuItem>
         {isInstanceAdmin ? (
