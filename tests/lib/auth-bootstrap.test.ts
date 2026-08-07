@@ -1,6 +1,3 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { bootstrapFirstUser, isBootstrapAllowed, verifyBootstrapToken } from "@/lib/auth/bootstrap";
 import {
@@ -11,33 +8,35 @@ import {
   resetBrainAuthForTests,
   runWithBootstrapSignup,
 } from "@/lib/auth/server";
+import { getPool } from "@/lib/db/pool";
 
-describe("better auth bootstrap", () => {
-  let dir: string;
-  let previousDbPath: string | undefined;
+const DB_URL = process.env["BRAIN_DATABASE_URL"] ?? process.env["DATABASE_URL"];
 
+const describeOrSkip = DB_URL ? describe : describe.skip;
+
+describeOrSkip("better auth bootstrap", () => {
   beforeEach(async () => {
-    dir = mkdtempSync(path.join(tmpdir(), "brain-auth-"));
-    previousDbPath = process.env["BRAIN_AUTH_DB_PATH"];
-    process.env["BRAIN_AUTH_DB_PATH"] = path.join(dir, "auth.sqlite");
+    process.env["BRAIN_DATABASE_URL"] = DB_URL;
     process.env["BETTER_AUTH_SECRET"] =
       process.env["BETTER_AUTH_SECRET"] ?? "test-only-better-auth-secret-32chars!!";
     resetBrainAuthForTests();
     await ensureAuthReady();
+    await getPool().query(
+      `TRUNCATE TABLE "session", "account", "verification", "user", brain_bootstrap_claim, brain_workspace_member, brain_workspace, brain_instance_admin, brain_user_active_workspace, brain_workspace_invite, brain_instance_policy RESTART IDENTITY CASCADE`,
+    );
+    await getPool().query(
+      `INSERT INTO brain_instance_policy (id, signup_mode, auto_personal_workspace, allow_create_workspace, allow_forgot_password)
+       VALUES (1, 'invite-only', true, true, true)
+       ON CONFLICT (id) DO UPDATE SET signup_mode = 'invite-only', auto_personal_workspace = true, allow_create_workspace = true, allow_forgot_password = true`,
+    );
   });
 
   afterEach(() => {
     resetBrainAuthForTests();
-    if (previousDbPath === undefined) {
-      delete process.env["BRAIN_AUTH_DB_PATH"];
-    } else {
-      process.env["BRAIN_AUTH_DB_PATH"] = previousDbPath;
-    }
-    rmSync(dir, { recursive: true, force: true });
   });
 
   it("allows bootstrap only when no users exist", async () => {
-    expect(isBootstrapAllowed()).toBe(true);
+    expect(await isBootstrapAllowed()).toBe(true);
     const user = await bootstrapFirstUser({
       name: "Ops",
       email: "ops@brain.local",
@@ -45,8 +44,8 @@ describe("better auth bootstrap", () => {
     });
     expect(user.email).toBe("ops@brain.local");
     expect(user.name).toBe("Ops");
-    expect(countAuthUsers()).toBe(1);
-    expect(isBootstrapAllowed()).toBe(false);
+    expect(await countAuthUsers()).toBe(1);
+    expect(await isBootstrapAllowed()).toBe(false);
   });
 
   it("blocks public signup outside the bootstrap gate", async () => {
@@ -69,11 +68,11 @@ describe("better auth bootstrap", () => {
         },
       });
     });
-    expect(countAuthUsers()).toBe(1);
+    expect(await countAuthUsers()).toBe(1);
   });
 
   it("allows first-user signup when bootstrap claim is held without ALS", async () => {
-    expect(claimFirstBootstrap()).toBe(true);
+    expect(await claimFirstBootstrap()).toBe(true);
     await getAuth().api.signUpEmail({
       body: {
         email: "ops@brain.local",
@@ -81,7 +80,7 @@ describe("better auth bootstrap", () => {
         name: "ops",
       },
     });
-    expect(countAuthUsers()).toBe(1);
+    expect(await countAuthUsers()).toBe(1);
 
     await expect(
       getAuth().api.signUpEmail({
@@ -124,6 +123,6 @@ describe("better auth bootstrap", () => {
     const rejected = results.filter((result) => result.status === "rejected");
     expect(fulfilled).toHaveLength(1);
     expect(rejected).toHaveLength(1);
-    expect(countAuthUsers()).toBe(1);
+    expect(await countAuthUsers()).toBe(1);
   });
 });

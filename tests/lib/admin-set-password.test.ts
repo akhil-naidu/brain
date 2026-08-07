@@ -1,49 +1,46 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { adminSetUserPassword } from "@/lib/auth/admin-set-password";
 import {
   ensureAuthReady,
   getAuth,
-  getAuthDb,
   resetBrainAuthForTests,
   runWithBootstrapSignup,
 } from "@/lib/auth/server";
+import { getPool } from "@/lib/db/pool";
 
-function countSessionsForUser(userId: string): number {
-  const row = getAuthDb()
-    .prepare("SELECT COUNT(*) AS count FROM session WHERE userId = ?")
-    .get(userId);
-  if (typeof row !== "object" || row === null || !("count" in row)) {
-    return 0;
-  }
-  const value = row.count;
-  return typeof value === "number" ? value : typeof value === "bigint" ? Number(value) : 0;
+const DB_URL = process.env["BRAIN_DATABASE_URL"] ?? process.env["DATABASE_URL"];
+
+const describeOrSkip = DB_URL ? describe : describe.skip;
+
+async function countSessionsForUser(userId: string): Promise<number> {
+  const result = await getPool().query<{ count: string }>(
+    `SELECT COUNT(*) AS count FROM session WHERE "userId" = $1`,
+    [userId],
+  );
+  const row = result.rows[0];
+  if (!row) return 0;
+  return Number(row.count);
 }
 
-describe("adminSetUserPassword", () => {
-  let dir: string;
-  let previousDbPath: string | undefined;
-
+describeOrSkip("adminSetUserPassword", () => {
   beforeEach(async () => {
-    dir = mkdtempSync(path.join(tmpdir(), "brain-admin-password-"));
-    previousDbPath = process.env["BRAIN_AUTH_DB_PATH"];
-    process.env["BRAIN_AUTH_DB_PATH"] = path.join(dir, "auth.sqlite");
+    process.env["BRAIN_DATABASE_URL"] = DB_URL;
     process.env["BETTER_AUTH_SECRET"] =
       process.env["BETTER_AUTH_SECRET"] ?? "test-only-better-auth-secret-32chars!!";
     resetBrainAuthForTests();
     await ensureAuthReady();
+    await getPool().query(
+      `TRUNCATE TABLE "session", "account", "verification", "user", brain_bootstrap_claim, brain_workspace_member, brain_workspace, brain_instance_admin, brain_user_active_workspace, brain_workspace_invite, brain_instance_policy RESTART IDENTITY CASCADE`,
+    );
+    await getPool().query(
+      `INSERT INTO brain_instance_policy (id, signup_mode, auto_personal_workspace, allow_create_workspace, allow_forgot_password)
+       VALUES (1, 'invite-only', true, true, true)
+       ON CONFLICT (id) DO UPDATE SET signup_mode = 'invite-only', auto_personal_workspace = true, allow_create_workspace = true, allow_forgot_password = true`,
+    );
   });
 
   afterEach(() => {
     resetBrainAuthForTests();
-    if (previousDbPath === undefined) {
-      delete process.env["BRAIN_AUTH_DB_PATH"];
-    } else {
-      process.env["BRAIN_AUTH_DB_PATH"] = previousDbPath;
-    }
-    rmSync(dir, { recursive: true, force: true });
   });
 
   it("updates password and clears sessions", async () => {
@@ -66,7 +63,7 @@ describe("adminSetUserPassword", () => {
     const userId = signIn.user.id;
     expect(userId).toBeTruthy();
 
-    expect(countSessionsForUser(userId)).toBeGreaterThan(0);
+    expect(await countSessionsForUser(userId)).toBeGreaterThan(0);
 
     const result = await adminSetUserPassword(getAuth(), {
       userId,
@@ -74,7 +71,7 @@ describe("adminSetUserPassword", () => {
     });
     expect(result).toEqual({ ok: true });
 
-    expect(countSessionsForUser(userId)).toBe(0);
+    expect(await countSessionsForUser(userId)).toBe(0);
 
     await expect(
       getAuth().api.signInEmail({

@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { resolveBrainSessionAuthFromRequest } from "@/lib/auth/session-from-request";
 
+const testEnv = {
+  BRAIN_INTERNAL_TOKEN: "internal-secret",
+  BRAIN_OPERATOR_USER_ID: "operator-1",
+  BRAIN_DATABASE_URL:
+    process.env["BRAIN_DATABASE_URL"] ??
+    process.env["DATABASE_URL"] ??
+    "postgres://brain:brain@127.0.0.1:5432/brain",
+};
+
 describe("resolveBrainSessionAuthFromRequest", () => {
   it("accepts the internal operator bearer token with workspace header", async () => {
     const auth = await resolveBrainSessionAuthFromRequest(
@@ -10,10 +19,7 @@ describe("resolveBrainSessionAuthFromRequest", () => {
           "x-brain-workspace-id": "ws-1",
         },
       }),
-      {
-        BRAIN_INTERNAL_TOKEN: "internal-secret",
-        BRAIN_OPERATOR_USER_ID: "operator-1",
-      },
+      testEnv,
     );
     expect(auth).toMatchObject({
       principalId: "operator-1",
@@ -32,10 +38,7 @@ describe("resolveBrainSessionAuthFromRequest", () => {
           "x-brain-workspace-id": "ws-9",
         },
       }),
-      {
-        BRAIN_INTERNAL_TOKEN: "internal-secret",
-        BRAIN_OPERATOR_USER_ID: "operator-1",
-      },
+      testEnv,
     );
     expect(auth?.principalId).toBe("user-42");
     expect(auth?.issuer).toBe("brain:ws-9");
@@ -46,10 +49,7 @@ describe("resolveBrainSessionAuthFromRequest", () => {
       new Request("http://localhost/eve/v1/sessions", {
         headers: { authorization: "Bearer internal-secret" },
       }),
-      {
-        BRAIN_INTERNAL_TOKEN: "internal-secret",
-        BRAIN_OPERATOR_USER_ID: "operator-1",
-      },
+      testEnv,
     );
     expect(auth).toBeNull();
   });
@@ -57,10 +57,7 @@ describe("resolveBrainSessionAuthFromRequest", () => {
   it("rejects unauthenticated requests", async () => {
     const auth = await resolveBrainSessionAuthFromRequest(
       new Request("http://localhost/eve/v1/sessions"),
-      {
-        BRAIN_INTERNAL_TOKEN: "internal-secret",
-        BRAIN_OPERATOR_USER_ID: "operator-1",
-      },
+      testEnv,
     );
     expect(auth).toBeNull();
   });

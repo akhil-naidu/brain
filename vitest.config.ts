@@ -18,5 +18,8 @@ export default defineConfig({
     clearMocks: true,
     unstubEnvs: true,
     unstubGlobals: true,
+    // Integration tests share a single Postgres instance; run files serially to
+    // prevent concurrent TRUNCATE / INSERT races across test files.
+    fileParallelism: false,
   },
 });
