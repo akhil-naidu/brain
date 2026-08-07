@@ -238,6 +238,140 @@ html[data-eve-chat-sidebar="closed"] [data-desktop-sidebar] {
   );
 }
 
+/* Auth split stage — brand plane + clean form column */
+.brain-auth-stage {
+  background: var(--background);
+}
+
+.brain-auth-brand-pane {
+  border-right: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+  background:
+    radial-gradient(
+      90% 70% at 20% 15%,
+      color-mix(in oklab, var(--primary) 22%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      80% 60% at 90% 90%,
+      color-mix(in oklab, oklch(0.38 0.05 240) 20%, transparent),
+      transparent 65%
+    ),
+    linear-gradient(
+      165deg,
+      color-mix(in oklab, var(--background) 88%, var(--primary) 12%) 0%,
+      color-mix(in oklab, var(--background) 94%, oklch(0.32 0.04 240) 6%) 100%
+    );
+}
+
+.brain-auth-atmosphere {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.brain-auth-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(2px);
+}
+
+.brain-auth-orb-a {
+  left: 12%;
+  top: 22%;
+  width: min(28rem, 70%);
+  height: 16rem;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in oklab, var(--primary) 28%, transparent),
+    transparent 72%
+  );
+  animation: auth-orb-drift 14s ease-in-out infinite;
+}
+
+.brain-auth-orb-b {
+  right: -10%;
+  bottom: 10%;
+  width: min(24rem, 65%);
+  height: 14rem;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in oklab, oklch(0.4 0.05 240) 22%, transparent),
+    transparent 74%
+  );
+  animation: auth-orb-drift 18s ease-in-out infinite reverse;
+}
+
+.brain-auth-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.4;
+  background-image:
+    linear-gradient(color-mix(in oklab, var(--foreground) 7%, transparent) 1px, transparent 1px),
+    linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--foreground) 7%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 56px 56px;
+  mask-image: linear-gradient(120deg, black 15%, transparent 85%);
+}
+
+.auth-brand-mark {
+  animation: auth-mark-float 7s ease-in-out infinite;
+}
+
+.auth-fade-up {
+  animation: auth-fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.auth-fade-up-delay-1 {
+  animation-delay: 0.1s;
+}
+
+@keyframes auth-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes auth-orb-drift {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(12px);
+  }
+}
+
+@keyframes auth-mark-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-fade-up,
+  .auth-brand-mark,
+  .brain-auth-orb-a,
+  .brain-auth-orb-b {
+    animation: none;
+  }
+}
+
 .features-hero-glow {
   filter: drop-shadow(0 20px 60px color-mix(in oklab, var(--primary) 35%, transparent));
 }
