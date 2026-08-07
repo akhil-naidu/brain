@@ -61,9 +61,11 @@ export function resolveScheduledPlaybooksPath(
 ): string {
   const configured = env["BRAIN_SCHEDULED_PLAYBOOKS_PATH"]?.trim();
   if (configured) {
-    return path.isAbsolute(configured) ? configured : path.resolve(cwd, configured);
+    return path.isAbsolute(configured)
+      ? configured
+      : path.resolve(/* turbopackIgnore: true */ cwd, configured);
   }
-  return path.resolve(cwd, ".eve", SCHEDULED_PLAYBOOKS_FILENAME);
+  return path.resolve(/* turbopackIgnore: true */ cwd, ".eve", SCHEDULED_PLAYBOOKS_FILENAME);
 }
 
 export function resolveLegacyScheduledBriefPath(
@@ -72,9 +74,11 @@ export function resolveLegacyScheduledBriefPath(
 ): string {
   const configured = env["BRAIN_SCHEDULED_BRIEF_PATH"]?.trim();
   if (configured) {
-    return path.isAbsolute(configured) ? configured : path.resolve(cwd, configured);
+    return path.isAbsolute(configured)
+      ? configured
+      : path.resolve(/* turbopackIgnore: true */ cwd, configured);
   }
-  return path.resolve(cwd, ".eve", SCHEDULED_BRIEF_FILENAME);
+  return path.resolve(/* turbopackIgnore: true */ cwd, ".eve", SCHEDULED_BRIEF_FILENAME);
 }
 
 function readJsonFile(filePath: string): unknown {
