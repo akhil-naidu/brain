@@ -1,10 +1,17 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type FormEvent } from "react";
+import {
+  AuthDivider,
+  AuthFooterNote,
+  AuthLink,
+  AuthPanel,
+  AuthPanelHeader,
+} from "@/components/auth/auth-shell";
 import { BrainBoot } from "@/components/loading/brain-boot";
 import { Button } from "@/components/ui/button";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth/client";
 import { safeCallbackUrl } from "@/lib/auth/safe-callback-url";
@@ -91,33 +98,33 @@ function SignInForm() {
   }
 
   return (
-    <div className="border-border bg-card w-full max-w-sm space-y-4 rounded-2xl border p-6 shadow-sm">
-      <div className="space-y-1">
-        <h1 className="text-lg font-semibold tracking-tight">Sign in</h1>
-        <p className="text-muted-foreground text-sm">
-          {signupMode === "sso-only" && !bootstrapAllowed
+    <AuthPanel>
+      <AuthPanelHeader
+        description={
+          signupMode === "sso-only" && !bootstrapAllowed
             ? "Use your organization SSO to continue."
-            : "Use your Brain host account."}
-        </p>
-      </div>
+            : "Sign in with your account on this host."
+        }
+        title="Sign in"
+      />
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium" htmlFor="email">
-          Email
-        </label>
+      <Field>
+        <FieldLabel htmlFor="email">Email</FieldLabel>
         <Input
           autoComplete="username"
+          className="h-11"
           id="email"
           onChange={(event) => setEmail(event.target.value)}
+          placeholder="you@company.com"
           required={passwordSignInAllowed}
           type="email"
           value={email}
         />
-      </div>
+      </Field>
 
       {ssoAvailable ? (
         <Button
-          className="w-full"
+          className="h-11 w-full"
           disabled={pending}
           onClick={() => {
             void onCompanySso();
@@ -131,28 +138,25 @@ function SignInForm() {
 
       {passwordSignInAllowed ? (
         <form
-          className="space-y-4"
+          className="space-y-6"
           onSubmit={(event) => {
             void onSubmit(event);
           }}
         >
-          {ssoAvailable ? (
-            <p className="text-muted-foreground text-center text-xs">or continue with password</p>
-          ) : null}
-          <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="password">
-              Password
-            </label>
+          {ssoAvailable ? <AuthDivider label="or password" /> : null}
+          <Field>
+            <FieldLabel htmlFor="password">Password</FieldLabel>
             <Input
               autoComplete="current-password"
+              className="h-11"
               id="password"
               onChange={(event) => setPassword(event.target.value)}
               required
               type="password"
               value={password}
             />
-          </div>
-          <Button className="w-full" disabled={pending} type="submit">
+          </Field>
+          <Button className="h-11 w-full" disabled={pending} type="submit">
             {pending ? "Signing in…" : "Sign in"}
           </Button>
         </form>
@@ -164,30 +168,28 @@ function SignInForm() {
         </p>
       ) : null}
 
-      {error ? <p className="text-destructive text-sm">{error}</p> : null}
+      {error ? (
+        <p className="text-destructive text-sm" role="alert">
+          {error}
+        </p>
+      ) : null}
 
-      <p className="text-muted-foreground text-center text-xs">
+      <AuthFooterNote>
         {bootstrapAllowed ? (
           <>
-            First time on this host?{" "}
-            <Link className="text-foreground underline underline-offset-2" href="/setup">
-              Create the operator account
-            </Link>
+            First time on this host? <AuthLink href="/setup">Create the operator account</AuthLink>
           </>
         ) : openSignupAllowed ? (
           <>
-            No account yet?{" "}
-            <Link className="text-foreground underline underline-offset-2" href="/sign-up">
-              Create an account
-            </Link>
+            No account yet? <AuthLink href="/sign-up">Create an account</AuthLink>
           </>
         ) : signupMode === "sso-only" ? (
           <>Password self-signup is disabled. Use company SSO or an invite link.</>
         ) : (
           <>This host is invite-only. Use an invite link from a workspace admin.</>
         )}
-      </p>
-    </div>
+      </AuthFooterNote>
+    </AuthPanel>
   );
 }
 
