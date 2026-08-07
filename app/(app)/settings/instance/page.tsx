@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { InstanceUsersSection } from "@/app/_components/instance-users-section";
 import { notifyWorkspacesChanged } from "@/lib/auth/workspace-events";
 import { FormFieldsSkeleton } from "@/components/loading/skeletons";
 import {
@@ -418,8 +419,28 @@ export default function InstanceSettingsPage() {
               }}
             />
           </div>
+
+          <div className="flex items-center justify-between gap-6 p-5">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Allow forgot password</p>
+              <p className="text-muted-foreground text-xs">
+                When off, sign-in hides self-serve reset. Admins can still reset passwords below.
+                Requires SMTP for email delivery when on.
+              </p>
+            </div>
+            <Switch
+              checked={policies.allowForgotPassword}
+              disabled={!canManage || pending}
+              onCheckedChange={(checked) => {
+                setSaved(false);
+                setPolicies({ ...policies, allowForgotPassword: checked });
+              }}
+            />
+          </div>
         </SettingsPanel>
       </SettingsSection>
+
+      <InstanceUsersSection canManage={canManage} />
 
       {error ? (
         <p className="text-destructive text-sm" role="alert">
