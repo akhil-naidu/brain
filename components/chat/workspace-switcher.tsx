@@ -1,6 +1,7 @@
 "use client";
 
 import { Building2Icon, ChevronsUpDownIcon, PlusIcon } from "lucide-react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { WORKSPACES_CHANGED_EVENT, notifyWorkspacesChanged } from "@/lib/auth/workspace-events";
@@ -243,22 +244,26 @@ export function WorkspaceSwitcher({
               ) : null}
             </DropdownMenuItem>
           ))}
+          <DropdownMenuSeparator />
           {canCreate ? (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                disabled={pending}
-                onSelect={() => {
-                  setError(null);
-                  setNewName("");
-                  setCreateOpen(true);
-                }}
-              >
-                <PlusIcon className="size-4" />
-                New workspace
-              </DropdownMenuItem>
-            </>
+            <DropdownMenuItem
+              disabled={pending}
+              onSelect={() => {
+                setError(null);
+                setNewName("");
+                setCreateOpen(true);
+              }}
+            >
+              <PlusIcon className="size-4" />
+              New workspace
+            </DropdownMenuItem>
           ) : null}
+          <DropdownMenuItem asChild>
+            <Link href="/workspaces">
+              <Building2Icon className="size-4" />
+              Manage workspaces
+            </Link>
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
       {error && !compact ? <p className="text-destructive mt-1 text-xs">{error}</p> : null}
