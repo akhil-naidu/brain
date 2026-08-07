@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
+import { BrainBoot } from "@/components/loading/brain-boot";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth/client";
@@ -152,7 +153,7 @@ export default function InvitePage() {
   }
 
   if (loading) {
-    return <p className="text-muted-foreground text-sm">Loading invite…</p>;
+    return <BrainBoot label="Checking invite…" size="sm" />;
   }
 
   if (preview === "invalid" || preview === null) {

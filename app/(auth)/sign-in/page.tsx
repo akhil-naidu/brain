@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type FormEvent } from "react";
+import { BrainBoot } from "@/components/loading/brain-boot";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth/client";
@@ -192,7 +193,7 @@ function SignInForm() {
 
 export default function SignInPage() {
   return (
-    <Suspense fallback={<div className="text-muted-foreground text-sm">Loading…</div>}>
+    <Suspense fallback={<BrainBoot label="Preparing sign-in…" size="sm" />}>
       <SignInForm />
     </Suspense>
   );
