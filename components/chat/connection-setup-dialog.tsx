@@ -242,7 +242,7 @@ export function ConnectionSetupDialog({
       ? `Enter the app ID and secret from your ${appName} account settings for this workspace. You can change these anytime. If already connected, Disconnect and Connect again after changing the app.`
       : target === "host"
         ? `Enter the app ID and secret from your ${appName} account settings for this Brain host. You can change these anytime. If already connected, Disconnect and Connect again after changing the app.`
-        : `A workspace owner/admin can save ${appName} credentials for this workspace (Tools → Workspace apps), or the host operator can configure host-wide credentials. You can still copy the return link below.`;
+        : `A workspace owner/admin can save ${appName} credentials for this workspace via Set up / App settings, or the host operator can save host-wide credentials. You can still copy the return link below.`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

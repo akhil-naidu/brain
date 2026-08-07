@@ -5,14 +5,12 @@ import { Settings2Icon, UnplugIcon } from "lucide-react";
 import { useChatShell } from "@/app/_components/chat-shell-context";
 import type { EnabledConnections } from "@/app/_components/chat-shell-context";
 import { ConnectionSetupDialog } from "@/components/chat/connection-setup-dialog";
-import { WorkspaceByoaSection } from "@/components/chat/workspace-byoa-section";
 import { SettingsCardsSkeleton } from "@/components/loading/skeletons";
 import {
   SettingsBadge,
   SettingsPanel,
   SettingsSection,
   SettingsShell,
-  SettingsTabs,
 } from "@/components/settings/settings-shell";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -20,6 +18,7 @@ import { IconTooltip } from "@/components/ui/tooltip";
 import { CONNECTION_ITEMS } from "@/lib/chat/connection-catalog";
 import {
   canEnableConnection,
+  connectionAdminSetupHint,
   connectionConfigureLabel,
   integrationStatusText,
   shouldOfferConnectionConfigure,
@@ -37,17 +36,10 @@ import {
   fetchMcpToolsCatalog,
   type McpToolsCatalogResponse,
 } from "@/lib/chat/connections-tools-api";
-import { useTabSearchParam } from "@/lib/navigation/use-tab-search-param";
 import { cn } from "@/lib/utils";
-
-const TOOLS_TABS = ["mcp", "workspace-apps"] as const;
 
 export function ToolsPage() {
   const { enabledConnections, setConnectionEnabled } = useChatShell();
-  const [tab, setTab] = useTabSearchParam({
-    defaultTab: "mcp",
-    tabs: TOOLS_TABS,
-  });
   const [statusById, setStatusById] = useState<ReadonlyMap<string, ConnectionStatus> | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
@@ -195,206 +187,198 @@ export function ToolsPage() {
       }
       title="Tools"
     >
-      <SettingsTabs
-        active={tab}
-        onChange={setTab}
-        tabs={[
-          { id: "mcp", label: "MCP connections" },
-          { id: "workspace-apps", label: "Workspace apps" },
-        ]}
-      />
-
       {statusError || actionError ? (
         <p className="text-destructive text-sm" role="alert">
           {actionError ?? statusError}
         </p>
       ) : null}
 
-      {tab === "mcp" ? (
-        <SettingsSection description="Connect once, then enable a tool when you want it available for the next chat turn.">
-          {catalogError ? (
-            <div className="mb-3 flex flex-wrap items-center gap-3">
-              <p className="text-destructive text-sm" role="alert">
-                {catalogError}
-              </p>
-              <Button onClick={() => loadCatalog()} size="sm" type="button" variant="outline">
-                Retry tools
-              </Button>
-            </div>
-          ) : null}
-          {loadingStatus && !statusById ? (
-            <SettingsCardsSkeleton cards={CONNECTION_ITEMS.length} />
-          ) : (
-            <div className="grid gap-3">
-              {CONNECTION_ITEMS.map(({ Icon, description, key, label }) => {
-                const enabled = enabledConnections[key];
-                const status = statusById?.get(key);
-                const statusText = integrationStatusText({
-                  loading: loadingStatus && !statusById,
-                  status,
-                  statusError,
-                });
-                const showConnect = shouldOfferConnectionConnect(status);
-                const showDisconnect = shouldOfferConnectionDisconnect(status);
-                const showConfigure = shouldOfferConnectionConfigure(status, key);
-                const allowEnable = canEnableConnection(status);
-                const isConnecting = connectingId === key;
-                const isDisconnecting = disconnectingId === key;
-                const catalogEntry = catalog?.connections.find(
-                  (connection) => connection.connectionId === key,
-                );
-                const isConnected = status?.status === "connected";
+      <SettingsSection description="Connect once, then enable a tool when you want it available for the next chat turn.">
+        {catalogError ? (
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            <p className="text-destructive text-sm" role="alert">
+              {catalogError}
+            </p>
+            <Button onClick={() => loadCatalog()} size="sm" type="button" variant="outline">
+              Retry tools
+            </Button>
+          </div>
+        ) : null}
+        {loadingStatus && !statusById ? (
+          <SettingsCardsSkeleton cards={CONNECTION_ITEMS.length} />
+        ) : (
+          <div className="grid gap-3">
+            {CONNECTION_ITEMS.map(({ Icon, description, key, label }) => {
+              const enabled = enabledConnections[key];
+              const status = statusById?.get(key);
+              const statusText = integrationStatusText({
+                loading: loadingStatus && !statusById,
+                status,
+                statusError,
+              });
+              const showConnect = shouldOfferConnectionConnect(status);
+              const showDisconnect = shouldOfferConnectionDisconnect(status);
+              const showConfigure = shouldOfferConnectionConfigure(status, key);
+              const adminSetupHint = connectionAdminSetupHint(status);
+              const allowEnable = canEnableConnection(status);
+              const isConnecting = connectingId === key;
+              const isDisconnecting = disconnectingId === key;
+              const catalogEntry = catalog?.connections.find(
+                (connection) => connection.connectionId === key,
+              );
+              const isConnected = status?.status === "connected";
 
-                return (
-                  <SettingsPanel className="p-4" key={key}>
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="flex min-w-0 items-start gap-3">
-                        <span className="border-border bg-background flex size-10 shrink-0 items-center justify-center rounded-xl border">
-                          <Icon className="size-5" />
-                        </span>
-                        <div className="min-w-0 space-y-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-sm font-medium">{label}</p>
-                            <span
-                              className={cn(
-                                "rounded-md px-1.5 py-0.5 text-[11px] font-medium",
-                                status?.status === "connected"
-                                  ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                                  : status?.status === "needs_setup"
-                                    ? "bg-destructive/10 text-destructive"
-                                    : "bg-muted text-muted-foreground",
-                              )}
-                            >
-                              {isConnecting
-                                ? "Waiting for sign-in…"
-                                : isDisconnecting
-                                  ? "Disconnecting…"
-                                  : statusText}
-                            </span>
-                            {isConnected && catalogEntry && !catalogEntry.error ? (
-                              <SettingsBadge>
-                                {`${catalogEntry.tools.length} tool${catalogEntry.tools.length === 1 ? "" : "s"}`}
-                              </SettingsBadge>
-                            ) : null}
-                          </div>
-                          <p className="text-muted-foreground text-xs leading-relaxed">
-                            {description}
-                          </p>
-                          {status?.detail ? (
-                            <p className="text-muted-foreground/80 text-[11px]">{status.detail}</p>
+              return (
+                <SettingsPanel className="p-4" key={key}>
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <span className="border-border bg-background flex size-10 shrink-0 items-center justify-center rounded-xl border">
+                        <Icon className="size-5" />
+                      </span>
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-medium">{label}</p>
+                          <span
+                            className={cn(
+                              "rounded-md px-1.5 py-0.5 text-[11px] font-medium",
+                              status?.status === "connected"
+                                ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                                : status?.status === "needs_setup"
+                                  ? "bg-destructive/10 text-destructive"
+                                  : "bg-muted text-muted-foreground",
+                            )}
+                          >
+                            {isConnecting
+                              ? "Waiting for sign-in…"
+                              : isDisconnecting
+                                ? "Disconnecting…"
+                                : statusText}
+                          </span>
+                          {isConnected && catalogEntry && !catalogEntry.error ? (
+                            <SettingsBadge>
+                              {`${catalogEntry.tools.length} tool${catalogEntry.tools.length === 1 ? "" : "s"}`}
+                            </SettingsBadge>
                           ) : null}
                         </div>
-                      </div>
-
-                      <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:justify-end">
-                        {showConfigure ? (
-                          <IconTooltip label={connectionConfigureLabel(status)} side="bottom">
-                            <Button
-                              aria-label={connectionConfigureLabel(status)}
-                              onClick={() => {
-                                setActionError(null);
-                                setConfigureId(key);
-                              }}
-                              size="icon-sm"
-                              type="button"
-                              variant="outline"
-                            >
-                              <Settings2Icon />
-                            </Button>
-                          </IconTooltip>
+                        <p className="text-muted-foreground text-xs leading-relaxed">
+                          {description}
+                        </p>
+                        {adminSetupHint ? (
+                          <p className="text-muted-foreground/90 text-[11px]">{adminSetupHint}</p>
+                        ) : status?.detail ? (
+                          <p className="text-muted-foreground/80 text-[11px]">{status.detail}</p>
                         ) : null}
-                        {showConnect ? (
-                          <Button
-                            disabled={isConnecting}
-                            onClick={() => {
-                              startConnect(key);
-                            }}
-                            size="sm"
-                            type="button"
-                          >
-                            {isConnecting ? "Connecting…" : "Connect"}
-                          </Button>
-                        ) : null}
-                        {showDisconnect ? (
-                          <IconTooltip
-                            label={isDisconnecting ? "Disconnecting…" : "Disconnect"}
-                            side="bottom"
-                          >
-                            <Button
-                              aria-label={isDisconnecting ? "Disconnecting…" : "Disconnect"}
-                              disabled={isDisconnecting}
-                              onClick={() => {
-                                startDisconnect(key);
-                              }}
-                              size="icon-sm"
-                              type="button"
-                              variant="outline"
-                            >
-                              <UnplugIcon />
-                            </Button>
-                          </IconTooltip>
-                        ) : null}
-                        <div className="border-border/70 flex items-center gap-2 rounded-lg border px-2.5 py-1.5">
-                          <span className="text-muted-foreground text-xs">In chat</span>
-                          <Switch
-                            checked={enabled}
-                            disabled={!enabled && !allowEnable}
-                            onCheckedChange={(checked) => {
-                              if (checked && !allowEnable) {
-                                setActionError(
-                                  status?.status === "needs_setup"
-                                    ? `Set up ${label} app credentials first (Set up or Workspace apps), then connect it.`
-                                    : status?.status === "needs_sign_in"
-                                      ? `Connect ${label} before turning it on.`
-                                      : `Wait for ${label} status, then connect it.`,
-                                );
-                                return;
-                              }
-                              setActionError(null);
-                              setConnectionEnabled(key, checked);
-                            }}
-                          />
-                        </div>
                       </div>
                     </div>
 
-                    {isConnected ? (
-                      <div className="border-border/60 mt-4 border-t pt-3">
-                        {loadingCatalog && !catalogEntry ? (
-                          <p className="text-muted-foreground text-xs">Loading tools…</p>
-                        ) : catalogEntry?.error ? (
-                          <p className="text-destructive text-xs" role="alert">
-                            {catalogEntry.error}
-                          </p>
-                        ) : catalogEntry && catalogEntry.tools.length > 0 ? (
-                          <ul className="flex flex-wrap gap-1.5">
-                            {catalogEntry.tools.map((tool) => (
-                              <li key={`${key}:${tool.name}`}>
-                                <span
-                                  className="bg-muted text-muted-foreground inline-flex max-w-full items-center rounded-md px-2 py-1 font-mono text-[11px]"
-                                  title={tool.description || tool.name}
-                                >
-                                  <span className="truncate">{tool.name}</span>
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="text-muted-foreground text-xs">
-                            Connected, but this app did not return any tools.
-                          </p>
-                        )}
+                    <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:justify-end">
+                      {showConfigure ? (
+                        <IconTooltip label={connectionConfigureLabel(status)} side="bottom">
+                          <Button
+                            aria-label={connectionConfigureLabel(status)}
+                            onClick={() => {
+                              setActionError(null);
+                              setConfigureId(key);
+                            }}
+                            size="icon-sm"
+                            type="button"
+                            variant="outline"
+                          >
+                            <Settings2Icon />
+                          </Button>
+                        </IconTooltip>
+                      ) : null}
+                      {showConnect ? (
+                        <Button
+                          disabled={isConnecting}
+                          onClick={() => {
+                            startConnect(key);
+                          }}
+                          size="sm"
+                          type="button"
+                        >
+                          {isConnecting ? "Connecting…" : "Connect"}
+                        </Button>
+                      ) : null}
+                      {showDisconnect ? (
+                        <IconTooltip
+                          label={isDisconnecting ? "Disconnecting…" : "Disconnect"}
+                          side="bottom"
+                        >
+                          <Button
+                            aria-label={isDisconnecting ? "Disconnecting…" : "Disconnect"}
+                            disabled={isDisconnecting}
+                            onClick={() => {
+                              startDisconnect(key);
+                            }}
+                            size="icon-sm"
+                            type="button"
+                            variant="outline"
+                          >
+                            <UnplugIcon />
+                          </Button>
+                        </IconTooltip>
+                      ) : null}
+                      <div className="border-border/70 flex items-center gap-2 rounded-lg border px-2.5 py-1.5">
+                        <span className="text-muted-foreground text-xs">In chat</span>
+                        <Switch
+                          checked={enabled}
+                          disabled={!enabled && !allowEnable}
+                          onCheckedChange={(checked) => {
+                            if (checked && !allowEnable) {
+                              setActionError(
+                                status?.status === "needs_setup"
+                                  ? adminSetupHint
+                                    ? adminSetupHint
+                                    : `Set up ${label} with App settings, then connect it.`
+                                  : status?.status === "needs_sign_in"
+                                    ? `Connect ${label} before turning it on.`
+                                    : `Wait for ${label} status, then connect it.`,
+                              );
+                              return;
+                            }
+                            setActionError(null);
+                            setConnectionEnabled(key, checked);
+                          }}
+                        />
                       </div>
-                    ) : null}
-                  </SettingsPanel>
-                );
-              })}
-            </div>
-          )}
-        </SettingsSection>
-      ) : null}
+                    </div>
+                  </div>
 
-      {tab === "workspace-apps" ? <WorkspaceByoaSection /> : null}
+                  {isConnected ? (
+                    <div className="border-border/60 mt-4 border-t pt-3">
+                      {loadingCatalog && !catalogEntry ? (
+                        <p className="text-muted-foreground text-xs">Loading tools…</p>
+                      ) : catalogEntry?.error ? (
+                        <p className="text-destructive text-xs" role="alert">
+                          {catalogEntry.error}
+                        </p>
+                      ) : catalogEntry && catalogEntry.tools.length > 0 ? (
+                        <ul className="flex flex-wrap gap-1.5">
+                          {catalogEntry.tools.map((tool) => (
+                            <li key={`${key}:${tool.name}`}>
+                              <span
+                                className="bg-muted text-muted-foreground inline-flex max-w-full items-center rounded-md px-2 py-1 font-mono text-[11px]"
+                                title={tool.description || tool.name}
+                              >
+                                <span className="truncate">{tool.name}</span>
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-muted-foreground text-xs">
+                          Connected, but this app did not return any tools.
+                        </p>
+                      )}
+                    </div>
+                  ) : null}
+                </SettingsPanel>
+              );
+            })}
+          </div>
+        )}
+      </SettingsSection>
 
       <ConnectionSetupDialog
         connectionId={configureId}

@@ -90,10 +90,18 @@ A workspace owner or admin MUST be able to store OAuth app credentials for a sta
 - **THEN** authorize/status resolution for active workspace W uses the workspace BYOA client id
 
 #### Scenario: Workspace admin can save BYOA
-- **WHEN** a workspace admin saves Slack client id/secret for the active workspace
+- **WHEN** a workspace admin saves Slack client id/secret for the active workspace via Tools Set up / App settings
 - **THEN** those credentials are stored for that workspace only
+
+#### Scenario: Tools has a single MCP connections surface
+- **WHEN** a signed-in user opens `/tools`
+- **THEN** app credential setup, Connect, and loaded tools are managed on that MCP connections surface without a separate Workspace apps tab
 
 #### Scenario: Member cannot mutate BYOA
 - **WHEN** a workspace member without admin/owner role attempts to save or clear BYOA credentials
 - **THEN** the system rejects the mutation
+
+#### Scenario: Member UI does not offer Set up
+- **WHEN** a workspace member views a static-credential connection that is needs_setup
+- **THEN** Tools and the integrations menu do not offer Set up / App settings and indicate a workspace admin must set up the app
 

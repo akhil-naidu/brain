@@ -1,7 +1,7 @@
 # connection-connect-menu Specification
 
 ## Purpose
-Lets signed-in users Connect, Disconnect, and configure MCP OAuth app credentials from the chat integrations menu and Tools (workspace BYOA for owners/admins; host credentials for the instance admin) without a chat turn.
+Lets signed-in users Connect, Disconnect, and configure MCP OAuth app credentials from the chat integrations menu and the Tools MCP connections surface (workspace BYOA for owners/admins; host credentials for the instance admin) without a chat turn or a separate Workspace apps tab.
 ## Requirements
 ### Requirement: Menu OAuth start API
 The host MUST expose an authorize endpoint that starts MCP OAuth for a supported connection and the signed-in user’s principal without requiring a chat turn.
@@ -124,14 +124,18 @@ The host MUST expose a setup endpoint for static-credential MCP connections that
 - **THEN** the endpoint fails with a clear error
 
 ### Requirement: Configure and connect controls in chat and Tools
-The Tools page and the chat integrations menu MUST offer Set up / App settings for static-credential MCP connections whenever status is known, so owners can enter or replace app credentials without relying only on a deep-link. Both surfaces MUST offer Connect when status is needs_sign_in and Disconnect when connected. DCR connections MUST NOT show Set up / App settings.
+The Tools page and the chat integrations menu MUST offer Set up / App settings for static-credential MCP connections only to users who can manage credentials (workspace owner/admin for workspace BYOA, or host operator for host credentials). Both surfaces MUST offer Connect when status is needs_sign_in and Disconnect when connected. DCR connections MUST NOT show Set up / App settings. Workspace members who cannot manage credentials MUST NOT see Set up / App settings; when status is needs_setup they MUST see that a workspace admin needs to set up the app.
 
-#### Scenario: Set up shown when setup is needed
-- **WHEN** Tools or the integrations menu loads status and a static-credential connection is needs_setup
+#### Scenario: Set up shown when setup is needed for admins
+- **WHEN** Tools or the integrations menu loads status, a static-credential connection is needs_setup, and the user can manage credentials
 - **THEN** that row shows a Set up control that opens a dialog to enter app id/secret and copy the return link
 
-#### Scenario: App settings available after setup
-- **WHEN** a static-credential connection is needs_sign_in or connected
+#### Scenario: Members see admin setup needed without Set up
+- **WHEN** Tools or the integrations menu loads status, a static-credential connection is needs_setup, and the user cannot manage credentials
+- **THEN** that row does not show Set up or App settings and indicates a workspace admin must set up the app
+
+#### Scenario: App settings available after setup for admins
+- **WHEN** a static-credential connection is needs_sign_in or connected and the user can manage credentials
 - **THEN** Tools and the integrations menu still offer App settings for that row so credentials can be replaced or cleared
 
 #### Scenario: Connect from integrations menu
