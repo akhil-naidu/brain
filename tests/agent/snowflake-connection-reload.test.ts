@@ -7,7 +7,7 @@ import {
   renderSnowflakeCompiledMcpUrlModule,
   SNOWFLAKE_MCP_URL_GENERATED_RELATIVE,
 } from "@/agent/lib/snowflake-connection-reload";
-import { SNOWFLAKE_PLACEHOLDER_MCP_URL } from "@/agent/connections/snowflake-env";
+import { SNOWFLAKE_PLACEHOLDER_MCP_URL } from "@/agent/lib/snowflake-env";
 
 const temporaryDirectories: string[] = [];
 

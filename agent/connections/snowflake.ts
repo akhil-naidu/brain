@@ -5,8 +5,8 @@ import {
 } from "../lib/connection-credentials";
 import { approvalForTool } from "../lib/define-mcp-oauth-connection";
 import type { McpOAuthProvider } from "../lib/mcp-oauth";
-import { SNOWFLAKE_COMPILED_MCP_URL } from "./snowflake-mcp-url.generated";
-import { SNOWFLAKE_MCP_URL_ENV, SNOWFLAKE_PAT_TOKEN_ENV } from "./snowflake-env";
+import { SNOWFLAKE_MCP_URL_ENV, SNOWFLAKE_PAT_TOKEN_ENV } from "../lib/snowflake-env";
+import { SNOWFLAKE_COMPILED_MCP_URL } from "../lib/snowflake-mcp-url.generated";
 
 /**
  * Snowflake-managed MCP (Cortex Agents / Analyst / Search / SQL).

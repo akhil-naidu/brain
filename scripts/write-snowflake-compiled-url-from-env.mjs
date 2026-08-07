@@ -15,7 +15,7 @@ if (!URL.canParse(mcpUrl)) {
   process.exit(1);
 }
 
-const destination = join(process.cwd(), "agent", "connections", "snowflake-mcp-url.generated.ts");
+const destination = join(process.cwd(), "agent", "lib", "snowflake-mcp-url.generated.ts");
 mkdirSync(dirname(destination), { recursive: true });
 writeFileSync(
   destination,

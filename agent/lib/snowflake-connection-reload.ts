@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { SNOWFLAKE_MCP_URL_ENV, SNOWFLAKE_PLACEHOLDER_MCP_URL } from "../connections/snowflake-env";
 import { resolveProviderMcpUrlSync } from "./connection-credentials";
+import { SNOWFLAKE_MCP_URL_ENV, SNOWFLAKE_PLACEHOLDER_MCP_URL } from "./snowflake-env";
 
 /**
  * Eve bakes `defineMcpClientConnection({ url })` into
@@ -11,10 +11,13 @@ import { resolveProviderMcpUrlSync } from "./connection-credentials";
  * Touching `snowflake.ts` is not enough: content-identical rebuilds can keep
  * the placeholder URL. Writing this generated module changes source content so
  * eve recompiles with the account MCP URL as a string literal.
+ *
+ * Keep the generated file under `agent/lib/` — eve treats every file in
+ * `agent/connections/` as a connection module.
  */
 export const SNOWFLAKE_MCP_URL_GENERATED_RELATIVE = path.join(
   "agent",
-  "connections",
+  "lib",
   "snowflake-mcp-url.generated.ts",
 );
 
