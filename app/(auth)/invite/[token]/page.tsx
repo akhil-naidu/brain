@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
+import { AuthFooterNote, AuthLink, AuthPanel, AuthPanelHeader } from "@/components/auth/auth-shell";
 import { BrainBoot } from "@/components/loading/brain-boot";
 import { Button } from "@/components/ui/button";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth/client";
 
@@ -153,122 +155,140 @@ export default function InvitePage() {
   }
 
   if (loading) {
-    return <BrainBoot label="Checking invite…" size="sm" />;
+    return (
+      <>
+        <BrainBoot label="Checking invite…" size="sm" />
+      </>
+    );
   }
 
   if (preview === "invalid" || preview === null) {
     return (
-      <div className="border-border bg-card w-full max-w-sm space-y-3 rounded-2xl border p-6 text-center shadow-sm">
-        <h1 className="text-lg font-semibold">Invite unavailable</h1>
-        <p className="text-muted-foreground text-sm">
-          This invite is invalid, expired, or revoked.
-        </p>
-        <Button asChild className="w-full">
-          <Link href="/sign-in">Sign in</Link>
-        </Button>
-      </div>
+      <>
+        <AuthPanel>
+          <AuthPanelHeader
+            description="This invite is invalid, expired, or revoked."
+            title="Invite unavailable"
+          />
+          <Button asChild className="h-11 w-full">
+            <Link href="/sign-in">Sign in</Link>
+          </Button>
+        </AuthPanel>
+      </>
     );
   }
 
   if (signedIn) {
     return (
-      <div className="border-border bg-card w-full max-w-sm space-y-4 rounded-2xl border p-6 shadow-sm">
-        <div className="space-y-1">
-          <h1 className="text-lg font-semibold tracking-tight">Join workspace</h1>
-          <p className="text-muted-foreground text-sm">
-            Join <span className="text-foreground font-medium">{preview.workspaceName}</span> as{" "}
-            {preview.role}.
-          </p>
-          {email ? (
-            <p className="text-muted-foreground text-xs">
-              Signed in as <span className="text-foreground">{email}</span>
+      <>
+        <AuthPanel>
+          <AuthPanelHeader
+            description={
+              <>
+                Join <span className="text-foreground font-medium">{preview.workspaceName}</span> as{" "}
+                {preview.role}.
+                {email ? (
+                  <>
+                    {" "}
+                    Signed in as <span className="text-foreground font-medium">{email}</span>.
+                  </>
+                ) : null}
+              </>
+            }
+            title="Join workspace"
+          />
+          {error ? (
+            <p className="text-destructive text-sm" role="alert">
+              {error}
             </p>
           ) : null}
-        </div>
-        {error ? <p className="text-destructive text-sm">{error}</p> : null}
-        <Button
-          className="w-full"
-          disabled={pending}
-          onClick={() => {
-            void acceptSignedIn();
-          }}
-          type="button"
-        >
-          {pending ? "Joining…" : "Accept invite"}
-        </Button>
-        <Button
-          className="w-full"
-          disabled={pending}
-          onClick={() => {
-            void (async () => {
-              await authClient.signOut();
-              setSignedIn(false);
-              setError(null);
-            })();
-          }}
-          type="button"
-          variant="ghost"
-        >
-          Use a different account
-        </Button>
-      </div>
+          <Button
+            className="h-11 w-full"
+            disabled={pending}
+            onClick={() => {
+              void acceptSignedIn();
+            }}
+            type="button"
+          >
+            {pending ? "Joining…" : "Accept invite"}
+          </Button>
+          <Button
+            className="h-11 w-full"
+            disabled={pending}
+            onClick={() => {
+              void (async () => {
+                await authClient.signOut();
+                setSignedIn(false);
+                setError(null);
+              })();
+            }}
+            type="button"
+            variant="ghost"
+          >
+            Use a different account
+          </Button>
+        </AuthPanel>
+      </>
     );
   }
 
   return (
-    <form
-      className="border-border bg-card w-full max-w-sm space-y-4 rounded-2xl border p-6 shadow-sm"
-      onSubmit={(event) => {
-        void onRegister(event);
-      }}
-    >
-      <div className="space-y-1">
-        <h1 className="text-lg font-semibold tracking-tight">Join {preview.workspaceName}</h1>
-        <p className="text-muted-foreground text-sm">
-          Create an account to join as {preview.role}.
-        </p>
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm font-medium" htmlFor="email">
-          Email
-        </label>
-        <Input
-          autoComplete="username"
-          id="email"
-          onChange={(event) => setEmail(event.target.value)}
-          readOnly={Boolean(preview.email)}
-          required
-          type="email"
-          value={email}
+    <>
+      <AuthPanel
+        onSubmit={(event) => {
+          void onRegister(event);
+        }}
+      >
+        <AuthPanelHeader
+          description={
+            <>
+              Join <span className="text-foreground font-medium">{preview.workspaceName}</span> as{" "}
+              {preview.role}.
+            </>
+          }
+          title={`Join ${preview.workspaceName}`}
         />
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm font-medium" htmlFor="password">
-          Password
-        </label>
-        <Input
-          autoComplete="new-password"
-          id="password"
-          minLength={8}
-          onChange={(event) => setPassword(event.target.value)}
-          required
-          type="password"
-          value={password}
-        />
-      </div>
-      {error ? <p className="text-destructive text-sm">{error}</p> : null}
-      <Button className="w-full" disabled={pending} type="submit">
-        {pending ? "Creating…" : "Create account and join"}
-      </Button>
-      <p className="text-muted-foreground text-center text-xs">
-        Already have an account?{" "}
-        <Link
-          className="text-foreground underline underline-offset-2"
-          href={`/sign-in?callbackUrl=${encodeURIComponent(`/invite/${token}`)}`}
-        >
-          Sign in
-        </Link>
-      </p>
-    </form>
+        <Field>
+          <FieldLabel htmlFor="email">Email</FieldLabel>
+          <Input
+            autoComplete="username"
+            className="h-11"
+            id="email"
+            onChange={(event) => setEmail(event.target.value)}
+            readOnly={Boolean(preview.email)}
+            required
+            type="email"
+            value={email}
+          />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="password">Password</FieldLabel>
+          <Input
+            autoComplete="new-password"
+            className="h-11"
+            id="password"
+            minLength={8}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+            type="password"
+            value={password}
+          />
+        </Field>
+        {error ? (
+          <p className="text-destructive text-sm" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <Button className="h-11 w-full" disabled={pending} type="submit">
+          {pending ? "Creating…" : "Create account and join"}
+        </Button>
+        <AuthFooterNote>
+          Already have an account?{" "}
+          <AuthLink href={`/sign-in?callbackUrl=${encodeURIComponent(`/invite/${token}`)}`}>
+            Sign in
+          </AuthLink>
+        </AuthFooterNote>
+      </AuthPanel>
+    </>
   );
 }
