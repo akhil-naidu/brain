@@ -1,7 +1,7 @@
 # connection-connect-menu Specification
 
 ## Purpose
-Lets signed-in users Connect, Disconnect, and configure MCP OAuth app credentials from Tools (workspace BYOA for owners/admins; host credentials for the instance admin) without a chat turn.
+Lets signed-in users Connect, Disconnect, and configure MCP OAuth app credentials from the chat integrations menu and Tools (workspace BYOA for owners/admins; host credentials for the instance admin) without a chat turn.
 ## Requirements
 ### Requirement: Menu OAuth start API
 The host MUST expose an authorize endpoint that starts MCP OAuth for a supported connection and the signed-in user’s principal without requiring a chat turn.
@@ -118,20 +118,24 @@ The host MUST expose a setup endpoint for static-credential MCP connections that
 - **WHEN** setup is requested for a DCR connection that does not need static app credentials
 - **THEN** the endpoint fails with a clear error
 
-### Requirement: Configure control for static-credential connections
-The Tools page MUST offer Set up / App settings for static-credential MCP connections whenever status is known, so owners can enter or replace app credentials anytime. DCR connections MUST NOT show this control. The chat integrations menu MAY deep-link to Tools instead of embedding the dialog.
+### Requirement: Configure and connect controls in chat and Tools
+The Tools page and the chat integrations menu MUST offer Set up / App settings for static-credential MCP connections whenever status is known, so owners can enter or replace app credentials without relying only on a deep-link. Both surfaces MUST offer Connect when status is needs_sign_in and Disconnect when connected. DCR connections MUST NOT show Set up / App settings.
 
 #### Scenario: Set up shown when setup is needed
-- **WHEN** Tools loads status and a static-credential connection is needs_setup
+- **WHEN** Tools or the integrations menu loads status and a static-credential connection is needs_setup
 - **THEN** that row shows a Set up control that opens a dialog to enter app id/secret and copy the return link
 
 #### Scenario: App settings available after setup
 - **WHEN** a static-credential connection is needs_sign_in or connected
-- **THEN** Tools still offers App settings for that row so credentials can be replaced or cleared
+- **THEN** Tools and the integrations menu still offer App settings for that row so credentials can be replaced or cleared
+
+#### Scenario: Connect from integrations menu
+- **WHEN** the integrations menu shows a connection as needs_sign_in
+- **THEN** that row offers Connect that starts Menu OAuth without navigating away from chat
 
 #### Scenario: DCR connections hide configure
 - **WHEN** a connection uses dynamic client registration (no static app credentials)
-- **THEN** Tools does not offer Set up or App settings for that row
+- **THEN** Tools and the integrations menu do not offer Set up or App settings for that row
 
 ### Requirement: Enable toggle requires a connected app
 The integrations menu MUST only allow turning a connection on when that connection is connected. Turning off remains allowed anytime.
