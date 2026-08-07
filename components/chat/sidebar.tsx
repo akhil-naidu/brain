@@ -29,6 +29,7 @@ import {
 import { formatScheduleTimeValue } from "@/lib/chat/schedule-defaults";
 import { fetchScheduledBrief } from "@/lib/chat/scheduled-brief-api";
 import { listScheduledPlaybooks, type ScheduledPlaybook } from "@/lib/chat/scheduled-playbooks-api";
+import { WorkspaceSwitcher } from "@/components/chat/workspace-switcher";
 import { SCHEDULES_CHANGED_EVENT } from "@/lib/chat/schedule-events";
 import {
   DEFAULT_SIDEBAR_SECTIONS,
@@ -270,8 +271,9 @@ export function ChatSidebar({
           className,
         )}
       >
-        <div className="border-border/50 flex w-full shrink-0 flex-col items-center justify-center gap-1 border-b py-2">
+        <div className="border-border/50 flex w-full shrink-0 flex-col items-center justify-center gap-1.5 border-b py-2">
           {brand}
+          <WorkspaceSwitcher compact />
         </div>
         <div className="flex w-full flex-col items-center px-1 py-2">
           {onToggleSidebar ? (
@@ -362,23 +364,24 @@ export function ChatSidebar({
         className,
       )}
     >
-      <div className="border-border/50 flex shrink-0 items-start justify-between gap-2 border-b px-2 py-2">
-        <div className="text-foreground flex min-w-0 flex-1 flex-col gap-2 text-sm font-medium">
-          {brand}
+      <div className="border-border/50 flex shrink-0 flex-col gap-2 border-b px-2 py-2">
+        <div className="flex items-center justify-between gap-1">
+          <div className="text-foreground min-w-0 flex-1 text-sm font-medium">{brand}</div>
+          {onToggleSidebar ? (
+            <Button
+              aria-label={`Collapse sidebar (${sidebarShortcutLabel})`}
+              className="text-muted-foreground/55 hover:text-muted-foreground shrink-0"
+              onClick={onToggleSidebar}
+              size="icon-sm"
+              title={`Collapse sidebar (${sidebarShortcutLabel})`}
+              type="button"
+              variant="ghost"
+            >
+              <PanelLeftIcon className="size-4" />
+            </Button>
+          ) : null}
         </div>
-        {onToggleSidebar ? (
-          <Button
-            aria-label={`Collapse sidebar (${sidebarShortcutLabel})`}
-            className="text-muted-foreground/55 hover:text-muted-foreground"
-            onClick={onToggleSidebar}
-            size="icon-sm"
-            title={`Collapse sidebar (${sidebarShortcutLabel})`}
-            type="button"
-            variant="ghost"
-          >
-            <PanelLeftIcon className="size-4" />
-          </Button>
-        ) : null}
+        <WorkspaceSwitcher />
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col">

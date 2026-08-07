@@ -1,10 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { notifyWorkspacesChanged } from "@/lib/auth/workspace-events";
 import { WorkspaceByoaSection } from "@/components/chat/workspace-byoa-section";
 import { WorkspaceScimSection } from "@/components/chat/workspace-scim-section";
 import { WorkspaceSsoSection } from "@/components/chat/workspace-sso-section";
+import {
+  SettingsBadge,
+  SettingsPanel,
+  SettingsSection,
+  SettingsShell,
+  SettingsTabs,
+} from "@/components/settings/settings-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -103,6 +110,7 @@ export default function WorkspaceSettingsPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
   const [emailDeliveryNote, setEmailDeliveryNote] = useState<string | null>(null);
+  const [tab, setTab] = useState("people");
   const copiedResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const markCopied = useCallback((id: string) => {
@@ -448,246 +456,307 @@ export default function WorkspaceSettingsPage() {
   const ownerCount = members.filter((member) => member.role === "owner").length;
   const busy = pendingAction !== null;
 
+  const tabs = useMemo(() => {
+    const items = [{ id: "people", label: "People" }];
+    if (isTeam) {
+      items.push({ id: "invites", label: "Invites" }, { id: "security", label: "Security" });
+    }
+    items.push({ id: "connections", label: "Connections" });
+    return items;
+  }, [isTeam]);
+
+  useEffect(() => {
+    if (!tabs.some((item) => item.id === tab)) {
+      setTab("people");
+    }
+  }, [tab, tabs]);
+
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-col gap-6 p-6">
-      <div className="space-y-1">
-        <h1 className="text-xl font-semibold tracking-tight">Workspace settings</h1>
-        <p className="text-muted-foreground text-sm">
-          {workspaceName
-            ? `Members and invites for ${workspaceName}.`
-            : "Manage members and invites for the active workspace."}
-        </p>
-      </div>
-
-      <div className="space-y-2">
-        <h2 className="text-sm font-medium">Members</h2>
-        {loading ? (
-          <p className="text-muted-foreground text-sm">Loading members…</p>
-        ) : members.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No members found for this workspace.</p>
-        ) : (
-          <ul className="space-y-2">
-            {members.map((member) => {
-              const isSelf = member.userId === viewerUserId;
-              const canEditRole =
-                isTeam &&
-                canManage &&
-                member.role !== "owner" &&
-                !(viewerRole === "admin" && member.role === "admin" && !isSelf);
-              const canRemove =
-                isTeam &&
-                (isSelf
-                  ? !(member.role === "owner" && ownerCount <= 1)
-                  : canManage &&
-                    member.role !== "owner" &&
-                    !(viewerRole === "admin" && member.role === "admin"));
-              const canTransfer =
-                isTeam && viewerRole === "owner" && !isSelf && member.role !== "owner";
-              const rowBusy =
-                pendingAction === `role:${member.userId}` ||
-                pendingAction === `remove:${member.userId}` ||
-                pendingAction === `transfer:${member.userId}`;
-              return (
-                <li
-                  className="border-border flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between"
-                  key={member.userId}
-                >
-                  <div className="min-w-0 space-y-0.5">
-                    <p className="truncate text-sm font-medium">
-                      {memberLabel(member)}
-                      {isSelf ? " (you)" : ""}
-                    </p>
-                    <p className="text-muted-foreground text-xs capitalize">{member.role}</p>
-                  </div>
-                  <div className="flex shrink-0 flex-wrap items-center gap-2">
-                    {canEditRole ? (
-                      <select
-                        className="border-border bg-background rounded-md border px-2 py-1 text-xs"
-                        disabled={rowBusy}
-                        onChange={(event) => {
-                          if (event.target.value === "admin" || event.target.value === "member") {
-                            void onChangeRole(member.userId, event.target.value);
-                          }
-                        }}
-                        value={member.role === "admin" ? "admin" : "member"}
-                      >
-                        <option value="member">Member</option>
-                        <option value="admin">Admin</option>
-                      </select>
-                    ) : null}
-                    {canTransfer ? (
-                      <Button
-                        disabled={busy}
-                        onClick={() => {
-                          void onTransfer(member.userId);
-                        }}
-                        size="sm"
-                        type="button"
-                        variant="outline"
-                      >
-                        {pendingAction === `transfer:${member.userId}`
-                          ? "Transferring…"
-                          : "Make owner"}
-                      </Button>
-                    ) : null}
-                    {canRemove ? (
-                      <Button
-                        disabled={busy}
-                        onClick={() => {
-                          void onRemove(member.userId);
-                        }}
-                        size="sm"
-                        type="button"
-                        variant="ghost"
-                      >
-                        {pendingAction === `remove:${member.userId}`
-                          ? isSelf
-                            ? "Leaving…"
-                            : "Removing…"
-                          : isSelf
-                            ? "Leave"
-                            : "Remove"}
-                      </Button>
-                    ) : null}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-        {!isTeam ? (
-          <p className="text-muted-foreground text-xs">
-            Personal workspaces do not support member role changes or invites for additional people.
-          </p>
-        ) : null}
-      </div>
-
-      {isTeam && canManage ? (
-        <div className="border-border space-y-3 rounded-xl border p-4">
-          <p className="text-sm font-medium">Create invite</p>
-          <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="invite-email">
-              Email (optional)
-            </label>
-            <Input
-              id="invite-email"
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="person@example.com"
-              type="email"
-              value={email}
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="invite-role">
-              Role
-            </label>
-            <select
-              className="border-border bg-background w-full rounded-md border px-3 py-2 text-sm"
-              id="invite-role"
-              onChange={(event) => {
-                if (event.target.value === "admin" || event.target.value === "member") {
-                  setRole(event.target.value);
-                }
-              }}
-              value={role}
-            >
-              <option value="member">Member</option>
-              <option value="admin">Admin</option>
-            </select>
-          </div>
-          <Button
-            disabled={busy}
-            onClick={() => {
-              void onCreate();
-            }}
-            type="button"
-          >
-            {pendingAction === "invite-create" ? "Creating…" : "Create invite link"}
-          </Button>
-          {emailDeliveryNote ? (
-            <p className="text-muted-foreground text-xs">{emailDeliveryNote}</p>
+    <SettingsShell
+      description="Manage who can access this workspace and how they sign in."
+      meta={
+        <div className="flex flex-wrap items-center gap-2">
+          <SettingsBadge>{workspaceKind === "personal" ? "Personal" : "Team"}</SettingsBadge>
+          {viewerRole ? <SettingsBadge>{viewerRole}</SettingsBadge> : null}
+          {workspaceName ? (
+            <span className="text-muted-foreground text-sm">{workspaceName}</span>
           ) : null}
-          {createdUrl ? (
-            <div className="bg-muted/40 space-y-1 rounded-md p-3">
-              <p className="text-xs font-medium">Invite link</p>
-              <p className="font-mono text-xs break-all">{createdUrl}</p>
-              <p className="text-muted-foreground text-xs">
-                {copiedId ? "Copied to clipboard." : "Copy and share this link."}
+        </div>
+      }
+      title="Workspace"
+    >
+      <SettingsTabs active={tab} onChange={setTab} tabs={tabs} />
+
+      {error ? (
+        <p className="text-destructive text-sm" role="alert">
+          {error}
+        </p>
+      ) : null}
+
+      {tab === "people" ? (
+        <SettingsSection
+          description={
+            isTeam
+              ? "Owners and admins can change roles. Transfer ownership from the owner account."
+              : "Personal workspaces are just for you. Create a team workspace to invite others."
+          }
+          title="Members"
+        >
+          <SettingsPanel>
+            {loading ? (
+              <p className="text-muted-foreground px-4 py-6 text-sm">Loading members…</p>
+            ) : members.length === 0 ? (
+              <p className="text-muted-foreground px-4 py-6 text-sm">
+                No members found for this workspace.
               </p>
-            </div>
+            ) : (
+              <ul className="divide-border/70 divide-y">
+                {members.map((member) => {
+                  const isSelf = member.userId === viewerUserId;
+                  const canEditRole =
+                    isTeam &&
+                    canManage &&
+                    member.role !== "owner" &&
+                    !(viewerRole === "admin" && member.role === "admin" && !isSelf);
+                  const canRemove =
+                    isTeam &&
+                    (isSelf
+                      ? !(member.role === "owner" && ownerCount <= 1)
+                      : canManage &&
+                        member.role !== "owner" &&
+                        !(viewerRole === "admin" && member.role === "admin"));
+                  const canTransfer =
+                    isTeam && viewerRole === "owner" && !isSelf && member.role !== "owner";
+                  const rowBusy =
+                    pendingAction === `role:${member.userId}` ||
+                    pendingAction === `remove:${member.userId}` ||
+                    pendingAction === `transfer:${member.userId}`;
+                  return (
+                    <li
+                      className="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between"
+                      key={member.userId}
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="bg-muted text-foreground flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
+                          {memberLabel(member).slice(0, 1).toUpperCase()}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">
+                            {memberLabel(member)}
+                            {isSelf ? (
+                              <span className="text-muted-foreground font-normal"> · you</span>
+                            ) : null}
+                          </p>
+                          <p className="text-muted-foreground text-xs capitalize">{member.role}</p>
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 flex-wrap items-center gap-2">
+                        {canEditRole ? (
+                          <select
+                            className="border-border bg-background rounded-md border px-2 py-1.5 text-xs"
+                            disabled={rowBusy}
+                            onChange={(event) => {
+                              if (
+                                event.target.value === "admin" ||
+                                event.target.value === "member"
+                              ) {
+                                void onChangeRole(member.userId, event.target.value);
+                              }
+                            }}
+                            value={member.role === "admin" ? "admin" : "member"}
+                          >
+                            <option value="member">Member</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        ) : null}
+                        {canTransfer ? (
+                          <Button
+                            disabled={busy}
+                            onClick={() => {
+                              void onTransfer(member.userId);
+                            }}
+                            size="sm"
+                            type="button"
+                            variant="outline"
+                          >
+                            {pendingAction === `transfer:${member.userId}`
+                              ? "Transferring…"
+                              : "Make owner"}
+                          </Button>
+                        ) : null}
+                        {canRemove ? (
+                          <Button
+                            disabled={busy}
+                            onClick={() => {
+                              void onRemove(member.userId);
+                            }}
+                            size="sm"
+                            type="button"
+                            variant="ghost"
+                          >
+                            {pendingAction === `remove:${member.userId}`
+                              ? isSelf
+                                ? "Leaving…"
+                                : "Removing…"
+                              : isSelf
+                                ? "Leave"
+                                : "Remove"}
+                          </Button>
+                        ) : null}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </SettingsPanel>
+        </SettingsSection>
+      ) : null}
+
+      {tab === "invites" ? (
+        <div className="space-y-8">
+          {canManage ? (
+            <SettingsSection
+              description="Optional email binding sends an invite when SMTP is configured."
+              title="Create invite"
+            >
+              <SettingsPanel className="space-y-4 p-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium" htmlFor="invite-email">
+                      Email (optional)
+                    </label>
+                    <Input
+                      id="invite-email"
+                      onChange={(event) => setEmail(event.target.value)}
+                      placeholder="person@example.com"
+                      type="email"
+                      value={email}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium" htmlFor="invite-role">
+                      Role
+                    </label>
+                    <select
+                      className="border-border bg-background h-9 w-full rounded-md border px-3 text-sm"
+                      id="invite-role"
+                      onChange={(event) => {
+                        if (event.target.value === "admin" || event.target.value === "member") {
+                          setRole(event.target.value);
+                        }
+                      }}
+                      value={role}
+                    >
+                      <option value="member">Member</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+                </div>
+                <Button
+                  disabled={busy}
+                  onClick={() => {
+                    void onCreate();
+                  }}
+                  type="button"
+                >
+                  {pendingAction === "invite-create" ? "Creating…" : "Create invite link"}
+                </Button>
+                {emailDeliveryNote ? (
+                  <p className="text-muted-foreground text-xs">{emailDeliveryNote}</p>
+                ) : null}
+                {createdUrl ? (
+                  <div className="bg-muted/40 space-y-1 rounded-lg p-3">
+                    <p className="text-xs font-medium">Invite link</p>
+                    <p className="font-mono text-xs break-all">{createdUrl}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {copiedId ? "Copied to clipboard." : "Copy and share this link."}
+                    </p>
+                  </div>
+                ) : null}
+              </SettingsPanel>
+            </SettingsSection>
+          ) : (
+            <p className="text-muted-foreground text-sm">
+              Only workspace owners and admins can create or revoke invites.
+            </p>
+          )}
+
+          {canManage ? (
+            <SettingsSection title="Outstanding invites">
+              <SettingsPanel>
+                {invites.length === 0 ? (
+                  <p className="text-muted-foreground px-4 py-6 text-sm">No active invites.</p>
+                ) : (
+                  <ul className="divide-border/70 divide-y">
+                    {invites.map((invite) => (
+                      <li
+                        className="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between"
+                        key={invite.id}
+                      >
+                        <div className="min-w-0 space-y-0.5">
+                          <p className="truncate text-sm font-medium">
+                            {invite.email ?? "Anyone with the link"}
+                            <span className="text-muted-foreground font-normal">
+                              {" "}
+                              · {invite.role}
+                            </span>
+                          </p>
+                          <p className="text-muted-foreground text-xs">
+                            Expires {new Date(invite.expiresAt).toLocaleString()}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 gap-2">
+                          <Button
+                            disabled={busy}
+                            onClick={() => {
+                              void (async () => {
+                                try {
+                                  await navigator.clipboard.writeText(inviteUrl(invite.token));
+                                  markCopied(invite.id);
+                                } catch {
+                                  setCreatedUrl(inviteUrl(invite.token));
+                                }
+                              })();
+                            }}
+                            size="sm"
+                            type="button"
+                            variant="outline"
+                          >
+                            {copiedId === invite.id ? "Copied" : "Copy link"}
+                          </Button>
+                          <Button
+                            disabled={busy}
+                            onClick={() => {
+                              void onRevoke(invite.id);
+                            }}
+                            size="sm"
+                            type="button"
+                            variant="ghost"
+                          >
+                            {pendingAction === `invite-revoke:${invite.id}`
+                              ? "Revoking…"
+                              : "Revoke"}
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </SettingsPanel>
+            </SettingsSection>
           ) : null}
         </div>
       ) : null}
 
-      {isTeam && !canManage ? (
-        <p className="text-muted-foreground text-sm">
-          Only workspace owners and admins can create or revoke invites.
-        </p>
-      ) : null}
-
-      {error ? <p className="text-destructive text-sm">{error}</p> : null}
-
-      {isTeam && canManage ? (
-        <div className="space-y-2">
-          <h2 className="text-sm font-medium">Outstanding invites</h2>
-          {invites.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No active invites.</p>
-          ) : (
-            <ul className="space-y-2">
-              {invites.map((invite) => (
-                <li
-                  className="border-border flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between"
-                  key={invite.id}
-                >
-                  <div className="min-w-0 space-y-0.5">
-                    <p className="truncate text-sm font-medium">
-                      {invite.email ?? "Anyone with the link"} · {invite.role}
-                    </p>
-                    <p className="text-muted-foreground text-xs">
-                      Expires {new Date(invite.expiresAt).toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 gap-2">
-                    <Button
-                      disabled={busy}
-                      onClick={() => {
-                        void (async () => {
-                          try {
-                            await navigator.clipboard.writeText(inviteUrl(invite.token));
-                            markCopied(invite.id);
-                          } catch {
-                            setCreatedUrl(inviteUrl(invite.token));
-                          }
-                        })();
-                      }}
-                      size="sm"
-                      type="button"
-                      variant="outline"
-                    >
-                      {copiedId === invite.id ? "Copied" : "Copy link"}
-                    </Button>
-                    <Button
-                      disabled={busy}
-                      onClick={() => {
-                        void onRevoke(invite.id);
-                      }}
-                      size="sm"
-                      type="button"
-                      variant="ghost"
-                    >
-                      {pendingAction === `invite-revoke:${invite.id}` ? "Revoking…" : "Revoke"}
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+      {tab === "security" ? (
+        <div className="space-y-6">
+          <WorkspaceSsoSection canManage={canManage} enabled={isTeam} />
+          <WorkspaceScimSection canManage={canManage} enabled={isTeam} />
         </div>
       ) : null}
 
-      <WorkspaceSsoSection canManage={canManage} enabled={isTeam} />
-      <WorkspaceScimSection canManage={canManage} enabled={isTeam} />
-      <WorkspaceByoaSection />
-    </div>
+      {tab === "connections" ? <WorkspaceByoaSection /> : null}
+    </SettingsShell>
   );
 }

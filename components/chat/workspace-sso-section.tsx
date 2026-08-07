@@ -302,7 +302,7 @@ export function WorkspaceSsoSection(props: {
   }
 
   return (
-    <div className="border-border space-y-3 rounded-xl border p-4">
+    <div className="border-border/80 bg-card/40 space-y-3 rounded-xl border p-4">
       <div className="space-y-1">
         <p className="text-sm font-medium">Single sign-on</p>
         <p className="text-muted-foreground text-xs">

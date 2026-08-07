@@ -2,11 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { notifyWorkspacesChanged } from "@/lib/auth/workspace-events";
+import {
+  SettingsBadge,
+  SettingsPanel,
+  SettingsSection,
+  SettingsShell,
+} from "@/components/settings/settings-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { parseInstancePolicies } from "@/lib/auth/parse-policies";
 import type { InstancePolicies } from "@/lib/auth/workspaces/types";
+import { cn } from "@/lib/utils";
 
 type Entitlements = {
   readonly maxUsers: number | null;
@@ -34,6 +41,28 @@ function isEntitlements(value: unknown): value is Entitlements {
     typeof value.byoa === "boolean" &&
     "openSignup" in value &&
     typeof value.openSignup === "boolean"
+  );
+}
+
+function EntitlementChip({
+  label,
+  allowed,
+}: {
+  readonly label: string;
+  readonly allowed: boolean;
+}) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium",
+        allowed
+          ? "border-primary/25 bg-primary/8 text-foreground"
+          : "border-border bg-muted/40 text-muted-foreground",
+      )}
+    >
+      {label}
+      <span className="text-muted-foreground ml-1.5 font-normal">{allowed ? "on" : "off"}</span>
+    </span>
   );
 }
 
@@ -207,179 +236,209 @@ export default function InstanceSettingsPage() {
 
   if (error && !policies) {
     return (
-      <div className="mx-auto max-w-lg p-6">
+      <SettingsShell title="Instance">
         <p className="text-destructive text-sm">{error}</p>
-      </div>
+      </SettingsShell>
     );
   }
 
   if (!policies) {
     return (
-      <div className="mx-auto max-w-lg p-6">
+      <SettingsShell title="Instance">
         <p className="text-muted-foreground text-sm">Loading instance settings…</p>
-      </div>
+      </SettingsShell>
     );
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-col gap-6 p-6">
-      <div className="space-y-1">
-        <h1 className="text-xl font-semibold tracking-tight">Instance settings</h1>
-        <p className="text-muted-foreground text-sm">
-          Host-wide license entitlements and policies for signup and workspace provisioning.
-        </p>
-      </div>
-
-      {!canManage ? (
-        <p className="text-muted-foreground text-sm">
-          You can view these settings. Only the instance admin can change them.
-        </p>
-      ) : null}
-
-      <div className="border-border space-y-3 rounded-xl border p-4">
-        <div className="space-y-1">
-          <p className="text-sm font-medium">License</p>
-          <p className="text-muted-foreground text-xs">
-            {entitlements?.source === "license"
-              ? "Using installed license entitlements."
-              : "No license installed — all features unlocked (self-host default)."}
-          </p>
+    <SettingsShell
+      description="Host-wide license and policies for this Brain deployment."
+      meta={
+        <div className="flex flex-wrap items-center gap-2">
+          <SettingsBadge>
+            {entitlements?.source === "license" ? "Licensed" : "Self-host"}
+          </SettingsBadge>
+          {canManage ? (
+            <SettingsBadge>Admin</SettingsBadge>
+          ) : (
+            <SettingsBadge>View only</SettingsBadge>
+          )}
         </div>
-        {entitlements ? (
-          <ul className="text-muted-foreground space-y-1 text-xs">
-            <li>
-              Max users: {entitlements.maxUsers === null ? "Unlimited" : entitlements.maxUsers}
-            </li>
-            <li>Open signup: {entitlements.openSignup ? "Allowed" : "Locked"}</li>
-            <li>
-              SSO: {entitlements.sso ? "Allowed (configure IdPs per team workspace)" : "Locked"}
-            </li>
-            <li>Multi-workspace: {entitlements.multiWorkspace ? "Allowed" : "Locked"}</li>
-            <li>Workspace BYOA: {entitlements.byoa ? "Allowed" : "Locked"}</li>
-            {entitlements.expiresAt ? <li>Expires: {entitlements.expiresAt}</li> : null}
-          </ul>
-        ) : null}
-        {canManage ? (
-          <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="license-key">
-              License key
-            </label>
-            <Input
-              id="license-key"
-              onChange={(event) => setLicenseKey(event.target.value)}
-              placeholder="BRAIN1...."
-              value={licenseKey}
-            />
+      }
+      title="Instance"
+    >
+      <SettingsSection
+        description={
+          entitlements?.source === "license"
+            ? "Installed license controls which features can be enabled."
+            : "No license installed — features stay unlocked for self-host defaults."
+        }
+        title="License"
+      >
+        <SettingsPanel className="space-y-5 p-5">
+          {entitlements ? (
             <div className="flex flex-wrap gap-2">
-              <Button
-                disabled={pending || !licenseKey.trim()}
-                onClick={() => {
-                  void installLicense();
-                }}
-                size="sm"
-                type="button"
-              >
-                Install license
-              </Button>
-              {entitlements?.source === "license" ? (
+              <EntitlementChip
+                allowed={entitlements.maxUsers === null || entitlements.maxUsers > 0}
+                label={
+                  entitlements.maxUsers === null
+                    ? "Unlimited users"
+                    : `${entitlements.maxUsers} users`
+                }
+              />
+              <EntitlementChip allowed={entitlements.openSignup} label="Open signup" />
+              <EntitlementChip allowed={entitlements.sso} label="SSO" />
+              <EntitlementChip allowed={entitlements.multiWorkspace} label="Multi-workspace" />
+              <EntitlementChip allowed={entitlements.byoa} label="BYOA" />
+            </div>
+          ) : null}
+          {entitlements?.expiresAt ? (
+            <p className="text-muted-foreground text-xs">Expires {entitlements.expiresAt}</p>
+          ) : null}
+
+          {canManage ? (
+            <div className="border-border/70 space-y-3 border-t pt-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="license-key">
+                  License key
+                </label>
+                <Input
+                  id="license-key"
+                  onChange={(event) => setLicenseKey(event.target.value)}
+                  placeholder="BRAIN1...."
+                  value={licenseKey}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
                 <Button
-                  disabled={pending}
+                  disabled={pending || !licenseKey.trim()}
                   onClick={() => {
-                    void clearLicense();
+                    void installLicense();
                   }}
                   size="sm"
                   type="button"
-                  variant="ghost"
                 >
-                  Clear license
+                  Install license
                 </Button>
-              ) : null}
+                {entitlements?.source === "license" ? (
+                  <Button
+                    disabled={pending}
+                    onClick={() => {
+                      void clearLicense();
+                    }}
+                    size="sm"
+                    type="button"
+                    variant="ghost"
+                  >
+                    Clear license
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+        </SettingsPanel>
+      </SettingsSection>
+
+      <SettingsSection
+        description="These policies apply to every workspace on this host."
+        title="Policies"
+      >
+        <SettingsPanel className="divide-border/70 divide-y">
+          <div className="space-y-3 p-5">
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="signup-mode">
+                Signup mode
+              </label>
+              <select
+                className="border-border bg-background h-9 w-full max-w-md rounded-md border px-3 text-sm"
+                disabled={!canManage || pending}
+                id="signup-mode"
+                onChange={(event) => {
+                  const value = event.target.value;
+                  if (value === "open" || value === "invite-only" || value === "sso-only") {
+                    setSaved(false);
+                    setPolicies({ ...policies, signupMode: value });
+                  }
+                }}
+                value={policies.signupMode}
+              >
+                <option value="invite-only">Invite only</option>
+                <option disabled={entitlements?.openSignup === false} value="open">
+                  Open signup
+                </option>
+                <option disabled={entitlements?.sso === false} value="sso-only">
+                  SSO only {entitlements?.sso ? "" : "(locked by license)"}
+                </option>
+              </select>
+              <p className="text-muted-foreground text-xs">
+                Invite only is the self-host default. Open signup enables account creation for
+                anyone when the license allows it.
+              </p>
             </div>
           </div>
-        ) : null}
-      </div>
 
-      <div className="border-border space-y-4 rounded-xl border p-4">
-        <div className="space-y-2">
-          <label className="text-sm font-medium" htmlFor="signup-mode">
-            Signup mode
-          </label>
-          <select
-            className="border-border bg-background w-full rounded-md border px-3 py-2 text-sm"
-            disabled={!canManage || pending}
-            id="signup-mode"
-            onChange={(event) => {
-              const value = event.target.value;
-              if (value === "open" || value === "invite-only" || value === "sso-only") {
+          <div className="flex items-center justify-between gap-6 p-5">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Allow creating workspaces</p>
+              <p className="text-muted-foreground text-xs">
+                When off, only instance admins can create team workspaces.
+              </p>
+            </div>
+            <Switch
+              checked={policies.allowCreateWorkspace}
+              disabled={!canManage || pending || entitlements?.multiWorkspace === false}
+              onCheckedChange={(checked) => {
                 setSaved(false);
-                setPolicies({ ...policies, signupMode: value });
-              }
-            }}
-            value={policies.signupMode}
-          >
-            <option value="invite-only">Invite only</option>
-            <option disabled={entitlements?.openSignup === false} value="open">
-              Open signup
-            </option>
-            <option disabled={entitlements?.sso === false} value="sso-only">
-              SSO only {entitlements?.sso ? "" : "(locked by license)"}
-            </option>
-          </select>
-          <p className="text-muted-foreground text-xs">
-            Invite only is the self-host default. Open signup enables `/sign-up` for anyone when the
-            license allows it.
-          </p>
-        </div>
-
-        <div className="flex items-center justify-between gap-4">
-          <div className="space-y-0.5">
-            <p className="text-sm font-medium">Allow creating workspaces</p>
-            <p className="text-muted-foreground text-xs">
-              When off, only instance admins can create team workspaces.
-            </p>
+                setPolicies({ ...policies, allowCreateWorkspace: checked });
+              }}
+            />
           </div>
-          <Switch
-            checked={policies.allowCreateWorkspace}
-            disabled={!canManage || pending || entitlements?.multiWorkspace === false}
-            onCheckedChange={(checked) => {
-              setSaved(false);
-              setPolicies({ ...policies, allowCreateWorkspace: checked });
-            }}
-          />
-        </div>
 
-        <div className="flex items-center justify-between gap-4">
-          <div className="space-y-0.5">
-            <p className="text-sm font-medium">Auto personal workspace</p>
-            <p className="text-muted-foreground text-xs">
-              Create a Personal workspace for each new user.
-            </p>
+          <div className="flex items-center justify-between gap-6 p-5">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Auto personal workspace</p>
+              <p className="text-muted-foreground text-xs">
+                Create a Personal workspace for each new user.
+              </p>
+            </div>
+            <Switch
+              checked={policies.autoPersonalWorkspace}
+              disabled={!canManage || pending}
+              onCheckedChange={(checked) => {
+                setSaved(false);
+                setPolicies({ ...policies, autoPersonalWorkspace: checked });
+              }}
+            />
           </div>
-          <Switch
-            checked={policies.autoPersonalWorkspace}
-            disabled={!canManage || pending}
-            onCheckedChange={(checked) => {
-              setSaved(false);
-              setPolicies({ ...policies, autoPersonalWorkspace: checked });
-            }}
-          />
-        </div>
-      </div>
+        </SettingsPanel>
+      </SettingsSection>
 
-      {error ? <p className="text-destructive text-sm">{error}</p> : null}
-      {saved ? <p className="text-muted-foreground text-sm">Saved.</p> : null}
+      {error ? (
+        <p className="text-destructive text-sm" role="alert">
+          {error}
+        </p>
+      ) : null}
 
       {canManage ? (
-        <Button
-          disabled={pending}
-          onClick={() => {
-            void save(policies);
-          }}
-          type="button"
-        >
-          {pending ? "Saving…" : "Save policy changes"}
-        </Button>
-      ) : null}
-    </div>
+        <div className="border-border/70 bg-background/90 sticky bottom-0 -mx-4 flex items-center justify-between gap-3 border-t px-4 py-4 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+          <p className="text-muted-foreground text-sm">
+            {saved ? "Saved." : "Unsaved policy changes stay local until you save."}
+          </p>
+          <Button
+            disabled={pending}
+            onClick={() => {
+              void save(policies);
+            }}
+            type="button"
+          >
+            {pending ? "Saving…" : "Save policies"}
+          </Button>
+        </div>
+      ) : (
+        <p className="text-muted-foreground text-sm">
+          You can view these settings. Only the instance admin can change them.
+        </p>
+      )}
+    </SettingsShell>
   );
 }

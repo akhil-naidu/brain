@@ -102,9 +102,9 @@ function ByoaProviderCard({ connectionId }: { readonly connectionId: string }) {
   }
 
   return (
-    <div className="border-border space-y-3 rounded-lg border p-3">
+    <div className="border-border/80 bg-card/40 space-y-3 rounded-xl border p-4">
       <div className="space-y-0.5">
-        <p className="text-sm font-medium">{info.displayName}</p>
+        <p className="text-sm font-medium capitalize">{info.displayName}</p>
         <p className="text-muted-foreground text-xs">
           {sourceLabel(info.credentialSource)}
           {info.hasWorkspaceCredentials ? " · workspace override saved" : ""}
@@ -202,15 +202,15 @@ function ByoaProviderCard({ connectionId }: { readonly connectionId: string }) {
 
 export function WorkspaceByoaSection() {
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="space-y-1">
-        <h2 className="text-sm font-medium">Workspace connection apps</h2>
+        <h2 className="text-sm font-medium tracking-tight">Workspace connection apps</h2>
         <p className="text-muted-foreground text-xs">
           Optional BYOA overrides for this workspace. When set, Connect uses these apps instead of
           the host/env apps. ClickUp and dFlow use dynamic registration and do not need this.
         </p>
       </div>
-      <div className="space-y-2">
+      <div className="grid gap-3">
         {STATIC_CONNECTION_IDS.map((id) => (
           <ByoaProviderCard connectionId={id} key={id} />
         ))}

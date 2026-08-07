@@ -9,7 +9,6 @@ import { ChatNavProvider, useChatNav } from "@/app/_components/chat-nav-context"
 import { ChatShellProvider } from "@/app/_components/chat-shell-context";
 import { BrainMark } from "@/components/brain-mark";
 import { ChatSidebar } from "@/components/chat/sidebar";
-import { WorkspaceSwitcher } from "@/components/chat/workspace-switcher";
 import { Button } from "@/components/ui/button";
 import {
   chatUrl,
@@ -261,27 +260,21 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
   }, [mobileDrawerOpen]);
 
   const sidebarBrand = (
-    <div className="flex min-w-0 flex-1 flex-col gap-2">
-      <Link className="text-foreground flex min-w-0 items-center gap-2" href="/chat">
-        <BrainMark className="size-5 shrink-0" />
-        <span className="truncate font-semibold tracking-tight">Brain</span>
-      </Link>
-      <WorkspaceSwitcher />
-    </div>
+    <Link className="text-foreground flex min-w-0 items-center gap-2" href="/chat">
+      <BrainMark className="size-5 shrink-0" />
+      <span className="truncate font-semibold tracking-tight">Brain</span>
+    </Link>
   );
 
   const compactBrand = (
-    <div className="flex flex-col items-center gap-2">
-      <Link
-        aria-label="Brain"
-        className="text-foreground hover:bg-muted/50 inline-flex size-9 items-center justify-center rounded-md"
-        href="/chat"
-        title="Brain"
-      >
-        <BrainMark className="size-5 shrink-0" />
-      </Link>
-      <WorkspaceSwitcher compact />
-    </div>
+    <Link
+      aria-label="Brain"
+      className="text-foreground hover:bg-muted/50 inline-flex size-9 items-center justify-center rounded-md"
+      href="/chat"
+      title="Brain"
+    >
+      <BrainMark className="size-5 shrink-0" />
+    </Link>
   );
 
   const sidebarProps = {

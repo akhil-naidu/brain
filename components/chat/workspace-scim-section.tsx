@@ -99,7 +99,7 @@ export function WorkspaceScimSection(props: {
   const canManage = props.canManage && Boolean(status?.canManage);
 
   return (
-    <section className="border-border/60 space-y-3 border-t pt-6">
+    <section className="border-border/80 bg-card/40 space-y-3 rounded-xl border p-4">
       <div>
         <h2 className="text-sm font-medium">SCIM provisioning</h2>
         <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
