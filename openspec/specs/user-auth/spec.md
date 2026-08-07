@@ -26,6 +26,43 @@ The system MUST provide a way to sign out that clears the browser session so sub
 - **WHEN** a signed-in user signs out
 - **THEN** chat history and connection APIs treat the caller as unauthenticated until they sign in again
 
+### Requirement: Self-serve forgot password
+When instance policy allows forgot-password and signup mode is not `sso-only`, Brain MUST offer a forgot-password flow. Successful email delivery requires SMTP; when SMTP is missing the API MUST return a clear configuration error without revealing whether the address exists. When the policy is off or the host is SSO-only, self-serve forgot-password MUST be unavailable in the UI and blocked by the API. Instance admins MUST still be able to set a user’s password.
+
+#### Scenario: Forgot password available
+- **WHEN** allow-forgot-password is on and mode is not `sso-only`
+- **THEN** sign-in shows a forgot-password control
+
+#### Scenario: Forgot password blocked by policy
+- **WHEN** allow-forgot-password is off
+- **THEN** requesting a reset is rejected and sign-in does not offer forgot-password
+
+#### Scenario: SMTP missing
+- **WHEN** forgot-password is allowed but SMTP is not configured
+- **THEN** the forgot-password request fails with a clear configuration error
+
+#### Scenario: Reset via email token
+- **WHEN** a visitor opens a valid reset link and submits a new password
+- **THEN** the password is updated and existing sessions for that user are revoked
+
+### Requirement: Signed-in user can change password
+A signed-in user with a credential password MUST be able to change that password from the account profile surface, optionally revoking other sessions.
+
+#### Scenario: Change password while signed in
+- **WHEN** a signed-in user submits current and new passwords on the account profile surface
+- **THEN** the password is updated for subsequent email sign-in
+
+### Requirement: Instance admin can reset user password
+An instance admin MUST be able to set or reset any host user’s password from instance settings, including users who currently have no credential password. The reset MUST revoke that user’s sessions. Non-admins MUST NOT reset other users’ passwords.
+
+#### Scenario: Admin resets password
+- **WHEN** an instance admin sets a new password for a user
+- **THEN** that user can sign in with the new password and prior sessions for that user end
+
+#### Scenario: Non-admin denied
+- **WHEN** a signed-in non-admin attempts to reset another user’s password
+- **THEN** the system rejects the request
+
 ### Requirement: User can manage active sessions
 The system MUST let a signed-in user list their active Better Auth sessions and revoke individual other sessions, all other sessions, or every session (including the current one). The current session MUST be identifiable in the UI. The system MUST NOT require a third-party device-management service for this capability.
 

@@ -42,6 +42,17 @@ The system MUST support an instance policy that enables or disables automatic Pe
 - **WHEN** auto personal workspace policy is enabled and a new user is created
 - **THEN** that user has a Personal workspace
 
+### Requirement: Forgot password policy
+The system MUST support an instance policy that allows or forbids self-serve forgot-password email. Default MUST be allowed. When forbidden, public forgot-password requests MUST be rejected while instance-admin password reset remains available.
+
+#### Scenario: Policy off blocks self-serve reset
+- **WHEN** allow-forgot-password is disabled
+- **THEN** a public forgot-password request is rejected
+
+#### Scenario: Policy on advertises availability
+- **WHEN** allow-forgot-password is enabled and signup mode is not `sso-only`
+- **THEN** signup-status reports forgot-password as available (email send still requires SMTP)
+
 ### Requirement: Instance admin can update policies
 An instance admin MUST be able to read and update these instance policies on the host. Non-instance-admins MUST NOT change instance policies.
 

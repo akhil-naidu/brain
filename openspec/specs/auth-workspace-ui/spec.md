@@ -26,11 +26,29 @@ Brain MUST provide `/invite/[token]` where a visitor can join the workspace. Sig
 - **THEN** an account is created, membership is granted, and they can use the app
 
 ### Requirement: Instance settings page
-Instance admins MUST have a settings page to view and update signup mode, allow-create-workspace, and auto-personal-workspace policies. Non-admins MUST NOT change those policies.
+Instance admins MUST have a settings page to view and update signup mode, allow-create-workspace, auto-personal-workspace, and allow-forgot-password policies, and to reset user passwords. Non-admins MUST NOT change those policies or reset passwords.
 
 #### Scenario: Admin updates signup mode
 - **WHEN** an instance admin sets signup mode to `open` from instance settings
 - **THEN** subsequent visitors can use `/sign-up`
+
+#### Scenario: Admin resets a user password from UI
+- **WHEN** an instance admin sets a new password for a listed user in instance settings
+- **THEN** the host stores that password for email sign-in and signs out that user’s sessions
+
+### Requirement: Account profile and password UI
+Signed-in users MUST have an account settings surface with profile details and a change-password form, plus a sessions tab for device management.
+
+#### Scenario: Change password from account settings
+- **WHEN** a signed-in user with a password opens Account and submits a password change
+- **THEN** the password is updated for later sign-in
+
+### Requirement: Forgot and reset password pages
+Brain MUST provide `/forgot-password` and `/reset-password` surfaces. Sign-in MUST link to forgot-password only when signup-status reports forgot-password available.
+
+#### Scenario: Sign-in shows forgot link when available
+- **WHEN** signup-status reports forgotPasswordAvailable
+- **THEN** the sign-in password field includes a Forgot password control
 
 ### Requirement: Workspace settings invites UI
 Workspace owners and admins MUST be able to create invite links, copy them, and revoke outstanding invites from a workspace settings surface.
