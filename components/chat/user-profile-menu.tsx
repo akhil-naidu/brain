@@ -25,8 +25,13 @@ export function UserProfileMenu() {
   const router = useRouter();
   const pathname = usePathname();
   const { data: session } = authClient.useSession();
+  const [mounted, setMounted] = useState(false);
   const [isInstanceAdmin, setIsInstanceAdmin] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const refreshAccess = useCallback(async () => {
     try {
@@ -60,9 +65,10 @@ export function UserProfileMenu() {
     };
   }, [refreshAccess]);
 
-  const user = session?.user;
+  const user = mounted ? session?.user : undefined;
   const displayName = user?.name?.trim() || user?.email?.trim() || "Account";
   const email = user?.email?.trim() || null;
+  const initial = userInitial(user?.name, user?.email);
 
   return (
     <DropdownMenu>
@@ -76,7 +82,7 @@ export function UserProfileMenu() {
           variant="ghost"
         >
           <span className="bg-primary/12 text-foreground flex size-7 items-center justify-center rounded-full text-[11px] font-semibold">
-            {userInitial(user?.name, user?.email)}
+            {initial}
           </span>
         </Button>
       </DropdownMenuTrigger>
@@ -84,7 +90,7 @@ export function UserProfileMenu() {
         <DropdownMenuLabel className="font-normal">
           <div className="flex items-center gap-2.5 py-0.5">
             <span className="bg-primary/12 text-foreground flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
-              {userInitial(user?.name, user?.email)}
+              {initial}
             </span>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">{displayName}</p>
