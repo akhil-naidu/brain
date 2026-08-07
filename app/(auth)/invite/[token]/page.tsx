@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth/client";
+import { DISPLAY_NAME_MAX_LENGTH, parseDisplayName } from "@/lib/auth/display-name";
 
 type InvitePreview = {
   readonly valid: true;
@@ -25,6 +26,7 @@ export default function InvitePage() {
   const [preview, setPreview] = useState<InvitePreview | null | "invalid">(null);
   const [loading, setLoading] = useState(true);
   const [signedIn, setSignedIn] = useState(false);
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -119,13 +121,18 @@ export default function InvitePage() {
 
   async function onRegister(event: FormEvent) {
     event.preventDefault();
+    const displayName = parseDisplayName(name);
+    if (!displayName) {
+      setError(`Enter a name between 1 and ${DISPLAY_NAME_MAX_LENGTH} characters.`);
+      return;
+    }
     setPending(true);
     setError(null);
     try {
       const response = await fetch("/api/workspaces/invites/register", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ token, email, password }),
+        body: JSON.stringify({ token, name: displayName, email, password }),
       });
       const data: unknown = await response.json();
       if (!response.ok) {
@@ -248,6 +255,20 @@ export default function InvitePage() {
           }
           title={`Join ${preview.workspaceName}`}
         />
+        <Field>
+          <FieldLabel htmlFor="name">Name</FieldLabel>
+          <Input
+            autoComplete="name"
+            className="h-11"
+            id="name"
+            maxLength={DISPLAY_NAME_MAX_LENGTH}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Your name"
+            required
+            type="text"
+            value={name}
+          />
+        </Field>
         <Field>
           <FieldLabel htmlFor="email">Email</FieldLabel>
           <Input

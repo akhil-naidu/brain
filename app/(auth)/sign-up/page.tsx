@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth/client";
+import { DISPLAY_NAME_MAX_LENGTH, parseDisplayName } from "@/lib/auth/display-name";
 
 type SignupStatus = {
   readonly openSignupAllowed: boolean;
@@ -18,6 +19,7 @@ type SignupStatus = {
 export default function SignUpPage() {
   const router = useRouter();
   const [status, setStatus] = useState<SignupStatus | null>(null);
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -57,12 +59,17 @@ export default function SignUpPage() {
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
+    const displayName = parseDisplayName(name);
+    if (!displayName) {
+      setError(`Enter a name between 1 and ${DISPLAY_NAME_MAX_LENGTH} characters.`);
+      return;
+    }
     setPending(true);
     setError(null);
     const { error: signUpError } = await authClient.signUp.email({
       email,
       password,
-      name: email.trim().toLowerCase(),
+      name: displayName,
     });
     if (signUpError) {
       setPending(false);
@@ -132,6 +139,20 @@ export default function SignUpPage() {
         }}
       >
         <AuthPanelHeader description="Create your account on this host." title="Create account" />
+        <Field>
+          <FieldLabel htmlFor="name">Name</FieldLabel>
+          <Input
+            autoComplete="name"
+            className="h-11"
+            id="name"
+            maxLength={DISPLAY_NAME_MAX_LENGTH}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Your name"
+            required
+            type="text"
+            value={name}
+          />
+        </Field>
         <Field>
           <FieldLabel htmlFor="email">Email</FieldLabel>
           <Input

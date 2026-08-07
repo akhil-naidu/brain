@@ -1,7 +1,12 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { authClient } from "@/lib/auth/client";
+import {
+  DISPLAY_NAME_MAX_LENGTH,
+  displayNameErrorMessage,
+  parseDisplayName,
+} from "@/lib/auth/display-name";
 import { SettingsPanel, SettingsSection } from "@/components/settings/settings-shell";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
@@ -11,37 +16,66 @@ import { Switch } from "@/components/ui/switch";
 export function AccountProfileSection() {
   const { data: session } = authClient.useSession();
   const email = session?.user?.email?.trim() || null;
-  const name = session?.user?.name?.trim() || null;
+  const sessionName = session?.user?.name?.trim() || "";
+
+  const [name, setName] = useState(sessionName);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileSaved, setProfileSaved] = useState(false);
+  const [profilePending, setProfilePending] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [revokeOtherSessions, setRevokeOtherSessions] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
-  const [pending, setPending] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSaved, setPasswordSaved] = useState(false);
+  const [passwordPending, setPasswordPending] = useState(false);
 
-  async function onSubmit(event: FormEvent) {
+  useEffect(() => {
+    setName(sessionName);
+  }, [sessionName]);
+
+  async function onSaveProfile(event: FormEvent) {
+    event.preventDefault();
+    const displayName = parseDisplayName(name);
+    if (!displayName) {
+      setProfileError(displayNameErrorMessage());
+      return;
+    }
+    setProfilePending(true);
+    setProfileError(null);
+    setProfileSaved(false);
+    const { error: updateError } = await authClient.updateUser({ name: displayName });
+    setProfilePending(false);
+    if (updateError) {
+      setProfileError(updateError.message || "Unable to update name.");
+      return;
+    }
+    setName(displayName);
+    setProfileSaved(true);
+  }
+
+  async function onChangePassword(event: FormEvent) {
     event.preventDefault();
     if (newPassword.length < 8) {
-      setError("New password must be at least 8 characters.");
+      setPasswordError("New password must be at least 8 characters.");
       return;
     }
     if (newPassword !== confirmPassword) {
-      setError("New passwords do not match.");
+      setPasswordError("New passwords do not match.");
       return;
     }
-    setPending(true);
-    setError(null);
-    setSaved(false);
+    setPasswordPending(true);
+    setPasswordError(null);
+    setPasswordSaved(false);
     const { error: changeError } = await authClient.changePassword({
       currentPassword,
       newPassword,
       revokeOtherSessions,
     });
-    setPending(false);
+    setPasswordPending(false);
     if (changeError) {
-      setError(
+      setPasswordError(
         changeError.message ||
           "Unable to change password. Check your current password, or ask an admin if you sign in with SSO only.",
       );
@@ -50,21 +84,58 @@ export function AccountProfileSection() {
     setCurrentPassword("");
     setNewPassword("");
     setConfirmPassword("");
-    setSaved(true);
+    setPasswordSaved(true);
   }
 
   return (
     <>
       <SettingsSection description="Your identity on this Brain host." title="Profile">
-        <SettingsPanel className="space-y-3 p-5">
-          <div>
-            <p className="text-muted-foreground text-xs">Name</p>
-            <p className="text-sm font-medium">{name || "—"}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground text-xs">Email</p>
-            <p className="text-sm font-medium">{email || "—"}</p>
-          </div>
+        <SettingsPanel className="p-5">
+          <form
+            className="max-w-md space-y-5"
+            onSubmit={(event) => {
+              void onSaveProfile(event);
+            }}
+          >
+            <Field>
+              <FieldLabel htmlFor="profile-name">Name</FieldLabel>
+              <Input
+                autoComplete="name"
+                id="profile-name"
+                maxLength={DISPLAY_NAME_MAX_LENGTH}
+                onChange={(event) => {
+                  setProfileSaved(false);
+                  setName(event.target.value);
+                }}
+                required
+                type="text"
+                value={name}
+              />
+              <FieldDescription>
+                Shown in the account menu and workspace people lists.
+              </FieldDescription>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="profile-email">Email</FieldLabel>
+              <Input id="profile-email" readOnly type="email" value={email || ""} />
+              <FieldDescription>
+                Email is used for sign-in and cannot be changed here.
+              </FieldDescription>
+            </Field>
+
+            {profileError ? (
+              <p className="text-destructive text-sm" role="alert">
+                {profileError}
+              </p>
+            ) : null}
+            {profileSaved ? (
+              <output className="text-muted-foreground text-sm">Profile updated.</output>
+            ) : null}
+
+            <Button disabled={profilePending} type="submit">
+              {profilePending ? "Saving…" : "Save profile"}
+            </Button>
+          </form>
         </SettingsPanel>
       </SettingsSection>
 
@@ -76,7 +147,7 @@ export function AccountProfileSection() {
           <form
             className="max-w-md space-y-5"
             onSubmit={(event) => {
-              void onSubmit(event);
+              void onChangePassword(event);
             }}
           >
             <Field>
@@ -125,17 +196,17 @@ export function AccountProfileSection() {
               <Switch checked={revokeOtherSessions} onCheckedChange={setRevokeOtherSessions} />
             </div>
 
-            {error ? (
+            {passwordError ? (
               <p className="text-destructive text-sm" role="alert">
-                {error}
+                {passwordError}
               </p>
             ) : null}
-            {saved ? (
+            {passwordSaved ? (
               <output className="text-muted-foreground text-sm">Password updated.</output>
             ) : null}
 
-            <Button disabled={pending} type="submit">
-              {pending ? "Updating…" : "Update password"}
+            <Button disabled={passwordPending} type="submit">
+              {passwordPending ? "Updating…" : "Update password"}
             </Button>
           </form>
         </SettingsPanel>

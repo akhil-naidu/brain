@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth/client";
+import { DISPLAY_NAME_MAX_LENGTH, parseDisplayName } from "@/lib/auth/display-name";
 
 export default function SetupPage() {
   const router = useRouter();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [bootstrapToken, setBootstrapToken] = useState("");
@@ -49,6 +51,11 @@ export default function SetupPage() {
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
+    const displayName = parseDisplayName(name);
+    if (!displayName) {
+      setError(`Enter a name between 1 and ${DISPLAY_NAME_MAX_LENGTH} characters.`);
+      return;
+    }
     setPending(true);
     setError(null);
     try {
@@ -56,6 +63,7 @@ export default function SetupPage() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          name: displayName,
           email,
           password,
           bootstrapToken: bootstrapToken || undefined,
@@ -126,6 +134,20 @@ export default function SetupPage() {
           description="Create the operator account. Open signup stays off afterward."
           title="Create operator"
         />
+        <Field>
+          <FieldLabel htmlFor="name">Name</FieldLabel>
+          <Input
+            autoComplete="name"
+            className="h-11"
+            id="name"
+            maxLength={DISPLAY_NAME_MAX_LENGTH}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Your name"
+            required
+            type="text"
+            value={name}
+          />
+        </Field>
         <Field>
           <FieldLabel htmlFor="email">Email</FieldLabel>
           <Input
