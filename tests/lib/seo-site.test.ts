@@ -1,7 +1,17 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { absoluteUrl, getSiteUrl } from "@/lib/seo/site";
+import packageJson from "../../package.json" with { type: "json" };
+import { absoluteUrl, getSiteUrl, SITE_STAGE, SITE_VERSION } from "@/lib/seo/site";
 
 describe("seo site helpers", () => {
+  it("exposes the public product stage", () => {
+    expect(SITE_STAGE).toBe("Beta");
+  });
+
+  it("keeps SITE_VERSION aligned with package.json", () => {
+    expect(SITE_VERSION).toBe(packageJson.version);
+    expect(SITE_VERSION).toMatch(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/);
+  });
+
   const previousPublicUrl = process.env["BRAIN_PUBLIC_URL"];
   const previousPublicOrigin = process.env["BRAIN_PUBLIC_ORIGIN"];
 

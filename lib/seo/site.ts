@@ -1,6 +1,13 @@
+import packageJson from "../../package.json" with { type: "json" };
 import { readConfiguredPublicOrigin } from "@/lib/http/public-origin";
 
 export const SITE_NAME = "Brain";
+
+/** Public product stage shown next to the wordmark (home, chrome, social). */
+export const SITE_STAGE = "Beta";
+
+/** Semver from package.json — keep the Beta badge in sync with pre-1.0 releases. */
+export const SITE_VERSION = packageJson.version;
 
 export const SITE_DESCRIPTION =
   "Self-hosted work assistant with browser chat, MCP connections, and local history on your host.";

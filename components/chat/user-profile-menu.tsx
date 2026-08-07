@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { authClient } from "@/lib/auth/client";
 import { WORKSPACES_CHANGED_EVENT } from "@/lib/auth/workspace-events";
+import { SITE_STAGE, SITE_VERSION } from "@/lib/seo/site";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -151,6 +152,10 @@ export function UserProfileMenu() {
           <LogOutIcon className="size-4" />
           {signingOut ? "Signing out…" : "Sign out"}
         </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <p className="text-muted-foreground px-2 py-1.5 text-[11px] tracking-wide">
+          Brain · {SITE_STAGE} · v{SITE_VERSION}
+        </p>
       </DropdownMenuContent>
     </DropdownMenu>
   );

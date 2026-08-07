@@ -16,8 +16,10 @@ import {
   ModelsTourMock,
   RuntimeTourMock,
 } from "@/components/features/tour-mocks";
+import { BetaBadge } from "@/components/brand/beta-badge";
 import { BRAIN_MARK_SRC } from "@/components/brain-mark";
 import { HOME_TOUR_SCENES } from "@/lib/features/catalog";
+import { SITE_VERSION } from "@/lib/seo/site";
 import { cn } from "@/lib/utils";
 
 const display = Space_Grotesk({
@@ -63,7 +65,10 @@ export function FeaturesShowcase() {
             unoptimized
             width={64}
           />
-          Brain
+          <span className="inline-flex items-center gap-2">
+            Brain
+            <BetaBadge />
+          </span>
         </Link>
         <Link
           className="border-border/80 bg-card/70 text-foreground hover:bg-muted/80 rounded-full border px-3.5 py-1.5 text-sm backdrop-blur transition"
@@ -87,8 +92,9 @@ export function FeaturesShowcase() {
               width={256}
             />
           </div>
-          <h1 className="features-fade-up font-[family-name:var(--font-features-display)] text-4xl font-semibold tracking-tight text-balance sm:text-6xl sm:leading-[1.05]">
+          <h1 className="features-fade-up flex flex-wrap items-center gap-3 font-[family-name:var(--font-features-display)] text-4xl font-semibold tracking-tight text-balance sm:gap-3.5 sm:text-6xl sm:leading-[1.05]">
             Brain
+            <BetaBadge className="translate-y-0.5 sm:translate-y-1" size="md" />
           </h1>
           <p className="features-fade-up features-delay-1 text-foreground/90 mt-3 max-w-2xl font-[family-name:var(--font-features-display)] text-2xl font-medium tracking-tight text-balance sm:text-3xl">
             Your self-hosted work assistant in the browser.
@@ -202,7 +208,7 @@ export function FeaturesShowcase() {
       </main>
 
       <footer className="text-muted-foreground relative z-10 mx-auto w-full max-w-5xl px-5 py-8 text-xs sm:px-8">
-        Brain · self-hosted work assistant · local/trusted use
+        Brain · Beta · v{SITE_VERSION} · self-hosted work assistant · local/trusted use
       </footer>
     </div>
   );

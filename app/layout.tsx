@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import Script from "next/script";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { getSiteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE } from "@/lib/seo/site";
+import { getSiteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_STAGE, SITE_TAGLINE } from "@/lib/seo/site";
 import { THEME_BOOTSTRAP_SCRIPT } from "@/lib/theme/bootstrap";
 import "./globals.css";
 
@@ -12,7 +12,7 @@ const siteUrl = getSiteUrl();
 export const metadata: Metadata = {
   metadataBase: siteUrl,
   title: {
-    default: SITE_NAME,
+    default: `${SITE_NAME} · ${SITE_STAGE}`,
     template: `%s · ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
@@ -38,12 +38,12 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: "/",
     siteName: SITE_NAME,
-    title: SITE_NAME,
+    title: `${SITE_NAME} · ${SITE_STAGE}`,
     description: SITE_TAGLINE,
   },
   twitter: {
     card: "summary_large_image",
-    title: SITE_NAME,
+    title: `${SITE_NAME} · ${SITE_STAGE}`,
     description: SITE_TAGLINE,
   },
   robots: {

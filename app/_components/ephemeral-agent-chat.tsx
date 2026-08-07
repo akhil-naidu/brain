@@ -18,6 +18,7 @@ import { ChatComposer } from "@/components/chat/composer";
 import { ErrorToast } from "@/components/chat/error-toast";
 import { IntegrationsMenu } from "@/components/chat/integrations-menu";
 import { AgentMessage, type AgentInputResponse } from "@/components/chat/message";
+import { BetaBadge } from "@/components/brand/beta-badge";
 import { BrainMark } from "@/components/brain-mark";
 import { ModelPicker } from "@/components/chat/model-picker";
 import { PlaybooksMenu } from "@/components/chat/playbooks-menu";
@@ -894,8 +895,9 @@ export function EphemeralAgentChat({
                 <div className="bg-primary/10 ring-primary/15 mx-auto flex size-14 items-center justify-center rounded-2xl ring-1">
                   <BrainMark className="size-8" />
                 </div>
-                <h1 className="text-foreground mt-5 text-[1.85rem] font-semibold tracking-tight">
+                <h1 className="text-foreground mt-5 flex items-center justify-center gap-2.5 text-[1.85rem] font-semibold tracking-tight">
                   Brain
+                  <BetaBadge size="md" />
                 </h1>
                 {missingApiKey ? (
                   <div className="mx-auto mt-4 max-w-md text-center">

@@ -1,4 +1,4 @@
-import { absoluteUrl, SITE_DESCRIPTION, SITE_NAME } from "@/lib/seo/site";
+import { absoluteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_VERSION } from "@/lib/seo/site";
 
 export function HomeJsonLd() {
   const data = {
@@ -9,6 +9,7 @@ export function HomeJsonLd() {
     url: absoluteUrl("/"),
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web",
+    softwareVersion: SITE_VERSION,
     offers: {
       "@type": "Offer",
       price: "0",

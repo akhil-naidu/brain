@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { ChatNavProvider, useChatNav } from "@/app/_components/chat-nav-context";
 import { ChatShellProvider } from "@/app/_components/chat-shell-context";
+import { BetaBadge } from "@/components/brand/beta-badge";
 import { BrainMark } from "@/components/brain-mark";
 import { ChatSidebar } from "@/components/chat/sidebar";
 import { UserProfileMenu } from "@/components/chat/user-profile-menu";
@@ -260,15 +261,16 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
     <Link className="text-foreground flex min-w-0 items-center gap-2" href="/chat">
       <BrainMark className="size-5 shrink-0" />
       <span className="truncate font-semibold tracking-tight">Brain</span>
+      <BetaBadge className="shrink-0" />
     </Link>
   );
 
   const compactBrand = (
     <Link
-      aria-label="Brain"
+      aria-label="Brain Beta"
       className="text-foreground hover:bg-muted/50 inline-flex size-9 items-center justify-center rounded-md"
       href="/chat"
-      title="Brain"
+      title="Brain Beta"
     >
       <BrainMark className="size-5 shrink-0" />
     </Link>

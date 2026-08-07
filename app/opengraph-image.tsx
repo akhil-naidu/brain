@@ -1,8 +1,8 @@
 import { ImageResponse } from "next/og";
-import { SITE_NAME, SITE_TAGLINE } from "@/lib/seo/site";
+import { SITE_NAME, SITE_STAGE, SITE_TAGLINE } from "@/lib/seo/site";
 
 export const runtime = "nodejs";
-export const alt = `${SITE_NAME} — self-hosted work assistant`;
+export const alt = `${SITE_NAME} ${SITE_STAGE} — self-hosted work assistant`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -46,6 +46,24 @@ export default function OpenGraphImage() {
           B
         </div>
         <div style={{ fontSize: 44, fontWeight: 700, letterSpacing: "-0.04em" }}>{SITE_NAME}</div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            marginLeft: 4,
+            padding: "6px 12px",
+            borderRadius: 999,
+            border: "1px solid rgba(255,255,255,0.18)",
+            background: "rgba(255,255,255,0.06)",
+            fontSize: 18,
+            fontWeight: 600,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            color: "rgba(244,247,250,0.72)",
+          }}
+        >
+          {SITE_STAGE}
+        </div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 18, maxWidth: 900 }}>
         <div style={{ fontSize: 54, fontWeight: 650, letterSpacing: "-0.045em", lineHeight: 1.1 }}>
