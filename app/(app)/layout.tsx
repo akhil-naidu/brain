@@ -20,10 +20,15 @@ export const metadata: Metadata = {
   },
 };
 
+/** Auth + Postgres are runtime-only — do not prerender during `next build` (no DB in Docker). */
+export const dynamic = "force-dynamic";
+
 export default async function AppLayout({ children }: { readonly children: ReactNode }) {
+  // Opt into a request context before any DB/auth work so static generation cannot run first.
+  const requestHeaders = await headers();
   await ensureAuthReady();
   const session = await getAuth().api.getSession({
-    headers: await headers(),
+    headers: requestHeaders,
   });
   if (!session?.user?.id) {
     if (await isBootstrapAllowed()) {
