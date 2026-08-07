@@ -78,6 +78,36 @@ function createTransport(config: SmtpConfig): MailTransport {
   return nodemailer.createTransport(options);
 }
 
+async function sendConfiguredMail(
+  input: {
+    readonly to: string;
+    readonly subject: string;
+    readonly text: string;
+    readonly html: string;
+  },
+  env: Record<string, string | undefined>,
+  transportFactory: (config: SmtpConfig) => MailTransport,
+): Promise<{ readonly ok: true } | { readonly ok: false; readonly reason: string }> {
+  const config = resolveSmtpConfig(env);
+  if (!config) {
+    return { ok: false, reason: "smtp-not-configured" };
+  }
+  try {
+    const transport = transportFactory(config);
+    await transport.sendMail({
+      from: config.from,
+      to: input.to,
+      subject: input.subject,
+      text: input.text,
+      html: input.html,
+    });
+    return { ok: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to send email.";
+    return { ok: false, reason: message };
+  }
+}
+
 export async function sendInviteEmail(
   input: {
     readonly to: string;
@@ -88,10 +118,6 @@ export async function sendInviteEmail(
   env: Record<string, string | undefined> = process.env,
   transportFactory: (config: SmtpConfig) => MailTransport = createTransport,
 ): Promise<{ readonly ok: true } | { readonly ok: false; readonly reason: string }> {
-  const config = resolveSmtpConfig(env);
-  if (!config) {
-    return { ok: false, reason: "smtp-not-configured" };
-  }
   const subject = `You're invited to ${input.workspaceName} on Brain`;
   const who = input.inviterLabel?.trim() || "A workspace admin";
   const text = [
@@ -104,20 +130,28 @@ export async function sendInviteEmail(
   ].join("\n");
   const html = `<p>${escapeHtml(who)} invited you to join the workspace <strong>${escapeHtml(input.workspaceName)}</strong> on Brain.</p><p><a href="${escapeHtml(input.inviteUrl)}">Accept invite</a></p><p>If you did not expect this email, you can ignore it.</p>`;
 
-  try {
-    const transport = transportFactory(config);
-    await transport.sendMail({
-      from: config.from,
-      to: input.to,
-      subject,
-      text,
-      html,
-    });
-    return { ok: true };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to send email.";
-    return { ok: false, reason: message };
-  }
+  return sendConfiguredMail({ to: input.to, subject, text, html }, env, transportFactory);
+}
+
+export async function sendPasswordResetEmail(
+  input: {
+    readonly to: string;
+    readonly resetUrl: string;
+  },
+  env: Record<string, string | undefined> = process.env,
+  transportFactory: (config: SmtpConfig) => MailTransport = createTransport,
+): Promise<{ readonly ok: true } | { readonly ok: false; readonly reason: string }> {
+  const subject = "Reset your Brain password";
+  const text = [
+    "Reset your Brain password using this link:",
+    "",
+    input.resetUrl,
+    "",
+    "If you did not request a password reset, you can ignore this email.",
+  ].join("\n");
+  const html = `<p>Reset your Brain password:</p><p><a href="${escapeHtml(input.resetUrl)}">Reset password</a></p><p>If you did not request a password reset, you can ignore this email.</p>`;
+
+  return sendConfiguredMail({ to: input.to, subject, text, html }, env, transportFactory);
 }
 
 function escapeHtml(value: string): string {

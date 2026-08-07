@@ -5,9 +5,10 @@ import { DatabaseSync } from "node:sqlite";
 import { scim } from "@better-auth/scim";
 import { sso } from "@better-auth/sso";
 import { betterAuth } from "better-auth";
-import { APIError } from "better-auth/api";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { getMigrations } from "better-auth/db/migration";
 import { nextCookies } from "better-auth/next-js";
+import { sendPasswordResetEmail } from "@/lib/auth/email/smtp";
 import { assertCanCreateUser, resolveLicenseEntitlements } from "@/lib/auth/license";
 import { workspaceIdFromScimProviderId } from "@/lib/auth/scim/provider-id";
 import { resolveAuthDbPath } from "@/lib/auth/users-path";
@@ -93,11 +94,37 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
       minPasswordLength: 8,
       disableSignUp: false,
       autoSignIn: true,
+      revokeSessionsOnPasswordReset: true,
+      sendResetPassword: async ({ user, url }) => {
+        // Soft-fail on SMTP errors so callers do not learn whether the address exists.
+        await sendPasswordResetEmail({
+          to: user.email,
+          resetUrl: url,
+        });
+      },
     },
     account: {
       accountLinking: {
         enabled: true,
       },
+    },
+    hooks: {
+      before: createAuthMiddleware(async (ctx) => {
+        if (ctx.path !== "/request-password-reset") {
+          return;
+        }
+        const policies = createWorkspaceStore(db).getPolicies();
+        if (!policies.allowForgotPassword) {
+          throw new APIError("FORBIDDEN", {
+            message: "Forgot password is disabled on this host.",
+          });
+        }
+        if (policies.signupMode === "sso-only") {
+          throw new APIError("FORBIDDEN", {
+            message: "Password reset is not available when this host is SSO-only.",
+          });
+        }
+      }),
     },
     databaseHooks: {
       user: {
