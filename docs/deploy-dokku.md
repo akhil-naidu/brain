@@ -55,6 +55,18 @@ sudo chown -R 1001:1001 /var/lib/dokku/data/storage/brain/default
 dokku ps:restart brain
 ```
 
+### Snowflake Set up in production
+
+Eve reads the Snowflake MCP URL when the eve process starts. Locally, `eve:dev`
+hot-reloads after Set up; in production, `start-production.mjs` watches
+`.eve/mcp-app-credentials-snowflake.json` and restarts eve when it changes.
+
+If tools still 404 after Set up on an older image, restart once:
+
+```bash
+dokku ps:restart brain
+```
+
 Redeploy from GitHub / dflow after the `Dockerfile` is on `main`.
 
 ## If you must stay on herokuish

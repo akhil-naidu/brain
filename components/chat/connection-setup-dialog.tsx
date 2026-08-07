@@ -227,6 +227,9 @@ export function ConnectionSetupDialog({
                 />
                 <p className="text-muted-foreground text-xs">
                   {`Example: https://<account>/api/v2/databases/…/schemas/…/mcp-servers/…`}
+                  {isPat
+                    ? " In production, eve reloads automatically a few seconds after Save."
+                    : null}
                 </p>
               </div>
             ) : null}
