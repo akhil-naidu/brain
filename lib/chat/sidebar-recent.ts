@@ -1,17 +1,17 @@
 export type SidebarRecentState = {
   readonly open: boolean;
-  readonly heightPx: number;
+  /** `null` means fill the remaining sidebar height. */
+  readonly heightPx: number | null;
 };
 
-export const SIDEBAR_RECENT_STORAGE_KEY = "brain.sidebar-recent.v1";
+export const SIDEBAR_RECENT_STORAGE_KEY = "brain.sidebar-recent.v3";
 
-export const SIDEBAR_RECENT_MIN_HEIGHT = 160;
-export const SIDEBAR_RECENT_MAX_HEIGHT = 520;
-export const SIDEBAR_RECENT_DEFAULT_HEIGHT = 280;
+export const SIDEBAR_RECENT_MIN_HEIGHT = 180;
+export const SIDEBAR_RECENT_MAX_HEIGHT = 720;
 
 export const DEFAULT_SIDEBAR_RECENT: SidebarRecentState = {
   open: true,
-  heightPx: SIDEBAR_RECENT_DEFAULT_HEIGHT,
+  heightPx: null,
 };
 
 function clampHeight(value: number): number {
@@ -39,12 +39,14 @@ export function readSidebarRecent(
       "open" in parsed && typeof parsed.open === "boolean"
         ? parsed.open
         : DEFAULT_SIDEBAR_RECENT.open;
-    const heightPx =
-      "heightPx" in parsed &&
-      typeof parsed.heightPx === "number" &&
-      Number.isFinite(parsed.heightPx)
-        ? clampHeight(parsed.heightPx)
-        : DEFAULT_SIDEBAR_RECENT.heightPx;
+    let heightPx: number | null = DEFAULT_SIDEBAR_RECENT.heightPx;
+    if ("heightPx" in parsed) {
+      if (parsed.heightPx === null) {
+        heightPx = null;
+      } else if (typeof parsed.heightPx === "number" && Number.isFinite(parsed.heightPx)) {
+        heightPx = clampHeight(parsed.heightPx);
+      }
+    }
     return { open, heightPx };
   } catch {
     return DEFAULT_SIDEBAR_RECENT;
@@ -65,7 +67,7 @@ export function writeSidebarRecent(
       SIDEBAR_RECENT_STORAGE_KEY,
       JSON.stringify({
         open: state.open,
-        heightPx: clampHeight(state.heightPx),
+        heightPx: state.heightPx === null ? null : clampHeight(state.heightPx),
       }),
     );
   } catch {

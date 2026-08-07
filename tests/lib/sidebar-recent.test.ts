@@ -40,9 +40,10 @@ describe("sidebar recent prefs", () => {
     expect(readSidebarRecent(memoryStorage({ [SIDEBAR_RECENT_STORAGE_KEY]: "{bad" }))).toEqual(
       DEFAULT_SIDEBAR_RECENT,
     );
+    expect(DEFAULT_SIDEBAR_RECENT.heightPx).toBeNull();
   });
 
-  it("persists open state and clamps height", () => {
+  it("persists open state, fill mode, and clamps height", () => {
     const storage = memoryStorage();
     writeSidebarRecent({ open: false, heightPx: 40 }, storage);
     expect(readSidebarRecent(storage)).toEqual({
@@ -53,6 +54,11 @@ describe("sidebar recent prefs", () => {
     expect(readSidebarRecent(storage)).toEqual({
       open: true,
       heightPx: SIDEBAR_RECENT_MAX_HEIGHT,
+    });
+    writeSidebarRecent({ open: true, heightPx: null }, storage);
+    expect(readSidebarRecent(storage)).toEqual({
+      open: true,
+      heightPx: null,
     });
   });
 
