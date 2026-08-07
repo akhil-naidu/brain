@@ -3,22 +3,22 @@ import { resolveOperatorUserId } from "@/lib/auth/operator";
 import { requireSessionUserId } from "@/lib/auth/require-session";
 import { ensureAuthReady, getWorkspaceStore } from "@/lib/auth/server";
 
-export function isOperatorUserId(
+export async function isOperatorUserId(
   userId: string,
   env: Record<string, string | undefined> = process.env,
-): boolean {
+): Promise<boolean> {
   const configured = env["BRAIN_OPERATOR_USER_ID"]?.trim();
   if (configured) {
     return configured === userId;
   }
   try {
-    if (getWorkspaceStore(env).isInstanceAdmin(userId)) {
+    if (await getWorkspaceStore(env).isInstanceAdmin(userId)) {
       return true;
     }
   } catch {
     // Auth DB may not be ready in some unit tests.
   }
-  const operatorId = resolveOperatorUserId(env);
+  const operatorId = await resolveOperatorUserId(env);
   return Boolean(operatorId && operatorId === userId);
 }
 
@@ -38,11 +38,11 @@ export async function requireOperatorSession(
   }
 
   await ensureAuthReady(env);
-  if (isOperatorUserId(session.userId, env)) {
+  if (await isOperatorUserId(session.userId, env)) {
     return { ok: true, userId: session.userId };
   }
 
-  const operatorId = resolveOperatorUserId(env);
+  const operatorId = await resolveOperatorUserId(env);
   if (!operatorId) {
     return {
       ok: false,

@@ -1,9 +1,9 @@
 import { randomBytes } from "node:crypto";
 import { resolveTxt } from "node:dns/promises";
-import type { DatabaseSync } from "node:sqlite";
+import type { Pool } from "pg";
 import { domainsFromStored } from "@/lib/auth/sso/domains";
 
-type SqlRow = Record<string, null | number | bigint | string | Uint8Array>;
+type PgRow = Record<string, unknown>;
 
 const TOKEN_PREFIX = "better-auth-token";
 const TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -16,7 +16,7 @@ export function domainVerificationDnsHost(providerId: string, domain: string): s
   return `${domainVerificationIdentifier(providerId)}.${domain}`;
 }
 
-function requireString(row: SqlRow, key: string): string {
+function requireString(row: PgRow, key: string): string {
   const value = row[key];
   if (typeof value !== "string") {
     throw new Error(`Expected string column ${key}`);
@@ -24,11 +24,9 @@ function requireString(row: SqlRow, key: string): string {
   return value;
 }
 
-function optionalString(row: SqlRow, key: string): string | null {
+function optionalString(row: PgRow, key: string): string | null {
   const value = row[key];
-  if (value === null || value === undefined) {
-    return null;
-  }
+  if (value === null || value === undefined) return null;
   if (typeof value !== "string") {
     throw new Error(`Expected string or null column ${key}`);
   }
@@ -36,25 +34,22 @@ function optionalString(row: SqlRow, key: string): string | null {
 }
 
 function asBool(value: unknown): boolean {
-  return value === 1 || value === true || value === "1";
+  return value === true || value === 1 || value === "1";
 }
 
-export function createDomainVerificationStore(db: DatabaseSync) {
-  function getProvider(providerId: string): SqlRow | null {
-    const row = db
-      .prepare(
-        `SELECT providerId, domain, organizationId, domainVerified
-         FROM ssoProvider WHERE providerId = ?`,
-      )
-      .get(providerId) as SqlRow | undefined;
-    return row ?? null;
+export function createDomainVerificationStore(pool: Pool) {
+  async function getProvider(providerId: string): Promise<PgRow | null> {
+    const result = await pool.query<PgRow>(
+      `SELECT "providerId", domain, "organizationId", "domainVerified"
+       FROM "ssoProvider" WHERE "providerId" = $1`,
+      [providerId],
+    );
+    return result.rows[0] ?? null;
   }
 
-  function isDomainVerified(providerId: string): boolean {
-    const row = getProvider(providerId);
-    if (!row) {
-      return false;
-    }
+  async function isDomainVerified(providerId: string): Promise<boolean> {
+    const row = await getProvider(providerId);
+    if (!row) return false;
     try {
       return asBool(row["domainVerified"]);
     } catch {
@@ -62,78 +57,74 @@ export function createDomainVerificationStore(db: DatabaseSync) {
     }
   }
 
-  function markUnverified(providerId: string): void {
+  async function markUnverified(providerId: string): Promise<void> {
     try {
-      db.prepare(`UPDATE ssoProvider SET domainVerified = 0 WHERE providerId = ?`).run(providerId);
+      await pool.query(
+        `UPDATE "ssoProvider" SET "domainVerified" = false WHERE "providerId" = $1`,
+        [providerId],
+      );
     } catch {
-      // Column may not exist until migrations run with domainVerification enabled.
+      // Column may not exist until Better Auth migrations run.
     }
   }
 
-  function markVerified(providerId: string): void {
-    db.prepare(`UPDATE ssoProvider SET domainVerified = 1 WHERE providerId = ?`).run(providerId);
+  async function markVerified(providerId: string): Promise<void> {
+    await pool.query(`UPDATE "ssoProvider" SET "domainVerified" = true WHERE "providerId" = $1`, [
+      providerId,
+    ]);
   }
 
-  function findActiveToken(providerId: string): string | null {
+  async function findActiveToken(providerId: string): Promise<string | null> {
     const identifier = domainVerificationIdentifier(providerId);
-    const row = db
-      .prepare(
-        `SELECT value, expiresAt FROM verification
-         WHERE identifier = ?
-         ORDER BY createdAt DESC
-         LIMIT 1`,
-      )
-      .get(identifier) as SqlRow | undefined;
-    if (!row) {
-      return null;
-    }
+    const result = await pool.query<PgRow>(
+      `SELECT value, "expiresAt" FROM verification
+       WHERE identifier = $1
+       ORDER BY "createdAt" DESC
+       LIMIT 1`,
+      [identifier],
+    );
+    const row = result.rows[0];
+    if (!row) return null;
     const value = optionalString(row, "value");
     const expiresAt = row["expiresAt"];
     const expiresMs =
-      typeof expiresAt === "number"
-        ? expiresAt
+      expiresAt instanceof Date
+        ? expiresAt.getTime()
         : typeof expiresAt === "string"
           ? Date.parse(expiresAt)
           : NaN;
-    if (!value || !Number.isFinite(expiresMs) || expiresMs <= Date.now()) {
-      return null;
-    }
+    if (!value || !Number.isFinite(expiresMs) || expiresMs <= Date.now()) return null;
     return value;
   }
 
-  function issueToken(providerId: string): string {
-    const existing = findActiveToken(providerId);
-    if (existing) {
-      return existing;
-    }
+  async function issueToken(providerId: string): Promise<string> {
+    const existing = await findActiveToken(providerId);
+    if (existing) return existing;
     const identifier = domainVerificationIdentifier(providerId);
     const token = randomBytes(18).toString("base64url");
     const now = new Date();
     const expiresAt = new Date(now.getTime() + TOKEN_TTL_MS);
-    db.prepare(
-      `INSERT INTO verification (id, identifier, value, expiresAt, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-    ).run(
-      randomBytes(16).toString("hex"),
-      identifier,
-      token,
-      expiresAt.toISOString(),
-      now.toISOString(),
-      now.toISOString(),
+    await pool.query(
+      `INSERT INTO verification (id, identifier, value, "expiresAt", "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [
+        randomBytes(16).toString("hex"),
+        identifier,
+        token,
+        expiresAt.toISOString(),
+        now.toISOString(),
+        now.toISOString(),
+      ],
     );
-    markUnverified(providerId);
+    await markUnverified(providerId);
     return token;
   }
 
   async function verifyProviderDomains(providerId: string): Promise<void> {
-    const provider = getProvider(providerId);
-    if (!provider) {
-      throw new Error("SSO provider not found.");
-    }
-    if (asBool(provider["domainVerified"])) {
-      throw new Error("Domain has already been verified.");
-    }
-    const token = findActiveToken(providerId);
+    const provider = await getProvider(providerId);
+    if (!provider) throw new Error("SSO provider not found.");
+    if (asBool(provider["domainVerified"])) throw new Error("Domain has already been verified.");
+    const token = await findActiveToken(providerId);
     if (!token) {
       throw new Error("No pending domain verification exists. Request a token first.");
     }
@@ -162,7 +153,7 @@ export function createDomainVerificationStore(db: DatabaseSync) {
         `Unable to verify domain ownership for ${failed.domain}. Publish the TXT record and try again.`,
       );
     }
-    markVerified(providerId);
+    await markVerified(providerId);
   }
 
   return {

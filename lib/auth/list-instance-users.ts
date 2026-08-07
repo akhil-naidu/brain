@@ -1,6 +1,4 @@
-import type { DatabaseSync } from "node:sqlite";
-
-type SqlRow = Record<string, null | number | bigint | string | Uint8Array>;
+import type { Pool } from "pg";
 
 export type InstanceUserRow = {
   readonly id: string;
@@ -15,19 +13,18 @@ function asString(value: unknown): string | null {
 }
 
 /** Lists host users for instance-admin management (password reset, etc.). */
-export function listInstanceUsers(db: DatabaseSync): readonly InstanceUserRow[] {
-  let rows: SqlRow[];
+export async function listInstanceUsers(pool: Pool): Promise<readonly InstanceUserRow[]> {
+  let rows: Record<string, unknown>[];
   try {
-    rows = db
-      .prepare(
-        `SELECT u.id AS id, u.email AS email, u.name AS name, u.createdAt AS createdAt,
-                CASE WHEN a.id IS NULL THEN 0 ELSE 1 END AS hasPassword
-         FROM user u
-         LEFT JOIN account a
-           ON a.userId = u.id AND a.providerId = 'credential' AND a.password IS NOT NULL
-         ORDER BY u.createdAt ASC`,
-      )
-      .all();
+    const result = await pool.query<Record<string, unknown>>(
+      `SELECT u.id AS id, u.email AS email, u.name AS name, u."createdAt" AS "createdAt",
+              CASE WHEN a.id IS NULL THEN 0 ELSE 1 END AS "hasPassword"
+       FROM "user" u
+       LEFT JOIN account a
+         ON a."userId" = u.id AND a."providerId" = 'credential' AND a.password IS NOT NULL
+       ORDER BY u."createdAt" ASC`,
+    );
+    rows = result.rows;
   } catch {
     return [];
   }

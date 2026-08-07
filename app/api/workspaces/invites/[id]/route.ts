@@ -16,7 +16,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
   const { id } = await context.params;
   await ensureAuthReady();
   try {
-    const revoked = getWorkspaceStore().revokeInvite(
+    const revoked = await getWorkspaceStore().revokeInvite(
       session.session.workspaceId,
       id,
       session.session.userId,

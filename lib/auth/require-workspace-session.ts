@@ -3,7 +3,7 @@ import { requireSessionUserId } from "@/lib/auth/require-session";
 import { ensureAuthReady, getWorkspaceStore } from "@/lib/auth/server";
 import type { Workspace, WorkspaceRole } from "@/lib/auth/workspaces/types";
 import { getChatStore } from "@/lib/chat/store";
-import { getUserDataStore } from "@/lib/chat/user-data/sqlite-user-data-store";
+import { getUserDataStore } from "@/lib/chat/user-data/postgres-user-data-store";
 
 export type WorkspaceSession = {
   readonly userId: string;
@@ -12,14 +12,14 @@ export type WorkspaceSession = {
   readonly role: WorkspaceRole;
 };
 
-function migrateLegacyUserData(userId: string, workspaceId: string): void {
+async function migrateLegacyUserData(userId: string, workspaceId: string): Promise<void> {
   try {
-    getChatStore().assignWorkspaceToUserChats(userId, workspaceId);
+    await getChatStore().assignWorkspaceToUserChats(userId, workspaceId);
   } catch {
     // ignore
   }
   try {
-    getUserDataStore().migrateUserScopedDataToWorkspace(userId, workspaceId);
+    void getUserDataStore().migrateUserScopedDataToWorkspace(userId, workspaceId);
   } catch {
     // ignore
   }
@@ -37,15 +37,15 @@ export async function requireWorkspaceSession(): Promise<
   await ensureAuthReady();
   const workspaces = getWorkspaceStore();
   try {
-    const workspace = workspaces.resolveActiveWorkspace(auth.userId);
-    const role = workspaces.getMembership(workspace.id, auth.userId);
+    const workspace = await workspaces.resolveActiveWorkspace(auth.userId);
+    const role = await workspaces.getMembership(workspace.id, auth.userId);
     if (!role) {
       return {
         ok: false,
         response: NextResponse.json({ error: "No workspace membership." }, { status: 403 }),
       };
     }
-    migrateLegacyUserData(auth.userId, workspace.id);
+    await migrateLegacyUserData(auth.userId, workspace.id);
     return {
       ok: true,
       session: {

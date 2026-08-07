@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { resolveLicenseEntitlements } from "@/lib/auth/license";
 import { requireWorkspaceSession } from "@/lib/auth/require-workspace-session";
-import { ensureAuthReady, getAuthDb } from "@/lib/auth/server";
+import { ensureAuthReady } from "@/lib/auth/server";
 import {
   createDomainVerificationStore,
   domainVerificationDnsHost,
@@ -10,6 +10,7 @@ import {
 } from "@/lib/auth/sso/domain-verification";
 import { createSsoProviderStore } from "@/lib/auth/sso/provider-store";
 import { isWorkspaceAdminRole } from "@/lib/auth/workspaces/types";
+import { getPool } from "@/lib/db/pool";
 
 export const runtime = "nodejs";
 
@@ -54,9 +55,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const providers = createSsoProviderStore(getAuthDb()).listByWorkspace(
-    session.session.workspaceId,
-  );
+  const pool = getPool();
+  const providers = await createSsoProviderStore(pool).listByWorkspace(session.session.workspaceId);
   const provider = providers.find((item) => item.providerId === parsed.data.providerId);
   if (!provider) {
     return NextResponse.json(
@@ -65,12 +65,12 @@ export async function POST(request: Request) {
     );
   }
 
-  const verification = createDomainVerificationStore(getAuthDb());
+  const verification = createDomainVerificationStore(pool);
   const identifier = domainVerificationIdentifier(provider.providerId);
 
   try {
     if (parsed.data.action === "request") {
-      const token = verification.issueToken(provider.providerId);
+      const token = await verification.issueToken(provider.providerId);
       return NextResponse.json({
         providerId: provider.providerId,
         domainVerified: false,

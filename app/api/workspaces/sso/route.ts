@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { resolveLicenseEntitlements } from "@/lib/auth/license";
 import { requireWorkspaceSession } from "@/lib/auth/require-workspace-session";
-import { ensureAuthReady, getAuthDb } from "@/lib/auth/server";
+import { ensureAuthReady } from "@/lib/auth/server";
 import { parseEmailDomains } from "@/lib/auth/sso/domains";
 import { createSsoProviderStore } from "@/lib/auth/sso/provider-store";
 import { isWorkspaceAdminRole } from "@/lib/auth/workspaces/types";
+import { getPool } from "@/lib/db/pool";
 import { resolvePublicOrigin } from "@/lib/http/public-origin";
 
 export const runtime = "nodejs";
@@ -79,9 +80,9 @@ export async function GET(request: Request) {
     });
   }
 
-  const store = createSsoProviderStore(getAuthDb());
+  const store = createSsoProviderStore(getPool());
   const origin = resolvePublicOrigin(request);
-  const providers = store.listByWorkspace(session.session.workspaceId).map((provider) => {
+  const providers = (await store.listByWorkspace(session.session.workspaceId)).map((provider) => {
     return Object.assign({}, provider, {
       oidcCallbackUrl: new URL(provider.oidcCallbackPath, origin).toString(),
       samlCallbackUrl: new URL(provider.samlCallbackPath, origin).toString(),
@@ -130,7 +131,7 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Invalid SSO provider payload." }, { status: 400 });
   }
 
-  const store = createSsoProviderStore(getAuthDb());
+  const store = createSsoProviderStore(getPool());
   const origin = resolvePublicOrigin(request);
   try {
     const provider =
@@ -209,7 +210,7 @@ export async function DELETE(request: Request) {
   }
 
   try {
-    createSsoProviderStore(getAuthDb()).deleteProvider(
+    await createSsoProviderStore(getPool()).deleteProvider(
       parsed.data.providerId,
       session.session.workspaceId,
     );

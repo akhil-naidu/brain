@@ -25,7 +25,7 @@ export async function GET() {
   const entitlements = await resolveLicenseEntitlements();
   return NextResponse.json({
     entitlements,
-    canManage: isOperatorUserId(session.userId),
+    canManage: await isOperatorUserId(session.userId),
   });
 }
 
@@ -34,7 +34,7 @@ export async function PUT(request: Request) {
   if (!session.ok) {
     return session.response;
   }
-  if (!isOperatorUserId(session.userId)) {
+  if (!(await isOperatorUserId(session.userId))) {
     return NextResponse.json(
       { error: "Only the instance admin can install a license." },
       { status: 403 },
@@ -68,7 +68,7 @@ export async function DELETE() {
   if (!session.ok) {
     return session.response;
   }
-  if (!isOperatorUserId(session.userId)) {
+  if (!(await isOperatorUserId(session.userId))) {
     return NextResponse.json(
       { error: "Only the instance admin can clear the license." },
       { status: 403 },

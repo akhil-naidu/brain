@@ -24,7 +24,7 @@ export async function registerWithInvite(input: {
 }): Promise<InviteRegisteredUser> {
   await ensureAuthReady();
   const workspaces = getWorkspaceStore();
-  const invite = workspaces.getInviteByToken(input.token);
+  const invite = await workspaces.getInviteByToken(input.token);
   if (!invite || invite.revokedAt) {
     throw new Error("Invite is invalid or revoked.");
   }
@@ -48,7 +48,7 @@ export async function registerWithInvite(input: {
   }
 
   const entitlements = await resolveLicenseEntitlements();
-  assertCanCreateUser(entitlements, countAuthUsers());
+  assertCanCreateUser(entitlements, await countAuthUsers());
 
   const result = await runWithInviteSignup(() =>
     getAuth().api.signUpEmail({
@@ -61,8 +61,8 @@ export async function registerWithInvite(input: {
   );
 
   const userId = result.user.id;
-  const workspace = workspaces.acceptInvite(input.token, userId, email);
-  workspaces.setActiveWorkspaceId(userId, workspace.id);
+  const workspace = await workspaces.acceptInvite(input.token, userId, email);
+  await workspaces.setActiveWorkspaceId(userId, workspace.id);
 
   return {
     id: userId,

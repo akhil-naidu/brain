@@ -26,7 +26,7 @@ export default async function AppLayout({ children }: { readonly children: React
     headers: await headers(),
   });
   if (!session?.user?.id) {
-    if (isBootstrapAllowed()) {
+    if (await isBootstrapAllowed()) {
       redirect("/setup");
     }
     redirect("/sign-in?callbackUrl=/chat");

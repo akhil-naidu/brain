@@ -38,7 +38,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   await ensureAuthReady();
   try {
-    const member = getWorkspaceStore().updateMemberRole({
+    const member = await getWorkspaceStore().updateMemberRole({
       workspaceId: session.session.workspaceId,
       actorUserId: session.session.userId,
       targetUserId,
@@ -63,7 +63,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
   await ensureAuthReady();
   try {
-    getWorkspaceStore().removeMember({
+    await getWorkspaceStore().removeMember({
       workspaceId: session.session.workspaceId,
       actorUserId: session.session.userId,
       targetUserId,

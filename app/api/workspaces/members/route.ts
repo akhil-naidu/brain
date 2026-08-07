@@ -10,7 +10,7 @@ export async function GET() {
     return session.response;
   }
   await ensureAuthReady();
-  const members = getWorkspaceStore().listMembers(session.session.workspaceId);
+  const members = await getWorkspaceStore().listMembers(session.session.workspaceId);
   return NextResponse.json({
     members,
     workspaceId: session.session.workspaceId,

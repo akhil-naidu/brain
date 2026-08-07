@@ -10,14 +10,14 @@ export async function GET(request: Request) {
   }
   await ensureAuthReady();
   const workspaces = getWorkspaceStore();
-  const invite = workspaces.getInviteByToken(token);
+  const invite = await workspaces.getInviteByToken(token);
   if (!invite || invite.revokedAt) {
     return NextResponse.json({ valid: false }, { status: 404 });
   }
   if (Date.parse(invite.expiresAt) < Date.now()) {
     return NextResponse.json({ valid: false, reason: "expired" }, { status: 410 });
   }
-  const workspace = workspaces.getWorkspace(invite.workspaceId);
+  const workspace = await workspaces.getWorkspace(invite.workspaceId);
   if (!workspace) {
     return NextResponse.json({ valid: false }, { status: 404 });
   }

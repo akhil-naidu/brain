@@ -30,7 +30,7 @@ export async function POST(request: Request) {
 
   await ensureAuthReady();
   try {
-    getWorkspaceStore().transferOwnership({
+    await getWorkspaceStore().transferOwnership({
       workspaceId: session.session.workspaceId,
       actorUserId: session.session.userId,
       targetUserId: parsed.data.userId,

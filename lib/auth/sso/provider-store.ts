@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { DatabaseSync } from "node:sqlite";
+import type { Pool } from "pg";
 import {
   assertValidEmailDomains,
   domainsFromStored,
@@ -8,7 +8,7 @@ import {
 import { createDomainVerificationStore } from "@/lib/auth/sso/domain-verification";
 import { oidcSsoCallbackPath, samlSsoCallbackPath } from "@/lib/auth/sso/paths";
 
-type SqlRow = Record<string, null | number | bigint | string | Uint8Array>;
+type PgRow = Record<string, unknown>;
 
 export type PublicSsoProvider = {
   readonly id: string;
@@ -50,7 +50,7 @@ type SamlUpsertInput = {
   readonly wantAssertionsSigned?: boolean;
 };
 
-function requireString(row: SqlRow, key: string): string {
+function requireString(row: PgRow, key: string): string {
   const value = row[key];
   if (typeof value !== "string") {
     throw new Error(`Expected string column ${key}`);
@@ -58,11 +58,9 @@ function requireString(row: SqlRow, key: string): string {
   return value;
 }
 
-function optionalString(row: SqlRow, key: string): string | null {
+function optionalString(row: PgRow, key: string): string | null {
   const value = row[key];
-  if (value === null || value === undefined) {
-    return null;
-  }
+  if (value === null || value === undefined) return null;
   if (typeof value !== "string") {
     throw new Error(`Expected string or null column ${key}`);
   }
@@ -70,14 +68,10 @@ function optionalString(row: SqlRow, key: string): string | null {
 }
 
 function parseJsonObject(value: string | null): Record<string, unknown> | null {
-  if (!value) {
-    return null;
-  }
+  if (!value) return null;
   try {
     const parsed: unknown = JSON.parse(value);
-    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-      return null;
-    }
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return null;
     const record: Record<string, unknown> = {};
     for (const [key, entry] of Object.entries(parsed)) {
       record[key] = entry;
@@ -140,10 +134,10 @@ async function buildOidcConfigJson(input: {
 }
 
 function asBool(value: unknown): boolean {
-  return value === 1 || value === true || value === "1";
+  return value === true || value === 1 || value === "1";
 }
 
-function toPublic(row: SqlRow): PublicSsoProvider {
+function toPublic(row: PgRow): PublicSsoProvider {
   const providerId = requireString(row, "providerId");
   const oidcConfig = parseJsonObject(optionalString(row, "oidcConfig"));
   const protocol = oidcConfig ? "oidc" : "saml";
@@ -173,39 +167,38 @@ function assertProviderId(providerId: string): void {
   }
 }
 
-export function createSsoProviderStore(db: DatabaseSync) {
-  const domainVerification = createDomainVerificationStore(db);
+export function createSsoProviderStore(pool: Pool) {
+  const domainVerification = createDomainVerificationStore(pool);
 
-  function listByWorkspace(workspaceId: string): PublicSsoProvider[] {
-    const rows = db
-      .prepare(
-        `SELECT id, providerId, issuer, domain, oidcConfig, samlConfig, organizationId, domainVerified
-         FROM ssoProvider
-         WHERE organizationId = ?
-         ORDER BY providerId ASC`,
-      )
-      .all(workspaceId) as SqlRow[];
-    return rows.map(toPublic);
+  async function listByWorkspace(workspaceId: string): Promise<PublicSsoProvider[]> {
+    const result = await pool.query<PgRow>(
+      `SELECT id, "providerId", issuer, domain, "oidcConfig", "samlConfig", "organizationId", "domainVerified"
+       FROM "ssoProvider"
+       WHERE "organizationId" = $1
+       ORDER BY "providerId" ASC`,
+      [workspaceId],
+    );
+    return result.rows.map(toPublic);
   }
 
-  function getByProviderId(providerId: string): SqlRow | null {
-    const row = db
-      .prepare(
-        `SELECT id, providerId, issuer, domain, oidcConfig, samlConfig, organizationId, userId, domainVerified
-         FROM ssoProvider WHERE providerId = ?`,
-      )
-      .get(providerId) as SqlRow | undefined;
-    return row ?? null;
+  async function getByProviderId(providerId: string): Promise<PgRow | null> {
+    const result = await pool.query<PgRow>(
+      `SELECT id, "providerId", issuer, domain, "oidcConfig", "samlConfig", "organizationId", "userId", "domainVerified"
+       FROM "ssoProvider" WHERE "providerId" = $1`,
+      [providerId],
+    );
+    return result.rows[0] ?? null;
   }
 
-  function assertDomainsAvailable(domains: readonly string[], providerId: string): void {
-    const rows = db.prepare(`SELECT providerId, domain FROM ssoProvider`).all() as SqlRow[];
-    for (const row of rows) {
-      const existingProviderId = requireString(row, "providerId");
-      if (existingProviderId === providerId) {
-        continue;
-      }
-      const taken = new Set(domainsFromStored(requireString(row, "domain")));
+  async function assertDomainsAvailable(
+    domains: readonly string[],
+    providerId: string,
+  ): Promise<void> {
+    const result = await pool.query<PgRow>(`SELECT "providerId", domain FROM "ssoProvider"`);
+    for (const rawRow of result.rows) {
+      const existingProviderId = requireString(rawRow, "providerId");
+      if (existingProviderId === providerId) continue;
+      const taken = new Set(domainsFromStored(requireString(rawRow, "domain")));
       for (const domain of domains) {
         if (taken.has(domain)) {
           throw new Error(`Email domain ${domain} is already used by another SSO provider.`);
@@ -218,9 +211,9 @@ export function createSsoProviderStore(db: DatabaseSync) {
     assertProviderId(input.providerId);
     const domains = parseEmailDomains([...input.domains]);
     assertValidEmailDomains(domains);
-    assertDomainsAvailable(domains, input.providerId);
+    await assertDomainsAvailable(domains, input.providerId);
 
-    const existing = getByProviderId(input.providerId);
+    const existing = await getByProviderId(input.providerId);
     if (existing) {
       const existingWorkspace = optionalString(existing, "organizationId");
       if (existingWorkspace !== input.workspaceId) {
@@ -249,31 +242,31 @@ export function createSsoProviderStore(db: DatabaseSync) {
     const domain = domains.join(",");
 
     if (existing) {
-      db.prepare(
-        `UPDATE ssoProvider
-         SET issuer = ?, domain = ?, oidcConfig = ?, samlConfig = NULL, organizationId = ?, domainVerified = 0
-         WHERE providerId = ?`,
-      ).run(input.issuer, domain, oidcConfig, input.workspaceId, input.providerId);
+      await pool.query(
+        `UPDATE "ssoProvider"
+         SET issuer = $1, domain = $2, "oidcConfig" = $3, "samlConfig" = NULL, "organizationId" = $4, "domainVerified" = false
+         WHERE "providerId" = $5`,
+        [input.issuer, domain, oidcConfig, input.workspaceId, input.providerId],
+      );
     } else {
-      db.prepare(
-        `INSERT INTO ssoProvider
-         (id, issuer, domain, oidcConfig, samlConfig, userId, providerId, organizationId, domainVerified)
-         VALUES (?, ?, ?, ?, NULL, ?, ?, ?, 0)`,
-      ).run(
-        randomUUID(),
-        input.issuer,
-        domain,
-        oidcConfig,
-        input.userId,
-        input.providerId,
-        input.workspaceId,
+      await pool.query(
+        `INSERT INTO "ssoProvider"
+         (id, issuer, domain, "oidcConfig", "samlConfig", "userId", "providerId", "organizationId", "domainVerified")
+         VALUES ($1, $2, $3, $4, NULL, $5, $6, $7, false)`,
+        [
+          randomUUID(),
+          input.issuer,
+          domain,
+          oidcConfig,
+          input.userId,
+          input.providerId,
+          input.workspaceId,
+        ],
       );
     }
-    domainVerification.markUnverified(input.providerId);
-    const row = getByProviderId(input.providerId);
-    if (!row) {
-      throw new Error("Failed to persist OIDC SSO provider.");
-    }
+    await domainVerification.markUnverified(input.providerId);
+    const row = await getByProviderId(input.providerId);
+    if (!row) throw new Error("Failed to persist OIDC SSO provider.");
     return toPublic(row);
   }
 
@@ -281,9 +274,9 @@ export function createSsoProviderStore(db: DatabaseSync) {
     assertProviderId(input.providerId);
     const domains = parseEmailDomains([...input.domains]);
     assertValidEmailDomains(domains);
-    assertDomainsAvailable(domains, input.providerId);
+    await assertDomainsAvailable(domains, input.providerId);
 
-    const existing = getByProviderId(input.providerId);
+    const existing = await getByProviderId(input.providerId);
     if (existing) {
       const existingWorkspace = optionalString(existing, "organizationId");
       if (existingWorkspace !== input.workspaceId) {
@@ -314,56 +307,51 @@ export function createSsoProviderStore(db: DatabaseSync) {
     const domain = domains.join(",");
 
     if (existing) {
-      db.prepare(
-        `UPDATE ssoProvider
-         SET issuer = ?, domain = ?, oidcConfig = NULL, samlConfig = ?, organizationId = ?, domainVerified = 0
-         WHERE providerId = ?`,
-      ).run(input.issuer, domain, samlConfig, input.workspaceId, input.providerId);
+      await pool.query(
+        `UPDATE "ssoProvider"
+         SET issuer = $1, domain = $2, "oidcConfig" = NULL, "samlConfig" = $3, "organizationId" = $4, "domainVerified" = false
+         WHERE "providerId" = $5`,
+        [input.issuer, domain, samlConfig, input.workspaceId, input.providerId],
+      );
     } else {
-      db.prepare(
-        `INSERT INTO ssoProvider
-         (id, issuer, domain, oidcConfig, samlConfig, userId, providerId, organizationId, domainVerified)
-         VALUES (?, ?, ?, NULL, ?, ?, ?, ?, 0)`,
-      ).run(
-        randomUUID(),
-        input.issuer,
-        domain,
-        samlConfig,
-        input.userId,
-        input.providerId,
-        input.workspaceId,
+      await pool.query(
+        `INSERT INTO "ssoProvider"
+         (id, issuer, domain, "oidcConfig", "samlConfig", "userId", "providerId", "organizationId", "domainVerified")
+         VALUES ($1, $2, $3, NULL, $4, $5, $6, $7, false)`,
+        [
+          randomUUID(),
+          input.issuer,
+          domain,
+          samlConfig,
+          input.userId,
+          input.providerId,
+          input.workspaceId,
+        ],
       );
     }
-    domainVerification.markUnverified(input.providerId);
-    const row = getByProviderId(input.providerId);
-    if (!row) {
-      throw new Error("Failed to persist SAML SSO provider.");
-    }
+    await domainVerification.markUnverified(input.providerId);
+    const row = await getByProviderId(input.providerId);
+    if (!row) throw new Error("Failed to persist SAML SSO provider.");
     return toPublic(row);
   }
 
-  function deleteProvider(providerId: string, workspaceId: string): void {
-    const existing = getByProviderId(providerId);
-    if (!existing) {
-      throw new Error("SSO provider not found.");
-    }
+  async function deleteProvider(providerId: string, workspaceId: string): Promise<void> {
+    const existing = await getByProviderId(providerId);
+    if (!existing) throw new Error("SSO provider not found.");
     if (optionalString(existing, "organizationId") !== workspaceId) {
       throw new Error("SSO provider not found in this workspace.");
     }
-    db.prepare(`DELETE FROM ssoProvider WHERE providerId = ?`).run(providerId);
+    await pool.query(`DELETE FROM "ssoProvider" WHERE "providerId" = $1`, [providerId]);
   }
 
-  function countProviders(): number {
+  async function countProviders(): Promise<number> {
     try {
-      const row = db.prepare(`SELECT COUNT(*) AS count FROM ssoProvider`).get() as
-        SqlRow | undefined;
+      const result = await pool.query<PgRow>(`SELECT COUNT(*) AS count FROM "ssoProvider"`);
+      const row = result.rows[0];
       const value = row?.["count"];
-      if (typeof value === "number") {
-        return value;
-      }
-      if (typeof value === "bigint") {
-        return Number(value);
-      }
+      if (typeof value === "number") return value;
+      if (typeof value === "string") return parseInt(value, 10) || 0;
+      if (typeof value === "bigint") return Number(value);
       return 0;
     } catch {
       return 0;

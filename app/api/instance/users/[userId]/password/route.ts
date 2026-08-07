@@ -22,7 +22,7 @@ export async function POST(
     return session.response;
   }
   await ensureAuthReady();
-  if (!isOperatorUserId(session.userId)) {
+  if (!(await isOperatorUserId(session.userId))) {
     return NextResponse.json(
       { error: "Only the instance admin can reset user passwords." },
       { status: 403 },

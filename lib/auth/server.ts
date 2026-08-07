@@ -1,7 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import { mkdirSync } from "node:fs";
-import path from "node:path";
-import { DatabaseSync } from "node:sqlite";
+import type { Pool } from "pg";
 import { scim } from "@better-auth/scim";
 import { sso } from "@better-auth/sso";
 import { betterAuth } from "better-auth";
@@ -11,11 +9,15 @@ import { nextCookies } from "better-auth/next-js";
 import { sendPasswordResetEmail } from "@/lib/auth/email/smtp";
 import { assertCanCreateUser, resolveLicenseEntitlements } from "@/lib/auth/license";
 import { workspaceIdFromScimProviderId } from "@/lib/auth/scim/provider-id";
-import { resolveAuthDbPath } from "@/lib/auth/users-path";
-import { createWorkspaceStore, type WorkspaceStore } from "@/lib/auth/workspaces/store";
+import {
+  createWorkspaceStore,
+  ensureWorkspaceSchema,
+  type WorkspaceStore,
+} from "@/lib/auth/workspaces/store";
 import { isWorkspaceAdminRole } from "@/lib/auth/workspaces/types";
-
-type SqlRow = Record<string, null | number | bigint | string | Uint8Array>;
+import type { DbRow } from "@/lib/db/rows";
+import { getPool } from "@/lib/db/pool";
+import { requireDatabaseUrl } from "@/lib/db/url";
 
 const bootstrapSignupGate = new AsyncLocalStorage<"bootstrap" | "open" | "invite">();
 
@@ -46,7 +48,7 @@ function resolveAuthBaseURL(env: Record<string, string | undefined> = process.en
   );
 }
 
-function countFromRow(row: SqlRow | undefined): number {
+function countFromRow(row: Record<string, unknown> | undefined): number {
   const value = row?.["count"];
   if (typeof value === "number") {
     return value;
@@ -54,38 +56,45 @@ function countFromRow(row: SqlRow | undefined): number {
   if (typeof value === "bigint") {
     return Number(value);
   }
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
   return 0;
 }
 
 function createBrainAuth(env: Record<string, string | undefined> = process.env) {
-  const dbPath = resolveAuthDbPath(env);
-  if (dbPath !== ":memory:") {
-    mkdirSync(path.dirname(dbPath), { recursive: true });
-  }
-  const db = new DatabaseSync(dbPath);
+  const pool = getPool(env);
   const secret = resolveAuthSecret(env);
   const baseURL = resolveAuthBaseURL(env);
 
-  const ensureBootstrapClaimTable = () => {
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS brain_bootstrap_claim (
-        id INTEGER PRIMARY KEY CHECK (id = 1)
-      );
-    `);
-  };
-
-  const hasActiveBootstrapClaim = () => {
+  async function countUsers(): Promise<number> {
     try {
-      ensureBootstrapClaimTable();
-      const row = db.prepare("SELECT id FROM brain_bootstrap_claim WHERE id = 1").get();
-      return Boolean(row);
+      const result = await pool.query<DbRow>(`SELECT COUNT(*)::int AS count FROM "user"`);
+      return countFromRow(result.rows[0]);
+    } catch {
+      return 0;
+    }
+  }
+
+  async function hasActiveBootstrapClaim(): Promise<boolean> {
+    try {
+      const result = await pool.query(`SELECT id FROM brain_bootstrap_claim WHERE id = 1`);
+      return Boolean(result.rows[0]);
     } catch {
       return false;
     }
-  };
+  }
+
+  let wsStore: WorkspaceStore | undefined;
+
+  function getWsStore(): WorkspaceStore {
+    wsStore ??= createWorkspaceStore(pool);
+    return wsStore;
+  }
 
   const auth = betterAuth({
-    database: db,
+    database: pool,
     secret,
     baseURL,
     trustedOrigins: [baseURL],
@@ -96,7 +105,6 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
       autoSignIn: true,
       revokeSessionsOnPasswordReset: true,
       sendResetPassword: async ({ user, url }) => {
-        // Soft-fail on SMTP errors so callers do not learn whether the address exists.
         await sendPasswordResetEmail({
           to: user.email,
           resetUrl: url,
@@ -113,7 +121,7 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
         if (ctx.path !== "/request-password-reset") {
           return;
         }
-        const policies = createWorkspaceStore(db).getPolicies();
+        const policies = await getWsStore().getPolicies();
         if (!policies.allowForgotPassword) {
           throw new APIError("FORBIDDEN", {
             message: "Forgot password is disabled on this host.",
@@ -131,17 +139,10 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
         create: {
           before: async () => {
             const gate = bootstrapSignupGate.getStore() ?? globalForSignupGate.brainSignupGate;
-            let userCount = 0;
-            try {
-              userCount = countFromRow(db.prepare("SELECT COUNT(*) AS count FROM user").get());
-            } catch {
-              userCount = 0;
-            }
+            const userCount = await countUsers();
 
-            // /setup holds a DB claim before signUpEmail; ALS often does not survive
-            // Better Auth's async path under Next.js, so the claim is the reliable gate.
             const bootstrapAllowed =
-              gate === "bootstrap" || (hasActiveBootstrapClaim() && userCount === 0);
+              gate === "bootstrap" || ((await hasActiveBootstrapClaim()) && userCount === 0);
             if (bootstrapAllowed && userCount === 0) {
               return;
             }
@@ -160,9 +161,7 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
               return;
             }
 
-            // Lazy policy check for Better Auth client / SSO JIT sign-up (no ALS gate).
-            const workspaces = createWorkspaceStore(db);
-            const signupMode = workspaces.getPolicies().signupMode;
+            const signupMode = (await getWsStore().getPolicies()).signupMode;
             if (signupMode === "open" || signupMode === "sso-only") {
               return;
             }
@@ -172,12 +171,12 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
             });
           },
           after: async (user) => {
-            const workspaces = createWorkspaceStore(db);
-            const policies = workspaces.getPolicies();
+            const workspaces = getWsStore();
+            const policies = await workspaces.getPolicies();
             if (policies.autoPersonalWorkspace && user.id) {
-              const personal = workspaces.ensurePersonalWorkspace(user.id);
-              if (!workspaces.getActiveWorkspaceId(user.id)) {
-                workspaces.setActiveWorkspaceId(user.id, personal.id);
+              const personal = await workspaces.ensurePersonalWorkspace(user.id);
+              if (!(await workspaces.getActiveWorkspaceId(user.id))) {
+                await workspaces.setActiveWorkspaceId(user.id, personal.id);
               }
             }
           },
@@ -192,16 +191,16 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
             if (!workspaceId || !userId) {
               return;
             }
-            const workspaces = createWorkspaceStore(db);
-            const workspace = workspaces.getWorkspace(workspaceId);
+            const workspaces = getWsStore();
+            const workspace = await workspaces.getWorkspace(workspaceId);
             if (!workspace || workspace.kind !== "team") {
               return;
             }
-            if (!workspaces.getMembership(workspaceId, userId)) {
-              workspaces.addMember(workspaceId, userId, "member");
+            if (!(await workspaces.getMembership(workspaceId, userId))) {
+              await workspaces.addMember(workspaceId, userId, "member");
             }
-            if (!workspaces.getActiveWorkspaceId(userId)) {
-              workspaces.setActiveWorkspaceId(userId, workspaceId);
+            if (!(await workspaces.getActiveWorkspaceId(userId))) {
+              await workspaces.setActiveWorkspaceId(userId, workspaceId);
             }
           },
         },
@@ -213,9 +212,9 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
             if (!workspaceId || !userId) {
               return;
             }
-            const workspaces = createWorkspaceStore(db);
+            const workspaces = getWsStore();
             try {
-              workspaces.removeMember({
+              await workspaces.removeMember({
                 workspaceId,
                 actorUserId: userId,
                 targetUserId: userId,
@@ -230,7 +229,6 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
     plugins: [
       nextCookies(),
       sso({
-        // Workspace Settings API owns registration; block Better Auth's public register path.
         providersLimit: 0,
         domainVerification: {
           enabled: true,
@@ -244,23 +242,20 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
           if (!workspaceId || !user.id) {
             return;
           }
-          const workspaces = createWorkspaceStore(db);
-          const workspace = workspaces.getWorkspace(workspaceId);
+          const workspaces = getWsStore();
+          const workspace = await workspaces.getWorkspace(workspaceId);
           if (!workspace || workspace.kind !== "team") {
             return;
           }
-          if (!workspaces.getMembership(workspaceId, user.id)) {
-            workspaces.addMember(workspaceId, user.id, "member");
+          if (!(await workspaces.getMembership(workspaceId, user.id))) {
+            await workspaces.addMember(workspaceId, user.id, "member");
           }
-          if (!workspaces.getActiveWorkspaceId(user.id)) {
-            workspaces.setActiveWorkspaceId(user.id, workspaceId);
+          if (!(await workspaces.getActiveWorkspaceId(user.id))) {
+            await workspaces.setActiveWorkspaceId(user.id, workspaceId);
           }
         },
       }),
       scim({
-        // Personal SCIM connections only — BA organization() is not used; workspace
-        // membership is synced from providerId via account database hooks.
-        // Ownership off so any workspace owner/admin can rotate the token.
         providerOwnership: { enabled: false },
         storeSCIMToken: "hashed",
         linkExistingUsers: true,
@@ -276,12 +271,12 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
           if (!entitlements.sso) {
             return false;
           }
-          const workspaces = createWorkspaceStore(db);
-          const workspace = workspaces.getWorkspace(workspaceId);
+          const workspaces = getWsStore();
+          const workspace = await workspaces.getWorkspace(workspaceId);
           if (!workspace || workspace.kind !== "team") {
             return false;
           }
-          const role = workspaces.getMembership(workspaceId, user.id);
+          const role = await workspaces.getMembership(workspaceId, user.id);
           return Boolean(role && isWorkspaceAdminRole(role));
         },
       }),
@@ -290,52 +285,42 @@ function createBrainAuth(env: Record<string, string | undefined> = process.env) 
 
   const ready = getMigrations(auth.options).then(async ({ runMigrations }) => {
     await runMigrations();
-    createWorkspaceStore(db);
+    await ensureWorkspaceSchema(pool);
     return undefined;
   });
 
-  let workspaceStore: WorkspaceStore | undefined;
-
   return {
     auth,
-    db,
+    pool,
     ready,
     workspaces() {
-      workspaceStore ??= createWorkspaceStore(db);
-      return workspaceStore;
+      return getWsStore();
     },
-    countUsers() {
+    countUsers,
+    async firstUserId(): Promise<string | null> {
       try {
-        const row = db.prepare("SELECT COUNT(*) AS count FROM user").get() as SqlRow | undefined;
-        return countFromRow(row);
-      } catch {
-        return 0;
-      }
-    },
-    firstUserId() {
-      try {
-        const row = db.prepare("SELECT id FROM user ORDER BY createdAt ASC LIMIT 1").get() as
-          SqlRow | undefined;
-        const id = row?.["id"];
+        const result = await pool.query<Record<string, unknown>>(
+          `SELECT id FROM "user" ORDER BY "createdAt" ASC LIMIT 1`,
+        );
+        const id = result.rows[0]?.["id"];
         return typeof id === "string" && id.trim() ? id : null;
       } catch {
         return null;
       }
     },
-    /** Single-row claim so parallel /setup cannot create two first users. */
-    claimFirstBootstrap() {
-      ensureBootstrapClaimTable();
+    async claimFirstBootstrap(): Promise<boolean> {
       try {
-        db.prepare("INSERT INTO brain_bootstrap_claim (id) VALUES (1)").run();
-        return true;
+        const result = await pool.query(
+          `INSERT INTO brain_bootstrap_claim (id) VALUES (1) ON CONFLICT DO NOTHING RETURNING id`,
+        );
+        return Boolean(result.rows[0]);
       } catch {
         return false;
       }
     },
-    releaseBootstrapClaim() {
+    async releaseBootstrapClaim(): Promise<void> {
       try {
-        ensureBootstrapClaimTable();
-        db.prepare("DELETE FROM brain_bootstrap_claim WHERE id = 1").run();
+        await pool.query(`DELETE FROM brain_bootstrap_claim WHERE id = 1`);
       } catch {
         // ignore
       }
@@ -351,7 +336,7 @@ const globalForAuth = globalThis as typeof globalThis & {
 };
 
 function authBundleKey(env: Record<string, string | undefined>): string {
-  return `${resolveAuthDbPath(env)}|${resolveAuthBaseURL(env)}`;
+  return `${requireDatabaseUrl(env)}|${resolveAuthBaseURL(env)}`;
 }
 
 function getBrainAuthBundle(
@@ -369,8 +354,9 @@ export function getAuth(env: Record<string, string | undefined> = process.env) {
   return getBrainAuthBundle(env).auth;
 }
 
-export function getAuthDb(env: Record<string, string | undefined> = process.env): DatabaseSync {
-  return getBrainAuthBundle(env).db;
+/** @deprecated Prefer getPool() — kept for transitional call sites. */
+export function getAuthDb(env: Record<string, string | undefined> = process.env): Pool {
+  return getBrainAuthBundle(env).pool;
 }
 
 export async function ensureAuthReady(
@@ -379,13 +365,15 @@ export async function ensureAuthReady(
   await getBrainAuthBundle(env).ready;
 }
 
-export function countAuthUsers(env: Record<string, string | undefined> = process.env): number {
+export async function countAuthUsers(
+  env: Record<string, string | undefined> = process.env,
+): Promise<number> {
   return getBrainAuthBundle(env).countUsers();
 }
 
-export function firstAuthUserId(
+export async function firstAuthUserId(
   env: Record<string, string | undefined> = process.env,
-): string | null {
+): Promise<string | null> {
   return getBrainAuthBundle(env).firstUserId();
 }
 
@@ -420,14 +408,16 @@ export function getWorkspaceStore(
   return getBrainAuthBundle(env).workspaces();
 }
 
-export function claimFirstBootstrap(
+export async function claimFirstBootstrap(
   env: Record<string, string | undefined> = process.env,
-): boolean {
+): Promise<boolean> {
   return getBrainAuthBundle(env).claimFirstBootstrap();
 }
 
-export function releaseBootstrapClaim(env: Record<string, string | undefined> = process.env): void {
-  getBrainAuthBundle(env).releaseBootstrapClaim();
+export async function releaseBootstrapClaim(
+  env: Record<string, string | undefined> = process.env,
+): Promise<void> {
+  await getBrainAuthBundle(env).releaseBootstrapClaim();
 }
 
 /** Test helper: replace the in-process auth singleton. */

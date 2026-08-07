@@ -1,9 +1,9 @@
 import { firstAuthUserId } from "@/lib/auth/server";
 
 /** Resolves the host operator user id for scheduled jobs. */
-export function resolveOperatorUserId(
+export async function resolveOperatorUserId(
   env: Record<string, string | undefined> = process.env,
-): string | null {
+): Promise<string | null> {
   const configured = env["BRAIN_OPERATOR_USER_ID"]?.trim();
   if (configured) {
     return configured;
@@ -11,10 +11,10 @@ export function resolveOperatorUserId(
   return firstAuthUserId(env);
 }
 
-export function requireOperatorUserId(
+export async function requireOperatorUserId(
   env: Record<string, string | undefined> = process.env,
-): string {
-  const userId = resolveOperatorUserId(env);
+): Promise<string> {
+  const userId = await resolveOperatorUserId(env);
   if (!userId) {
     throw new Error("No Brain operator user. Bootstrap an account or set BRAIN_OPERATOR_USER_ID.");
   }

@@ -59,7 +59,7 @@ export async function GET(request: Request, context: RouteContext) {
     clientSecretEnv: provider.clientSecretEnv,
     callbackPath,
     callbackUrl: new URL(callbackPath, origin).toString(),
-    canManageCredentials: isOperatorUserId(session.userId),
+    canManageCredentials: await isOperatorUserId(session.userId),
   });
 }
 

@@ -4,7 +4,7 @@ import { sessionAuthContext } from "@/lib/auth/principal";
 import { readRunAsUserId, readWorkspaceId } from "@/lib/auth/run-as";
 import { ensureAuthReady, getAuth, getWorkspaceStore } from "@/lib/auth/server";
 import { getChatStore } from "@/lib/chat/store";
-import { getUserDataStore } from "@/lib/chat/user-data/sqlite-user-data-store";
+import { getUserDataStore } from "@/lib/chat/user-data/postgres-user-data-store";
 
 function secretsEqual(a: string, b: string): boolean {
   const left = Buffer.from(a);
@@ -24,13 +24,13 @@ function extractBearer(header: string | null): string | null {
 }
 
 function ensureUserWorkspaceData(userId: string, workspaceId: string): void {
+  getChatStore()
+    .assignWorkspaceToUserChats(userId, workspaceId)
+    .catch(() => {
+      // ignore best-effort migration errors
+    });
   try {
-    getChatStore().assignWorkspaceToUserChats(userId, workspaceId);
-  } catch {
-    // ignore
-  }
-  try {
-    getUserDataStore().migrateUserScopedDataToWorkspace(userId, workspaceId);
+    void getUserDataStore().migrateUserScopedDataToWorkspace(userId, workspaceId);
   } catch {
     // ignore
   }
@@ -75,14 +75,14 @@ export async function resolveBrainWorkspaceIdFromRequest(
   await ensureAuthReady(env);
   const workspaces = getWorkspaceStore(env);
   if (headerWorkspace) {
-    if (!workspaces.getMembership(headerWorkspace, userId)) {
+    if (!(await workspaces.getMembership(headerWorkspace, userId))) {
       return null;
     }
     ensureUserWorkspaceData(userId, headerWorkspace);
     return headerWorkspace;
   }
   try {
-    const active = workspaces.resolveActiveWorkspace(userId);
+    const active = await workspaces.resolveActiveWorkspace(userId);
     ensureUserWorkspaceData(userId, active.id);
     return active.id;
   } catch {

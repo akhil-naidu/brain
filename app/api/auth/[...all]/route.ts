@@ -36,7 +36,7 @@ async function handler(request: Request) {
   const pathname = requestPath(request);
 
   if (request.method === "POST") {
-    const signupMode = getWorkspaceStore().getPolicies().signupMode;
+    const signupMode = (await getWorkspaceStore().getPolicies()).signupMode;
     if (signupMode === "sso-only") {
       if (pathname.endsWith("/sign-up/email")) {
         return NextResponse.json(
@@ -44,7 +44,7 @@ async function handler(request: Request) {
           { status: 403 },
         );
       }
-      if (pathname.endsWith("/sign-in/email") && !isBootstrapAllowed()) {
+      if (pathname.endsWith("/sign-in/email") && !(await isBootstrapAllowed())) {
         return NextResponse.json(
           { error: "Password sign-in is disabled. Use SSO." },
           { status: 403 },

@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { listInstanceUsers } from "@/lib/auth/list-instance-users";
 import { isOperatorUserId } from "@/lib/auth/require-operator-session";
 import { requireSessionUserId } from "@/lib/auth/require-session";
-import { ensureAuthReady, getAuthDb } from "@/lib/auth/server";
+import { ensureAuthReady } from "@/lib/auth/server";
+import { getPool } from "@/lib/db/pool";
 
 export const runtime = "nodejs";
 
@@ -12,7 +13,7 @@ export async function GET() {
     return session.response;
   }
   await ensureAuthReady();
-  if (!isOperatorUserId(session.userId)) {
+  if (!(await isOperatorUserId(session.userId))) {
     return NextResponse.json(
       { error: "Only the instance admin can list host users." },
       { status: 403 },
@@ -20,6 +21,6 @@ export async function GET() {
   }
 
   return NextResponse.json({
-    users: listInstanceUsers(getAuthDb()),
+    users: await listInstanceUsers(getPool()),
   });
 }

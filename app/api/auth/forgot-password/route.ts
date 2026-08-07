@@ -24,7 +24,7 @@ function publicBaseUrl(env: Record<string, string | undefined> = process.env): s
  */
 export async function POST(request: Request) {
   await ensureAuthReady();
-  const policies = getWorkspaceStore().getPolicies();
+  const policies = await getWorkspaceStore().getPolicies();
   const availability = resolveForgotPasswordAvailability(policies);
 
   if (!availability.allowForgotPassword) {

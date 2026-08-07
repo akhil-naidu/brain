@@ -25,14 +25,14 @@ const bodySchema = z
 export async function GET() {
   await ensureAuthReady();
   return NextResponse.json({
-    allowed: isBootstrapAllowed(),
+    allowed: await isBootstrapAllowed(),
     requiresToken: Boolean(process.env["BRAIN_BOOTSTRAP_TOKEN"]?.trim()),
   });
 }
 
 export async function POST(request: Request) {
   await ensureAuthReady();
-  if (!isBootstrapAllowed()) {
+  if (!(await isBootstrapAllowed())) {
     return NextResponse.json(
       { error: "Bootstrap is disabled because a user already exists." },
       { status: 403 },

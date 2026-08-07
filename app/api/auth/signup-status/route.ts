@@ -8,8 +8,8 @@ export const runtime = "nodejs";
 
 export async function GET() {
   await ensureAuthReady();
-  const bootstrapAllowed = isBootstrapAllowed();
-  const policies = getWorkspaceStore().getPolicies();
+  const bootstrapAllowed = await isBootstrapAllowed();
+  const policies = await getWorkspaceStore().getPolicies();
   const openSignupAllowed = !bootstrapAllowed && policies.signupMode === "open";
   const entitlements = await resolveLicenseEntitlements();
   const ssoAvailable = entitlements.sso;

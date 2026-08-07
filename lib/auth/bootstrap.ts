@@ -21,11 +21,13 @@ function secretsEqual(a: string, b: string): boolean {
   return timingSafeEqual(left, right);
 }
 
-/** Serialize bootstrap attempts in this process (pairs with SQLite claim). */
+/** Serialize bootstrap attempts in this process (pairs with DB claim). */
 let bootstrapChain: Promise<unknown> = Promise.resolve();
 
-export function isBootstrapAllowed(env: Record<string, string | undefined> = process.env): boolean {
-  return countAuthUsers(env) === 0;
+export async function isBootstrapAllowed(
+  env: Record<string, string | undefined> = process.env,
+): Promise<boolean> {
+  return (await countAuthUsers(env)) === 0;
 }
 
 export function verifyBootstrapToken(
@@ -55,7 +57,7 @@ async function bootstrapFirstUserUnlocked(input: {
   readonly name: string;
 }): Promise<BootstrappedUser> {
   await ensureAuthReady();
-  if (!isBootstrapAllowed()) {
+  if (!(await isBootstrapAllowed())) {
     throw new Error("Bootstrap is only available when no users exist.");
   }
 
@@ -71,7 +73,7 @@ async function bootstrapFirstUserUnlocked(input: {
     throw new Error("Password must be at least 8 characters.");
   }
 
-  if (!claimFirstBootstrap()) {
+  if (!(await claimFirstBootstrap())) {
     throw new Error("Bootstrap is only available when no users exist.");
   }
 
@@ -88,14 +90,14 @@ async function bootstrapFirstUserUnlocked(input: {
 
     const userId = result.user.id;
     const workspaces = getWorkspaceStore();
-    workspaces.addInstanceAdmin(userId);
-    const personal = workspaces.ensurePersonalWorkspace(userId);
-    workspaces.setActiveWorkspaceId(userId, personal.id);
+    await workspaces.addInstanceAdmin(userId);
+    const personal = await workspaces.ensurePersonalWorkspace(userId);
+    await workspaces.setActiveWorkspaceId(userId, personal.id);
 
-    // Best-effort: older in-memory store singletons (HMR) may lack reassignOwner.
+    // Best-effort: migrate any legacy chats to the new owner/workspace.
     try {
-      getChatStore().reassignOwner(LEGACY_CHAT_OWNER_ID, userId);
-      getChatStore().assignWorkspaceToUserChats(userId, personal.id);
+      await getChatStore().reassignOwner(LEGACY_CHAT_OWNER_ID, userId);
+      await getChatStore().assignWorkspaceToUserChats(userId, personal.id);
     } catch {
       // Existing chats stay under LEGACY_CHAT_OWNER_ID until process restart.
     }
@@ -106,7 +108,7 @@ async function bootstrapFirstUserUnlocked(input: {
       name,
     };
   } catch (error) {
-    releaseBootstrapClaim();
+    await releaseBootstrapClaim();
     throw error;
   }
 }

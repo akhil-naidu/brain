@@ -24,8 +24,8 @@ export async function GET() {
   await ensureAuthReady();
   const workspaces = getWorkspaceStore();
   return NextResponse.json({
-    policies: workspaces.getPolicies(),
-    canManage: isOperatorUserId(session.userId),
+    policies: await workspaces.getPolicies(),
+    canManage: await isOperatorUserId(session.userId),
   });
 }
 
@@ -35,7 +35,7 @@ export async function PUT(request: Request) {
     return session.response;
   }
   await ensureAuthReady();
-  if (!isOperatorUserId(session.userId)) {
+  if (!(await isOperatorUserId(session.userId))) {
     return NextResponse.json(
       { error: "Only the instance admin can update policies." },
       { status: 403 },
@@ -66,6 +66,6 @@ export async function PUT(request: Request) {
     const message = error instanceof Error ? error.message : "License does not allow this policy.";
     return NextResponse.json({ error: message }, { status: 403 });
   }
-  const policies = getWorkspaceStore().updatePolicies(parsed.data);
+  const policies = await getWorkspaceStore().updatePolicies(parsed.data);
   return NextResponse.json({ policies });
 }

@@ -30,11 +30,11 @@ export async function PUT(request: Request) {
 
   const workspaces = getWorkspaceStore();
   try {
-    workspaces.setActiveWorkspaceId(session.userId, parsed.data.workspaceId);
+    await workspaces.setActiveWorkspaceId(session.userId, parsed.data.workspaceId);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to switch workspace.";
     return NextResponse.json({ error: message }, { status: 403 });
   }
-  const workspace = workspaces.getWorkspace(parsed.data.workspaceId);
+  const workspace = await workspaces.getWorkspace(parsed.data.workspaceId);
   return NextResponse.json({ workspace });
 }

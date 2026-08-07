@@ -32,8 +32,8 @@ export async function POST(request: Request) {
   const email = authSession?.user?.email?.trim().toLowerCase() ?? "";
   try {
     const workspaces = getWorkspaceStore();
-    const workspace = workspaces.acceptInvite(parsed.data.token, session.userId, email);
-    workspaces.setActiveWorkspaceId(session.userId, workspace.id);
+    const workspace = await workspaces.acceptInvite(parsed.data.token, session.userId, email);
+    await workspaces.setActiveWorkspaceId(session.userId, workspace.id);
     return NextResponse.json({ workspace });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to accept invite.";

@@ -25,7 +25,7 @@ export async function GET() {
     return NextResponse.json({ error: "Only workspace admins can list invites." }, { status: 403 });
   }
   await ensureAuthReady();
-  const invites = getWorkspaceStore().listInvites(session.session.workspaceId);
+  const invites = await getWorkspaceStore().listInvites(session.session.workspaceId);
   return NextResponse.json({ invites, smtpConfigured: isSmtpConfigured() });
 }
 
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
   }
   await ensureAuthReady();
   try {
-    const invite = getWorkspaceStore().createInvite({
+    const invite = await getWorkspaceStore().createInvite({
       workspaceId: session.session.workspaceId,
       createdByUserId: session.session.userId,
       email: parsed.data.email,
