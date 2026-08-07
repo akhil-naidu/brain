@@ -41,16 +41,14 @@ export function PlaybooksPanel({
   const isPage = variant === "page";
 
   return (
-    <div className={cn("mx-auto mt-6 w-full max-w-md text-left", className)}>
-      <div className="mb-2 flex items-center justify-between gap-2">
+    <div className={cn("mx-auto w-full max-w-lg text-left", !isPage && "mt-0", className)}>
+      <div className="mb-2.5 flex items-center justify-between gap-2">
         {isPage ? (
           <p className="text-sm font-medium">Saved playbooks</p>
         ) : (
-          <p className="text-muted-foreground/80 text-xs font-medium tracking-wide uppercase">
-            Your playbooks
-          </p>
+          <p className="text-muted-foreground text-xs font-medium">Playbooks</p>
         )}
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 items-center gap-0.5">
           {!isPage ? (
             <Button
               asChild
@@ -97,8 +95,10 @@ export function PlaybooksPanel({
       {playbooks.length === 0 ? (
         <p
           className={cn(
-            "text-muted-foreground text-sm leading-relaxed",
-            isPage ? "border-border/60 bg-card rounded-xl border px-4 py-4" : "px-3 py-2",
+            "text-muted-foreground text-[13px] leading-relaxed",
+            isPage
+              ? "border-border/60 bg-card rounded-xl border px-4 py-4"
+              : "border-border/50 bg-muted/20 rounded-lg border border-dashed px-3 py-3",
           )}
         >
           {isPage

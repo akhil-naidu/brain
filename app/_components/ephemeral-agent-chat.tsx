@@ -880,15 +880,23 @@ export function EphemeralAgentChat({
         <ChatConversationContent
           className={
             messages.length === 0
-              ? "mx-auto flex min-h-full w-full max-w-3xl flex-col justify-center gap-5 px-4 py-10 sm:px-6"
+              ? "mx-auto flex min-h-full w-full max-w-3xl flex-col justify-center px-4 py-8 sm:px-6"
               : "mx-auto w-full max-w-3xl gap-5 px-4 py-5 sm:px-6"
           }
         >
           {messages.length === 0 ? (
-            <div className="flex flex-1 items-center justify-center">
-              <div className="w-full text-center">
-                <BrainMark className="mx-auto size-11" />
-                <h1 className="mt-5 text-[1.75rem] font-semibold tracking-tight">Brain</h1>
+            <div className="relative flex flex-1 items-center justify-center">
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-x-8 top-1/2 h-56 -translate-y-[60%] rounded-full bg-[radial-gradient(ellipse_at_center,color-mix(in_oklab,var(--primary)_14%,transparent),transparent_70%)]"
+              />
+              <div className="relative w-full max-w-lg text-center">
+                <div className="bg-primary/10 ring-primary/15 mx-auto flex size-14 items-center justify-center rounded-2xl ring-1">
+                  <BrainMark className="size-8" />
+                </div>
+                <h1 className="text-foreground mt-5 text-[1.85rem] font-semibold tracking-tight">
+                  Brain
+                </h1>
                 {missingApiKey ? (
                   <div className="mx-auto mt-4 max-w-md text-center">
                     <p className="text-foreground text-sm font-medium">
@@ -900,16 +908,18 @@ export function EphemeralAgentChat({
                   </div>
                 ) : (
                   <>
-                    <p className="text-muted-foreground mt-2 text-sm">
-                      Ask anything to get started.
+                    <p className="text-muted-foreground mx-auto mt-2 max-w-sm text-sm leading-relaxed">
+                      Ask across your connected work apps — tasks, mail, Slack, deploys, and more.
                     </p>
                     <WelcomePrompts
+                      className="mt-8"
                       onSelect={(prompt) => {
                         void handleSubmit(prompt);
                       }}
                       prompts={WELCOME_PROMPTS}
                     />
                     <PlaybooksPanel
+                      className="mt-7"
                       onDelete={deletePlaybook}
                       onRun={(prompt) => {
                         void handleSubmit(prompt);
@@ -957,10 +967,10 @@ export function EphemeralAgentChat({
         </ChatConversationContent>
         <ChatScrollButton />
       </ChatConversation>
-      <div className="bg-background relative px-3 pt-1 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4 sm:pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div className="bg-background relative px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4 sm:pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div
           aria-hidden
-          className="from-background pointer-events-none absolute inset-x-0 -top-10 h-10 bg-gradient-to-t to-transparent"
+          className="from-background pointer-events-none absolute inset-x-0 -top-8 h-8 bg-gradient-to-t to-transparent"
         />
         <div className="mx-auto w-full max-w-3xl">
           {onOpenChat && schedulesOpen ? (

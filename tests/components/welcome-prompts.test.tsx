@@ -18,5 +18,6 @@ describe("WelcomePrompts", () => {
     render(<WelcomePrompts onSelect={vi.fn()} prompts={WELCOME_PROMPTS} />);
     const primary = screen.getByRole("button", { name: "What's waiting on me?" });
     expect(primary.className).toContain("font-medium");
+    expect(primary.className).toContain("bg-primary/8");
   });
 });
