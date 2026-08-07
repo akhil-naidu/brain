@@ -219,26 +219,14 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
   }, [onNewChat, setExpanded, toggleExpanded]);
 
   const activeChatId = handlers?.activeChatId ?? (pathname === "/chat" ? urlChatId : null);
-  const currentTitle =
-    handlers?.currentTitle ??
-    (pathname === "/playbooks"
-      ? "Playbooks"
-      : pathname === "/schedules"
-        ? "Schedules"
-        : pathname === "/tools"
-          ? "Tools"
-          : null);
   const draftVisibility = handlers?.draftVisibility ?? "personal";
+  const isChatRoute = pathname === "/chat";
+  const currentTitle = isChatRoute ? (handlers?.currentTitle ?? null) : null;
 
-  const headerTitle =
-    pathname === "/playbooks"
-      ? "Playbooks"
-      : pathname === "/schedules"
-        ? "Schedules"
-        : pathname === "/tools"
-          ? "Tools"
-          : (handlers?.currentTitle ??
-            (draftVisibility === "shared" ? "New shared chat" : "New chat"));
+  // Dedicated pages render their own titles; keep the chrome title for chat only.
+  const headerTitle = isChatRoute
+    ? (handlers?.currentTitle ?? (draftVisibility === "shared" ? "New shared chat" : "New chat"))
+    : null;
 
   const closeMobileDrawer = useCallback(() => {
     setMobileDrawerOpen(false);
@@ -377,7 +365,9 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="border-border/50 flex h-12 items-center gap-2 border-b px-3 md:px-4">
-          <div className="text-muted-foreground min-w-0 flex-1 truncate text-sm">{headerTitle}</div>
+          <div className="text-muted-foreground min-w-0 flex-1 truncate text-sm">
+            {headerTitle ?? ""}
+          </div>
           {handlers?.threadActions?.canCopy ? (
             <Button
               aria-label={
