@@ -26,4 +26,4 @@
 - [x] 4.2 Add CI Postgres service (or equivalent) so `pnpm run verify` exercises real SQL
 - [x] 4.3 Update `openspec/config.yaml` context line that still says “host SQLite” for auth
 - [x] 4.4 Run `pnpm run verify` and `pnpm run openspec:validate`
-- [ ] 4.5 On archive: sync delta specs into `openspec/specs/` and refresh chat-persistence Purpose wording
+- [x] 4.5 On archive: sync delta specs into `openspec/specs/` and refresh chat-persistence Purpose wording

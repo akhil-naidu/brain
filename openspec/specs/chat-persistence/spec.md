@@ -2,12 +2,12 @@
 
 ## Purpose
 
-Local durable chat history for Brain: create, list, open, delete, and resume conversations after refresh using host-local storage scoped to the signed-in user and active workspace, without hosted cloud databases.
+Durable chat history for Brain: create, list, open, delete, and resume conversations after refresh using the instance Postgres store scoped to the signed-in user and active workspace, without requiring Neon or other hosted-only database products.
 
 ## Requirements
 
 ### Requirement: Durable chat records on the host
-The system MUST persist each conversation as a durable chat record on the Brain host within the active workspace. Each record MUST include a stable chat id, the creating user id, the workspace id, a visibility of `personal` or `shared`, a monotonic revision, a display title, timestamps, the eve session cursor needed to continue the thread, and the ordered stream events needed to restore the UI. Personal chats are owned by the creating user. Shared chats are readable and continuable by any member of that workspace.
+The system MUST persist each conversation as a durable chat record in the Brain instance’s Postgres database within the active workspace. Each record MUST include a stable chat id, the creating user id, the workspace id, a visibility of `personal` or `shared`, a monotonic revision, a display title, timestamps, the eve session cursor needed to continue the thread, and the ordered stream events needed to restore the UI. Personal chats are owned by the creating user. Shared chats are readable and continuable by any member of that workspace.
 
 #### Scenario: First message creates a chat
 - **WHEN** a signed-in user sends the first message of a new conversation in a workspace
@@ -41,11 +41,15 @@ The system MUST show a sidebar list of chats the signed-in user can access in th
 - **THEN** the sidebar lists only chats accessible in workspace B
 
 ### Requirement: Local single-tenant storage only
-Chat history MUST be stored on the local host (or a path configured for that host) using the host-local store (SQLite by default). The system MUST NOT require Neon, Supabase, Redis, Elasticsearch, ClickHouse, Convex, or other hosted databases for this capability. Login sessions are required for access; hosted auth platforms are not.
+Chat history MUST be stored in the operator-configured Postgres database for the Brain instance. The system MUST NOT require Neon, Supabase, Redis, Elasticsearch, ClickHouse, Convex, or other hosted-only database products for this capability. The system MUST NOT use host SQLite files as the chat store. Login sessions are required for access; hosted auth platforms are not.
 
-#### Scenario: History works without cloud DB credentials
-- **WHEN** the operator runs Brain with only local configuration and no hosted database credentials
-- **THEN** authenticated chat create/list/open/delete and resume still work against the host-local store
+#### Scenario: History requires Postgres
+- **WHEN** a signed-in user creates or lists chats with Postgres configured
+- **THEN** authenticated chat create/list/open/delete and resume work against the Postgres store
+
+#### Scenario: SQLite chat files are not used
+- **WHEN** Brain is running with Postgres configured
+- **THEN** chat persistence does not read or write `.eve/brain-chats.sqlite`
 
 ### Requirement: Chat persistence APIs enforce access
 The system MUST expose same-origin HTTP APIs to list chats, create a chat, fetch one chat (including session cursor and events), update persistence fields during/after a turn, and delete a chat. Each API MUST require an authenticated session and active workspace membership. Personal chats MUST only be returned or mutated for their owner. Shared chats MUST be readable and updatable by any member of the workspace; delete MUST follow shared-chat delete controls.
