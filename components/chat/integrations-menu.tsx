@@ -1,82 +1,28 @@
 "use client";
 
-import type { ComponentType } from "react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import { HammerIcon } from "lucide-react";
-import {
-  AsanaIcon,
-  ClickUpIcon,
-  DflowIcon,
-  GitHubIcon,
-  GmailIcon,
-  SlackIcon,
-} from "@/components/icons";
+import { HammerIcon, Settings2Icon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { EnabledConnections } from "@/app/_components/chat-shell-context";
-import { ConnectionSetupDialog } from "@/components/chat/connection-setup-dialog";
-import {
-  connectionStatusLabel,
-  disconnectConnection,
-  fetchConnectionStatuses,
-  getSafeAuthorizeUrl,
-  startConnectionAuthorize,
-  type ConnectionStatus,
-} from "@/lib/chat/connections-status-api";
+import { CONNECTION_ITEMS } from "@/lib/chat/connection-catalog";
+import { canEnableConnection, integrationStatusText } from "@/lib/chat/connection-ui";
+import { fetchConnectionStatuses, type ConnectionStatus } from "@/lib/chat/connections-status-api";
 import { cn } from "@/lib/utils";
 
-type ConnectionItem = {
-  readonly key: keyof EnabledConnections;
-  readonly label: string;
-  readonly Icon: ComponentType<{ readonly className?: string }>;
-};
-
-const CONNECTION_ITEMS: readonly ConnectionItem[] = [
-  { key: "clickup", label: "ClickUp", Icon: ClickUpIcon },
-  { key: "slack", label: "Slack", Icon: SlackIcon },
-  { key: "asana", label: "Asana", Icon: AsanaIcon },
-  { key: "gmail", label: "Gmail", Icon: GmailIcon },
-  { key: "dflow", label: "dFlow", Icon: DflowIcon },
-  { key: "github", label: "GitHub", Icon: GitHubIcon },
-];
-
-export function integrationStatusText(input: {
-  readonly loading: boolean;
-  readonly status: ConnectionStatus | undefined;
-  readonly statusError: string | null;
-}): string {
-  if (input.loading) {
-    return "Checking…";
-  }
-  if (input.status) {
-    return connectionStatusLabel(input.status.status);
-  }
-  if (input.statusError) {
-    return "Status unavailable";
-  }
-  return "—";
-}
-
-export function shouldOfferConnectionConnect(status: ConnectionStatus | undefined): boolean {
-  return status?.status === "needs_sign_in";
-}
-
-export function shouldOfferConnectionDisconnect(status: ConnectionStatus | undefined): boolean {
-  return status?.status === "connected";
-}
-
-export function shouldOfferConnectionConfigure(status: ConnectionStatus | undefined): boolean {
-  return status?.status === "needs_setup";
-}
-
-/** Users can only turn a connection on after it is signed in. */
-export function canEnableConnection(status: ConnectionStatus | undefined): boolean {
-  return status?.status === "connected";
-}
+export {
+  canEnableConnection,
+  integrationStatusText,
+  shouldOfferConnectionConfigure,
+  shouldOfferConnectionConnect,
+  shouldOfferConnectionDisconnect,
+} from "@/lib/chat/connection-ui";
 
 export function IntegrationsMenu({
   enabledConnections,
@@ -92,10 +38,7 @@ export function IntegrationsMenu({
   const [statusById, setStatusById] = useState<ReadonlyMap<string, ConnectionStatus> | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(false);
-  const [connectingId, setConnectingId] = useState<keyof EnabledConnections | null>(null);
-  const [disconnectingId, setDisconnectingId] = useState<keyof EnabledConnections | null>(null);
-  const [connectError, setConnectError] = useState<string | null>(null);
-  const [configureId, setConfigureId] = useState<string | null>(null);
+  const [toggleError, setToggleError] = useState<string | null>(null);
 
   const loadStatus = () => {
     setLoadingStatus(true);
@@ -123,32 +66,10 @@ export function IntegrationsMenu({
       loadStatus();
     };
     window.addEventListener("focus", onFocus);
-
-    const interval =
-      connectingId === null
-        ? undefined
-        : window.setInterval(() => {
-            loadStatus();
-          }, 2000);
-
     return () => {
       window.removeEventListener("focus", onFocus);
-      if (interval !== undefined) {
-        window.clearInterval(interval);
-      }
     };
-  }, [menuOpen, connectingId]);
-
-  useEffect(() => {
-    if (!connectingId || !statusById) {
-      return;
-    }
-    if (statusById.get(connectingId)?.status === "connected") {
-      onConnectionEnabledChange(connectingId, true);
-      setConnectingId(null);
-      setConnectError(null);
-    }
-  }, [connectingId, onConnectionEnabledChange, statusById]);
+  }, [menuOpen]);
 
   useEffect(() => {
     if (!statusById) {
@@ -162,39 +83,6 @@ export function IntegrationsMenu({
     }
   }, [enabledConnections, onConnectionEnabledChange, statusById]);
 
-  const startConnect = (connectionId: keyof EnabledConnections) => {
-    setConnectingId(connectionId);
-    setConnectError(null);
-    void (async () => {
-      try {
-        const { authorizeUrl } = await startConnectionAuthorize(connectionId);
-        const safeUrl = getSafeAuthorizeUrl(authorizeUrl);
-        if (!safeUrl) {
-          throw new Error("Authorization URL cannot be opened.");
-        }
-        window.open(safeUrl, "_blank", "noopener,noreferrer");
-      } catch (error) {
-        setConnectingId(null);
-        setConnectError(error instanceof Error ? error.message : "Unable to start sign-in.");
-      }
-    })();
-  };
-
-  const startDisconnect = (connectionId: keyof EnabledConnections) => {
-    setDisconnectingId(connectionId);
-    setConnectError(null);
-    void (async () => {
-      try {
-        await disconnectConnection(connectionId);
-        loadStatus();
-      } catch (error) {
-        setConnectError(error instanceof Error ? error.message : "Unable to disconnect.");
-      } finally {
-        setDisconnectingId(null);
-      }
-    })();
-  };
-
   return (
     <DropdownMenu
       open={menuOpen}
@@ -203,13 +91,13 @@ export function IntegrationsMenu({
         if (open) {
           loadStatus();
         } else {
-          setConnectError(null);
+          setToggleError(null);
         }
       }}
     >
       <DropdownMenuTrigger asChild>
         <button
-          aria-label="Connections"
+          aria-label="Tools"
           className="text-muted-foreground/60 hover:bg-muted/50 hover:text-foreground focus-visible:bg-muted/50 focus-visible:text-foreground dark:text-muted-foreground/50 inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg transition-colors focus-visible:outline-none [&_*]:cursor-pointer"
           onPointerDown={() => {
             loadStatus();
@@ -224,14 +112,17 @@ export function IntegrationsMenu({
         className="border-border bg-popover w-72 rounded-md p-1"
         sideOffset={4}
       >
+        <p className="text-muted-foreground px-2 py-1.5 text-[11px] font-medium tracking-wide uppercase">
+          Enable for this chat
+        </p>
         {statusError ? (
           <p className="text-destructive px-2 py-1.5 text-xs" role="alert">
             {statusError}
           </p>
         ) : null}
-        {connectError ? (
+        {toggleError ? (
           <p className="text-destructive px-2 py-1.5 text-xs" role="alert">
-            {connectError}
+            {toggleError}
           </p>
         ) : null}
         {CONNECTION_ITEMS.map(({ Icon, key, label }) => {
@@ -242,12 +133,7 @@ export function IntegrationsMenu({
             status,
             statusError,
           });
-          const showConnect = shouldOfferConnectionConnect(status);
-          const showDisconnect = shouldOfferConnectionDisconnect(status);
-          const showConfigure = shouldOfferConnectionConfigure(status);
           const allowEnable = canEnableConnection(status);
-          const isConnecting = connectingId === key;
-          const isDisconnecting = disconnectingId === key;
 
           return (
             <DropdownMenuItem
@@ -257,29 +143,22 @@ export function IntegrationsMenu({
               key={key}
               onSelect={(event) => {
                 event.preventDefault();
-                const target = event.target;
-                if (
-                  target instanceof Element &&
-                  target.closest(
-                    "[data-connection-connect], [data-connection-disconnect], [data-connection-configure]",
-                  )
-                ) {
-                  return;
-                }
                 if (enabled) {
+                  setToggleError(null);
                   onConnectionEnabledChange(key, false);
                   return;
                 }
                 if (!allowEnable) {
-                  setConnectError(
+                  setToggleError(
                     status?.status === "needs_setup"
-                      ? `Ask the host operator to set up ${label}, then connect it.`
+                      ? `Set up ${label} on the Tools page first.`
                       : status?.status === "needs_sign_in"
-                        ? `Connect ${label} before turning it on.`
-                        : `Wait for ${label} status, then connect it.`,
+                        ? `Connect ${label} on the Tools page first.`
+                        : `Wait for ${label} status, then manage it on Tools.`,
                   );
                   return;
                 }
+                setToggleError(null);
                 onConnectionEnabledChange(key, true);
               }}
               role="menuitemcheckbox"
@@ -300,71 +179,9 @@ export function IntegrationsMenu({
                   )}
                   title={status?.detail}
                 >
-                  {isConnecting
-                    ? "Waiting for sign-in…"
-                    : isDisconnecting
-                      ? "Disconnecting…"
-                      : statusText}
+                  {statusText}
                 </span>
               </span>
-              {showConfigure ? (
-                <button
-                  className="border-border bg-background text-foreground hover:bg-muted inline-flex h-6 shrink-0 items-center rounded-md border px-1.5 text-[11px] font-medium"
-                  data-connection-configure
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    setConnectError(null);
-                    setMenuOpen(false);
-                    setConfigureId(key);
-                  }}
-                  onPointerDown={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                  }}
-                  type="button"
-                >
-                  Set up
-                </button>
-              ) : null}
-              {showConnect ? (
-                <button
-                  className="border-border bg-background text-foreground hover:bg-muted inline-flex h-6 shrink-0 items-center rounded-md border px-1.5 text-[11px] font-medium"
-                  data-connection-connect
-                  disabled={isConnecting}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    startConnect(key);
-                  }}
-                  onPointerDown={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                  }}
-                  type="button"
-                >
-                  Connect
-                </button>
-              ) : null}
-              {showDisconnect ? (
-                <button
-                  className="border-border bg-background text-foreground hover:bg-muted inline-flex h-6 shrink-0 items-center rounded-md border px-1.5 text-[11px] font-medium"
-                  data-connection-disconnect
-                  disabled={isDisconnecting}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    startDisconnect(key);
-                  }}
-                  onPointerDown={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                  }}
-                  type="button"
-                >
-                  Disconnect
-                </button>
-              ) : null}
               <span
                 aria-hidden="true"
                 className={cn(
@@ -383,19 +200,19 @@ export function IntegrationsMenu({
             </DropdownMenuItem>
           );
         })}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild className="cursor-pointer gap-2 rounded-sm px-2 py-1.5 text-sm">
+          <Link
+            href="/tools"
+            onClick={() => {
+              setMenuOpen(false);
+            }}
+          >
+            <Settings2Icon className="size-4" />
+            Manage tools
+          </Link>
+        </DropdownMenuItem>
       </DropdownMenuContent>
-      <ConnectionSetupDialog
-        connectionId={configureId}
-        onOpenChange={(next) => {
-          if (!next) {
-            setConfigureId(null);
-          }
-        }}
-        onSaved={() => {
-          loadStatus();
-        }}
-        open={configureId !== null}
-      />
     </DropdownMenu>
   );
 }

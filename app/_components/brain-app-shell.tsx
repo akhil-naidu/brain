@@ -221,7 +221,13 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
   const activeChatId = handlers?.activeChatId ?? (pathname === "/chat" ? urlChatId : null);
   const currentTitle =
     handlers?.currentTitle ??
-    (pathname === "/playbooks" ? "Playbooks" : pathname === "/schedules" ? "Schedules" : null);
+    (pathname === "/playbooks"
+      ? "Playbooks"
+      : pathname === "/schedules"
+        ? "Schedules"
+        : pathname === "/tools"
+          ? "Tools"
+          : null);
   const draftVisibility = handlers?.draftVisibility ?? "personal";
 
   const headerTitle =
@@ -229,8 +235,10 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
       ? "Playbooks"
       : pathname === "/schedules"
         ? "Schedules"
-        : (handlers?.currentTitle ??
-          (draftVisibility === "shared" ? "New shared chat" : "New chat"));
+        : pathname === "/tools"
+          ? "Tools"
+          : (handlers?.currentTitle ??
+            (draftVisibility === "shared" ? "New shared chat" : "New chat"));
 
   const closeMobileDrawer = useCallback(() => {
     setMobileDrawerOpen(false);

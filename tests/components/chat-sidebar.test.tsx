@@ -201,6 +201,7 @@ describe("ChatSidebar compact nav", () => {
     );
     expect(screen.getByRole("link", { name: "Chats" }).getAttribute("aria-current")).toBe("page");
     expect(screen.getByRole("link", { name: "Playbooks" }).getAttribute("aria-current")).toBeNull();
+    expect(screen.getByRole("link", { name: "Tools" }).getAttribute("href")).toBe("/tools");
   });
 });
 

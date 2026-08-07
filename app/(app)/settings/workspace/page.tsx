@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { notifyWorkspacesChanged } from "@/lib/auth/workspace-events";
-import { WorkspaceByoaSection } from "@/components/chat/workspace-byoa-section";
 import { WorkspaceScimSection } from "@/components/chat/workspace-scim-section";
 import { WorkspaceSsoSection } from "@/components/chat/workspace-sso-section";
 import {
@@ -13,6 +12,7 @@ import {
   SettingsTabs,
 } from "@/components/settings/settings-shell";
 import { Button } from "@/components/ui/button";
+import { Field, FieldLabel, FieldSelect } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
 type InviteRow = {
@@ -461,7 +461,6 @@ export default function WorkspaceSettingsPage() {
     if (isTeam) {
       items.push({ id: "invites", label: "Invites" }, { id: "security", label: "Security" });
     }
-    items.push({ id: "connections", label: "Connections" });
     return items;
   }, [isTeam]);
 
@@ -552,22 +551,22 @@ export default function WorkspaceSettingsPage() {
                       </div>
                       <div className="flex shrink-0 flex-wrap items-center gap-2">
                         {canEditRole ? (
-                          <select
-                            className="border-border bg-background rounded-md border px-2 py-1.5 text-xs"
+                          <FieldSelect
+                            aria-label={`Role for ${memberLabel(member)}`}
                             disabled={rowBusy}
-                            onChange={(event) => {
-                              if (
-                                event.target.value === "admin" ||
-                                event.target.value === "member"
-                              ) {
-                                void onChangeRole(member.userId, event.target.value);
+                            onValueChange={(value) => {
+                              if (value === "admin" || value === "member") {
+                                void onChangeRole(member.userId, value);
                               }
                             }}
+                            options={[
+                              { value: "member", label: "Member" },
+                              { value: "admin", label: "Admin" },
+                            ]}
+                            size="sm"
+                            triggerClassName="w-[7.5rem]"
                             value={member.role === "admin" ? "admin" : "member"}
-                          >
-                            <option value="member">Member</option>
-                            <option value="admin">Admin</option>
-                          </select>
+                          />
                         ) : null}
                         {canTransfer ? (
                           <Button
@@ -622,10 +621,8 @@ export default function WorkspaceSettingsPage() {
             >
               <SettingsPanel className="space-y-4 p-4">
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="invite-email">
-                      Email (optional)
-                    </label>
+                  <Field>
+                    <FieldLabel htmlFor="invite-email">Email (optional)</FieldLabel>
                     <Input
                       id="invite-email"
                       onChange={(event) => setEmail(event.target.value)}
@@ -633,25 +630,23 @@ export default function WorkspaceSettingsPage() {
                       type="email"
                       value={email}
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="invite-role">
-                      Role
-                    </label>
-                    <select
-                      className="border-border bg-background h-9 w-full rounded-md border px-3 text-sm"
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="invite-role">Role</FieldLabel>
+                    <FieldSelect
                       id="invite-role"
-                      onChange={(event) => {
-                        if (event.target.value === "admin" || event.target.value === "member") {
-                          setRole(event.target.value);
+                      onValueChange={(value) => {
+                        if (value === "admin" || value === "member") {
+                          setRole(value);
                         }
                       }}
+                      options={[
+                        { value: "member", label: "Member" },
+                        { value: "admin", label: "Admin" },
+                      ]}
                       value={role}
-                    >
-                      <option value="member">Member</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  </div>
+                    />
+                  </Field>
                 </div>
                 <Button
                   disabled={busy}
@@ -755,8 +750,6 @@ export default function WorkspaceSettingsPage() {
           <WorkspaceScimSection canManage={canManage} enabled={isTeam} />
         </div>
       ) : null}
-
-      {tab === "connections" ? <WorkspaceByoaSection /> : null}
     </SettingsShell>
   );
 }

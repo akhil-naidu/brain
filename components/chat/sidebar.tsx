@@ -5,6 +5,7 @@ import {
   BookmarkIcon,
   CalendarClockIcon,
   ChevronDownIcon,
+  HammerIcon,
   MessageSquareIcon,
   PanelLeftIcon,
   PencilIcon,
@@ -154,6 +155,7 @@ export function ChatSidebar({
   const chatsActive = pathname === "/chat";
   const playbooksActive = pathname === "/playbooks";
   const schedulesActive = pathname === "/schedules";
+  const toolsActive = pathname === "/tools";
   const showDraftRow = showChatDraft && !activeChatId;
   const draftTitle =
     currentTitle?.trim() || (draftVisibility === "shared" ? "New shared chat" : DEFAULT_CHAT_TITLE);
@@ -350,6 +352,19 @@ export function ChatSidebar({
           >
             <Link href="/schedules">
               <CalendarClockIcon className="size-4" />
+            </Link>
+          </Button>
+          <Button
+            aria-current={toolsActive ? "page" : undefined}
+            aria-label="Tools"
+            asChild
+            className={compactNavClass(toolsActive)}
+            size="icon-sm"
+            title="Tools"
+            variant="ghost"
+          >
+            <Link href="/tools">
+              <HammerIcon className="size-4" />
             </Link>
           </Button>
         </div>
@@ -633,7 +648,7 @@ export function ChatSidebar({
             </Button>
           }
           active={schedulesActive}
-          className="shrink-0 border-b-0"
+          className="shrink-0"
           contentClassName="max-h-40 overflow-y-auto"
           onOpenChange={(open) => setSectionOpen("schedules", open)}
           open={sections.schedules}
@@ -667,6 +682,22 @@ export function ChatSidebar({
             ))}
           </ul>
         </SidebarSection>
+
+        <div className="border-border/50 shrink-0 border-t px-1 py-2">
+          <Link
+            aria-current={toolsActive ? "page" : undefined}
+            className={cn(
+              "flex items-center gap-2 rounded-sm px-2 py-1.5 text-[13px] transition-colors",
+              toolsActive
+                ? "bg-muted/60 text-foreground"
+                : "text-muted-foreground hover:bg-muted/40 hover:text-foreground",
+            )}
+            href="/tools"
+          >
+            <HammerIcon className="size-3.5 shrink-0" />
+            <span>Tools</span>
+          </Link>
+        </div>
       </div>
     </aside>
   );

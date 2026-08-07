@@ -1,13 +1,13 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { IntegrationsMenu } from "@/components/chat/integrations-menu";
 import {
   canEnableConnection,
   integrationStatusText,
-  IntegrationsMenu,
   shouldOfferConnectionConfigure,
   shouldOfferConnectionConnect,
   shouldOfferConnectionDisconnect,
-} from "@/components/chat/integrations-menu";
+} from "@/lib/chat/connection-ui";
 
 const fetchConnectionStatuses = vi.hoisted(() =>
   vi.fn(async () => [
@@ -179,7 +179,7 @@ describe("IntegrationsMenu status", () => {
       />,
     );
 
-    fireEvent.pointerDown(screen.getByRole("button", { name: "Connections" }));
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Tools" }));
 
     await waitFor(() => {
       expect(fetchConnectionStatuses).toHaveBeenCalled();
