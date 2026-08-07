@@ -79,6 +79,10 @@ function infoForTarget(
   return loaded.workspace ?? loaded.host;
 }
 
+function clientIdFromInfo(info: ConnectionSetupInfo | null): string {
+  return info?.storedClientId?.trim() ?? "";
+}
+
 export function ConnectionSetupDialog({
   connectionId,
   open,
@@ -123,6 +127,8 @@ export function ConnectionSetupDialog({
           setWorkspaceInfo(loaded.workspace);
           setHostInfo(loaded.host);
           setTarget(loaded.target);
+          setClientId(clientIdFromInfo(infoForTarget(loaded, loaded.target)));
+          setClientSecret("");
         }
       } catch (loadError) {
         if (!cancelled) {
@@ -226,7 +232,7 @@ export function ConnectionSetupDialog({
   const canSave =
     canManage &&
     clientId.trim().length > 0 &&
-    (!info?.requiresClientSecret || clientSecret.trim().length > 0) &&
+    (!info?.requiresClientSecret || clientSecret.trim().length > 0 || hasRemovableCredentials) &&
     !saving &&
     !loading;
 
@@ -261,7 +267,7 @@ export function ConnectionSetupDialog({
                   )}
                   onClick={() => {
                     setTarget("workspace");
-                    setClientId("");
+                    setClientId(clientIdFromInfo(workspaceInfo));
                     setClientSecret("");
                     setError(null);
                   }}
@@ -278,7 +284,7 @@ export function ConnectionSetupDialog({
                   )}
                   onClick={() => {
                     setTarget("host");
-                    setClientId("");
+                    setClientId(clientIdFromInfo(hostInfo));
                     setClientSecret("");
                     setError(null);
                   }}
@@ -342,7 +348,11 @@ export function ConnectionSetupDialog({
                       autoComplete="off"
                       id="connection-setup-client-secret"
                       onChange={(event) => setClientSecret(event.target.value)}
-                      placeholder="Paste app secret"
+                      placeholder={
+                        hasRemovableCredentials
+                          ? "Leave blank to keep current secret"
+                          : "Paste app secret"
+                      }
                       spellCheck={false}
                       type="password"
                       value={clientSecret}
@@ -354,7 +364,7 @@ export function ConnectionSetupDialog({
                   <p className="text-muted-foreground text-xs">
                     Details are already saved
                     {target === "workspace" ? " for this workspace" : " on this host"}. Saving
-                    replaces them.
+                    updates the app ID; leave the secret blank to keep it.
                   </p>
                 ) : null}
               </>

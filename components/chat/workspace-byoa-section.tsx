@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { CheckIcon, CopyIcon, SaveIcon, Trash2Icon } from "lucide-react";
 import { FormFieldsSkeleton } from "@/components/loading/skeletons";
 import { SettingsPanel, SettingsSection } from "@/components/settings/settings-shell";
 import { Button } from "@/components/ui/button";
-import { Field, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { IconTooltip } from "@/components/ui/tooltip";
 import { STATIC_APP_CREDENTIAL_CONNECTION_IDS } from "@/lib/chat/connection-catalog";
 import {
   clearWorkspaceConnectionSetup,
@@ -40,9 +42,13 @@ function ByoaProviderCard({ connectionId }: { readonly connectionId: string }) {
     try {
       const setup = await fetchWorkspaceConnectionSetup(connectionId);
       setInfo(setup);
+      setClientId(setup.storedClientId?.trim() ?? "");
+      setClientSecret("");
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load setup.");
       setInfo(null);
+      setClientId("");
+      setClientSecret("");
     }
   }, [connectionId]);
 
@@ -59,10 +65,8 @@ function ByoaProviderCard({ connectionId }: { readonly connectionId: string }) {
     try {
       await saveWorkspaceConnectionSetup(connectionId, {
         clientId,
-        clientSecret: info.requiresClientSecret ? clientSecret : undefined,
+        clientSecret: info.requiresClientSecret ? clientSecret || undefined : undefined,
       });
-      setClientId("");
-      setClientSecret("");
       setPending(false);
       await refresh();
     } catch (saveError) {
@@ -112,79 +116,103 @@ function ByoaProviderCard({ connectionId }: { readonly connectionId: string }) {
           {info.hasWorkspaceCredentials ? " · workspace override saved" : ""}
         </p>
       </div>
-      <div className="space-y-1">
-        <p className="text-muted-foreground text-xs">Redirect URI</p>
-        <div className="flex gap-2">
-          <code className="bg-muted/40 flex-1 truncate rounded px-2 py-1 font-mono text-xs">
-            {info.callbackUrl}
-          </code>
-          <Button
-            disabled={pending}
-            onClick={() => {
-              void (async () => {
-                try {
-                  await navigator.clipboard.writeText(info.callbackUrl);
-                  setCopied(true);
-                  window.setTimeout(() => setCopied(false), 2000);
-                } catch {
-                  setCopied(false);
-                }
-              })();
-            }}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            {copied ? "Copied" : "Copy"}
-          </Button>
+      <div className="border-border/70 bg-muted/25 rounded-xl border px-3 py-2.5">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
+              Redirect URI
+            </p>
+            <code className="text-foreground mt-1 block font-mono text-xs break-all">
+              {info.callbackUrl}
+            </code>
+          </div>
+          <IconTooltip label={copied ? "Copied" : "Copy redirect URI"} side="left">
+            <Button
+              aria-label={copied ? "Copied" : "Copy redirect URI"}
+              disabled={pending}
+              onClick={() => {
+                void (async () => {
+                  try {
+                    await navigator.clipboard.writeText(info.callbackUrl);
+                    setCopied(true);
+                    window.setTimeout(() => setCopied(false), 2000);
+                  } catch {
+                    setCopied(false);
+                  }
+                })();
+              }}
+              size="icon-sm"
+              type="button"
+              variant="outline"
+            >
+              {copied ? <CheckIcon className="size-3.5" /> : <CopyIcon className="size-3.5" />}
+            </Button>
+          </IconTooltip>
         </div>
       </div>
       {info.canManageCredentials ? (
         <>
           <Field>
-            <FieldLabel htmlFor={`byoa-${connectionId}-id`}>Client ID</FieldLabel>
+            <FieldLabel htmlFor={`byoa-${connectionId}-id`}>App ID</FieldLabel>
             <Input
               id={`byoa-${connectionId}-id`}
               onChange={(event) => setClientId(event.target.value)}
-              placeholder="Workspace OAuth client id"
+              placeholder="OAuth client / app id"
               value={clientId}
             />
           </Field>
           {info.requiresClientSecret ? (
             <Field>
-              <FieldLabel htmlFor={`byoa-${connectionId}-secret`}>Client secret</FieldLabel>
+              <FieldLabel htmlFor={`byoa-${connectionId}-secret`}>App secret</FieldLabel>
               <Input
                 id={`byoa-${connectionId}-secret`}
                 onChange={(event) => setClientSecret(event.target.value)}
-                placeholder="Workspace OAuth client secret"
+                placeholder={
+                  info.hasWorkspaceCredentials
+                    ? "Leave blank to keep current secret"
+                    : "OAuth client secret"
+                }
                 type="password"
                 value={clientSecret}
               />
+              {info.hasWorkspaceCredentials ? (
+                <FieldDescription>
+                  Secret is never shown after save. Enter a new value only to replace it.
+                </FieldDescription>
+              ) : null}
             </Field>
           ) : null}
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
-              disabled={pending || !clientId.trim()}
+              disabled={
+                pending ||
+                !clientId.trim() ||
+                (info.requiresClientSecret && !clientSecret.trim() && !info.hasWorkspaceCredentials)
+              }
               onClick={() => {
                 void onSave();
               }}
               size="sm"
               type="button"
             >
-              {pending ? "Saving…" : "Save workspace app"}
+              <SaveIcon className="size-3.5" />
+              {pending ? "Saving…" : info.hasWorkspaceCredentials ? "Save changes" : "Save app"}
             </Button>
             {info.hasWorkspaceCredentials ? (
-              <Button
-                disabled={pending}
-                onClick={() => {
-                  void onClear();
-                }}
-                size="sm"
-                type="button"
-                variant="ghost"
-              >
-                Clear override
-              </Button>
+              <IconTooltip label="Remove workspace app" side="top">
+                <Button
+                  aria-label="Remove workspace app"
+                  disabled={pending}
+                  onClick={() => {
+                    void onClear();
+                  }}
+                  size="icon-sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  <Trash2Icon />
+                </Button>
+              </IconTooltip>
             ) : null}
           </div>
         </>
