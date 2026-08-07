@@ -206,18 +206,18 @@ export function WorkspaceSwitcher({
           ) : (
             <button
               className={cn(
-                "border-border/70 bg-muted/30 hover:bg-muted/55 focus-visible:ring-ring/40 flex h-9 w-full min-w-0 cursor-pointer items-center gap-2 rounded-lg border px-2 text-left outline-none focus-visible:ring-2",
+                "border-border/70 bg-muted/30 hover:bg-muted/55 focus-visible:ring-ring/40 flex h-8 w-full min-w-0 cursor-pointer items-center gap-1.5 rounded-md border px-1.5 text-left outline-none focus-visible:ring-2",
                 (pending || workspaces.length === 0) && "pointer-events-none opacity-50",
               )}
               disabled={pending || workspaces.length === 0}
               title={label}
               type="button"
             >
-              <span className="bg-background text-foreground flex size-6 shrink-0 items-center justify-center rounded-md text-[11px] font-semibold">
+              <span className="bg-background text-foreground flex size-5 shrink-0 items-center justify-center rounded text-[10px] font-semibold">
                 {active ? workspaceInitial(active) : "W"}
               </span>
-              <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{label}</span>
-              <ChevronsUpDownIcon className="text-muted-foreground size-3.5 shrink-0" />
+              <span className="min-w-0 flex-1 truncate text-xs font-medium">{label}</span>
+              <ChevronsUpDownIcon className="text-muted-foreground size-3 shrink-0" />
             </button>
           )}
         </DropdownMenuTrigger>
