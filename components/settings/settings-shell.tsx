@@ -18,11 +18,15 @@ export function SettingsShell({
 }) {
   return (
     <div className={cn("bg-background h-full overflow-y-auto", className)}>
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
         <header className="space-y-3">
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-            {description ? <p className="text-muted-foreground text-sm">{description}</p> : null}
+            {description ? (
+              <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">
+                {description}
+              </p>
+            ) : null}
           </div>
           {meta}
         </header>
@@ -38,20 +42,23 @@ export function SettingsSection({
   children,
   actions,
 }: {
-  readonly title: string;
+  readonly title?: string;
   readonly description?: string;
   readonly children: ReactNode;
   readonly actions?: ReactNode;
 }) {
+  const hasHeader = Boolean(title || description || actions);
   return (
     <section className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="space-y-1">
-          <h2 className="text-sm font-medium tracking-tight">{title}</h2>
-          {description ? <p className="text-muted-foreground text-xs">{description}</p> : null}
+      {hasHeader ? (
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="space-y-1">
+            {title ? <h2 className="text-sm font-medium tracking-tight">{title}</h2> : null}
+            {description ? <p className="text-muted-foreground text-xs">{description}</p> : null}
+          </div>
+          {actions}
         </div>
-        {actions}
-      </div>
+      ) : null}
       {children}
     </section>
   );
@@ -92,7 +99,7 @@ export function SettingsTabs({
             className={cn(
               "cursor-pointer rounded-lg px-3.5 py-1.5 text-sm transition-[color,background-color,box-shadow]",
               selected
-                ? "bg-background text-foreground shadow-sm ring-1 ring-border/70"
+                ? "bg-background text-foreground ring-border/70 shadow-sm ring-1"
                 : "text-muted-foreground hover:bg-background/50 hover:text-foreground",
             )}
             id={`settings-tab-${tab.id}`}

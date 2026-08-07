@@ -74,14 +74,17 @@ export function SchedulesPanel({
         className,
       )}
     >
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="min-w-0">
-          {variant === "page" ? (
-            <p className="text-muted-foreground text-sm">Morning brief and playbook timers.</p>
-          ) : (
+      <div
+        className={cn(
+          "flex flex-wrap items-center gap-2",
+          variant === "page" ? "mb-2 justify-end" : "mb-4 justify-between",
+        )}
+      >
+        {variant === "inline" ? (
+          <div className="min-w-0">
             <p className="text-base font-medium">Schedules</p>
-          )}
-        </div>
+          </div>
+        ) : null}
         <div className="flex shrink-0 items-center gap-1">
           {canResume ? (
             <Button
