@@ -8,7 +8,7 @@ When instance signup mode is `open`, Brain MUST provide a `/sign-up` page that c
 
 #### Scenario: Open mode shows form
 - **WHEN** signup mode is `open` and a visitor opens `/sign-up`
-- **THEN** they can submit email and password to create an account and reach the app
+- **THEN** they can submit name, email, and password to create an account and reach the app
 
 #### Scenario: Invite-only blocks form
 - **WHEN** signup mode is `invite-only` and a visitor opens `/sign-up`
@@ -22,8 +22,8 @@ Brain MUST provide `/invite/[token]` where a visitor can join the workspace. Sig
 - **THEN** they join the workspace and land in the app with that workspace active
 
 #### Scenario: New user register via invite
-- **WHEN** a logged-out visitor completes the invite register form with a valid token
-- **THEN** an account is created, membership is granted, and they can use the app
+- **WHEN** a logged-out visitor completes the invite register form with a valid token, name, email, and password
+- **THEN** an account is created with that display name, membership is granted, and they can use the app
 
 ### Requirement: Instance settings page
 Instance admins MUST have a settings page to view and update signup mode, allow-create-workspace, auto-personal-workspace, and allow-forgot-password policies, and to reset user passwords. Non-admins MUST NOT change those policies or reset passwords.
@@ -37,7 +37,11 @@ Instance admins MUST have a settings page to view and update signup mode, allow-
 - **THEN** the host stores that password for email sign-in and signs out that user’s sessions
 
 ### Requirement: Account profile and password UI
-Signed-in users MUST have an account settings surface with profile details and a change-password form, plus a sessions tab for device management.
+Signed-in users MUST have an account settings surface with an editable display name, read-only email, and a change-password form, plus a sessions tab for device management.
+
+#### Scenario: Update display name from account settings
+- **WHEN** a signed-in user edits their name on Account → Profile and saves
+- **THEN** the updated name appears in the account menu and profile
 
 #### Scenario: Change password from account settings
 - **WHEN** a signed-in user with a password opens Account and submits a password change

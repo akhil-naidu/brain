@@ -94,11 +94,22 @@ Chat history APIs, eve browser chat sessions, and connection authorize/status/di
 - **THEN** the system rejects the request instead of binding it to a shared anonymous user
 
 ### Requirement: Bootstrap initial account
-A fresh Brain host with no users MUST provide a bootstrap path to create the first account without open public self-signup for arbitrary strangers. That first account MUST become an instance admin and MUST receive workspace membership (Personal workspace when auto personal policy is enabled). After bootstrap, public registration MUST follow the instance signup mode policy (default `invite-only`).
+A fresh Brain host with no users MUST provide a bootstrap path to create the first account without open public self-signup for arbitrary strangers. That first account MUST become an instance admin and MUST receive workspace membership (Personal workspace when auto personal policy is enabled). After bootstrap, public registration MUST follow the instance signup mode policy (default `invite-only`). Bootstrap MUST collect a display name (not derived from email).
 
 #### Scenario: First operator creation
-- **WHEN** the host has zero user accounts and an authorized bootstrap action creates the first account
-- **THEN** that account can sign in as instance admin, has a workspace membership, and open public registration remains unavailable when signup mode is `invite-only`
+- **WHEN** the host has zero user accounts and an authorized bootstrap action creates the first account with name, email, and password
+- **THEN** that account can sign in as instance admin, has a workspace membership, stores the provided display name, and open public registration remains unavailable when signup mode is `invite-only`
+
+### Requirement: Account display name
+Email/password account creation paths (open signup, invite registration, and bootstrap) MUST require a trimmed display name of 1–80 characters and MUST NOT default the name to the email address. A signed-in user MUST be able to update their display name from the account profile surface. Email MUST remain read-only on that surface for this capability.
+
+#### Scenario: Open signup stores display name
+- **WHEN** a visitor completes open sign-up with a name, email, and password
+- **THEN** the created user has that display name (not the email)
+
+#### Scenario: Profile name update
+- **WHEN** a signed-in user saves a valid new display name on the account profile surface
+- **THEN** subsequent session and people UI surfaces show the updated name
 
 ### Requirement: Session maps to eve user principal
 Each authenticated Brain session MUST map to a stable eve user principal (`principalType` user with a stable user id) used for MCP OAuth token storage and agent authorization. Resolution of workspace-scoped grants and data MUST also use the session’s active workspace id.
@@ -115,21 +126,21 @@ Each authenticated Brain session MUST map to a stable eve user principal (`princ
 When instance signup mode is `open`, Brain MUST expose a browser sign-up flow that creates an email/password user via Better Auth (not Vercel auth). When mode is `invite-only`, public sign-up without an invite MUST remain unavailable.
 
 #### Scenario: Open signup from UI
-- **WHEN** signup mode is `open` and a visitor completes the sign-up form
-- **THEN** a user account is created and they can access the authenticated app
+- **WHEN** signup mode is `open` and a visitor completes the sign-up form with name, email, and password
+- **THEN** a user account is created with that display name and they can access the authenticated app
 
 ### Requirement: Invite path creates users under invite-only
 When signup mode is `invite-only`, Brain MUST still allow account creation through a valid workspace invite registration path.
 
 #### Scenario: Invite register under invite-only
-- **WHEN** a visitor uses a valid invite registration path with email and password
+- **WHEN** a visitor uses a valid invite registration path with name, email, and password
 - **THEN** the account is created despite invite-only public signup being disabled
 
 ### Requirement: Signup follows instance policy
 After the first user exists, email/password self-signup MUST be allowed only when instance signup mode is `open`, or when an invite-driven registration path explicitly creates the account. The system MUST NOT require Vercel auth products for signup.
 
 #### Scenario: Open signup creates user
-- **WHEN** signup mode is `open` and a visitor completes sign-up with valid email and password
+- **WHEN** signup mode is `open` and a visitor completes sign-up with valid name, email, and password
 - **THEN** a user account is created and can sign in
 
 ### Requirement: Instance admin distinct from workspace admin
