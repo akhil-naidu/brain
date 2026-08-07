@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { AccountSessionsPage } from "@/app/_components/account-sessions-page";
+import { AccountSettingsPage } from "@/app/_components/account-settings-page";
 
 export const metadata: Metadata = {
-  title: "Sessions",
-  description: "Manage signed-in devices and revoke Brain sessions.",
+  title: "Account",
+  description: "Manage your Brain profile, password, and sessions.",
 };
 
 export default function Page() {
-  return <AccountSessionsPage />;
+  return <AccountSettingsPage />;
 }
