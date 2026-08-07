@@ -22,6 +22,7 @@ import { WorkspaceSwitcher } from "@/components/chat/workspace-switcher";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
+import { IconTooltip } from "@/components/ui/tooltip";
 import { filterChatsByTitle } from "@/lib/chat/filter-chats";
 import {
   focusChatSearchShortcutLabel,
@@ -150,10 +151,6 @@ export function ChatSidebar({
   const expandLabel = sidebarShortcutLabel
     ? `Expand sidebar (${sidebarShortcutLabel})`
     : "Expand sidebar";
-  const searchTitle = searchShortcutLabel
-    ? `Search chats (${searchShortcutLabel})`
-    : "Search chats";
-
   const updateRecent = (patch: Partial<SidebarRecentState>) => {
     setRecent((previous) => {
       const next: SidebarRecentState = {
@@ -282,94 +279,101 @@ export function ChatSidebar({
         </div>
         <div className="flex w-full flex-col items-center px-1 py-2">
           {onToggleSidebar ? (
-            <Button
-              aria-label={expandLabel}
-              className="text-muted-foreground/55 hover:text-muted-foreground"
-              onClick={onToggleSidebar}
-              size="icon-sm"
-              title={expandLabel}
-              type="button"
-              variant="ghost"
-            >
-              <PanelLeftIcon className="size-4" />
-            </Button>
+            <IconTooltip label={expandLabel} side="right">
+              <Button
+                aria-label={expandLabel}
+                className="text-muted-foreground/55 hover:text-muted-foreground"
+                onClick={onToggleSidebar}
+                size="icon-sm"
+                type="button"
+                variant="ghost"
+              >
+                <PanelLeftIcon className="size-4" />
+              </Button>
+            </IconTooltip>
           ) : null}
-          <Button
-            aria-label={newChatLabel}
-            className="text-muted-foreground mt-1"
-            onClick={onNewChat}
-            size="icon-sm"
-            title={newChatLabel}
-            type="button"
-            variant="ghost"
-          >
-            <PlusIcon className="size-4" />
-          </Button>
-          {canCreateShared && onNewSharedChat ? (
+          <IconTooltip label={newChatLabel} side="right">
             <Button
-              aria-label="New shared chat"
+              aria-label={newChatLabel}
               className="text-muted-foreground mt-1"
-              onClick={onNewSharedChat}
+              onClick={onNewChat}
               size="icon-sm"
-              title="New shared chat"
               type="button"
               variant="ghost"
             >
-              <UserPlusIcon className="size-4" />
+              <PlusIcon className="size-4" />
             </Button>
+          </IconTooltip>
+          {canCreateShared && onNewSharedChat ? (
+            <IconTooltip label="New shared chat" side="right">
+              <Button
+                aria-label="New shared chat"
+                className="text-muted-foreground mt-1"
+                onClick={onNewSharedChat}
+                size="icon-sm"
+                type="button"
+                variant="ghost"
+              >
+                <UserPlusIcon className="size-4" />
+              </Button>
+            </IconTooltip>
           ) : null}
-          <Button
-            aria-current={chatsActive ? "page" : undefined}
-            aria-label="Chats"
-            asChild
-            className={compactNavClass(chatsActive)}
-            size="icon-sm"
-            title="Chats"
-            variant="ghost"
-          >
-            <Link href="/chat">
-              <MessageSquareIcon className="size-4" />
-            </Link>
-          </Button>
-          <Button
-            aria-current={playbooksActive ? "page" : undefined}
-            aria-label="Playbooks"
-            asChild
-            className={compactNavClass(playbooksActive)}
-            size="icon-sm"
-            title="Playbooks"
-            variant="ghost"
-          >
-            <Link href="/playbooks">
-              <BookmarkIcon className="size-4" />
-            </Link>
-          </Button>
-          <Button
-            aria-current={schedulesActive ? "page" : undefined}
-            aria-label="Schedules"
-            asChild
-            className={compactNavClass(schedulesActive)}
-            size="icon-sm"
-            title="Schedules"
-            variant="ghost"
-          >
-            <Link href="/schedules">
-              <CalendarClockIcon className="size-4" />
-            </Link>
-          </Button>
-          <Button
-            aria-current={toolsActive ? "page" : undefined}
-            aria-label="Tools"
-            asChild
-            className={compactNavClass(toolsActive)}
-            size="icon-sm"
-            title="Tools"
-            variant="ghost"
-          >
-            <Link href="/tools">
-              <HammerIcon className="size-4" />
-            </Link>
-          </Button>
+          <IconTooltip label="Chats" side="right">
+            <Button
+              aria-current={chatsActive ? "page" : undefined}
+              aria-label="Chats"
+              asChild
+              className={compactNavClass(chatsActive)}
+              size="icon-sm"
+              variant="ghost"
+            >
+              <Link href="/chat">
+                <MessageSquareIcon className="size-4" />
+              </Link>
+            </Button>
+          </IconTooltip>
+          <IconTooltip label="Playbooks" side="right">
+            <Button
+              aria-current={playbooksActive ? "page" : undefined}
+              aria-label="Playbooks"
+              asChild
+              className={compactNavClass(playbooksActive)}
+              size="icon-sm"
+              variant="ghost"
+            >
+              <Link href="/playbooks">
+                <BookmarkIcon className="size-4" />
+              </Link>
+            </Button>
+          </IconTooltip>
+          <IconTooltip label="Schedules" side="right">
+            <Button
+              aria-current={schedulesActive ? "page" : undefined}
+              aria-label="Schedules"
+              asChild
+              className={compactNavClass(schedulesActive)}
+              size="icon-sm"
+              variant="ghost"
+            >
+              <Link href="/schedules">
+                <CalendarClockIcon className="size-4" />
+              </Link>
+            </Button>
+          </IconTooltip>
+          <IconTooltip label="Tools" side="right">
+            <Button
+              aria-current={toolsActive ? "page" : undefined}
+              aria-label="Tools"
+              asChild
+              className={compactNavClass(toolsActive)}
+              size="icon-sm"
+              variant="ghost"
+            >
+              <Link href="/tools">
+                <HammerIcon className="size-4" />
+              </Link>
+            </Button>
+          </IconTooltip>
         </div>
       </aside>
     );
@@ -386,17 +390,18 @@ export function ChatSidebar({
         <div className="flex h-8 items-center justify-between gap-1">
           <div className="text-foreground min-w-0 flex-1 text-sm font-medium">{brand}</div>
           {onToggleSidebar ? (
-            <Button
-              aria-label={collapseLabel}
-              className="text-muted-foreground/55 hover:text-muted-foreground size-7 shrink-0"
-              onClick={onToggleSidebar}
-              size="icon-sm"
-              title={collapseLabel}
-              type="button"
-              variant="ghost"
-            >
-              <PanelLeftIcon className="size-3.5" />
-            </Button>
+            <IconTooltip label={collapseLabel} side="bottom">
+              <Button
+                aria-label={collapseLabel}
+                className="text-muted-foreground/55 hover:text-muted-foreground size-7 shrink-0"
+                onClick={onToggleSidebar}
+                size="icon-sm"
+                type="button"
+                variant="ghost"
+              >
+                <PanelLeftIcon className="size-3.5" />
+              </Button>
+            </IconTooltip>
           ) : null}
         </div>
 
@@ -405,29 +410,31 @@ export function ChatSidebar({
         </div>
 
         <div className="mt-4 flex items-center gap-1.5">
-          <Button
-            aria-label={newChatLabel}
-            className="border-border/80 bg-muted/40 hover:bg-muted/70 text-foreground h-8 min-w-0 flex-1 justify-start gap-1.5 rounded-md px-2.5 text-[13px] shadow-none"
-            onClick={onNewChat}
-            title={newChatLabel}
-            type="button"
-            variant="outline"
-          >
-            <PlusIcon className="size-3.5" />
-            <span className="min-w-0 flex-1 truncate text-left">New chat</span>
-          </Button>
-          {canCreateShared && onNewSharedChat ? (
+          <IconTooltip label={newChatLabel} side="bottom">
             <Button
-              aria-label="New shared chat"
-              className="text-muted-foreground border-border/80 bg-muted/25 hover:bg-muted/50 size-8 shrink-0 rounded-md shadow-none"
-              onClick={onNewSharedChat}
-              size="icon-sm"
-              title="New shared chat"
+              aria-label={newChatLabel}
+              className="border-border/80 bg-muted/40 hover:bg-muted/70 text-foreground h-8 min-w-0 flex-1 justify-start gap-1.5 rounded-md px-2.5 text-[13px] shadow-none"
+              onClick={onNewChat}
               type="button"
               variant="outline"
             >
-              <UserPlusIcon className="size-3.5" />
+              <PlusIcon className="size-3.5" />
+              <span className="min-w-0 flex-1 truncate text-left">New chat</span>
             </Button>
+          </IconTooltip>
+          {canCreateShared && onNewSharedChat ? (
+            <IconTooltip label="New shared chat" side="bottom">
+              <Button
+                aria-label="New shared chat"
+                className="text-muted-foreground border-border/80 bg-muted/25 hover:bg-muted/50 size-8 shrink-0 rounded-md shadow-none"
+                onClick={onNewSharedChat}
+                size="icon-sm"
+                type="button"
+                variant="outline"
+              >
+                <UserPlusIcon className="size-3.5" />
+              </Button>
+            </IconTooltip>
           ) : null}
         </div>
 
@@ -455,21 +462,22 @@ export function ChatSidebar({
       </div>
 
       {recent.open ? (
-        <div
-          aria-label="Resize recent chats"
-          className={cn(
-            "group/resize relative z-20 w-full shrink-0 touch-none",
-            recentFillsHeight ? "mt-2" : "mt-auto",
-            resizingRecent ? "bg-border/50" : "hover:bg-border/40",
-          )}
-          onDoubleClick={() => updateRecent({ heightPx: null })}
-          onPointerDown={(event) => {
-            event.preventDefault();
-            beginResizeRecent(event.clientY);
-          }}
-          style={{ cursor: "row-resize", height: 10 }}
-          title="Drag to resize · Double-click to fill height"
-        />
+        <IconTooltip label="Drag to resize · Double-click to fill" side="top">
+          <div
+            aria-label="Resize recent chats"
+            className={cn(
+              "group/resize relative z-20 w-full shrink-0 touch-none",
+              recentFillsHeight ? "mt-2" : "mt-auto",
+              resizingRecent ? "bg-border/50" : "hover:bg-border/40",
+            )}
+            onDoubleClick={() => updateRecent({ heightPx: null })}
+            onPointerDown={(event) => {
+              event.preventDefault();
+              beginResizeRecent(event.clientY);
+            }}
+            style={{ cursor: "row-resize", height: 10 }}
+          />
+        </IconTooltip>
       ) : null}
 
       <div
@@ -528,7 +536,6 @@ export function ChatSidebar({
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="Search"
                   ref={searchInputRef}
-                  title={searchTitle}
                   type="search"
                   value={query}
                 />
@@ -551,34 +558,34 @@ export function ChatSidebar({
                 ) : null}
               </div>
 
-            <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
-              {showDraftRow ? (
-                <div
-                  aria-current="page"
-                  className="bg-muted text-foreground rounded-md px-2 py-1.5 text-[13px] font-medium"
-                >
-                  <span className="flex min-w-0 items-center gap-1.5">
-                    <span className="line-clamp-1 min-w-0 flex-1">{draftTitle}</span>
-                    {draftVisibility === "shared" ? (
-                      <UsersIcon
-                        aria-label="Shared with workspace"
-                        className="text-muted-foreground/60 size-3 shrink-0"
-                      />
-                    ) : null}
-                  </span>
-                </div>
-              ) : null}
-              {chats.length === 0 && !showDraftRow && !hasActiveQuery ? (
-                <p className="text-muted-foreground/65 px-2 py-4 text-center text-xs">
-                  No chats yet
-                </p>
-              ) : null}
-              {hasActiveQuery && filteredChats.length === 0 ? (
-                <p className="text-muted-foreground/65 px-2 py-4 text-center text-xs">
-                  No chats match
-                </p>
-              ) : null}
-              <ul className="flex flex-col gap-1">
+              <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
+                {showDraftRow ? (
+                  <div
+                    aria-current="page"
+                    className="bg-muted text-foreground rounded-md px-2 py-1.5 text-[13px] font-medium"
+                  >
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span className="line-clamp-1 min-w-0 flex-1">{draftTitle}</span>
+                      {draftVisibility === "shared" ? (
+                        <UsersIcon
+                          aria-label="Shared with workspace"
+                          className="text-muted-foreground/60 size-3 shrink-0"
+                        />
+                      ) : null}
+                    </span>
+                  </div>
+                ) : null}
+                {chats.length === 0 && !showDraftRow && !hasActiveQuery ? (
+                  <p className="text-muted-foreground/65 px-2 py-4 text-center text-xs">
+                    No chats yet
+                  </p>
+                ) : null}
+                {hasActiveQuery && filteredChats.length === 0 ? (
+                  <p className="text-muted-foreground/65 px-2 py-4 text-center text-xs">
+                    No chats match
+                  </p>
+                ) : null}
+                <ul className="flex flex-col gap-1">
                   {filteredChats.map((chat) => {
                     const selected = chat.id === activeChatId;
                     const editing = editingId === chat.id;
@@ -638,38 +645,43 @@ export function ChatSidebar({
                               chat.visibility === "personal" &&
                               viewerUserId &&
                               chat.userId === viewerUserId ? (
+                                <IconTooltip label="Share with workspace" side="bottom">
+                                  <Button
+                                    aria-label={`Share ${chat.title} with workspace`}
+                                    className="text-muted-foreground/45 hover:text-foreground size-6 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                                    onClick={() => void onShareChat(chat.id)}
+                                    size="icon-sm"
+                                    type="button"
+                                    variant="ghost"
+                                  >
+                                    <UsersIcon className="size-3" />
+                                  </Button>
+                                </IconTooltip>
+                              ) : null}
+                              <IconTooltip label="Rename" side="bottom">
                                 <Button
-                                  aria-label={`Share ${chat.title} with workspace`}
+                                  aria-label={`Rename ${chat.title}`}
                                   className="text-muted-foreground/45 hover:text-foreground size-6 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                                  onClick={() => void onShareChat(chat.id)}
+                                  onClick={() => beginRename(chat)}
                                   size="icon-sm"
-                                  title="Share with workspace"
                                   type="button"
                                   variant="ghost"
                                 >
-                                  <UsersIcon className="size-3" />
+                                  <PencilIcon className="size-3" />
                                 </Button>
-                              ) : null}
-                              <Button
-                                aria-label={`Rename ${chat.title}`}
-                                className="text-muted-foreground/45 hover:text-foreground size-6 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                                onClick={() => beginRename(chat)}
-                                size="icon-sm"
-                                type="button"
-                                variant="ghost"
-                              >
-                                <PencilIcon className="size-3" />
-                              </Button>
-                              <Button
-                                aria-label={`Delete ${chat.title}`}
-                                className="text-muted-foreground/45 hover:text-foreground mr-0.5 size-6 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                                onClick={() => onDeleteChat(chat.id)}
-                                size="icon-sm"
-                                type="button"
-                                variant="ghost"
-                              >
-                                <Trash2Icon className="size-3" />
-                              </Button>
+                              </IconTooltip>
+                              <IconTooltip label="Delete" side="bottom">
+                                <Button
+                                  aria-label={`Delete ${chat.title}`}
+                                  className="text-muted-foreground/45 hover:text-foreground mr-0.5 size-6 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                                  onClick={() => onDeleteChat(chat.id)}
+                                  size="icon-sm"
+                                  type="button"
+                                  variant="ghost"
+                                >
+                                  <Trash2Icon className="size-3" />
+                                </Button>
+                              </IconTooltip>
                             </>
                           ) : null}
                         </div>

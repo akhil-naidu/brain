@@ -91,7 +91,6 @@ describe("ChatSidebar new chat shortcut hint", () => {
     renderSidebar();
 
     const button = await screen.findByRole("button", { name: /New chat \(/i });
-    expect(button.getAttribute("title")).toMatch(/New chat \(.+\)/);
     expect(button.getAttribute("aria-label")).toMatch(/New chat \(.+\)/);
   });
 });
@@ -113,7 +112,7 @@ describe("ChatSidebar toggle shortcut hint", () => {
     );
 
     const button = await screen.findByRole("button", { name: /Collapse sidebar \(/i });
-    expect(button.getAttribute("title")).toMatch(/Collapse sidebar \(.+\)/);
+    expect(button.getAttribute("aria-label")).toMatch(/Collapse sidebar \(.+\)/);
   });
 });
 
@@ -156,7 +155,7 @@ describe("ChatSidebar search focus", () => {
     );
 
     const search = screen.getByRole("searchbox", { name: "Search chats" });
-    expect(search.getAttribute("title")).toMatch(/Search chats \(.+\)/);
+    expect(screen.getByText(/⌘K|Ctrl\+K/)).toBeDefined();
 
     rerender(
       <ChatSidebar
