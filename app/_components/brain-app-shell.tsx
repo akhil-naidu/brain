@@ -10,6 +10,7 @@ import { BrainMark } from "@/components/brain-mark";
 import { ChatSidebar } from "@/components/chat/sidebar";
 import { UserProfileMenu } from "@/components/chat/user-profile-menu";
 import { Button } from "@/components/ui/button";
+import { IconTooltip } from "@/components/ui/tooltip";
 import {
   chatUrl,
   deleteChat,
@@ -364,41 +365,56 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
       ) : null}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="border-border/50 flex h-12 items-center gap-2 border-b px-3 md:px-4">
-          <div className="text-muted-foreground min-w-0 flex-1 truncate text-sm">
-            {headerTitle ?? ""}
+        <header className="border-border/40 bg-background/85 supports-[backdrop-filter]:bg-background/70 flex h-12 items-center gap-2 border-b px-3 backdrop-blur-md md:px-4">
+          <div className="min-w-0 flex-1">
+            {headerTitle ? (
+              <div className="flex min-w-0 items-center gap-2">
+                <p className="text-foreground min-w-0 truncate text-sm font-medium tracking-tight">
+                  {headerTitle}
+                </p>
+                {isChatRoute && draftVisibility === "shared" ? (
+                  <span className="text-muted-foreground bg-muted/60 shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-medium tracking-wide uppercase">
+                    Shared
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
           </div>
           {handlers?.threadActions?.canCopy ? (
-            <Button
-              aria-label={
-                handlers.copyState === "copied"
-                  ? "Copied"
-                  : handlers.copyState === "error"
-                    ? "Copy failed"
-                    : "Copy chat as Markdown"
-              }
-              className={cn(
-                "text-muted-foreground",
-                handlers.copyState === "error" ? "text-destructive" : undefined,
-              )}
-              onClick={handlers.onCopyChat}
-              size="icon-sm"
-              title={
+            <IconTooltip
+              label={
                 handlers.copyState === "copied"
                   ? "Copied"
                   : handlers.copyState === "error"
                     ? "Couldn't copy — check clipboard permissions"
                     : "Copy chat as Markdown"
               }
-              type="button"
-              variant="ghost"
+              side="bottom"
             >
-              {handlers.copyState === "copied" ? (
-                <CheckIcon className="size-4" />
-              ) : (
-                <CopyIcon className="size-4" />
-              )}
-            </Button>
+              <Button
+                aria-label={
+                  handlers.copyState === "copied"
+                    ? "Copied"
+                    : handlers.copyState === "error"
+                      ? "Copy failed"
+                      : "Copy chat as Markdown"
+                }
+                className={cn(
+                  "text-muted-foreground hover:text-foreground size-8",
+                  handlers.copyState === "error" ? "text-destructive" : undefined,
+                )}
+                onClick={handlers.onCopyChat}
+                size="icon-sm"
+                type="button"
+                variant="ghost"
+              >
+                {handlers.copyState === "copied" ? (
+                  <CheckIcon className="size-4" />
+                ) : (
+                  <CopyIcon className="size-4" />
+                )}
+              </Button>
+            </IconTooltip>
           ) : null}
           <UserProfileMenu />
         </header>
