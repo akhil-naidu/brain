@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { SettingsRowsSkeleton } from "@/components/loading/skeletons";
 import { SettingsBadge, SettingsPanel, SettingsShell } from "@/components/settings/settings-shell";
+import { ActiveIndicator } from "@/components/ui/active-indicator";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -214,17 +215,25 @@ export function WorkspacesPage() {
               const label = workspaceLabel(workspace);
               return (
                 <li
-                  className="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between"
+                  className={cn(
+                    "flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between",
+                    active && "bg-muted/40",
+                  )}
                   key={workspace.id}
                 >
                   <div className="flex min-w-0 items-start gap-3">
-                    <span className="bg-muted text-foreground flex size-10 shrink-0 items-center justify-center rounded-xl text-sm font-semibold">
+                    <span
+                      className={cn(
+                        "flex size-10 shrink-0 items-center justify-center rounded-xl text-sm font-semibold",
+                        active ? "bg-foreground text-background" : "bg-muted text-foreground",
+                      )}
+                    >
                       {workspaceInitial(workspace)}
                     </span>
                     <div className="min-w-0 space-y-1.5">
                       <div className="flex min-w-0 flex-wrap items-center gap-2">
                         <p className="text-sm font-medium">{label}</p>
-                        {active ? <SettingsBadge>Active</SettingsBadge> : null}
+                        {active ? <ActiveIndicator /> : null}
                         <SettingsBadge>
                           {workspace.kind === "personal" ? "Personal" : "Team"}
                         </SettingsBadge>

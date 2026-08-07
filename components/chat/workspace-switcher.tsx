@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { WORKSPACES_CHANGED_EVENT, notifyWorkspacesChanged } from "@/lib/auth/workspace-events";
+import { ActiveIndicator } from "@/components/ui/active-indicator";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -225,25 +226,45 @@ export function WorkspaceSwitcher({
             </button>
           </DropdownMenuTrigger>
         )}
-        <DropdownMenuContent align={compact ? "center" : "start"} className="w-60">
+        <DropdownMenuContent
+          align="start"
+          className={cn(
+            // Expanded: match the trigger. Collapsed: fixed readable width (trigger is icon-only).
+            compact ? "w-56" : "w-(--radix-popper-anchor-width)",
+          )}
+          side={compact ? "right" : "bottom"}
+          sideOffset={compact ? 8 : 4}
+        >
           <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
-          {workspaces.map((workspace) => (
-            <DropdownMenuItem
-              disabled={pending || workspace.id === activeId}
-              key={workspace.id}
-              onSelect={() => {
-                void onSwitch(workspace.id);
-              }}
-            >
-              <span className="bg-muted flex size-5 shrink-0 items-center justify-center rounded text-[10px] font-semibold">
-                {workspaceInitial(workspace)}
-              </span>
-              <span className="min-w-0 flex-1 truncate">{workspaceLabel(workspace)}</span>
-              {workspace.id === activeId ? (
-                <span className="text-muted-foreground text-xs">Active</span>
-              ) : null}
-            </DropdownMenuItem>
-          ))}
+          <div className="flex flex-col gap-1 py-0.5">
+            {workspaces.map((workspace) => {
+              const isActive = workspace.id === activeId;
+              return (
+                <DropdownMenuItem
+                  aria-current={isActive ? "true" : undefined}
+                  className={cn(isActive && "bg-accent/70")}
+                  disabled={pending}
+                  key={workspace.id}
+                  onSelect={() => {
+                    void onSwitch(workspace.id);
+                  }}
+                >
+                  <span
+                    className={cn(
+                      "flex size-5 shrink-0 items-center justify-center rounded text-[10px] font-semibold",
+                      isActive ? "bg-foreground text-background" : "bg-muted",
+                    )}
+                  >
+                    {workspaceInitial(workspace)}
+                  </span>
+                  <span className={cn("min-w-0 flex-1 truncate", isActive && "font-medium")}>
+                    {workspaceLabel(workspace)}
+                  </span>
+                  {isActive ? <ActiveIndicator compact /> : null}
+                </DropdownMenuItem>
+              );
+            })}
+          </div>
           <DropdownMenuSeparator />
           {canCreate ? (
             <DropdownMenuItem
