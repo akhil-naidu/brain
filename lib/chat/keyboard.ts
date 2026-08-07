@@ -6,9 +6,13 @@ export type ShortcutKeyEvent = {
   readonly shiftKey: boolean;
 };
 
+function shortcutKey(event: ShortcutKeyEvent): string {
+  return typeof event.key === "string" ? event.key.toLowerCase() : "";
+}
+
 /** ⌘/Ctrl+Shift+O — start a new chat. */
 export function isNewChatShortcutEvent(event: ShortcutKeyEvent): boolean {
-  if (event.key.toLowerCase() !== "o") {
+  if (shortcutKey(event) !== "o") {
     return false;
   }
   if (!event.shiftKey || event.altKey) {
@@ -23,7 +27,7 @@ export function newChatShortcutLabel(platform = getPlatform()): string {
 
 /** ⌘/Ctrl+K — focus sidebar chat search. */
 export function isFocusChatSearchShortcutEvent(event: ShortcutKeyEvent): boolean {
-  if (event.key.toLowerCase() !== "k") {
+  if (shortcutKey(event) !== "k") {
     return false;
   }
   if (event.shiftKey || event.altKey) {
@@ -50,7 +54,7 @@ export function focusChatSearchShortcutLabel(platform = getPlatform()): string {
 
 /** ⌘/Ctrl+B — toggle the chat sidebar. */
 export function isToggleSidebarShortcutEvent(event: ShortcutKeyEvent): boolean {
-  if (event.key.toLowerCase() !== "b") {
+  if (shortcutKey(event) !== "b") {
     return false;
   }
   if (event.shiftKey || event.altKey) {

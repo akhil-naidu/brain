@@ -32,6 +32,18 @@ describe("isNewChatShortcutEvent", () => {
     ).toBe(true);
   });
 
+  it("ignores events with an empty key", () => {
+    expect(
+      isNewChatShortcutEvent({
+        key: "",
+        altKey: false,
+        ctrlKey: false,
+        metaKey: true,
+        shiftKey: true,
+      }),
+    ).toBe(false);
+  });
+
   it("rejects incomplete or unrelated combinations", () => {
     expect(
       isNewChatShortcutEvent({
