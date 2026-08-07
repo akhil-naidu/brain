@@ -31,6 +31,7 @@
   },
   "packageManager": "pnpm@11.13.1",
   "dependencies": {
+    "@ai-sdk/mcp": "^2.0.27",
     "@ai-sdk/openai": "^4.0.20",
     "@better-auth/scim": "^1.6.26",
     "@better-auth/sso": "^1.6.26",

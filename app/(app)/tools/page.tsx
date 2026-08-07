@@ -6,7 +6,7 @@ import { SettingsPanel, SettingsShell } from "@/components/settings/settings-she
 
 export const metadata: Metadata = {
   title: "Tools",
-  description: "Connect MCP apps and manage which tools Brain can use in chat.",
+  description: "Connect MCP apps and browse loaded tools Brain can use in chat.",
 };
 
 export default function Page() {
@@ -14,7 +14,7 @@ export default function Page() {
     <Suspense
       fallback={
         <SettingsShell
-          description="Connect MCP apps and choose which tools Brain can use in chat."
+          description="Connect MCP apps and browse loaded tools Brain can use in chat."
           title="Tools"
         >
           <SettingsPanel className="p-4">

@@ -19,7 +19,7 @@ Built with [Next.js](https://nextjs.org/) + [`eve`](https://eve.dev/) (`withEve(
 
 - **Signed-in browser chat** — Better Auth (email/password), sessions in Postgres
 - **Workspaces** — personal + team workspaces, invites, roles, optional SSO/SCIM
-- **MCP connections** — Connect from the chat menu (OAuth / DCR); env credentials as deploy fallback
+- **MCP connections** — Connect from the chat menu (OAuth / DCR); browse loaded tools on `/tools`; env credentials as deploy fallback
 - **Durable history** — chats, playbooks, and schedules in operator Postgres
 - **Schedules** — morning brief + playbook schedules (needs production eve process)
 - **Model picker** — Command Code (or other direct providers), not Vercel AI Gateway
@@ -66,6 +66,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 1. First host with an empty DB → **`/setup`** (create the operator account)
 2. Sign in → **`/chat`**
+3. Connect MCP apps and browse loaded tools on **`/tools`**
 
 > **Tip:** Vitest uses the same Compose Postgres. If `/setup` disappears after running tests, wipe the volume:  
 > `docker compose down -v && docker compose up -d db`
