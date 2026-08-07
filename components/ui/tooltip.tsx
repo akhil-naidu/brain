@@ -6,7 +6,7 @@ import { Tooltip as TooltipPrimitive } from "radix-ui";
 import { cn } from "@/lib/utils";
 
 function TooltipProvider({
-  delayDuration = 0,
+  delayDuration = 400,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
   return (
@@ -19,7 +19,11 @@ function TooltipProvider({
 }
 
 function Tooltip({ ...props }: React.ComponentProps<typeof TooltipPrimitive.Root>) {
-  return <TooltipPrimitive.Root data-slot="tooltip" {...props} />;
+  return (
+    <TooltipProvider>
+      <TooltipPrimitive.Root data-slot="tooltip" {...props} />
+    </TooltipProvider>
+  );
 }
 
 function TooltipTrigger({ ...props }: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
@@ -28,7 +32,7 @@ function TooltipTrigger({ ...props }: React.ComponentProps<typeof TooltipPrimiti
 
 function TooltipContent({
   className,
-  sideOffset = 0,
+  sideOffset = 6,
   children,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Content>) {
@@ -38,7 +42,7 @@ function TooltipContent({
         data-slot="tooltip-content"
         sideOffset={sideOffset}
         className={cn(
-          "animate-in bg-foreground text-background fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 z-50 w-fit origin-(--radix-tooltip-content-transform-origin) rounded-md px-3 py-1.5 text-xs text-balance",
+          "animate-in bg-foreground text-background fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 z-50 w-fit max-w-xs origin-(--radix-tooltip-content-transform-origin) rounded-md px-2.5 py-1.5 text-xs text-balance",
           className,
         )}
         {...props}
@@ -50,4 +54,26 @@ function TooltipContent({
   );
 }
 
-export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider };
+/** Wrap icon-only controls that need a hover label. Prefer over native `title`. */
+function IconTooltip({
+  label,
+  children,
+  side = "top",
+  sideOffset = 6,
+}: {
+  readonly label: string;
+  readonly children: React.ReactElement;
+  readonly side?: React.ComponentProps<typeof TooltipContent>["side"];
+  readonly sideOffset?: number;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side={side} sideOffset={sideOffset}>
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider, IconTooltip };
