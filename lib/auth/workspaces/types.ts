@@ -31,6 +31,8 @@ export type InstancePolicies = {
   readonly signupMode: SignupMode;
   readonly autoPersonalWorkspace: boolean;
   readonly allowCreateWorkspace: boolean;
+  /** When false, self-serve forgot-password email is blocked; admins can still reset. */
+  readonly allowForgotPassword: boolean;
 };
 
 export type WorkspaceInvite = {

@@ -12,6 +12,7 @@ const patchSchema = z
     signupMode: z.enum(["open", "invite-only", "sso-only"]).optional(),
     autoPersonalWorkspace: z.boolean().optional(),
     allowCreateWorkspace: z.boolean().optional(),
+    allowForgotPassword: z.boolean().optional(),
   })
   .strict();
 

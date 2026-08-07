@@ -17,5 +17,6 @@ export function parseInstancePolicies(value: unknown): InstancePolicies | null {
       "autoPersonalWorkspace" in value ? Boolean(value.autoPersonalWorkspace) : false,
     allowCreateWorkspace:
       "allowCreateWorkspace" in value ? Boolean(value.allowCreateWorkspace) : false,
+    allowForgotPassword: "allowForgotPassword" in value ? Boolean(value.allowForgotPassword) : true,
   };
 }

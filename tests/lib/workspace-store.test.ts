@@ -79,6 +79,13 @@ describe("workspace store", () => {
     expect(store.getPolicies().allowCreateWorkspace).toBe(false);
   });
 
+  it("defaults allow forgot password and persists toggles", () => {
+    const store = openStore();
+    expect(store.getPolicies().allowForgotPassword).toBe(true);
+    store.updatePolicies({ allowForgotPassword: false });
+    expect(store.getPolicies().allowForgotPassword).toBe(false);
+  });
+
   it("lists members and updates roles with guards", () => {
     const store = openStore();
     const team = store.createWorkspace({

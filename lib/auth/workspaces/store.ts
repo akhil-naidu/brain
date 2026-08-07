@@ -17,6 +17,7 @@ const DEFAULT_POLICIES: InstancePolicies = {
   signupMode: "invite-only",
   autoPersonalWorkspace: true,
   allowCreateWorkspace: true,
+  allowForgotPassword: true,
 };
 
 function nowIso(): string {
@@ -91,7 +92,8 @@ export function ensureWorkspaceSchema(db: DatabaseSync): void {
       id INTEGER PRIMARY KEY CHECK (id = 1),
       signup_mode TEXT NOT NULL,
       auto_personal_workspace INTEGER NOT NULL,
-      allow_create_workspace INTEGER NOT NULL
+      allow_create_workspace INTEGER NOT NULL,
+      allow_forgot_password INTEGER NOT NULL DEFAULT 1
     );
     CREATE TABLE IF NOT EXISTS brain_instance_admin (
       user_id TEXT PRIMARY KEY NOT NULL
@@ -120,12 +122,22 @@ export function ensureWorkspaceSchema(db: DatabaseSync): void {
   if (!policy) {
     db.prepare(
       `INSERT INTO brain_instance_policy
-        (id, signup_mode, auto_personal_workspace, allow_create_workspace)
-       VALUES (1, ?, ?, ?)`,
+        (id, signup_mode, auto_personal_workspace, allow_create_workspace, allow_forgot_password)
+       VALUES (1, ?, ?, ?, ?)`,
     ).run(
       DEFAULT_POLICIES.signupMode,
       DEFAULT_POLICIES.autoPersonalWorkspace ? 1 : 0,
       DEFAULT_POLICIES.allowCreateWorkspace ? 1 : 0,
+      DEFAULT_POLICIES.allowForgotPassword ? 1 : 0,
+    );
+  }
+
+  // Migrate hosts created before allow_forgot_password existed.
+  const columns = db.prepare("PRAGMA table_info(brain_instance_policy)").all() as SqlRow[];
+  const hasForgot = columns.some((column) => column["name"] === "allow_forgot_password");
+  if (!hasForgot) {
+    db.exec(
+      "ALTER TABLE brain_instance_policy ADD COLUMN allow_forgot_password INTEGER NOT NULL DEFAULT 1",
     );
   }
 }
@@ -143,6 +155,10 @@ export function createWorkspaceStore(db: DatabaseSync) {
       signupMode: parseSignupMode(requireString(row, "signup_mode")),
       autoPersonalWorkspace: asBool(row["auto_personal_workspace"]),
       allowCreateWorkspace: asBool(row["allow_create_workspace"]),
+      allowForgotPassword:
+        row["allow_forgot_password"] === undefined
+          ? DEFAULT_POLICIES.allowForgotPassword
+          : asBool(row["allow_forgot_password"]),
     };
   }
 
@@ -152,12 +168,19 @@ export function createWorkspaceStore(db: DatabaseSync) {
       signupMode: patch.signupMode ?? current.signupMode,
       autoPersonalWorkspace: patch.autoPersonalWorkspace ?? current.autoPersonalWorkspace,
       allowCreateWorkspace: patch.allowCreateWorkspace ?? current.allowCreateWorkspace,
+      allowForgotPassword: patch.allowForgotPassword ?? current.allowForgotPassword,
     };
     db.prepare(
       `UPDATE brain_instance_policy
-       SET signup_mode = ?, auto_personal_workspace = ?, allow_create_workspace = ?
+       SET signup_mode = ?, auto_personal_workspace = ?, allow_create_workspace = ?,
+           allow_forgot_password = ?
        WHERE id = 1`,
-    ).run(next.signupMode, next.autoPersonalWorkspace ? 1 : 0, next.allowCreateWorkspace ? 1 : 0);
+    ).run(
+      next.signupMode,
+      next.autoPersonalWorkspace ? 1 : 0,
+      next.allowCreateWorkspace ? 1 : 0,
+      next.allowForgotPassword ? 1 : 0,
+    );
     return next;
   }
 
