@@ -221,15 +221,15 @@ describe("ChatSidebar recent panel", () => {
     renderSidebar();
 
     expect(screen.getByRole("searchbox", { name: "Search chats" })).toBeDefined();
-    expect(screen.getByRole("separator", { name: "Resize recent chats" })).toBeDefined();
+    expect(screen.getByLabelText("Resize recent chats")).toBeDefined();
 
     fireEvent.click(screen.getByRole("button", { name: "Collapse recent chats" }));
     expect(screen.queryByRole("searchbox", { name: "Search chats" })).toBeNull();
-    expect(screen.queryByRole("separator", { name: "Resize recent chats" })).toBeNull();
+    expect(screen.queryByLabelText("Resize recent chats")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Expand recent chats" }));
     expect(screen.getByRole("searchbox", { name: "Search chats" })).toBeDefined();
-    expect(screen.getByRole("separator", { name: "Resize recent chats" })).toBeDefined();
+    expect(screen.getByLabelText("Resize recent chats")).toBeDefined();
   });
 });
 
