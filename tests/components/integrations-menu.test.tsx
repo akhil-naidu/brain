@@ -4,6 +4,7 @@ import { IntegrationsConnectionActions } from "@/components/chat/integrations-co
 import { IntegrationsMenu } from "@/components/chat/integrations-menu";
 import {
   canEnableConnection,
+  connectionAdminSetupHint,
   connectionConfigureLabel,
   integrationStatusText,
   shouldOfferConnectionConfigure,
@@ -139,13 +140,14 @@ describe("shouldOfferConnectionDisconnect", () => {
 });
 
 describe("shouldOfferConnectionConfigure", () => {
-  it("offers configure for static-credential apps anytime status is known", () => {
+  it("offers configure only when canConfigureApp is true for static apps", () => {
     expect(
       shouldOfferConnectionConfigure(
         {
           id: "asana",
           displayName: "Asana",
           status: "needs_setup",
+          canConfigureApp: true,
         },
         "asana",
       ),
@@ -153,9 +155,21 @@ describe("shouldOfferConnectionConfigure", () => {
     expect(
       shouldOfferConnectionConfigure(
         {
+          id: "asana",
+          displayName: "Asana",
+          status: "needs_setup",
+          canConfigureApp: false,
+        },
+        "asana",
+      ),
+    ).toBe(false);
+    expect(
+      shouldOfferConnectionConfigure(
+        {
           id: "slack",
           displayName: "Slack",
           status: "needs_sign_in",
+          canConfigureApp: true,
         },
         "slack",
       ),
@@ -166,6 +180,7 @@ describe("shouldOfferConnectionConfigure", () => {
           id: "gmail",
           displayName: "Gmail",
           status: "connected",
+          canConfigureApp: true,
         },
         "gmail",
       ),
@@ -176,6 +191,7 @@ describe("shouldOfferConnectionConfigure", () => {
           id: "clickup",
           displayName: "ClickUp",
           status: "connected",
+          canConfigureApp: false,
         },
         "clickup",
       ),
@@ -198,6 +214,35 @@ describe("shouldOfferConnectionConfigure", () => {
         status: "connected",
       }),
     ).toBe("App settings");
+  });
+});
+
+describe("connectionAdminSetupHint", () => {
+  it("hints members when setup is needed and they cannot configure", () => {
+    expect(
+      connectionAdminSetupHint({
+        id: "slack",
+        displayName: "Slack",
+        status: "needs_setup",
+        canConfigureApp: false,
+      }),
+    ).toMatch(/workspace admin/i);
+    expect(
+      connectionAdminSetupHint({
+        id: "slack",
+        displayName: "Slack",
+        status: "needs_setup",
+        canConfigureApp: true,
+      }),
+    ).toBeNull();
+    expect(
+      connectionAdminSetupHint({
+        id: "slack",
+        displayName: "Slack",
+        status: "needs_sign_in",
+        canConfigureApp: false,
+      }),
+    ).toBeNull();
   });
 });
 
@@ -226,7 +271,7 @@ describe("IntegrationsMenu status", () => {
 });
 
 describe("IntegrationsConnectionActions", () => {
-  it("offers Set up icon and Connect button for static apps", () => {
+  it("offers Set up icon and Connect button for static apps when allowed", () => {
     const onConfigure = vi.fn();
     const onConnect = vi.fn();
     render(
@@ -237,7 +282,12 @@ describe("IntegrationsConnectionActions", () => {
         onConfigure={onConfigure}
         onConnect={onConnect}
         onDisconnect={vi.fn()}
-        status={{ id: "asana", displayName: "Asana", status: "needs_setup" }}
+        status={{
+          id: "asana",
+          displayName: "Asana",
+          status: "needs_setup",
+          canConfigureApp: true,
+        }}
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Set up" }));
@@ -252,12 +302,39 @@ describe("IntegrationsConnectionActions", () => {
         onConfigure={vi.fn()}
         onConnect={onConnect}
         onDisconnect={vi.fn()}
-        status={{ id: "slack", displayName: "Slack", status: "needs_sign_in" }}
+        status={{
+          id: "slack",
+          displayName: "Slack",
+          status: "needs_sign_in",
+          canConfigureApp: true,
+        }}
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Connect" }));
     expect(onConnect).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("button", { name: "App settings" })).toBeTruthy();
+  });
+
+  it("hides configure for members who cannot manage app credentials", () => {
+    const { container } = render(
+      <IntegrationsConnectionActions
+        connectionId="slack"
+        isConnecting={false}
+        isDisconnecting={false}
+        onConfigure={vi.fn()}
+        onConnect={vi.fn()}
+        onDisconnect={vi.fn()}
+        status={{
+          id: "slack",
+          displayName: "Slack",
+          status: "needs_setup",
+          canConfigureApp: false,
+        }}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Set up" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "App settings" })).toBeNull();
+    expect(container.querySelectorAll("button").length).toBe(0);
   });
 
   it("hides configure for DCR apps", () => {

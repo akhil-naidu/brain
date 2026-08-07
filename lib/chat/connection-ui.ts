@@ -27,18 +27,27 @@ export function shouldOfferConnectionDisconnect(status: ConnectionStatus | undef
 }
 
 /**
- * Static-credential apps can be configured anytime (initial Set up or later App settings).
- * DCR apps (ClickUp, dFlow) never need this control.
+ * Static-credential apps can be configured by workspace admins / host operator
+ * (initial Set up or later App settings). Members never see this control.
+ * DCR apps (ClickUp, dFlow) never need it.
  */
 export function shouldOfferConnectionConfigure(
   status: ConnectionStatus | undefined,
   connectionId: string,
 ): boolean {
-  return Boolean(status) && connectionNeedsStaticAppCredentials(connectionId);
+  return Boolean(status?.canConfigureApp) && connectionNeedsStaticAppCredentials(connectionId);
 }
 
 export function connectionConfigureLabel(status: ConnectionStatus | undefined): string {
   return status?.status === "needs_setup" ? "Set up" : "App settings";
+}
+
+/** Member-facing hint when app credentials are missing and they cannot configure. */
+export function connectionAdminSetupHint(status: ConnectionStatus | undefined): string | null {
+  if (status?.status !== "needs_setup" || status.canConfigureApp) {
+    return null;
+  }
+  return "A workspace admin needs to set up this app before you can connect.";
 }
 
 /** Users can only turn a connection on after it is signed in. */

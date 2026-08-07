@@ -5,6 +5,8 @@ const connectionStatusSchema = z.object({
   displayName: z.string(),
   status: z.enum(["connected", "needs_sign_in", "needs_setup"]),
   detail: z.string().optional(),
+  /** True when this user may open Set up / App settings for the connection. */
+  canConfigureApp: z.boolean().optional(),
 });
 
 const responseSchema = z.object({

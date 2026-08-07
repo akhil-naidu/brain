@@ -15,7 +15,11 @@ import {
 import { IconTooltip } from "@/components/ui/tooltip";
 import type { EnabledConnections } from "@/app/_components/chat-shell-context";
 import { CONNECTION_ITEMS } from "@/lib/chat/connection-catalog";
-import { canEnableConnection, integrationStatusText } from "@/lib/chat/connection-ui";
+import {
+  canEnableConnection,
+  connectionAdminSetupHint,
+  integrationStatusText,
+} from "@/lib/chat/connection-ui";
 import {
   disconnectConnection,
   fetchConnectionStatuses,
@@ -205,6 +209,7 @@ export function IntegrationsMenu({
               statusError,
             });
             const allowEnable = canEnableConnection(status);
+            const adminSetupHint = connectionAdminSetupHint(status);
             const isConnecting = connectingId === key;
             const isDisconnecting = disconnectingId === key;
 
@@ -228,7 +233,7 @@ export function IntegrationsMenu({
                       if (!allowEnable) {
                         setActionError(
                           status?.status === "needs_setup"
-                            ? `Set up ${label} first, then enable it.`
+                            ? (adminSetupHint ?? `Set up ${label} first, then enable it.`)
                             : status?.status === "needs_sign_in"
                               ? `Connect ${label} first, then enable it.`
                               : `Wait for ${label} status, then enable it.`,
@@ -252,13 +257,15 @@ export function IntegrationsMenu({
                               ? "text-destructive"
                               : "text-muted-foreground",
                         )}
-                        title={status?.detail}
+                        title={adminSetupHint ?? status?.detail}
                       >
                         {isConnecting
                           ? "Waiting for sign-in…"
                           : isDisconnecting
                             ? "Disconnecting…"
-                            : statusText}
+                            : adminSetupHint
+                              ? "Admin setup needed"
+                              : statusText}
                       </span>
                     </span>
                     <span
