@@ -115,6 +115,7 @@ export function ChatSidebar({
   activeChatId,
   compact = false,
   currentTitle,
+  draftVisibility = "personal",
   onDeleteChat,
   onNewChat,
   onNewSharedChat,
@@ -134,6 +135,7 @@ export function ChatSidebar({
   readonly activeChatId: string | null;
   readonly compact?: boolean;
   readonly currentTitle: string | null;
+  readonly draftVisibility?: "personal" | "shared";
   readonly onDeleteChat: (chatId: string) => void;
   readonly onNewChat: () => void;
   readonly onNewSharedChat?: () => void;
@@ -152,7 +154,8 @@ export function ChatSidebar({
   const playbooksActive = pathname === "/playbooks";
   const schedulesActive = pathname === "/schedules";
   const showDraftRow = showChatDraft && !activeChatId;
-  const draftTitle = currentTitle?.trim() || DEFAULT_CHAT_TITLE;
+  const draftTitle =
+    currentTitle?.trim() || (draftVisibility === "shared" ? "New shared chat" : DEFAULT_CHAT_TITLE);
   const shortcutLabel = newChatShortcutLabel();
   const searchShortcutLabel = focusChatSearchShortcutLabel();
   const sidebarShortcutLabel = toggleSidebarShortcutLabel();
@@ -437,7 +440,17 @@ export function ChatSidebar({
                 aria-current="page"
                 className="bg-muted/60 text-foreground mb-0.5 rounded-sm px-2 py-1.5 text-[13px]"
               >
-                <span className="line-clamp-1">{draftTitle}</span>
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <span className="line-clamp-1 min-w-0 flex-1">{draftTitle}</span>
+                  {draftVisibility === "shared" ? (
+                    <span
+                      className="text-muted-foreground/70 shrink-0 text-[10px] tracking-wide uppercase"
+                      title="Shared with workspace"
+                    >
+                      Shared
+                    </span>
+                  ) : null}
+                </span>
               </div>
             ) : null}
             {chats.length === 0 && !showDraftRow && !hasActiveQuery ? (

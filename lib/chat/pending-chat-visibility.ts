@@ -6,6 +6,14 @@ export function stashPendingChatVisibility(visibility: ChatVisibility): void {
   pendingVisibility = visibility;
 }
 
+export function peekPendingChatVisibility(): ChatVisibility {
+  return pendingVisibility;
+}
+
+export function clearPendingChatVisibility(): void {
+  pendingVisibility = "personal";
+}
+
 /** Returns and resets the visibility for the next newly created chat. */
 export function takePendingChatVisibility(): ChatVisibility {
   const value = pendingVisibility;

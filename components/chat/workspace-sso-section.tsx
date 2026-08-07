@@ -430,33 +430,63 @@ export function WorkspaceSsoSection(props: {
       ) : null}
 
       {mode === "oidc" ? (
-        <div className="space-y-2">
-          <Input
-            onChange={(e) => setProviderId(e.target.value)}
-            placeholder="provider-id"
-            value={providerId}
-          />
-          <Input
-            onChange={(e) => setIssuer(e.target.value)}
-            placeholder="https://login.example.com"
-            value={issuer}
-          />
-          <Input
-            onChange={(e) => setDomains(e.target.value)}
-            placeholder="acme.com, acme.co"
-            value={domains}
-          />
-          <Input
-            onChange={(e) => setClientId(e.target.value)}
-            placeholder="Client ID"
-            value={clientId}
-          />
-          <Input
-            onChange={(e) => setClientSecret(e.target.value)}
-            placeholder="Client secret"
-            type="password"
-            value={clientSecret}
-          />
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium" htmlFor="sso-oidc-provider-id">
+              Provider ID
+            </label>
+            <Input
+              id="sso-oidc-provider-id"
+              onChange={(e) => setProviderId(e.target.value)}
+              placeholder="okta-prod"
+              value={providerId}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium" htmlFor="sso-oidc-issuer">
+              Issuer URL
+            </label>
+            <Input
+              id="sso-oidc-issuer"
+              onChange={(e) => setIssuer(e.target.value)}
+              placeholder="https://login.example.com"
+              value={issuer}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium" htmlFor="sso-oidc-domains">
+              Email domains
+            </label>
+            <Input
+              id="sso-oidc-domains"
+              onChange={(e) => setDomains(e.target.value)}
+              placeholder="acme.com, acme.co"
+              value={domains}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium" htmlFor="sso-oidc-client-id">
+              Client ID
+            </label>
+            <Input
+              id="sso-oidc-client-id"
+              onChange={(e) => setClientId(e.target.value)}
+              placeholder="Client ID"
+              value={clientId}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium" htmlFor="sso-oidc-client-secret">
+              Client secret
+            </label>
+            <Input
+              id="sso-oidc-client-secret"
+              onChange={(e) => setClientSecret(e.target.value)}
+              placeholder="Client secret"
+              type="password"
+              value={clientSecret}
+            />
+          </div>
           <div className="flex gap-2">
             <Button
               disabled={pending}
@@ -482,33 +512,63 @@ export function WorkspaceSsoSection(props: {
       ) : null}
 
       {mode === "saml" ? (
-        <div className="space-y-2">
-          <Input
-            onChange={(e) => setProviderId(e.target.value)}
-            placeholder="provider-id"
-            value={providerId}
-          />
-          <Input
-            onChange={(e) => setIssuer(e.target.value)}
-            placeholder="https://idp.example.com/metadata"
-            value={issuer}
-          />
-          <Input
-            onChange={(e) => setDomains(e.target.value)}
-            placeholder="acme.com"
-            value={domains}
-          />
-          <Input
-            onChange={(e) => setEntryPoint(e.target.value)}
-            placeholder="SAML entry point URL"
-            value={entryPoint}
-          />
-          <textarea
-            className="border-border bg-background min-h-24 w-full rounded-md border px-3 py-2 text-sm"
-            onChange={(e) => setCert(e.target.value)}
-            placeholder="IdP X.509 certificate"
-            value={cert}
-          />
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium" htmlFor="sso-saml-provider-id">
+              Provider ID
+            </label>
+            <Input
+              id="sso-saml-provider-id"
+              onChange={(e) => setProviderId(e.target.value)}
+              placeholder="okta-saml"
+              value={providerId}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium" htmlFor="sso-saml-issuer">
+              Metadata / issuer URL
+            </label>
+            <Input
+              id="sso-saml-issuer"
+              onChange={(e) => setIssuer(e.target.value)}
+              placeholder="https://idp.example.com/metadata"
+              value={issuer}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium" htmlFor="sso-saml-domains">
+              Email domains
+            </label>
+            <Input
+              id="sso-saml-domains"
+              onChange={(e) => setDomains(e.target.value)}
+              placeholder="acme.com"
+              value={domains}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium" htmlFor="sso-saml-entry-point">
+              Entry point URL
+            </label>
+            <Input
+              id="sso-saml-entry-point"
+              onChange={(e) => setEntryPoint(e.target.value)}
+              placeholder="SAML entry point URL"
+              value={entryPoint}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium" htmlFor="sso-saml-cert">
+              IdP certificate
+            </label>
+            <textarea
+              className="border-border bg-background min-h-24 w-full rounded-md border px-3 py-2 text-sm"
+              id="sso-saml-cert"
+              onChange={(e) => setCert(e.target.value)}
+              placeholder="IdP X.509 certificate"
+              value={cert}
+            />
+          </div>
           <div className="flex gap-2">
             <Button
               disabled={pending}

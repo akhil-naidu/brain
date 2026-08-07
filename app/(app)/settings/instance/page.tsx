@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { notifyWorkspacesChanged } from "@/lib/auth/workspace-events";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -120,6 +121,7 @@ export default function InstanceSettingsPage() {
       }
       setSaved(true);
       setPending(false);
+      notifyWorkspacesChanged();
     } catch {
       setPending(false);
       setError("Unable to save policies.");
@@ -160,6 +162,7 @@ export default function InstanceSettingsPage() {
       setLicenseKey("");
       setSaved(true);
       setPending(false);
+      notifyWorkspacesChanged();
     } catch {
       setPending(false);
       setError("Unable to install license.");
@@ -195,6 +198,7 @@ export default function InstanceSettingsPage() {
       }
       setSaved(true);
       setPending(false);
+      notifyWorkspacesChanged();
     } catch {
       setPending(false);
       setError("Unable to clear license.");
@@ -307,6 +311,7 @@ export default function InstanceSettingsPage() {
             onChange={(event) => {
               const value = event.target.value;
               if (value === "open" || value === "invite-only" || value === "sso-only") {
+                setSaved(false);
                 setPolicies({ ...policies, signupMode: value });
               }
             }}
@@ -337,6 +342,7 @@ export default function InstanceSettingsPage() {
             checked={policies.allowCreateWorkspace}
             disabled={!canManage || pending || entitlements?.multiWorkspace === false}
             onCheckedChange={(checked) => {
+              setSaved(false);
               setPolicies({ ...policies, allowCreateWorkspace: checked });
             }}
           />
@@ -353,6 +359,7 @@ export default function InstanceSettingsPage() {
             checked={policies.autoPersonalWorkspace}
             disabled={!canManage || pending}
             onCheckedChange={(checked) => {
+              setSaved(false);
               setPolicies({ ...policies, autoPersonalWorkspace: checked });
             }}
           />

@@ -2,7 +2,9 @@
 
 import { ChevronsUpDownIcon, PlusIcon, SettingsIcon } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { WORKSPACES_CHANGED_EVENT, notifyWorkspacesChanged } from "@/lib/auth/workspace-events";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -65,6 +67,7 @@ export function WorkspaceSwitcher({
   const [error, setError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState("");
+  const pathname = usePathname();
 
   const refresh = useCallback(async () => {
     try {
@@ -103,6 +106,21 @@ export function WorkspaceSwitcher({
 
   useEffect(() => {
     void refresh();
+  }, [pathname, refresh]);
+
+  useEffect(() => {
+    const onChanged = () => {
+      void refresh();
+    };
+    const onFocus = () => {
+      void refresh();
+    };
+    window.addEventListener(WORKSPACES_CHANGED_EVENT, onChanged);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.removeEventListener(WORKSPACES_CHANGED_EVENT, onChanged);
+      window.removeEventListener("focus", onFocus);
+    };
   }, [refresh]);
 
   async function onSwitch(workspaceId: string) {
@@ -124,6 +142,7 @@ export function WorkspaceSwitcher({
       }
       setActiveId(workspaceId);
       setPending(false);
+      notifyWorkspacesChanged();
       window.location.assign("/chat");
     } catch {
       setPending(false);
@@ -152,6 +171,7 @@ export function WorkspaceSwitcher({
       setCreateOpen(false);
       setNewName("");
       setPending(false);
+      notifyWorkspacesChanged();
       window.location.assign("/chat");
     } catch {
       setPending(false);
@@ -168,7 +188,7 @@ export function WorkspaceSwitcher({
         <Button
           className={
             compact
-              ? "text-muted-foreground hover:text-foreground h-auto max-w-12 truncate px-1 py-0.5 text-[10px] font-medium"
+              ? "text-muted-foreground hover:text-foreground h-auto max-w-[3.25rem] truncate px-1 py-0.5 text-[10px] font-medium"
               : "border-border bg-background h-auto w-full justify-between gap-2 px-2 py-1.5 text-left text-sm font-normal"
           }
           disabled={pending || workspaces.length === 0}

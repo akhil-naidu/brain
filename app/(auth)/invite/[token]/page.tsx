@@ -178,6 +178,11 @@ export default function InvitePage() {
             Join <span className="text-foreground font-medium">{preview.workspaceName}</span> as{" "}
             {preview.role}.
           </p>
+          {email ? (
+            <p className="text-muted-foreground text-xs">
+              Signed in as <span className="text-foreground">{email}</span>
+            </p>
+          ) : null}
         </div>
         {error ? <p className="text-destructive text-sm">{error}</p> : null}
         <Button
@@ -189,6 +194,21 @@ export default function InvitePage() {
           type="button"
         >
           {pending ? "Joining…" : "Accept invite"}
+        </Button>
+        <Button
+          className="w-full"
+          disabled={pending}
+          onClick={() => {
+            void (async () => {
+              await authClient.signOut();
+              setSignedIn(false);
+              setError(null);
+            })();
+          }}
+          type="button"
+          variant="ghost"
+        >
+          Use a different account
         </Button>
       </div>
     );

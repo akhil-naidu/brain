@@ -18,12 +18,14 @@ import {
   readChatIdFromLocation,
   updateChat,
 } from "@/lib/chat/chats-api";
+import { CHATS_CHANGED_EVENT, notifyChatsChanged } from "@/lib/chat/chat-list-events";
 import {
   isFocusChatSearchShortcutEvent,
   isNewChatShortcutEvent,
   isSlashFocusChatSearchEvent,
   isToggleSidebarShortcutEvent,
 } from "@/lib/chat/keyboard";
+import { stashPendingChatVisibility } from "@/lib/chat/pending-chat-visibility";
 import { stashPendingPlaybookRun } from "@/lib/chat/pending-playbook-run";
 import { readSidebarExpanded, writeSidebarExpanded } from "@/lib/chat/sidebar-expanded";
 import { normalizeChatTitle } from "@/lib/chat/title";
@@ -59,28 +61,30 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
     return () => window.removeEventListener("popstate", sync);
   }, [pathname]);
 
+  const refreshChats = useCallback(async () => {
+    try {
+      const listed = await listChats();
+      setChats([...listed.chats]);
+      setCanCreateShared(listed.canCreateShared);
+      setViewerUserId(listed.viewerUserId);
+    } catch {
+      setChats([]);
+      setCanCreateShared(false);
+      setViewerUserId(null);
+    }
+  }, []);
+
   useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const listed = await listChats();
-        if (!cancelled) {
-          setChats([...listed.chats]);
-          setCanCreateShared(listed.canCreateShared);
-          setViewerUserId(listed.viewerUserId);
-        }
-      } catch {
-        if (!cancelled) {
-          setChats([]);
-          setCanCreateShared(false);
-          setViewerUserId(null);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
+    void refreshChats();
+  }, [pathname, refreshChats]);
+
+  useEffect(() => {
+    const onChatsChanged = () => {
+      void refreshChats();
     };
-  }, [pathname]);
+    window.addEventListener(CHATS_CHANGED_EVENT, onChatsChanged);
+    return () => window.removeEventListener(CHATS_CHANGED_EVENT, onChatsChanged);
+  }, [refreshChats]);
 
   const setExpanded = useCallback((expanded: boolean) => {
     setSidebarExpanded(expanded);
@@ -92,6 +96,7 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
   }, [setExpanded, sidebarExpanded]);
 
   const onNewChat = useCallback(() => {
+    stashPendingChatVisibility("personal");
     if (handlers) {
       handlers.onNewChat();
       return;
@@ -100,6 +105,7 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
   }, [handlers, router]);
 
   const onNewSharedChat = useCallback(() => {
+    stashPendingChatVisibility("shared");
     if (handlers?.onNewSharedChat) {
       handlers.onNewSharedChat();
       return;
@@ -122,27 +128,30 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
     (chatId: string) => {
       if (handlers) {
         handlers.onDeleteChat(chatId);
+        setChats((current) => current.filter((chat) => chat.id !== chatId));
         return;
       }
       void (async () => {
-        await deleteChat(chatId);
-        setChats((current) => current.filter((chat) => chat.id !== chatId));
-        if (readChatIdFromLocation() === chatId) {
-          router.push("/chat");
+        try {
+          await deleteChat(chatId);
+          setChats((current) => current.filter((chat) => chat.id !== chatId));
+          notifyChatsChanged();
+          if (readChatIdFromLocation() === chatId) {
+            router.push("/chat");
+          }
+        } catch {
+          await refreshChats();
         }
       })();
     },
-    [handlers, router],
+    [handlers, refreshChats, router],
   );
 
   const onRenameChat = useCallback(
     async (chatId: string, title: string) => {
       if (handlers) {
         await handlers.onRenameChat(chatId, title);
-        const listed = await listChats().catch(() => null);
-        if (listed) {
-          setChats([...listed.chats]);
-        }
+        await refreshChats();
         return;
       }
       const existing = chats.find((chat) => chat.id === chatId);
@@ -151,17 +160,28 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
         ...(existing?.visibility === "shared" ? { expectedRevision: existing.revision } : {}),
       });
       setChats((current) => upsertChatSummary(current, chat));
+      notifyChatsChanged();
     },
-    [chats, handlers],
+    [chats, handlers, refreshChats],
   );
 
-  const onShareChat = useCallback(async (chatId: string) => {
-    const chat = await updateChat(chatId, { visibility: "shared" });
-    setChats((current) => upsertChatSummary(current, chat));
-  }, []);
+  const onShareChat = useCallback(
+    async (chatId: string) => {
+      try {
+        const chat = await updateChat(chatId, { visibility: "shared" });
+        setChats((current) => upsertChatSummary(current, chat));
+        notifyChatsChanged();
+        await handlers?.onShareChatApplied?.(chatId);
+      } catch {
+        await refreshChats();
+      }
+    },
+    [handlers, refreshChats],
+  );
 
   const onRunPlaybook = useCallback(
     (prompt: string) => {
+      stashPendingChatVisibility("personal");
       if (handlers) {
         handlers.onRunPlaybook(prompt);
         return;
@@ -199,33 +219,19 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onNewChat, setExpanded, toggleExpanded]);
 
-  // Keep shell chat list in sync when chat workspace creates/updates chats.
-  useEffect(() => {
-    if (!handlers) {
-      return;
-    }
-    // Refresh list when returning from chat workspace remounts / title changes.
-    void listChats()
-      .then((listed) => {
-        setChats([...listed.chats]);
-        setCanCreateShared(listed.canCreateShared);
-        setViewerUserId(listed.viewerUserId);
-        return undefined;
-      })
-      .catch(() => undefined);
-  }, [handlers?.activeChatId, handlers?.currentTitle, handlers]);
-
   const activeChatId = handlers?.activeChatId ?? (pathname === "/chat" ? urlChatId : null);
   const currentTitle =
     handlers?.currentTitle ??
     (pathname === "/playbooks" ? "Playbooks" : pathname === "/schedules" ? "Schedules" : null);
+  const draftVisibility = handlers?.draftVisibility ?? "personal";
 
   const headerTitle =
     pathname === "/playbooks"
       ? "Playbooks"
       : pathname === "/schedules"
         ? "Schedules"
-        : (handlers?.currentTitle ?? "New chat");
+        : (handlers?.currentTitle ??
+          (draftVisibility === "shared" ? "New shared chat" : "New chat"));
 
   const closeMobileDrawer = useCallback(() => {
     setMobileDrawerOpen(false);
@@ -283,6 +289,7 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
     canCreateShared,
     chats,
     currentTitle: pathname === "/chat" ? currentTitle : null,
+    draftVisibility: pathname === "/chat" ? draftVisibility : "personal",
     onDeleteChat,
     onNewSharedChat,
     onRenameChat,

@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { notifyWorkspacesChanged } from "@/lib/auth/workspace-events";
 import { WorkspaceByoaSection } from "@/components/chat/workspace-byoa-section";
 import { WorkspaceScimSection } from "@/components/chat/workspace-scim-section";
 import { WorkspaceSsoSection } from "@/components/chat/workspace-sso-section";
@@ -88,7 +88,6 @@ function memberLabel(member: MemberRow): string {
 }
 
 export default function WorkspaceSettingsPage() {
-  const router = useRouter();
   const [workspaceName, setWorkspaceName] = useState<string | null>(null);
   const [workspaceKind, setWorkspaceKind] = useState<"personal" | "team" | null>(null);
   const [viewerUserId, setViewerUserId] = useState<string | null>(null);
@@ -99,10 +98,22 @@ export default function WorkspaceSettingsPage() {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"member" | "admin">("member");
   const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
   const [emailDeliveryNote, setEmailDeliveryNote] = useState<string | null>(null);
+  const copiedResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const markCopied = useCallback((id: string) => {
+    setCopiedId(id);
+    if (copiedResetRef.current) {
+      clearTimeout(copiedResetRef.current);
+    }
+    copiedResetRef.current = setTimeout(() => {
+      setCopiedId(null);
+    }, 2000);
+  }, []);
 
   const refresh = useCallback(async () => {
     setError(null);
@@ -191,6 +202,8 @@ export default function WorkspaceSettingsPage() {
       }
     } catch {
       setError("Unable to load workspace settings.");
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -198,8 +211,16 @@ export default function WorkspaceSettingsPage() {
     void refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    return () => {
+      if (copiedResetRef.current) {
+        clearTimeout(copiedResetRef.current);
+      }
+    };
+  }, []);
+
   async function onCreate() {
-    setPending(true);
+    setPendingAction("invite-create");
     setError(null);
     setCreatedUrl(null);
     setEmailDeliveryNote(null);
@@ -222,7 +243,7 @@ export default function WorkspaceSettingsPage() {
             ? data.error
             : "Unable to create invite.",
         );
-        setPending(false);
+        setPendingAction(null);
         return;
       }
       if (
@@ -235,7 +256,7 @@ export default function WorkspaceSettingsPage() {
         setCreatedUrl(url);
         try {
           await navigator.clipboard.writeText(url);
-          setCopiedId(data.invite.id);
+          markCopied(data.invite.id);
         } catch {
           // ignore clipboard failures
         }
@@ -259,16 +280,19 @@ export default function WorkspaceSettingsPage() {
         }
       }
       setEmail("");
-      setPending(false);
+      setPendingAction(null);
       await refresh();
     } catch {
-      setPending(false);
+      setPendingAction(null);
       setError("Unable to create invite.");
     }
   }
 
   async function onRevoke(inviteId: string) {
-    setPending(true);
+    if (!window.confirm("Revoke this invite? The link will stop working.")) {
+      return;
+    }
+    setPendingAction(`invite-revoke:${inviteId}`);
     setError(null);
     try {
       const response = await fetch(`/api/workspaces/invites/${inviteId}`, {
@@ -284,19 +308,23 @@ export default function WorkspaceSettingsPage() {
             ? data.error
             : "Unable to revoke invite.",
         );
-        setPending(false);
+        setPendingAction(null);
         return;
       }
-      setPending(false);
+      setPendingAction(null);
       await refresh();
     } catch {
-      setPending(false);
+      setPendingAction(null);
       setError("Unable to revoke invite.");
     }
   }
 
   async function onChangeRole(userId: string, nextRole: "admin" | "member") {
-    setPending(true);
+    const previous = members.find((member) => member.userId === userId)?.role;
+    setMembers((current) =>
+      current.map((member) => (member.userId === userId ? { ...member, role: nextRole } : member)),
+    );
+    setPendingAction(`role:${userId}`);
     setError(null);
     try {
       const response = await fetch(`/api/workspaces/members/${encodeURIComponent(userId)}`, {
@@ -306,6 +334,13 @@ export default function WorkspaceSettingsPage() {
       });
       const data: unknown = await response.json();
       if (!response.ok) {
+        if (previous) {
+          setMembers((current) =>
+            current.map((member) =>
+              member.userId === userId ? { ...member, role: previous } : member,
+            ),
+          );
+        }
         setError(
           typeof data === "object" &&
             data !== null &&
@@ -314,19 +349,34 @@ export default function WorkspaceSettingsPage() {
             ? data.error
             : "Unable to update role.",
         );
-        setPending(false);
+        setPendingAction(null);
         return;
       }
-      setPending(false);
+      setPendingAction(null);
+      notifyWorkspacesChanged();
       await refresh();
     } catch {
-      setPending(false);
+      if (previous) {
+        setMembers((current) =>
+          current.map((member) =>
+            member.userId === userId ? { ...member, role: previous } : member,
+          ),
+        );
+      }
+      setPendingAction(null);
       setError("Unable to update role.");
     }
   }
 
   async function onRemove(userId: string) {
-    setPending(true);
+    const isSelf = userId === viewerUserId;
+    const label = isSelf
+      ? "Leave this workspace? You will lose access until invited again."
+      : "Remove this member from the workspace?";
+    if (!window.confirm(label)) {
+      return;
+    }
+    setPendingAction(`remove:${userId}`);
     setError(null);
     try {
       const response = await fetch(`/api/workspaces/members/${encodeURIComponent(userId)}`, {
@@ -342,24 +392,29 @@ export default function WorkspaceSettingsPage() {
             ? data.error
             : "Unable to remove member.",
         );
-        setPending(false);
+        setPendingAction(null);
         return;
       }
-      setPending(false);
-      if (userId === viewerUserId) {
-        router.replace("/chat");
-        router.refresh();
+      setPendingAction(null);
+      notifyWorkspacesChanged();
+      if (isSelf) {
+        window.location.assign("/chat");
         return;
       }
       await refresh();
     } catch {
-      setPending(false);
+      setPendingAction(null);
       setError("Unable to remove member.");
     }
   }
 
   async function onTransfer(userId: string) {
-    setPending(true);
+    const target = members.find((member) => member.userId === userId);
+    const label = target ? memberLabel(target) : "this member";
+    if (!window.confirm(`Make ${label} the workspace owner? You will become an admin.`)) {
+      return;
+    }
+    setPendingAction(`transfer:${userId}`);
     setError(null);
     try {
       const response = await fetch("/api/workspaces/transfer", {
@@ -377,19 +432,21 @@ export default function WorkspaceSettingsPage() {
             ? data.error
             : "Unable to transfer ownership.",
         );
-        setPending(false);
+        setPendingAction(null);
         return;
       }
-      setPending(false);
+      setPendingAction(null);
+      notifyWorkspacesChanged();
       await refresh();
     } catch {
-      setPending(false);
+      setPendingAction(null);
       setError("Unable to transfer ownership.");
     }
   }
 
   const isTeam = workspaceKind === "team";
   const ownerCount = members.filter((member) => member.role === "owner").length;
+  const busy = pendingAction !== null;
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-6 p-6">
@@ -404,8 +461,10 @@ export default function WorkspaceSettingsPage() {
 
       <div className="space-y-2">
         <h2 className="text-sm font-medium">Members</h2>
-        {members.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No members loaded.</p>
+        {loading ? (
+          <p className="text-muted-foreground text-sm">Loading members…</p>
+        ) : members.length === 0 ? (
+          <p className="text-muted-foreground text-sm">No members found for this workspace.</p>
         ) : (
           <ul className="space-y-2">
             {members.map((member) => {
@@ -424,6 +483,10 @@ export default function WorkspaceSettingsPage() {
                     !(viewerRole === "admin" && member.role === "admin"));
               const canTransfer =
                 isTeam && viewerRole === "owner" && !isSelf && member.role !== "owner";
+              const rowBusy =
+                pendingAction === `role:${member.userId}` ||
+                pendingAction === `remove:${member.userId}` ||
+                pendingAction === `transfer:${member.userId}`;
               return (
                 <li
                   className="border-border flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between"
@@ -440,13 +503,13 @@ export default function WorkspaceSettingsPage() {
                     {canEditRole ? (
                       <select
                         className="border-border bg-background rounded-md border px-2 py-1 text-xs"
-                        disabled={pending}
+                        disabled={rowBusy}
                         onChange={(event) => {
                           if (event.target.value === "admin" || event.target.value === "member") {
                             void onChangeRole(member.userId, event.target.value);
                           }
                         }}
-                        value={member.role}
+                        value={member.role === "admin" ? "admin" : "member"}
                       >
                         <option value="member">Member</option>
                         <option value="admin">Admin</option>
@@ -454,7 +517,7 @@ export default function WorkspaceSettingsPage() {
                     ) : null}
                     {canTransfer ? (
                       <Button
-                        disabled={pending}
+                        disabled={busy}
                         onClick={() => {
                           void onTransfer(member.userId);
                         }}
@@ -462,12 +525,14 @@ export default function WorkspaceSettingsPage() {
                         type="button"
                         variant="outline"
                       >
-                        Make owner
+                        {pendingAction === `transfer:${member.userId}`
+                          ? "Transferring…"
+                          : "Make owner"}
                       </Button>
                     ) : null}
                     {canRemove ? (
                       <Button
-                        disabled={pending}
+                        disabled={busy}
                         onClick={() => {
                           void onRemove(member.userId);
                         }}
@@ -475,7 +540,13 @@ export default function WorkspaceSettingsPage() {
                         type="button"
                         variant="ghost"
                       >
-                        {isSelf ? "Leave" : "Remove"}
+                        {pendingAction === `remove:${member.userId}`
+                          ? isSelf
+                            ? "Leaving…"
+                            : "Removing…"
+                          : isSelf
+                            ? "Leave"
+                            : "Remove"}
                       </Button>
                     ) : null}
                   </div>
@@ -525,13 +596,13 @@ export default function WorkspaceSettingsPage() {
             </select>
           </div>
           <Button
-            disabled={pending}
+            disabled={busy}
             onClick={() => {
               void onCreate();
             }}
             type="button"
           >
-            {pending ? "Creating…" : "Create invite link"}
+            {pendingAction === "invite-create" ? "Creating…" : "Create invite link"}
           </Button>
           {emailDeliveryNote ? (
             <p className="text-muted-foreground text-xs">{emailDeliveryNote}</p>
@@ -578,12 +649,12 @@ export default function WorkspaceSettingsPage() {
                   </div>
                   <div className="flex shrink-0 gap-2">
                     <Button
-                      disabled={pending}
+                      disabled={busy}
                       onClick={() => {
                         void (async () => {
                           try {
                             await navigator.clipboard.writeText(inviteUrl(invite.token));
-                            setCopiedId(invite.id);
+                            markCopied(invite.id);
                           } catch {
                             setCreatedUrl(inviteUrl(invite.token));
                           }
@@ -596,7 +667,7 @@ export default function WorkspaceSettingsPage() {
                       {copiedId === invite.id ? "Copied" : "Copy link"}
                     </Button>
                     <Button
-                      disabled={pending}
+                      disabled={busy}
                       onClick={() => {
                         void onRevoke(invite.id);
                       }}
@@ -604,7 +675,7 @@ export default function WorkspaceSettingsPage() {
                       type="button"
                       variant="ghost"
                     >
-                      Revoke
+                      {pendingAction === `invite-revoke:${invite.id}` ? "Revoking…" : "Revoke"}
                     </Button>
                   </div>
                 </li>

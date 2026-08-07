@@ -123,6 +123,7 @@ function ByoaProviderCard({ connectionId }: { readonly connectionId: string }) {
                 try {
                   await navigator.clipboard.writeText(info.callbackUrl);
                   setCopied(true);
+                  window.setTimeout(() => setCopied(false), 2000);
                 } catch {
                   setCopied(false);
                 }

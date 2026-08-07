@@ -108,13 +108,15 @@ export function WorkspaceScimSection(props: {
         </p>
       </div>
 
-      {!status?.ssoLicensed ? (
+      {!status ? (
+        <p className="text-muted-foreground text-xs">Loading SCIM settings…</p>
+      ) : !status.ssoLicensed ? (
         <p className="text-muted-foreground text-xs">SCIM is locked by the current license.</p>
-      ) : null}
-
-      {error ? <p className="text-destructive text-xs">{error}</p> : null}
-
-      {status?.enabled ? (
+      ) : !status.enabled ? (
+        <p className="text-muted-foreground text-xs">
+          SCIM is unavailable for this workspace. Configure SSO for the team workspace first.
+        </p>
+      ) : (
         <div className="space-y-2 text-xs">
           <p>
             Status: {status.connected ? "Token active" : "No token"}
@@ -163,7 +165,9 @@ export function WorkspaceScimSection(props: {
             </p>
           )}
         </div>
-      ) : null}
+      )}
+
+      {error ? <p className="text-destructive text-xs">{error}</p> : null}
     </section>
   );
 }

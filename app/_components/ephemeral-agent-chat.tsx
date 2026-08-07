@@ -143,6 +143,14 @@ export function EphemeralAgentChat({
   const revisionRef = useRef(initialRevision);
   const visibilityRef = useRef<ChatVisibility>(initialVisibility);
   const turnLockHeldRef = useRef(false);
+
+  useEffect(() => {
+    // Keep concurrency metadata aligned when the open thread is shared from the sidebar.
+    visibilityRef.current = initialVisibility;
+    if (initialVisibility === "shared") {
+      revisionRef.current = Math.max(revisionRef.current, initialRevision);
+    }
+  }, [initialRevision, initialVisibility]);
   const cancellationRef = useRef<Cancellation>({ requested: false });
   const agentStopRef = useRef<() => void>(() => undefined);
   const disposalBoundaryRef = useRef(false);

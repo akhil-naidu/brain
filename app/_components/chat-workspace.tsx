@@ -16,10 +16,14 @@ import {
   replaceChatUrl,
   updateChat,
 } from "@/lib/chat/chats-api";
-import { stashPendingChatVisibility } from "@/lib/chat/pending-chat-visibility";
+import { notifyChatsChanged } from "@/lib/chat/chat-list-events";
+import {
+  peekPendingChatVisibility,
+  stashPendingChatVisibility,
+} from "@/lib/chat/pending-chat-visibility";
 import { stashPendingPlaybookRun } from "@/lib/chat/pending-playbook-run";
 import { createFallbackTitle, normalizeChatTitle } from "@/lib/chat/title";
-import type { ChatRecord, ChatSummary } from "@/lib/chat/store/types";
+import type { ChatRecord, ChatSummary, ChatVisibility } from "@/lib/chat/store/types";
 
 type ActiveChatState = {
   readonly id: string | null;
@@ -27,18 +31,18 @@ type ActiveChatState = {
   readonly initialSession: SessionState | null;
   readonly initialEvents: readonly HandleMessageStreamEvent[];
   readonly initialRevision: number;
-  readonly initialVisibility: ChatRecord["visibility"];
+  readonly initialVisibility: ChatVisibility;
   readonly remountKey: number;
 };
 
-function emptyActive(remountKey: number): ActiveChatState {
+function emptyActive(remountKey: number, visibility: ChatVisibility = "personal"): ActiveChatState {
   return {
     id: null,
     title: null,
     initialSession: null,
     initialEvents: [],
     initialRevision: 0,
-    initialVisibility: "personal",
+    initialVisibility: visibility,
     remountKey,
   };
 }
@@ -63,6 +67,7 @@ export function ChatWorkspace() {
         const urlChatId = readChatIdFromLocation();
         if (!urlChatId) {
           if (!cancelled) {
+            setActive(emptyActive(0, peekPendingChatVisibility()));
             setBootstrapped(true);
           }
           return;
@@ -83,7 +88,7 @@ export function ChatWorkspace() {
           });
         } catch {
           replaceChatUrl(null);
-          setActive(emptyActive(0));
+          setActive(emptyActive(0, peekPendingChatVisibility()));
         }
         if (!cancelled) {
           setBootstrapped(true);
@@ -163,7 +168,7 @@ export function ChatWorkspace() {
       stashPendingChatVisibility("personal");
       replaceChatUrl(null);
       setDraft("");
-      setActive((current) => emptyActive(current.remountKey + 1));
+      setActive((current) => emptyActive(current.remountKey + 1, "personal"));
     });
   }, [runWithDisposal]);
 
@@ -172,7 +177,7 @@ export function ChatWorkspace() {
       stashPendingChatVisibility("shared");
       replaceChatUrl(null);
       setDraft("");
-      setActive((current) => emptyActive(current.remountKey + 1));
+      setActive((current) => emptyActive(current.remountKey + 1, "shared"));
     });
   }, [runWithDisposal]);
 
@@ -211,6 +216,7 @@ export function ChatWorkspace() {
     (chatId: string) => {
       void runWithDisposal(async () => {
         await deleteChat(chatId);
+        notifyChatsChanged();
         if (active.id === chatId) {
           replaceChatUrl(null);
           setDraft("");
@@ -238,8 +244,27 @@ export function ChatWorkspace() {
             }
           : currentActive,
       );
+      notifyChatsChanged();
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : "Unable to rename chat.");
+    }
+  }, []);
+
+  const handleShareChatApplied = useCallback(async (chatId: string) => {
+    try {
+      const chat = await getChat(chatId);
+      setActive((current) =>
+        current.id === chat.id
+          ? {
+              ...current,
+              title: chat.title,
+              initialRevision: chat.revision,
+              initialVisibility: chat.visibility,
+            }
+          : current,
+      );
+    } catch {
+      // Sidebar already reflects share; open-thread sync is best-effort.
     }
   }, []);
 
@@ -252,6 +277,7 @@ export function ChatWorkspace() {
       initialRevision: chat.revision,
       initialVisibility: chat.visibility,
     }));
+    notifyChatsChanged();
   }, []);
 
   const handleChatUpdated = useCallback((chat: ChatSummary) => {
@@ -278,6 +304,7 @@ export function ChatWorkspace() {
     setHandlers({
       activeChatId: active.id,
       currentTitle: active.title,
+      draftVisibility: active.initialVisibility,
       threadActions,
       copyState,
       onCopyChat: handleCopyChat,
@@ -285,12 +312,14 @@ export function ChatWorkspace() {
       onNewChat: handleNewChat,
       onNewSharedChat: handleNewSharedChat,
       onRenameChat: handleRenameChat,
+      onShareChatApplied: handleShareChatApplied,
       onRunPlaybook: handleRunPlaybook,
       onSelectChat: handleSelectChat,
     });
     return () => setHandlers(null);
   }, [
     active.id,
+    active.initialVisibility,
     active.title,
     copyState,
     handleCopyChat,
@@ -298,6 +327,7 @@ export function ChatWorkspace() {
     handleNewChat,
     handleNewSharedChat,
     handleRenameChat,
+    handleShareChatApplied,
     handleRunPlaybook,
     handleSelectChat,
     setHandlers,

@@ -6,6 +6,7 @@ import type { ChatThreadActions } from "@/app/_components/ephemeral-agent-chat";
 export type ChatNavHandlers = {
   readonly activeChatId: string | null;
   readonly currentTitle: string | null;
+  readonly draftVisibility: "personal" | "shared";
   readonly threadActions: ChatThreadActions | null;
   readonly copyState: "idle" | "copied" | "error";
   readonly onCopyChat: () => void;
@@ -13,6 +14,7 @@ export type ChatNavHandlers = {
   readonly onNewChat: () => void;
   readonly onNewSharedChat?: () => void;
   readonly onRenameChat: (chatId: string, title: string) => void | Promise<void>;
+  readonly onShareChatApplied?: (chatId: string) => void | Promise<void>;
   readonly onRunPlaybook: (prompt: string) => void;
   readonly onSelectChat: (chatId: string) => void;
 };
