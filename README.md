@@ -68,8 +68,10 @@ Open [http://localhost:3000](http://localhost:3000).
 2. Sign in → **`/chat`**
 3. Connect MCP apps and browse loaded tools on **`/tools`**
 
-> **Tip:** Vitest uses the same Compose Postgres. If `/setup` disappears after running tests, wipe the volume:  
-> `docker compose down -v && docker compose up -d db`
+> **Tip:** Vitest uses a separate database `brain_test` (created by Compose init) so `pnpm test` / `pnpm verify` will not wipe your local operator account on `brain`.  
+> If `brain_test` is missing on an older volume:  
+> `docker compose exec db psql -U brain -d brain -c 'CREATE DATABASE brain_test;'`  
+> To reset local auth data entirely: `docker compose down -v && docker compose up -d db`, then open `/setup`.
 
 ---
 

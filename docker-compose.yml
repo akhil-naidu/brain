@@ -9,6 +9,8 @@ services:
       POSTGRES_DB: brain
     volumes:
       - brain_pg_data:/var/lib/postgresql/data
+      # Runs only on first volume init. Existing volumes: see README tip.
+      - ./docker/postgres/01-create-test-db.sql:/docker-entrypoint-initdb.d/01-create-test-db.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U brain -d brain"]
       interval: 3s

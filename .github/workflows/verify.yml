@@ -31,6 +31,8 @@ jobs:
           --health-retries 10
 
     env:
+      # Vitest defaults to brain_test locally; CI reuses the service DB name.
+      BRAIN_TEST_DATABASE_URL: postgres://brain:brain@127.0.0.1:5432/brain
       BRAIN_DATABASE_URL: postgres://brain:brain@127.0.0.1:5432/brain
       BETTER_AUTH_SECRET: test-only-better-auth-secret-32chars!!
 
