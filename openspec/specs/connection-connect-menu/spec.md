@@ -110,6 +110,11 @@ The host MUST expose a setup endpoint for static-credential MCP connections that
 - **WHEN** a signed-in user requests setup for a static-credential connection
 - **THEN** the response includes whether a client secret is required, whether credentials exist, credential source when known, and the public callback URL — and MUST NOT include client secrets
 
+#### Scenario: Managers can edit saved client id
+- **WHEN** a user who can manage credentials requests setup and a client id is already stored for that scope
+- **THEN** the response includes that stored client id for editing, and MUST still omit client secrets
+- **AND** saving with an empty secret keeps the previously stored secret when one exists
+
 #### Scenario: Clearing removes only stored credentials
 - **WHEN** the operator deletes setup for a connection
 - **THEN** the system removes the UI-stored credentials file without clearing env-based credentials

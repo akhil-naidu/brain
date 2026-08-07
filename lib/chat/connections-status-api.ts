@@ -93,6 +93,8 @@ const connectionSetupSchema = z.object({
   hasWorkspaceCredentials: z.boolean().optional(),
   hasCredentials: z.boolean(),
   credentialSource: z.enum(["workspace", "stored", "env"]).nullable(),
+  /** Saved app id for managers to edit. Secrets are never returned. */
+  storedClientId: z.string().nullable().optional(),
   clientIdEnv: z.string().optional(),
   clientSecretEnv: z.string().optional(),
   callbackPath: z.string(),

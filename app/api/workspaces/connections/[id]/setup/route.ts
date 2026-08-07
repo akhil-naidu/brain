@@ -49,6 +49,7 @@ export async function GET(request: Request, context: RouteContext) {
   const resolved = await resolveProviderAppCredentials(provider, process.env, workspaceId);
   const origin = resolvePublicOrigin(request);
   const callbackPath = connectionCallbackPath(provider.name);
+  const canManageCredentials = isWorkspaceAdminRole(session.session.role);
 
   return NextResponse.json({
     id: provider.name,
@@ -57,11 +58,13 @@ export async function GET(request: Request, context: RouteContext) {
     hasWorkspaceCredentials: Boolean(stored?.clientId),
     hasCredentials: Boolean(resolved?.clientId),
     credentialSource: resolved?.source ?? null,
+    // Non-secret client id for managers to edit; never return client secrets.
+    storedClientId: canManageCredentials ? (stored?.clientId ?? null) : null,
     clientIdEnv: provider.clientIdEnv,
     clientSecretEnv: provider.clientSecretEnv,
     callbackPath,
     callbackUrl: new URL(callbackPath, origin).toString(),
-    canManageCredentials: isWorkspaceAdminRole(session.session.role),
+    canManageCredentials,
     workspaceId,
   });
 }
@@ -102,14 +105,16 @@ export async function PUT(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Client ID is required." }, { status: 400 });
   }
 
-  if (provider.clientSecretEnv && !parsed.data.clientSecret?.trim()) {
+  const existing = await readWorkspaceAppCredentials(session.session.workspaceId, provider.name);
+  const nextSecret = parsed.data.clientSecret?.trim() || existing?.clientSecret;
+  if (provider.clientSecretEnv && !nextSecret) {
     return NextResponse.json({ error: "Client secret is required." }, { status: 400 });
   }
 
   try {
     await writeWorkspaceAppCredentials(session.session.workspaceId, provider.name, {
       clientId: parsed.data.clientId,
-      clientSecret: parsed.data.clientSecret,
+      clientSecret: nextSecret,
     });
     return NextResponse.json({
       ok: true,
