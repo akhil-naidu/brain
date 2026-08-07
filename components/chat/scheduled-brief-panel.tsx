@@ -2,6 +2,7 @@
 
 import { LoaderCircleIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { PanelSkeleton } from "@/components/loading/skeletons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -143,11 +144,7 @@ export function ScheduledBriefPanel({
   }
 
   if (!schedule) {
-    return (
-      <p className={cn("text-muted-foreground mx-auto mt-6 max-w-md text-sm", className)}>
-        Loading…
-      </p>
-    );
+    return <PanelSkeleton className={cn("mt-6", className)} />;
   }
 
   const busy = disabled || saving || running;

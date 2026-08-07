@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 
 type ScimStatus = {
@@ -109,7 +110,11 @@ export function WorkspaceScimSection(props: {
       </div>
 
       {!status ? (
-        <p className="text-muted-foreground text-xs">Loading SCIM settings…</p>
+        <output aria-busy="true" className="block space-y-2">
+          <Skeleton className="h-3 w-40" />
+          <Skeleton className="h-3 w-full max-w-sm" />
+          <Skeleton className="h-9 w-full rounded-lg" />
+        </output>
       ) : !status.ssoLicensed ? (
         <p className="text-muted-foreground text-xs">SCIM is locked by the current license.</p>
       ) : !status.enabled ? (

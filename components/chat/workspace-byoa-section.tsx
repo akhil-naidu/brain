@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { FormFieldsSkeleton } from "@/components/loading/skeletons";
 import { SettingsPanel, SettingsSection } from "@/components/settings/settings-shell";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
@@ -90,7 +91,7 @@ function ByoaProviderCard({ connectionId }: { readonly connectionId: string }) {
   if (!info && !error) {
     return (
       <SettingsPanel className="p-4">
-        <p className="text-muted-foreground text-sm">Loading {connectionId}…</p>
+        <FormFieldsSkeleton fields={2} />
       </SettingsPanel>
     );
   }

@@ -3,6 +3,7 @@
 import { LoaderCircleIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { PanelSkeleton } from "@/components/loading/skeletons";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel, FieldSelect } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -114,11 +115,7 @@ export function ScheduledPlaybooksPanel({
   }
 
   if (!schedules) {
-    return (
-      <p className={cn("text-muted-foreground mx-auto mt-6 max-w-md text-sm", className)}>
-        Loading schedules…
-      </p>
-    );
+    return <PanelSkeleton className={cn("mt-6", className)} />;
   }
 
   const atLimit = schedules.length >= MAX_SCHEDULED_PLAYBOOKS;

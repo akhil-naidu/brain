@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { FormFieldsSkeleton } from "@/components/loading/skeletons";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -158,7 +159,7 @@ export function ConnectionSetupDialog({
         </DialogHeader>
 
         {loading ? (
-          <p className="text-muted-foreground text-sm">Loading…</p>
+          <FormFieldsSkeleton fields={2} />
         ) : (
           <div className="flex flex-col gap-3">
             {info ? (
