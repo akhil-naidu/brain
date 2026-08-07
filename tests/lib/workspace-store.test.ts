@@ -52,6 +52,18 @@ if (!url) {
       expect((await store.resolveActiveWorkspace("user-1")).id).toBe(personal.id);
     });
 
+    it("persists policy updates even when the seed row is missing", async () => {
+      const store = openStore();
+      await pool.query("TRUNCATE brain_instance_policy");
+      expect((await store.getPolicies()).signupMode).toBe("invite-only");
+      await store.updatePolicies({ signupMode: "open" });
+      expect((await store.getPolicies()).signupMode).toBe("open");
+      const row = await pool.query<{ signup_mode: string }>(
+        "SELECT signup_mode FROM brain_instance_policy WHERE id = 1",
+      );
+      expect(row.rows[0]?.signup_mode).toBe("open");
+    });
+
     it("creates team workspace and isolates membership", async () => {
       const store = openStore();
       await store.ensurePersonalWorkspace("user-1");

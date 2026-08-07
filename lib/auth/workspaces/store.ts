@@ -102,11 +102,17 @@ export function createWorkspaceStore(pool: Pool) {
       allowCreateWorkspace: patch.allowCreateWorkspace ?? current.allowCreateWorkspace,
       allowForgotPassword: patch.allowForgotPassword ?? current.allowForgotPassword,
     };
+    // Upsert: a bare UPDATE no-ops when the seed row is missing (e.g. after TRUNCATE
+    // while the process has already run ensureBrainSchema once).
     await pool.query(
-      `UPDATE brain_instance_policy
-       SET signup_mode = $1, auto_personal_workspace = $2, allow_create_workspace = $3,
-           allow_forgot_password = $4
-       WHERE id = 1`,
+      `INSERT INTO brain_instance_policy (
+         id, signup_mode, auto_personal_workspace, allow_create_workspace, allow_forgot_password
+       ) VALUES (1, $1, $2, $3, $4)
+       ON CONFLICT (id) DO UPDATE SET
+         signup_mode = EXCLUDED.signup_mode,
+         auto_personal_workspace = EXCLUDED.auto_personal_workspace,
+         allow_create_workspace = EXCLUDED.allow_create_workspace,
+         allow_forgot_password = EXCLUDED.allow_forgot_password`,
       [
         next.signupMode,
         next.autoPersonalWorkspace,
