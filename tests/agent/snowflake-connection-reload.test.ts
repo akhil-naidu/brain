@@ -1,8 +1,13 @@
-import { mkdir, mkdtemp, rm, stat, utimes, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { reloadSnowflakeConnectionModule } from "@/agent/lib/snowflake-connection-reload";
+import {
+  reloadSnowflakeConnectionModule,
+  renderSnowflakeCompiledMcpUrlModule,
+  SNOWFLAKE_MCP_URL_GENERATED_RELATIVE,
+} from "@/agent/lib/snowflake-connection-reload";
+import { SNOWFLAKE_PLACEHOLDER_MCP_URL } from "@/agent/connections/snowflake-env";
 
 const temporaryDirectories: string[] = [];
 
@@ -15,18 +20,39 @@ afterEach(async () => {
 });
 
 describe("reloadSnowflakeConnectionModule", () => {
-  it("touches snowflake.ts so eve can reload the connection URL", async () => {
+  it("writes the account MCP URL into the generated module for eve compile", async () => {
     const directory = await mkdtemp(path.join(tmpdir(), "brain-snowflake-reload-"));
     temporaryDirectories.push(directory);
-    const filePath = path.join(directory, "agent/connections/snowflake.ts");
-    await mkdir(path.dirname(filePath), { recursive: true });
-    await writeFile(filePath, "export default {};\n", "utf8");
-    const past = new Date(Date.now() - 60_000);
-    await utimes(filePath, past, past);
-    const before = (await stat(filePath)).mtimeMs;
+    const generatedPath = path.join(directory, SNOWFLAKE_MCP_URL_GENERATED_RELATIVE);
+    await mkdir(path.dirname(generatedPath), { recursive: true });
+    await writeFile(
+      generatedPath,
+      renderSnowflakeCompiledMcpUrlModule(SNOWFLAKE_PLACEHOLDER_MCP_URL),
+      "utf8",
+    );
 
-    await reloadSnowflakeConnectionModule(directory);
-    const after = (await stat(filePath)).mtimeMs;
-    expect(after).toBeGreaterThan(before);
+    const mcpUrl =
+      "https://myorg-myaccount.snowflakecomputing.com/api/v2/databases/ANALYTICS/schemas/MCP/mcp-servers/BUSINESS_AGENT";
+    await reloadSnowflakeConnectionModule(directory, mcpUrl);
+
+    const contents = await readFile(generatedPath, "utf8");
+    expect(contents).toContain(mcpUrl);
+    expect(contents).toContain("SNOWFLAKE_COMPILED_MCP_URL");
+    expect(contents).not.toContain(SNOWFLAKE_PLACEHOLDER_MCP_URL);
+  });
+
+  it("resets to the placeholder when mcpUrl is null", async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), "brain-snowflake-reload-"));
+    temporaryDirectories.push(directory);
+    const generatedPath = path.join(directory, SNOWFLAKE_MCP_URL_GENERATED_RELATIVE);
+
+    await reloadSnowflakeConnectionModule(
+      directory,
+      "https://myorg-myaccount.snowflakecomputing.com/api/v2/databases/A/schemas/B/mcp-servers/C",
+    );
+    await reloadSnowflakeConnectionModule(directory, null);
+
+    const contents = await readFile(generatedPath, "utf8");
+    expect(contents).toContain(SNOWFLAKE_PLACEHOLDER_MCP_URL);
   });
 });

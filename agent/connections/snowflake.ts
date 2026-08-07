@@ -5,6 +5,8 @@ import {
 } from "../lib/connection-credentials";
 import { approvalForTool } from "../lib/define-mcp-oauth-connection";
 import type { McpOAuthProvider } from "../lib/mcp-oauth";
+import { SNOWFLAKE_COMPILED_MCP_URL } from "./snowflake-mcp-url.generated";
+import { SNOWFLAKE_MCP_URL_ENV, SNOWFLAKE_PAT_TOKEN_ENV } from "./snowflake-env";
 
 /**
  * Snowflake-managed MCP (Cortex Agents / Analyst / Search / SQL).
@@ -13,12 +15,7 @@ import type { McpOAuthProvider } from "../lib/mcp-oauth";
  *
  * https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-mcp
  */
-export const SNOWFLAKE_MCP_URL_ENV = "SNOWFLAKE_MCP_URL";
-export const SNOWFLAKE_PAT_TOKEN_ENV = "SNOWFLAKE_PAT_TOKEN";
-
-/** Used only until Set up / env provides a real account MCP URL. */
-const SNOWFLAKE_PLACEHOLDER_MCP_URL =
-  "https://org-account.snowflakecomputing.com/api/v2/databases/EXAMPLE/schemas/EXAMPLE/mcp-servers/EXAMPLE";
+export { SNOWFLAKE_MCP_URL_ENV, SNOWFLAKE_PAT_TOKEN_ENV };
 
 const snowflakeLookup = {
   name: "snowflake",
@@ -38,10 +35,17 @@ export function resolveSnowflakePatToken(
   return resolveProviderPatTokenSync(snowflakeLookup, env);
 }
 
+/** URL eve compiles into the connection manifest (generated file, then live resolve). */
+export function snowflakeConnectionMcpUrl(
+  env: { readonly [key: string]: string | undefined } = process.env,
+): string {
+  return resolveSnowflakeMcpUrl(env) ?? SNOWFLAKE_COMPILED_MCP_URL;
+}
+
 export function createSnowflakeProvider(
   env: { readonly [key: string]: string | undefined } = process.env,
 ): McpOAuthProvider {
-  const mcpUrl = resolveSnowflakeMcpUrl(env) ?? SNOWFLAKE_PLACEHOLDER_MCP_URL;
+  const mcpUrl = snowflakeConnectionMcpUrl(env);
   let origin = "https://org-account.snowflakecomputing.com";
   try {
     origin = new URL(mcpUrl).origin;
@@ -69,7 +73,8 @@ export function createSnowflakeProvider(
 export const snowflakeProvider = createSnowflakeProvider();
 
 export default defineMcpClientConnection({
-  url: resolveSnowflakeMcpUrl() ?? SNOWFLAKE_PLACEHOLDER_MCP_URL,
+  // Eve persists this `url` into compiled-agent-manifest.json at compile time.
+  url: snowflakeConnectionMcpUrl(),
   description:
     "Snowflake-managed MCP (PAT auth, same as Cursor): Cortex Agents, Analyst, Search, SQL, and custom tools. Configure MCP URL + Programmatic Access Token in Connections → Set up.",
   auth: {

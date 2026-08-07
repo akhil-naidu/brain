@@ -125,7 +125,7 @@ export async function PUT(request: Request, context: RouteContext) {
       mcpUrl: nextMcpUrl,
     });
     if (provider.name === "snowflake") {
-      await reloadSnowflakeConnectionModule();
+      await reloadSnowflakeConnectionModule(process.cwd(), nextMcpUrl);
     }
     return NextResponse.json({
       ok: true,
@@ -152,7 +152,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
   await deleteStoredAppCredentials(provider.name);
   if (provider.name === "snowflake") {
-    await reloadSnowflakeConnectionModule();
+    await reloadSnowflakeConnectionModule(process.cwd(), null);
   }
   return NextResponse.json({ ok: true, displayName: provider.displayName });
 }

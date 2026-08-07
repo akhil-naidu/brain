@@ -13,6 +13,11 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+# Optional: bake the account MCP URL into the eve bundle at build time.
+# Runtime Set up still works via scripts/patch-snowflake-bundled-url.mjs.
+ARG SNOWFLAKE_MCP_URL
+ENV SNOWFLAKE_MCP_URL=$SNOWFLAKE_MCP_URL
+RUN node scripts/write-snowflake-compiled-url-from-env.mjs
 # eve build writes .output/server/index.mjs (proxied at :4274 by withEve).
 RUN pnpm run build
 

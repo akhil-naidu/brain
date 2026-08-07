@@ -57,17 +57,36 @@ dokku ps:restart brain
 
 ### Snowflake Set up in production
 
-Eve reads the Snowflake MCP URL when the eve process starts. Locally, `eve:dev`
-hot-reloads after Set up; in production, `start-production.mjs` watches
-`.eve/mcp-app-credentials-snowflake.json` and restarts eve when it changes.
+Eve bakes the Snowflake MCP `url` into the Nitro bundle at `eve build` time.
+Production always loads that bundled manifest (not a live re-read of `.eve`).
 
-If tools still 404 after Set up on an older image, restart once:
+Brain handles this in two ways:
+
+1. **Connections → Snowflake → Set up** writes `.eve/mcp-app-credentials-snowflake.json`.
+   `start-production.mjs` patches the baked URL under `.output`, then restarts eve.
+2. **Optional build-time bake:** set `SNOWFLAKE_MCP_URL` as a Docker build-arg /
+   Dokku config so `eve build` embeds the account URL up front. The PAT can stay
+   runtime-only (`SNOWFLAKE_PAT_TOKEN` or Set up).
 
 ```bash
-dokku ps:restart brain
+# Runtime (PAT + URL via Set up, or env fallback)
+dokku config:set brain \
+  SNOWFLAKE_MCP_URL="https://<account>.snowflakecomputing.com/api/v2/databases/<db>/schemas/<schema>/mcp-servers/<name>" \
+  SNOWFLAKE_PAT_TOKEN="..."
+
+# Ensure Dockerfile builds see SNOWFLAKE_MCP_URL (Dokku build-arg)
+dokku docker-options:add brain build '--build-arg SNOWFLAKE_MCP_URL'
 ```
 
-Redeploy from GitHub / dflow after the `Dockerfile` is on `main`.
+After Set up on a deployed image that includes the patcher, watch logs for:
+
+```text
+[start-production] Snowflake bundle URL patched (credential-change): ...
+[start-production] eve reloaded after Snowflake credential change
+```
+
+If tools still 404 on an older image without the patcher, redeploy this repo then
+either re-run Set up or `dokku ps:restart brain`.
 
 ## If you must stay on herokuish
 

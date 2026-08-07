@@ -5,14 +5,15 @@
  * reliably spawn that Nitro server in container deploys. Start it ourselves,
  * wait until the port, then boot Next.
  *
- * Snowflake's MCP `url` is resolved when eve loads the connection module. After
- * Connections → Set up writes `.eve` credentials, respawn eve so it picks up
- * the new URL (local `eve:dev` hot-reloads; production does not).
+ * Snowflake MCP `url` is baked into the Nitro bundle at `eve build` time.
+ * Production always loads that bundled manifest — so after Set up we patch
+ * `.output` with the account URL, then respawn eve.
  */
 import { spawn } from "node:child_process";
 import { existsSync, watch } from "node:fs";
 import net from "node:net";
 import { dirname, resolve } from "node:path";
+import { patchSnowflakeBundledMcpUrl } from "./patch-snowflake-bundled-url.mjs";
 
 const appRoot = process.cwd();
 const eveEntry = resolve(appRoot, ".output/server/index.mjs");
@@ -96,6 +97,19 @@ function waitForPort(port, timeoutMs = 60_000) {
   });
 }
 
+function applySnowflakeBundledUrlPatch(reason) {
+  const result = patchSnowflakeBundledMcpUrl(appRoot);
+  if (!result.ok) {
+    console.log(
+      `[start-production] Snowflake bundle URL patch skipped (${reason}): ${result.reason}`,
+    );
+    return;
+  }
+  console.log(
+    `[start-production] Snowflake bundle URL patched (${reason}): ${result.patchedFiles.join(", ")}`,
+  );
+}
+
 function startEve() {
   console.log(`[start-production] starting eve on 127.0.0.1:${evePort}`);
   const child = spawn(process.execPath, [eveEntry], {
@@ -162,8 +176,9 @@ async function restartEveAfterCredentialChange(eventType) {
   }
   restartingEve = true;
   console.log(
-    `[start-production] Snowflake credentials ${eventType}; restarting eve to load MCP URL`,
+    `[start-production] Snowflake credentials ${eventType}; patching bundled MCP URL and restarting eve`,
   );
+  applySnowflakeBundledUrlPatch("credential-change");
   const previous = eveChild;
   try {
     if (!previous.killed) {
@@ -193,6 +208,7 @@ async function restartEveAfterCredentialChange(eventType) {
   }
 }
 
+applySnowflakeBundledUrlPatch("boot");
 startEve();
 
 try {
