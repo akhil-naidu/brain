@@ -3,7 +3,7 @@ import { ChatWorkspace } from "@/app/_components/chat-workspace";
 
 export const metadata: Metadata = {
   title: "Chat",
-  description: "Brain agent chat",
+  description: "Chat with Brain on this host.",
 };
 
 export default function ChatPage() {
