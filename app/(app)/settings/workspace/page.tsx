@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { notifyWorkspacesChanged } from "@/lib/auth/workspace-events";
 import { WorkspaceScimSection } from "@/components/chat/workspace-scim-section";
 import { WorkspaceSsoSection } from "@/components/chat/workspace-sso-section";
+import { SettingsRowsSkeleton } from "@/components/loading/skeletons";
 import {
   SettingsBadge,
   SettingsPanel,
@@ -503,7 +504,7 @@ export default function WorkspaceSettingsPage() {
         >
           <SettingsPanel>
             {loading ? (
-              <p className="text-muted-foreground px-4 py-6 text-sm">Loading members…</p>
+              <SettingsRowsSkeleton rows={3} />
             ) : members.length === 0 ? (
               <p className="text-muted-foreground px-4 py-6 text-sm">
                 No members found for this workspace.

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { notifyWorkspacesChanged } from "@/lib/auth/workspace-events";
+import { FormFieldsSkeleton } from "@/components/loading/skeletons";
 import {
   SettingsBadge,
   SettingsPanel,
@@ -245,8 +246,15 @@ export default function InstanceSettingsPage() {
 
   if (!policies) {
     return (
-      <SettingsShell title="Instance">
-        <p className="text-muted-foreground text-sm">Loading instance settings…</p>
+      <SettingsShell
+        description="Host-wide license and policies for this Brain deployment."
+        title="Instance"
+      >
+        <SettingsSection title="Policies">
+          <SettingsPanel className="p-4">
+            <FormFieldsSkeleton fields={4} />
+          </SettingsPanel>
+        </SettingsSection>
       </SettingsShell>
     );
   }
