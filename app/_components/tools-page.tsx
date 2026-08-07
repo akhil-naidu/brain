@@ -144,9 +144,11 @@ export function ToolsPage() {
       description="Connect MCP apps and choose which tools Brain can use in chat."
       meta={
         <div className="flex flex-wrap items-center gap-2">
-          <SettingsBadge>{loadingStatus ? "…" : `${connectedCount} connected`}</SettingsBadge>
           <SettingsBadge>
-            {CONNECTION_ITEMS.filter((item) => enabledConnections[item.key]).length} enabled
+            {loadingStatus ? "Checking connections" : `${connectedCount} connected`}
+          </SettingsBadge>
+          <SettingsBadge>
+            {CONNECTION_ITEMS.filter((item) => enabledConnections[item.key]).length} enabled in chat
           </SettingsBadge>
         </div>
       }
@@ -168,10 +170,7 @@ export function ToolsPage() {
       ) : null}
 
       {tab === "mcp" ? (
-        <SettingsSection
-          description="Connect once, then enable a tool when you want it available for the next chat turn."
-          title="Connections"
-        >
+        <SettingsSection description="Connect once, then enable a tool when you want it available for the next chat turn.">
           <div className="grid gap-3">
             {CONNECTION_ITEMS.map(({ Icon, description, key, label }) => {
               const enabled = enabledConnections[key];

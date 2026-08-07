@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { SettingsPanel, SettingsSection } from "@/components/settings/settings-shell";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -88,22 +89,22 @@ function ByoaProviderCard({ connectionId }: { readonly connectionId: string }) {
 
   if (!info && !error) {
     return (
-      <div className="border-border rounded-lg border p-3">
+      <SettingsPanel className="p-4">
         <p className="text-muted-foreground text-sm">Loading {connectionId}…</p>
-      </div>
+      </SettingsPanel>
     );
   }
 
   if (!info) {
     return (
-      <div className="border-border rounded-lg border p-3">
+      <SettingsPanel className="p-4">
         <p className="text-destructive text-sm">{error}</p>
-      </div>
+      </SettingsPanel>
     );
   }
 
   return (
-    <div className="border-border/80 bg-card/40 space-y-3 rounded-xl border p-4">
+    <SettingsPanel className="space-y-3 p-4">
       <div className="space-y-0.5">
         <p className="text-sm font-medium capitalize">{info.displayName}</p>
         <p className="text-muted-foreground text-xs">
@@ -193,25 +194,21 @@ function ByoaProviderCard({ connectionId }: { readonly connectionId: string }) {
         </p>
       )}
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
-    </div>
+    </SettingsPanel>
   );
 }
 
 export function WorkspaceByoaSection() {
   return (
-    <div className="space-y-4">
-      <div className="space-y-1">
-        <h2 className="text-sm font-medium tracking-tight">Workspace connection apps</h2>
-        <p className="text-muted-foreground text-xs">
-          Optional BYOA overrides for this workspace. When set, Connect uses these apps instead of
-          the host/env apps. ClickUp and dFlow use dynamic registration and do not need this.
-        </p>
-      </div>
+    <SettingsSection
+      description="Optional BYOA overrides for this workspace. When set, Connect uses these apps instead of the host/env apps. ClickUp and dFlow use dynamic registration and do not need this."
+      title="Workspace apps"
+    >
       <div className="grid gap-3">
         {STATIC_CONNECTION_IDS.map((id) => (
           <ByoaProviderCard connectionId={id} key={id} />
         ))}
       </div>
-    </div>
+    </SettingsSection>
   );
 }
