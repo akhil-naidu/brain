@@ -121,7 +121,7 @@ export function ChatSidebar({
 }) {
   const pathname = usePathname();
   const chatsActive = pathname === "/chats" || pathname === "/chat";
-  const workspacesActive = pathname === "/workspaces";
+  const workspacesActive = pathname === "/workspaces" || pathname.startsWith("/workspaces/");
   const playbooksActive = pathname === "/playbooks";
   const schedulesActive = pathname === "/schedules";
   const toolsActive = pathname === "/tools";

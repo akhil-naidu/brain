@@ -137,7 +137,9 @@ describe("ChatSidebar compact nav", () => {
         onToggleSidebar={vi.fn()}
       />,
     );
-    expect(screen.getByRole("link", { name: "Chats" }).getAttribute("aria-current")).toBe("page");
+    expect(screen.getByRole("link", { name: "All chats" }).getAttribute("aria-current")).toBe(
+      "page",
+    );
     expect(screen.getByRole("link", { name: "Playbooks" }).getAttribute("aria-current")).toBeNull();
     expect(screen.getByRole("link", { name: "Tools" }).getAttribute("href")).toBe("/tools");
   });

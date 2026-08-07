@@ -240,7 +240,7 @@ export function WorkspacesPage() {
                   <div className="flex shrink-0 flex-wrap items-center gap-2">
                     {active ? (
                       <Button asChild size="sm" type="button" variant="outline">
-                        <Link href="/settings/workspace">
+                        <Link href="/workspaces/settings">
                           <Settings2Icon className="size-3.5" />
                           Settings
                         </Link>

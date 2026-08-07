@@ -287,7 +287,7 @@ export function ChatComposer({
       </label>
       <textarea
         aria-describedby={disabledReason ? disabledReasonId : undefined}
-        className="placeholder:text-muted-foreground/50 max-h-56 min-h-12 w-full resize-none overflow-y-auto bg-transparent px-4 pt-3.5 pb-2 text-base leading-6 outline-none transition-[min-height] duration-300 ease-out focus:min-h-16 disabled:cursor-not-allowed disabled:opacity-60 md:text-[15px]"
+        className="placeholder:text-muted-foreground/50 max-h-56 min-h-12 w-full resize-none overflow-y-auto bg-transparent px-4 pt-3.5 pb-2 text-base leading-6 transition-[min-height] duration-300 ease-out outline-none focus:min-h-16 disabled:cursor-not-allowed disabled:opacity-60 md:text-[15px]"
         data-chat-composer-input
         disabled={textareaDisabled}
         id={composerId}

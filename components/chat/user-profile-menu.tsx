@@ -105,8 +105,8 @@ export function UserProfileMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link
-            aria-current={pathname.startsWith("/settings/workspace") ? "page" : undefined}
-            href="/settings/workspace"
+            aria-current={pathname.startsWith("/workspaces/settings") ? "page" : undefined}
+            href="/workspaces/settings"
           >
             <SettingsIcon className="size-4" />
             Workspace settings

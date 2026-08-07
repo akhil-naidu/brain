@@ -12,7 +12,9 @@ export default function AuthLayout({ children }: { readonly children: ReactNode 
           Brain
         </Link>
       </header>
-      <main className="relative flex flex-1 items-center justify-center px-4 py-10">{children}</main>
+      <main className="relative flex flex-1 items-center justify-center px-4 py-10">
+        {children}
+      </main>
     </div>
   );
 }
