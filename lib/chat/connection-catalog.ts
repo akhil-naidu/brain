@@ -16,6 +16,18 @@ export type ConnectionItem = {
   readonly Icon: ComponentType<{ readonly className?: string }>;
 };
 
+/** Static OAuth app credentials (not DCR). Set up / App settings apply here. */
+export const STATIC_APP_CREDENTIAL_CONNECTION_IDS = [
+  "slack",
+  "asana",
+  "gmail",
+  "github",
+] as const satisfies ReadonlyArray<keyof EnabledConnections>;
+
+export function connectionNeedsStaticAppCredentials(connectionId: string): boolean {
+  return (STATIC_APP_CREDENTIAL_CONNECTION_IDS as readonly string[]).includes(connectionId);
+}
+
 export const CONNECTION_ITEMS: readonly ConnectionItem[] = [
   {
     key: "clickup",

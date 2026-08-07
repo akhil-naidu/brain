@@ -6,14 +6,13 @@ import { SettingsPanel, SettingsSection } from "@/components/settings/settings-s
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { STATIC_APP_CREDENTIAL_CONNECTION_IDS } from "@/lib/chat/connection-catalog";
 import {
   clearWorkspaceConnectionSetup,
   fetchWorkspaceConnectionSetup,
   saveWorkspaceConnectionSetup,
   type ConnectionSetupInfo,
 } from "@/lib/chat/connections-status-api";
-
-const STATIC_CONNECTION_IDS = ["slack", "asana", "gmail", "github"] as const;
 
 function sourceLabel(source: ConnectionSetupInfo["credentialSource"]): string {
   if (source === "workspace") {
@@ -206,7 +205,7 @@ export function WorkspaceByoaSection() {
       title="Workspace apps"
     >
       <div className="grid gap-3">
-        {STATIC_CONNECTION_IDS.map((id) => (
+        {STATIC_APP_CREDENTIAL_CONNECTION_IDS.map((id) => (
           <ByoaProviderCard connectionId={id} key={id} />
         ))}
       </div>

@@ -18,6 +18,7 @@ import { Switch } from "@/components/ui/switch";
 import { CONNECTION_ITEMS } from "@/lib/chat/connection-catalog";
 import {
   canEnableConnection,
+  connectionConfigureLabel,
   integrationStatusText,
   shouldOfferConnectionConfigure,
   shouldOfferConnectionConnect,
@@ -224,7 +225,7 @@ export function ToolsPage() {
                   });
                   const showConnect = shouldOfferConnectionConnect(status);
                   const showDisconnect = shouldOfferConnectionDisconnect(status);
-                  const showConfigure = shouldOfferConnectionConfigure(status);
+                  const showConfigure = shouldOfferConnectionConfigure(status, key);
                   const allowEnable = canEnableConnection(status);
                   const isConnecting = connectingId === key;
                   const isDisconnecting = disconnectingId === key;
@@ -278,7 +279,7 @@ export function ToolsPage() {
                               type="button"
                               variant="outline"
                             >
-                              Set up
+                              {connectionConfigureLabel(status)}
                             </Button>
                           ) : null}
                           {showConnect ? (

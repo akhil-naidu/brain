@@ -1,3 +1,4 @@
+import { connectionNeedsStaticAppCredentials } from "@/lib/chat/connection-catalog";
 import { connectionStatusLabel, type ConnectionStatus } from "@/lib/chat/connections-status-api";
 
 export function integrationStatusText(input: {
@@ -25,8 +26,19 @@ export function shouldOfferConnectionDisconnect(status: ConnectionStatus | undef
   return status?.status === "connected";
 }
 
-export function shouldOfferConnectionConfigure(status: ConnectionStatus | undefined): boolean {
-  return status?.status === "needs_setup";
+/**
+ * Static-credential apps can be configured anytime (initial Set up or later App settings).
+ * DCR apps (ClickUp, dFlow) never need this control.
+ */
+export function shouldOfferConnectionConfigure(
+  status: ConnectionStatus | undefined,
+  connectionId: string,
+): boolean {
+  return Boolean(status) && connectionNeedsStaticAppCredentials(connectionId);
+}
+
+export function connectionConfigureLabel(status: ConnectionStatus | undefined): string {
+  return status?.status === "needs_setup" ? "Set up" : "App settings";
 }
 
 /** Users can only turn a connection on after it is signed in. */

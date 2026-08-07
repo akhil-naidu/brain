@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { IntegrationsMenu } from "@/components/chat/integrations-menu";
 import {
   canEnableConnection,
+  connectionConfigureLabel,
   integrationStatusText,
   shouldOfferConnectionConfigure,
   shouldOfferConnectionConnect,
@@ -137,29 +138,65 @@ describe("shouldOfferConnectionDisconnect", () => {
 });
 
 describe("shouldOfferConnectionConfigure", () => {
-  it("offers Configure only when setup is needed", () => {
+  it("offers configure for static-credential apps anytime status is known", () => {
     expect(
-      shouldOfferConnectionConfigure({
-        id: "asana",
-        displayName: "Asana",
-        status: "needs_setup",
-      }),
+      shouldOfferConnectionConfigure(
+        {
+          id: "asana",
+          displayName: "Asana",
+          status: "needs_setup",
+        },
+        "asana",
+      ),
     ).toBe(true);
     expect(
-      shouldOfferConnectionConfigure({
+      shouldOfferConnectionConfigure(
+        {
+          id: "slack",
+          displayName: "Slack",
+          status: "needs_sign_in",
+        },
+        "slack",
+      ),
+    ).toBe(true);
+    expect(
+      shouldOfferConnectionConfigure(
+        {
+          id: "gmail",
+          displayName: "Gmail",
+          status: "connected",
+        },
+        "gmail",
+      ),
+    ).toBe(true);
+    expect(
+      shouldOfferConnectionConfigure(
+        {
+          id: "clickup",
+          displayName: "ClickUp",
+          status: "connected",
+        },
+        "clickup",
+      ),
+    ).toBe(false);
+    expect(shouldOfferConnectionConfigure(undefined, "slack")).toBe(false);
+  });
+
+  it("labels configure as Set up or App settings", () => {
+    expect(
+      connectionConfigureLabel({
         id: "slack",
         displayName: "Slack",
-        status: "needs_sign_in",
+        status: "needs_setup",
       }),
-    ).toBe(false);
+    ).toBe("Set up");
     expect(
-      shouldOfferConnectionConfigure({
-        id: "clickup",
-        displayName: "ClickUp",
+      connectionConfigureLabel({
+        id: "slack",
+        displayName: "Slack",
         status: "connected",
       }),
-    ).toBe(false);
-    expect(shouldOfferConnectionConfigure(undefined)).toBe(false);
+    ).toBe("App settings");
   });
 });
 

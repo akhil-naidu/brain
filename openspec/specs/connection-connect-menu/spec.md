@@ -1,7 +1,7 @@
 # connection-connect-menu Specification
 
 ## Purpose
-Lets signed-in users Connect, Disconnect, and (for the host operator) configure MCP OAuth app credentials from the integrations menu without a chat turn.
+Lets signed-in users Connect, Disconnect, and configure MCP OAuth app credentials from Tools (workspace BYOA for owners/admins; host credentials for the instance admin) without a chat turn.
 ## Requirements
 ### Requirement: Menu OAuth start API
 The host MUST expose an authorize endpoint that starts MCP OAuth for a supported connection and the signed-in user’s principal without requiring a chat turn.
@@ -118,16 +118,20 @@ The host MUST expose a setup endpoint for static-credential MCP connections that
 - **WHEN** setup is requested for a DCR connection that does not need static app credentials
 - **THEN** the endpoint fails with a clear error
 
-### Requirement: Configure control in the integrations menu
-The integrations menu MUST offer Set up for connections that need setup.
+### Requirement: Configure control for static-credential connections
+The Tools page MUST offer Set up / App settings for static-credential MCP connections whenever status is known, so owners can enter or replace app credentials anytime. DCR connections MUST NOT show this control. The chat integrations menu MAY deep-link to Tools instead of embedding the dialog.
 
 #### Scenario: Set up shown when setup is needed
-- **WHEN** the integrations menu loads status and a connection is needs_setup
+- **WHEN** Tools loads status and a static-credential connection is needs_setup
 - **THEN** that row shows a Set up control that opens a dialog to enter app id/secret and copy the return link
 
-#### Scenario: Set up hidden when setup is complete
-- **WHEN** a connection is needs_sign_in or connected
-- **THEN** the menu does not offer Set up for that row
+#### Scenario: App settings available after setup
+- **WHEN** a static-credential connection is needs_sign_in or connected
+- **THEN** Tools still offers App settings for that row so credentials can be replaced or cleared
+
+#### Scenario: DCR connections hide configure
+- **WHEN** a connection uses dynamic client registration (no static app credentials)
+- **THEN** Tools does not offer Set up or App settings for that row
 
 ### Requirement: Enable toggle requires a connected app
 The integrations menu MUST only allow turning a connection on when that connection is connected. Turning off remains allowed anytime.

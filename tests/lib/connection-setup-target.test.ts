@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { resolveConnectionSetupTarget } from "@/lib/chat/connection-setup-target";
+import {
+  connectionSetupCanManageBoth,
+  resolveConnectionSetupTarget,
+} from "@/lib/chat/connection-setup-target";
 
 describe("resolveConnectionSetupTarget", () => {
   it("prefers workspace BYOA when the member can manage it", () => {
@@ -33,5 +36,22 @@ describe("resolveConnectionSetupTarget", () => {
         hostCanManage: undefined,
       }),
     ).toBe("none");
+  });
+});
+
+describe("connectionSetupCanManageBoth", () => {
+  it("is true only when workspace and host can both manage", () => {
+    expect(
+      connectionSetupCanManageBoth({
+        workspaceCanManage: true,
+        hostCanManage: true,
+      }),
+    ).toBe(true);
+    expect(
+      connectionSetupCanManageBoth({
+        workspaceCanManage: true,
+        hostCanManage: false,
+      }),
+    ).toBe(false);
   });
 });

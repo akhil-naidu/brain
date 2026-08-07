@@ -14,6 +14,7 @@ import {
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
+  connectionSetupCanManageBoth,
   resolveConnectionSetupTarget,
   type ConnectionSetupTarget,
 } from "@/lib/chat/connection-setup-target";
@@ -26,11 +27,15 @@ import {
   saveWorkspaceConnectionSetup,
   type ConnectionSetupInfo,
 } from "@/lib/chat/connections-status-api";
+import { cn } from "@/lib/utils";
 
-async function loadSetupTarget(connectionId: string): Promise<{
-  readonly info: ConnectionSetupInfo;
+type LoadedSetup = {
+  readonly workspace: ConnectionSetupInfo | null;
+  readonly host: ConnectionSetupInfo | null;
   readonly target: ConnectionSetupTarget;
-}> {
+};
+
+async function loadSetup(connectionId: string): Promise<LoadedSetup> {
   const [workspaceResult, hostResult] = await Promise.allSettled([
     fetchWorkspaceConnectionSetup(connectionId),
     fetchConnectionSetup(connectionId),
@@ -51,15 +56,27 @@ async function loadSetupTarget(connectionId: string): Promise<{
     throw new Error(workspaceError ?? hostError ?? "Unable to load setup.");
   }
 
-  const target = resolveConnectionSetupTarget({
-    workspaceCanManage: workspace?.canManageCredentials,
-    hostCanManage: host?.canManageCredentials,
-  });
-  const info = (target === "workspace" ? workspace : null) ?? workspace ?? host;
-  if (!info) {
-    throw new Error("Unable to load setup.");
+  return {
+    workspace,
+    host,
+    target: resolveConnectionSetupTarget({
+      workspaceCanManage: workspace?.canManageCredentials,
+      hostCanManage: host?.canManageCredentials,
+    }),
+  };
+}
+
+function infoForTarget(
+  loaded: Pick<LoadedSetup, "workspace" | "host">,
+  target: ConnectionSetupTarget,
+): ConnectionSetupInfo | null {
+  if (target === "workspace") {
+    return loaded.workspace ?? loaded.host;
   }
-  return { info, target };
+  if (target === "host") {
+    return loaded.host ?? loaded.workspace;
+  }
+  return loaded.workspace ?? loaded.host;
 }
 
 export function ConnectionSetupDialog({
@@ -73,7 +90,8 @@ export function ConnectionSetupDialog({
   readonly onOpenChange: (open: boolean) => void;
   readonly onSaved: () => void;
 }) {
-  const [info, setInfo] = useState<ConnectionSetupInfo | null>(null);
+  const [workspaceInfo, setWorkspaceInfo] = useState<ConnectionSetupInfo | null>(null);
+  const [hostInfo, setHostInfo] = useState<ConnectionSetupInfo | null>(null);
   const [target, setTarget] = useState<ConnectionSetupTarget>("none");
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
@@ -93,15 +111,17 @@ export function ConnectionSetupDialog({
     setError(null);
     setClientId("");
     setClientSecret("");
-    setInfo(null);
+    setWorkspaceInfo(null);
+    setHostInfo(null);
     setTarget("none");
     setCopied(false);
 
     void (async () => {
       try {
-        const loaded = await loadSetupTarget(connectionId);
+        const loaded = await loadSetup(connectionId);
         if (!cancelled) {
-          setInfo(loaded.info);
+          setWorkspaceInfo(loaded.workspace);
+          setHostInfo(loaded.host);
           setTarget(loaded.target);
         }
       } catch (loadError) {
@@ -120,6 +140,11 @@ export function ConnectionSetupDialog({
     };
   }, [connectionId, open]);
 
+  const info = infoForTarget({ workspace: workspaceInfo, host: hostInfo }, target);
+  const canManageBoth = connectionSetupCanManageBoth({
+    workspaceCanManage: workspaceInfo?.canManageCredentials,
+    hostCanManage: hostInfo?.canManageCredentials,
+  });
   const canManage = target === "workspace" || target === "host";
   const hasRemovableCredentials =
     target === "workspace"
@@ -167,9 +192,10 @@ export function ConnectionSetupDialog({
           await clearConnectionSetup(connectionId);
         }
         onSaved();
-        const loaded = await loadSetupTarget(connectionId);
-        setInfo(loaded.info);
-        setTarget(loaded.target);
+        const loaded = await loadSetup(connectionId);
+        setWorkspaceInfo(loaded.workspace);
+        setHostInfo(loaded.host);
+        setTarget(target === "host" && loaded.host?.canManageCredentials ? "host" : loaded.target);
         setClientId("");
         setClientSecret("");
       } catch (clearError) {
@@ -207,9 +233,9 @@ export function ConnectionSetupDialog({
   const appName = info?.displayName ?? "this app";
   const description =
     target === "workspace"
-      ? `Enter the app ID and secret from your ${appName} account settings for this workspace. Connect will use these instead of host/env apps.`
+      ? `Enter the app ID and secret from your ${appName} account settings for this workspace. You can change these anytime. If already connected, Disconnect and Connect again after changing the app.`
       : target === "host"
-        ? `Enter the app ID and secret from your ${appName} account settings so Brain can connect. They stay on this computer (host-wide).`
+        ? `Enter the app ID and secret from your ${appName} account settings for this Brain host. You can change these anytime. If already connected, Disconnect and Connect again after changing the app.`
         : `A workspace owner/admin can save ${appName} credentials for this workspace (Tools → Workspace apps), or the host operator can configure host-wide credentials. You can still copy the return link below.`;
 
   return (
@@ -224,6 +250,45 @@ export function ConnectionSetupDialog({
           <FormFieldsSkeleton fields={2} />
         ) : (
           <div className="flex flex-col gap-3">
+            {canManageBoth ? (
+              <div className="bg-muted/40 flex rounded-md p-1">
+                <button
+                  className={cn(
+                    "flex-1 rounded-sm px-2 py-1.5 text-xs font-medium transition-colors",
+                    target === "workspace"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                  onClick={() => {
+                    setTarget("workspace");
+                    setClientId("");
+                    setClientSecret("");
+                    setError(null);
+                  }}
+                  type="button"
+                >
+                  This workspace
+                </button>
+                <button
+                  className={cn(
+                    "flex-1 rounded-sm px-2 py-1.5 text-xs font-medium transition-colors",
+                    target === "host"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                  onClick={() => {
+                    setTarget("host");
+                    setClientId("");
+                    setClientSecret("");
+                    setError(null);
+                  }}
+                  type="button"
+                >
+                  Entire host
+                </button>
+              </div>
+            ) : null}
+
             {info ? (
               <div className="bg-muted/40 rounded-md px-3 py-2">
                 <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
@@ -319,7 +384,7 @@ export function ConnectionSetupDialog({
           </Button>
           {canManage ? (
             <Button disabled={!canSave} onClick={save} type="button">
-              {saving ? "Saving…" : target === "workspace" ? "Save for workspace" : "Save"}
+              {saving ? "Saving…" : target === "workspace" ? "Save for workspace" : "Save for host"}
             </Button>
           ) : null}
         </DialogFooter>
