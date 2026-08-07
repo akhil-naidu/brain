@@ -85,6 +85,11 @@ export function SettingsTabs({
   readonly active: string;
   readonly onChange: (id: string) => void;
 }) {
+  // A single tab is not a choice — section titles already label the content.
+  if (tabs.length <= 1) {
+    return null;
+  }
+
   return (
     <div
       aria-label="Settings sections"
