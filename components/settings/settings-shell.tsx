@@ -79,20 +79,26 @@ export function SettingsTabs({
   readonly onChange: (id: string) => void;
 }) {
   return (
-    <div className="border-border/70 flex flex-wrap gap-1 border-b pb-px">
+    <div
+      aria-label="Settings sections"
+      className="border-border/80 bg-muted/35 inline-flex w-fit max-w-full flex-wrap gap-0.5 rounded-xl border p-1"
+      role="tablist"
+    >
       {tabs.map((tab) => {
         const selected = tab.id === active;
         return (
           <button
-            aria-current={selected ? "page" : undefined}
+            aria-selected={selected}
             className={cn(
-              "relative -mb-px cursor-pointer rounded-t-md px-3 py-2 text-sm transition-colors",
+              "cursor-pointer rounded-lg px-3.5 py-1.5 text-sm transition-[color,background-color,box-shadow]",
               selected
-                ? "text-foreground border-foreground border-b-2 font-medium"
-                : "text-muted-foreground hover:text-foreground border-b-2 border-transparent",
+                ? "bg-background text-foreground shadow-sm ring-1 ring-border/70"
+                : "text-muted-foreground hover:bg-background/50 hover:text-foreground",
             )}
+            id={`settings-tab-${tab.id}`}
             key={tab.id}
             onClick={() => onChange(tab.id)}
+            role="tab"
             type="button"
           >
             {tab.label}
