@@ -179,6 +179,41 @@ html[data-eve-chat-sidebar="closed"] [data-desktop-sidebar] {
   }
 }
 
+@keyframes brain-boot-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(0.97);
+    opacity: 0.92;
+  }
+}
+
+@keyframes brain-boot-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.brain-boot-mark {
+  animation: brain-boot-breathe 1.8s ease-in-out infinite;
+}
+
+.brain-boot-ring {
+  border-top-color: color-mix(in oklab, var(--primary) 55%, transparent);
+  border-right-color: color-mix(in oklab, var(--primary) 20%, transparent);
+  animation: brain-boot-spin 1.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brain-boot-mark,
+  .brain-boot-ring {
+    animation: none;
+  }
+}
+
 /* Soft primary wash behind app content (chat, tools, settings, …). */
 .brain-ambient-shade {
   pointer-events: none;
