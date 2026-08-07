@@ -1,5 +1,8 @@
 "use client";
 
+import { Settings2Icon, UnplugIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { IconTooltip } from "@/components/ui/tooltip";
 import {
   connectionConfigureLabel,
   shouldOfferConnectionConfigure,
@@ -33,36 +36,49 @@ export function IntegrationsConnectionActions({
     return null;
   }
 
+  const configureLabel = connectionConfigureLabel(status);
+
   return (
-    <div className="mt-1.5 flex flex-wrap gap-1 pl-9">
+    <div className="mt-1.5 flex flex-wrap items-center gap-1 pl-9">
       {showConfigure ? (
-        <button
-          className="text-muted-foreground hover:text-foreground hover:bg-background/80 rounded px-1.5 py-0.5 text-[11px] font-medium"
-          onClick={onConfigure}
-          type="button"
-        >
-          {connectionConfigureLabel(status)}
-        </button>
+        <IconTooltip label={configureLabel} side="bottom">
+          <Button
+            aria-label={configureLabel}
+            className="text-muted-foreground"
+            onClick={onConfigure}
+            size="icon-xs"
+            type="button"
+            variant="ghost"
+          >
+            <Settings2Icon />
+          </Button>
+        </IconTooltip>
       ) : null}
       {showConnect ? (
-        <button
-          className="text-primary hover:bg-background/80 rounded px-1.5 py-0.5 text-[11px] font-medium"
+        <Button
           disabled={isConnecting}
           onClick={onConnect}
+          size="xs"
           type="button"
+          variant="outline"
         >
           {isConnecting ? "Connecting…" : "Connect"}
-        </button>
+        </Button>
       ) : null}
       {showDisconnect ? (
-        <button
-          className="text-muted-foreground hover:text-foreground hover:bg-background/80 rounded px-1.5 py-0.5 text-[11px] font-medium"
-          disabled={isDisconnecting}
-          onClick={onDisconnect}
-          type="button"
-        >
-          {isDisconnecting ? "Disconnecting…" : "Disconnect"}
-        </button>
+        <IconTooltip label={isDisconnecting ? "Disconnecting…" : "Disconnect"} side="bottom">
+          <Button
+            aria-label={isDisconnecting ? "Disconnecting…" : "Disconnect"}
+            className="text-muted-foreground"
+            disabled={isDisconnecting}
+            onClick={onDisconnect}
+            size="icon-xs"
+            type="button"
+            variant="ghost"
+          >
+            <UnplugIcon />
+          </Button>
+        </IconTooltip>
       ) : null}
     </div>
   );

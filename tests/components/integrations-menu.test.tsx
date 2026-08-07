@@ -226,7 +226,7 @@ describe("IntegrationsMenu status", () => {
 });
 
 describe("IntegrationsConnectionActions", () => {
-  it("offers Set up and Connect for static apps that need them", () => {
+  it("offers Set up icon and Connect button for static apps", () => {
     const onConfigure = vi.fn();
     const onConnect = vi.fn();
     render(
@@ -257,6 +257,7 @@ describe("IntegrationsConnectionActions", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Connect" }));
     expect(onConnect).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "App settings" })).toBeTruthy();
   });
 
   it("hides configure for DCR apps", () => {
