@@ -872,7 +872,7 @@ export function EphemeralAgentChat({
   const dimEmptyChrome = isEmptyThread && composerFocused && !missingApiKey;
 
   return (
-    <div className="bg-background text-foreground relative flex h-full min-h-0 flex-1 flex-col">
+    <div className="text-foreground relative flex h-full min-h-0 flex-1 flex-col">
       {visibleError ? (
         <ErrorToast
           message={visibleError.message}
@@ -890,10 +890,6 @@ export function EphemeralAgentChat({
         >
           {isEmptyThread ? (
             <div className="relative flex flex-1 items-center justify-center">
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-x-8 top-1/2 h-56 -translate-y-[60%] rounded-full bg-[radial-gradient(ellipse_at_center,color-mix(in_oklab,var(--primary)_14%,transparent),transparent_70%)]"
-              />
               <div className="relative w-full max-w-lg text-center">
                 <div className="bg-primary/10 ring-primary/15 mx-auto flex size-14 items-center justify-center rounded-2xl ring-1">
                   <BrainMark className="size-8" />

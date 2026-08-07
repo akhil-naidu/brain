@@ -364,8 +364,9 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
         </div>
       ) : null}
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="border-border/40 bg-background/85 supports-[backdrop-filter]:bg-background/70 flex h-12 items-center gap-2 border-b px-3 backdrop-blur-md md:px-4">
+      <div className="relative flex min-w-0 flex-1 flex-col">
+        <div aria-hidden className="brain-ambient-shade" />
+        <header className="border-border/40 bg-background/85 supports-[backdrop-filter]:bg-background/70 relative z-10 flex h-12 items-center gap-2 border-b px-3 backdrop-blur-md md:px-4">
           <div className="min-w-0 flex-1">
             {headerTitle ? (
               <div className="flex min-w-0 items-center gap-2">
@@ -418,7 +419,7 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
           ) : null}
           <UserProfileMenu />
         </header>
-        <div className="min-h-0 flex-1">{children}</div>
+        <div className="relative min-h-0 flex-1">{children}</div>
       </div>
     </div>
   );

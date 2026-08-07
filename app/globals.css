@@ -179,6 +179,30 @@ html[data-eve-chat-sidebar="closed"] [data-desktop-sidebar] {
   }
 }
 
+/* Soft primary wash behind app content (chat, tools, settings, …). */
+.brain-ambient-shade {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.brain-ambient-shade::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  width: min(42rem, 92%);
+  height: 18rem;
+  translate: -50% -60%;
+  border-radius: 9999px;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in oklab, var(--primary) 14%, transparent),
+    transparent 70%
+  );
+}
+
 .features-hero-glow {
   filter: drop-shadow(0 20px 60px color-mix(in oklab, var(--primary) 35%, transparent));
 }

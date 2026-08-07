@@ -17,7 +17,7 @@ export function SettingsShell({
   readonly className?: string;
 }) {
   return (
-    <div className={cn("bg-background h-full overflow-y-auto", className)}>
+    <div className={cn("h-full overflow-y-auto", className)}>
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
         <header className="space-y-3">
           <div className="space-y-1.5">
