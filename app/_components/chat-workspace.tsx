@@ -8,6 +8,7 @@ import {
   type ChatThreadActions,
   type DisposeEphemeralChat,
 } from "@/app/_components/ephemeral-agent-chat";
+import { BrainBoot } from "@/components/loading/brain-boot";
 import {
   deleteChat,
   getChat,
@@ -337,7 +338,7 @@ export function ChatWorkspace() {
   if (!bootstrapped) {
     return (
       <div className="flex h-full items-center justify-center px-4 sm:px-6">
-        <p className="text-muted-foreground w-full max-w-3xl text-sm">Loading chats…</p>
+        <BrainBoot label="Opening your workspace…" size="lg" />
       </div>
     );
   }
