@@ -41,10 +41,10 @@ The integrations menu MUST show each connection’s status alongside the enable 
 - **WHEN** the user opens the integrations menu
 - **THEN** each connection row indicates Connected, Sign in, or Set up needed according to the status API
 
-### Requirement: Tools page links catalog from connection management
-The Tools page MCP management UI MUST provide a clear path to the loaded tools catalog (same page section or adjacent section) so users who finish Connect can inspect available tools without hunting.
+### Requirement: Tools page shows catalog on each connected app
+The Tools page MCP management UI MUST show loaded tools on each connected app’s card so users who finish Connect can inspect available tools without hunting in a separate section.
 
-#### Scenario: Connected row near catalog
+#### Scenario: Connected row shows its tools
 - **WHEN** the user views MCP connections on `/tools` and at least one connection is connected
-- **THEN** the loaded tools catalog is visible on that page (or one click away within `/tools`) without opening a chat turn
+- **THEN** that connection’s loaded tools are visible on its card without opening a chat turn
 

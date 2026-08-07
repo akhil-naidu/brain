@@ -26,19 +26,19 @@ The host MUST expose a session-authenticated API that returns the MCP tools avai
 - **THEN** the system rejects the request and does not return another user’s tools
 
 ### Requirement: Catalog visible on Tools page
-The `/tools` surface MUST show the loaded MCP tools catalog for the active workspace, grouped or labeled by connection, including empty and error states.
+The `/tools` surface MUST show the loaded MCP tools catalog for the active workspace **under each connected app card** (not a separate page-wide “Loaded tools” section), including empty and error states per connection.
 
 #### Scenario: User opens Tools after Connect
 - **WHEN** the user has at least one connected MCP app and opens `/tools`
-- **THEN** they can see the loaded tool names (and descriptions when available) for those connections
+- **THEN** they can see the loaded tool names for each connected app on that app’s card (descriptions MAY appear as hover/title text)
 
 #### Scenario: No connected apps
 - **WHEN** the user has no connected MCP apps
-- **THEN** the Tools page shows an empty catalog state that explains connecting an app first
+- **THEN** the Tools page explains connecting an app first and does not show a standalone tools catalog section
 
 #### Scenario: Catalog refresh after connect
 - **WHEN** the user completes Connect for an MCP app and returns to `/tools`
-- **THEN** the catalog updates to include that connection’s tools without requiring a chat turn
+- **THEN** that app’s card updates to include its tools without requiring a chat turn
 
 ### Requirement: Catalog does not replace in-chat tool calls
 Showing the catalog MUST NOT remove or replace the existing rendering of tool calls inside chat messages when the agent invokes tools.
