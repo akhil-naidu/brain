@@ -2,6 +2,7 @@
 
 import {
   BookmarkIcon,
+  Building2Icon,
   CalendarClockIcon,
   ChevronDownIcon,
   HammerIcon,
@@ -119,7 +120,8 @@ export function ChatSidebar({
   readonly viewerUserId?: string | null;
 }) {
   const pathname = usePathname();
-  const chatsActive = pathname === "/chat";
+  const chatsActive = pathname === "/chats" || pathname === "/chat";
+  const workspacesActive = pathname === "/workspaces";
   const playbooksActive = pathname === "/playbooks";
   const schedulesActive = pathname === "/schedules";
   const toolsActive = pathname === "/tools";
@@ -318,17 +320,31 @@ export function ChatSidebar({
               </Button>
             </IconTooltip>
           ) : null}
-          <IconTooltip label="Chats" side="right">
+          <IconTooltip label="All chats" side="right">
             <Button
               aria-current={chatsActive ? "page" : undefined}
-              aria-label="Chats"
+              aria-label="All chats"
               asChild
               className={compactNavClass(chatsActive)}
               size="icon-sm"
               variant="ghost"
             >
-              <Link href="/chat">
+              <Link href="/chats">
                 <MessageSquareIcon className="size-4" />
+              </Link>
+            </Button>
+          </IconTooltip>
+          <IconTooltip label="Workspaces" side="right">
+            <Button
+              aria-current={workspacesActive ? "page" : undefined}
+              aria-label="Workspaces"
+              asChild
+              className={compactNavClass(workspacesActive)}
+              size="icon-sm"
+              variant="ghost"
+            >
+              <Link href="/workspaces">
+                <Building2Icon className="size-4" />
               </Link>
             </Button>
           </IconTooltip>
@@ -441,9 +457,15 @@ export function ChatSidebar({
         <nav aria-label="Workspace" className="mt-4 flex flex-col gap-1">
           <SidebarNavLink
             active={chatsActive}
-            href="/chat"
+            href="/chats"
             icon={MessageSquareIcon}
-            label="Chats"
+            label="All chats"
+          />
+          <SidebarNavLink
+            active={workspacesActive}
+            href="/workspaces"
+            icon={Building2Icon}
+            label="Workspaces"
           />
           <SidebarNavLink
             active={playbooksActive}

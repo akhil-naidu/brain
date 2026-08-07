@@ -76,13 +76,18 @@ describe("ChatSidebar rename", () => {
 });
 
 describe("ChatSidebar navigation", () => {
-  it("exposes destination links for playbooks, schedules, and tools", () => {
+  it("exposes destination links for chats, workspaces, playbooks, schedules, and tools", () => {
     renderSidebar();
+    expect(screen.getByRole("link", { name: "All chats" }).getAttribute("href")).toBe("/chats");
+    expect(screen.getByRole("link", { name: "All chats" }).getAttribute("aria-current")).toBe(
+      "page",
+    );
+    expect(screen.getByRole("link", { name: "Workspaces" }).getAttribute("href")).toBe(
+      "/workspaces",
+    );
     expect(screen.getByRole("link", { name: "Playbooks" }).getAttribute("href")).toBe("/playbooks");
     expect(screen.getByRole("link", { name: "Schedules" }).getAttribute("href")).toBe("/schedules");
     expect(screen.getByRole("link", { name: "Tools" }).getAttribute("href")).toBe("/tools");
-    expect(screen.getByRole("link", { name: "Chats" }).getAttribute("href")).toBe("/chat");
-    expect(screen.getByRole("link", { name: "Chats" }).getAttribute("aria-current")).toBe("page");
   });
 });
 
