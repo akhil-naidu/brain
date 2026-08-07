@@ -29,6 +29,7 @@ function SignInForm() {
   const [bootstrapAllowed, setBootstrapAllowed] = useState(false);
   const [signupMode, setSignupMode] = useState<SignupMode | null>(null);
   const [ssoAvailable, setSsoAvailable] = useState(false);
+  const [forgotPasswordAvailable, setForgotPasswordAvailable] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -42,6 +43,9 @@ function SignInForm() {
         setOpenSignupAllowed("openSignupAllowed" in data && Boolean(data.openSignupAllowed));
         setBootstrapAllowed("bootstrapAllowed" in data && Boolean(data.bootstrapAllowed));
         setSsoAvailable("ssoAvailable" in data && Boolean(data.ssoAvailable));
+        setForgotPasswordAvailable(
+          "forgotPasswordAvailable" in data && Boolean(data.forgotPasswordAvailable),
+        );
         if (
           "signupMode" in data &&
           (data.signupMode === "open" ||
@@ -145,7 +149,14 @@ function SignInForm() {
         >
           {ssoAvailable ? <AuthDivider label="or password" /> : null}
           <Field>
-            <FieldLabel htmlFor="password">Password</FieldLabel>
+            <div className="flex items-center justify-between gap-3">
+              <FieldLabel htmlFor="password">Password</FieldLabel>
+              {forgotPasswordAvailable ? (
+                <span className="text-xs">
+                  <AuthLink href="/forgot-password">Forgot password?</AuthLink>
+                </span>
+              ) : null}
+            </div>
             <Input
               autoComplete="current-password"
               className="h-11"
