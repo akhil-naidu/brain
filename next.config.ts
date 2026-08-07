@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
-  serverExternalPackages: ["node:sqlite"],
+  serverExternalPackages: ["pg", "pg-native"],
   experimental: {
     // TypeScript 7 (tsgo) does not expose the compiler API Next drives directly,
     // so build-time checking has to go through the TypeScript CLI instead.
