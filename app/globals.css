@@ -238,6 +238,74 @@ html[data-eve-chat-sidebar="closed"] [data-desktop-sidebar] {
   );
 }
 
+/* Marketing home — same family as chat ambient + auth brand plane. */
+.brain-home-atmosphere {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.brain-home-atmosphere::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 18%;
+  width: min(52rem, 110%);
+  height: 22rem;
+  translate: -50% -40%;
+  border-radius: 9999px;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in oklab, var(--primary) 18%, transparent),
+    transparent 72%
+  );
+}
+
+.brain-home-atmosphere::after {
+  content: "";
+  position: absolute;
+  right: -8%;
+  bottom: 8%;
+  width: min(36rem, 80%);
+  height: 18rem;
+  border-radius: 9999px;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in oklab, oklch(0.4 0.05 240) 16%, transparent),
+    transparent 74%
+  );
+  animation: auth-orb-drift 18s ease-in-out infinite reverse;
+}
+
+.brain-home-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+  background-image:
+    linear-gradient(color-mix(in oklab, var(--foreground) 6%, transparent) 1px, transparent 1px),
+    linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--foreground) 6%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 64px 64px;
+  -webkit-mask-image: linear-gradient(180deg, black 0%, transparent 78%);
+  mask-image: linear-gradient(180deg, black 0%, transparent 78%);
+}
+
+.brain-home-hero-plane {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: min(52%, 28rem);
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in oklab, var(--background) 55%, transparent) 35%,
+    color-mix(in oklab, var(--muted) 55%, var(--background) 45%) 100%
+  );
+}
+
 /* Auth split stage — brand plane + clean form column */
 .brain-auth-stage {
   background: var(--background);
@@ -368,7 +436,8 @@ html[data-eve-chat-sidebar="closed"] [data-desktop-sidebar] {
   .auth-fade-up,
   .auth-brand-mark,
   .brain-auth-orb-a,
-  .brain-auth-orb-b {
+  .brain-auth-orb-b,
+  .brain-home-atmosphere::after {
     animation: none;
   }
 }

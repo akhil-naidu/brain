@@ -213,7 +213,7 @@ export function RuntimeTourMock() {
           <ul className="text-muted-foreground space-y-2 text-[12px]">
             <li className="flex gap-2">
               <span className="bg-primary mt-1 size-1.5 shrink-0 rounded-full" />
-              Chat history in local storage
+              Chat history on this host’s Postgres
             </li>
             <li className="flex gap-2">
               <span className="bg-primary mt-1 size-1.5 shrink-0 rounded-full" />
