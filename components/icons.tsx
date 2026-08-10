@@ -86,3 +86,18 @@ export function GitHubIcon({ className }: { readonly className?: string }) {
     </svg>
   );
 }
+
+/** Snowflake mark (simplified). */
+export function SnowflakeIcon({ className }: { readonly className?: string }) {
+  return (
+    <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
+      <path
+        d="M12 2.25v19.5M4.5 6.75l15 10.5M4.5 17.25l15-10.5M7.5 3.75l9 16.5M16.5 3.75l-9 16.5"
+        stroke="#29B5E8"
+        strokeLinecap="round"
+        strokeWidth="1.75"
+      />
+      <circle cx="12" cy="12" fill="#29B5E8" r="1.75" />
+    </svg>
+  );
+}

@@ -19,6 +19,7 @@ const SCHEDULED_CONNECTIONS = {
   github: true,
   gmail: true,
   slack: true,
+  snowflake: true,
 } as const;
 
 async function deliverToSlackIfConfigured(input: {

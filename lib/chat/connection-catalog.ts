@@ -6,6 +6,7 @@ import {
   GitHubIcon,
   GmailIcon,
   SlackIcon,
+  SnowflakeIcon,
 } from "@/components/icons";
 import type { EnabledConnections } from "@/app/_components/chat-shell-context";
 
@@ -24,8 +25,26 @@ export const STATIC_APP_CREDENTIAL_CONNECTION_IDS = [
   "github",
 ] as const satisfies ReadonlyArray<keyof EnabledConnections>;
 
+/** PAT connections (MCP URL + token). Set up / App settings; no OAuth Connect. */
+export const PAT_CONNECTION_IDS = ["snowflake"] as const satisfies ReadonlyArray<
+  keyof EnabledConnections
+>;
+
+export function connectionUsesPatAuth(connectionId: string): boolean {
+  return (PAT_CONNECTION_IDS as readonly string[]).includes(connectionId);
+}
+
+/** @deprecated Use connectionUsesPatAuth */
+export function connectionUsesPatEnvAuth(connectionId: string): boolean {
+  return connectionUsesPatAuth(connectionId);
+}
+
 export function connectionNeedsStaticAppCredentials(connectionId: string): boolean {
   return (STATIC_APP_CREDENTIAL_CONNECTION_IDS as readonly string[]).includes(connectionId);
+}
+
+export function connectionOffersAppSetup(connectionId: string): boolean {
+  return connectionNeedsStaticAppCredentials(connectionId) || connectionUsesPatAuth(connectionId);
 }
 
 export const CONNECTION_ITEMS: readonly ConnectionItem[] = [
@@ -64,5 +83,11 @@ export const CONNECTION_ITEMS: readonly ConnectionItem[] = [
     label: "GitHub",
     description: "Repos, issues, and pull requests via GitHub MCP.",
     Icon: GitHubIcon,
+  },
+  {
+    key: "snowflake",
+    label: "Snowflake",
+    description: "Cortex, SQL, and warehouse tools via Snowflake MCP.",
+    Icon: SnowflakeIcon,
   },
 ];

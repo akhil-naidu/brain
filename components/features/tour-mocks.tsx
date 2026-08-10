@@ -4,6 +4,7 @@ import {
   ClickUpIcon,
   DflowIcon,
   GitHubIcon,
+  SnowflakeIcon,
   GmailIcon,
   SlackIcon,
 } from "@/components/icons";
@@ -100,6 +101,13 @@ const CONNECTION_ROWS: readonly ConnectionRow[] = [
   { id: "asana", label: "Asana", status: "Connected", tone: "ok", Icon: AsanaIcon },
   { id: "dflow", label: "dFlow", status: "Sign in", action: "Connect", Icon: DflowIcon },
   { id: "github", label: "GitHub", status: "Set up needed", action: "Set up", Icon: GitHubIcon },
+  {
+    id: "snowflake",
+    label: "Snowflake",
+    status: "Set up needed",
+    action: "Set up",
+    Icon: SnowflakeIcon,
+  },
 ];
 
 export function ConnectionsTourMock() {
