@@ -581,7 +581,10 @@ export function ModelsPage() {
             </div>
             <div className="grid gap-1.5">
               <label className="text-sm font-medium" htmlFor="model-api-key">
-                API key {editor?.mode === "edit" ? "(leave blank to keep)" : "(optional)"}
+                API key{" "}
+                {editor?.mode === "edit" && editor.model?.hasApiKey
+                  ? "(leave blank to keep)"
+                  : "(optional)"}
               </label>
               <Input
                 autoComplete="off"
