@@ -4,6 +4,7 @@ import { FolderIcon, MessageSquareIcon, PinIcon, SearchIcon, UsersIcon, XIcon } 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChatRowMenu } from "@/components/chat/chat-row-menu";
+import { ProjectEditorDialog } from "@/components/chat/project-editor-dialog";
 import { SettingsRowsSkeleton } from "@/components/loading/skeletons";
 import { SettingsPanel, SettingsShell } from "@/components/settings/settings-shell";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,8 @@ export function ChatsPage() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [projectEditorOpen, setProjectEditorOpen] = useState(false);
+  const [moveChatId, setMoveChatId] = useState<string | null>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -189,21 +192,27 @@ export function ChatsPage() {
     }
   }
 
-  async function handleCreateProjectAndMove(chatId: string) {
-    const name = window.prompt("Project name")?.trim();
-    if (!name) {
+  function handleCreateProjectAndMove(chatId: string) {
+    setMoveChatId(chatId);
+    setProjectEditorOpen(true);
+  }
+
+  async function handleSaveProject(input: { readonly name: string }) {
+    if (!moveChatId) {
       return;
     }
+    const chatId = moveChatId;
     const existing = chats.find((chat) => chat.id === chatId);
     setBusyId(chatId);
     try {
-      const project = await createChatProject({ name });
+      const project = await createChatProject({ name: input.name });
       setProjects((current) => [project, ...current.filter((item) => item.id !== project.id)]);
       await updateChat(chatId, { projectId: project.id, ...revisionOpts(existing) });
       notifyChatsChanged();
       await refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to create project.");
+      throw cause instanceof Error ? cause : new Error("Unable to create project.");
     } finally {
       setBusyId(null);
     }
@@ -226,6 +235,17 @@ export function ChatsPage() {
       }
       title="All chats"
     >
+      <ProjectEditorDialog
+        onOpenChange={(open) => {
+          setProjectEditorOpen(open);
+          if (!open) {
+            setMoveChatId(null);
+          }
+        }}
+        onSave={handleSaveProject}
+        open={projectEditorOpen}
+        project={null}
+      />
       <div className="flex flex-wrap items-center gap-2">
         <Button
           aria-pressed={status === "active"}
@@ -406,7 +426,7 @@ export function ChatsPage() {
                         onCreateProject={
                           status === "active"
                             ? () => {
-                                void handleCreateProjectAndMove(chat.id);
+                                handleCreateProjectAndMove(chat.id);
                               }
                             : undefined
                         }

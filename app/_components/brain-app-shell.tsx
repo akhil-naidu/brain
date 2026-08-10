@@ -9,12 +9,18 @@ import { ChatShellProvider } from "@/app/_components/chat-shell-context";
 import { BetaBadge } from "@/components/brand/beta-badge";
 import { BrainMark } from "@/components/brain-mark";
 import { ChatRowMenu } from "@/components/chat/chat-row-menu";
+import { ProjectEditorDialog } from "@/components/chat/project-editor-dialog";
 import { ChatSidebar } from "@/components/chat/sidebar";
 import { UserProfileMenu } from "@/components/chat/user-profile-menu";
 import { AppToaster } from "@/components/ui/app-toast";
 import { Button } from "@/components/ui/button";
 import { IconTooltip } from "@/components/ui/tooltip";
-import { createChatProject, listChatProjects } from "@/lib/chat/chat-projects-api";
+import {
+  createChatProject,
+  deleteChatProject,
+  listChatProjects,
+  updateChatProject,
+} from "@/lib/chat/chat-projects-api";
 import {
   chatUrl,
   deleteChat,
@@ -29,6 +35,7 @@ import {
   isSlashFocusChatSearchEvent,
   isToggleSidebarShortcutEvent,
 } from "@/lib/chat/keyboard";
+import { stashPendingChatProjectId } from "@/lib/chat/pending-chat-project";
 import { stashPendingChatVisibility } from "@/lib/chat/pending-chat-visibility";
 import { stashPendingPlaybookRun } from "@/lib/chat/pending-playbook-run";
 import { readSidebarExpanded, writeSidebarExpanded } from "@/lib/chat/sidebar-expanded";
@@ -36,6 +43,12 @@ import { sortChatSummaries } from "@/lib/chat/sort-chats";
 import { normalizeChatTitle } from "@/lib/chat/title";
 import type { ChatProject, ChatSummary } from "@/lib/chat/store/types";
 import { cn } from "@/lib/utils";
+
+type ProjectEditorState = {
+  readonly open: boolean;
+  readonly project: ChatProject | null;
+  readonly moveChatId: string | null;
+};
 
 function upsertChatSummary(chats: readonly ChatSummary[], chat: ChatSummary): ChatSummary[] {
   const rest = chats.filter((item) => item.id !== chat.id);
@@ -54,6 +67,11 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
   const [viewerUserId, setViewerUserId] = useState<string | null>(null);
   const [searchFocusRequest, setSearchFocusRequest] = useState(0);
   const [urlChatId, setUrlChatId] = useState<string | null>(null);
+  const [projectEditor, setProjectEditor] = useState<ProjectEditorState>({
+    open: false,
+    project: null,
+    moveChatId: null,
+  });
 
   useEffect(() => {
     setSidebarExpanded(readSidebarExpanded());
@@ -251,28 +269,87 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
     [chats, refreshChats],
   );
 
+  const openProjectEditor = useCallback((state: Omit<ProjectEditorState, "open">) => {
+    setProjectEditor({ open: true, ...state });
+  }, []);
+
+  const onCreateProject = useCallback(() => {
+    openProjectEditor({ project: null, moveChatId: null });
+  }, [openProjectEditor]);
+
   const onCreateProjectAndMove = useCallback(
-    async (chatId: string) => {
-      const name = window.prompt("Project name")?.trim();
-      if (!name) {
+    (chatId: string) => {
+      openProjectEditor({ project: null, moveChatId: chatId });
+    },
+    [openProjectEditor],
+  );
+
+  const onRenameProject = useCallback(
+    (project: ChatProject) => {
+      openProjectEditor({ project, moveChatId: null });
+    },
+    [openProjectEditor],
+  );
+
+  const onDeleteProject = useCallback(
+    async (projectId: string) => {
+      const project = projects.find((item) => item.id === projectId);
+      const label = project?.name ?? "this project";
+      if (
+        !window.confirm(`Delete “${label}”? Chats stay in your workspace and return to Recent.`)
+      ) {
         return;
       }
       try {
-        const project = await createChatProject({ name });
-        setProjects((current) => [project, ...current.filter((item) => item.id !== project.id)]);
-        const existing = chats.find((chat) => chat.id === chatId);
-        const chat = await updateChat(chatId, {
-          projectId: project.id,
-          ...(existing?.visibility === "shared" ? { expectedRevision: existing.revision } : {}),
-        });
-        setChats((current) => upsertChatSummary(current, chat));
+        await deleteChatProject(projectId);
+        setProjects((current) => current.filter((item) => item.id !== projectId));
+        await refreshChats();
         notifyChatsChanged();
       } catch {
         await refreshProjects();
         await refreshChats();
       }
     },
-    [chats, refreshChats, refreshProjects],
+    [projects, refreshChats, refreshProjects],
+  );
+
+  const onNewChatInProject = useCallback(
+    (projectId: string) => {
+      stashPendingChatProjectId(projectId);
+      stashPendingChatVisibility("personal");
+      if (handlers) {
+        handlers.onNewChat();
+        return;
+      }
+      router.push("/chat");
+    },
+    [handlers, router],
+  );
+
+  const onSaveProject = useCallback(
+    async (input: { readonly name: string }) => {
+      if (projectEditor.project) {
+        const project = await updateChatProject(projectEditor.project.id, { name: input.name });
+        setProjects((current) => current.map((item) => (item.id === project.id ? project : item)));
+        notifyChatsChanged();
+        return;
+      }
+
+      const project = await createChatProject({ name: input.name });
+      setProjects((current) => [project, ...current.filter((item) => item.id !== project.id)]);
+
+      if (projectEditor.moveChatId) {
+        const chatId = projectEditor.moveChatId;
+        const existing = chats.find((chat) => chat.id === chatId);
+        const chat = await updateChat(chatId, {
+          projectId: project.id,
+          ...(existing?.visibility === "shared" ? { expectedRevision: existing.revision } : {}),
+        });
+        setChats((current) => upsertChatSummary(current, chat));
+      }
+      notifyChatsChanged();
+    },
+    [chats, projectEditor.moveChatId, projectEditor.project],
   );
 
   const onRunPlaybook = useCallback(
@@ -379,12 +456,16 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
     currentTitle: pathname === "/chat" ? currentTitle : null,
     draftVisibility: pathname === "/chat" ? draftVisibility : "personal",
     onArchiveChat,
+    onCreateProject,
     onCreateProjectAndMove,
     onDeleteChat,
+    onDeleteProject,
     onMoveChatToProject,
+    onNewChatInProject,
     onNewSharedChat,
     onPinChat,
     onRenameChat,
+    onRenameProject,
     onShareChat,
     onRunPlaybook,
     projects,
@@ -395,6 +476,14 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
 
   return (
     <div className="bg-background text-foreground flex h-dvh">
+      <ProjectEditorDialog
+        onOpenChange={(open) => {
+          setProjectEditor((current) => ({ ...current, open }));
+        }}
+        onSave={onSaveProject}
+        open={projectEditor.open}
+        project={projectEditor.project}
+      />
       <div
         className={cn(
           "hidden h-full shrink-0 overflow-hidden transition-[width] duration-200 md:block",
@@ -533,7 +622,7 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
                 void onArchiveChat(activeChat.id);
               }}
               onCreateProject={() => {
-                void onCreateProjectAndMove(activeChat.id);
+                onCreateProjectAndMove(activeChat.id);
               }}
               onDelete={() => {
                 onDeleteChat(activeChat.id);

@@ -5,7 +5,6 @@ import {
   Building2Icon,
   CalendarClockIcon,
   ChevronDownIcon,
-  FolderIcon,
   HammerIcon,
   MessageSquareIcon,
   PanelLeftIcon,
@@ -20,6 +19,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { ChatRowMenu } from "@/components/chat/chat-row-menu";
+import { SidebarProjects } from "@/components/chat/sidebar-projects";
 import { WorkspaceSwitcher } from "@/components/chat/workspace-switcher";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -79,6 +79,8 @@ function SidebarNavLink({
   );
 }
 
+const EMPTY_PROJECTS: readonly ChatProject[] = [];
+
 export function ChatSidebar({
   brand,
   canCreateShared = false,
@@ -89,17 +91,21 @@ export function ChatSidebar({
   currentTitle,
   draftVisibility = "personal",
   onArchiveChat,
+  onCreateProject,
   onCreateProjectAndMove,
   onDeleteChat,
+  onDeleteProject,
   onMoveChatToProject,
   onNewChat,
+  onNewChatInProject,
   onNewSharedChat,
   onPinChat,
   onRenameChat,
+  onRenameProject,
   onShareChat,
   onSelectChat,
   onToggleSidebar,
-  projects = [],
+  projects = EMPTY_PROJECTS,
   searchFocusRequest = 0,
   showChatDraft = false,
   viewerUserId = null,
@@ -113,13 +119,17 @@ export function ChatSidebar({
   readonly currentTitle: string | null;
   readonly draftVisibility?: "personal" | "shared";
   readonly onArchiveChat?: (chatId: string) => void | Promise<void>;
+  readonly onCreateProject?: () => void;
   readonly onCreateProjectAndMove?: (chatId: string) => void | Promise<void>;
   readonly onDeleteChat: (chatId: string) => void;
+  readonly onDeleteProject?: (projectId: string) => void;
   readonly onMoveChatToProject?: (chatId: string, projectId: string | null) => void | Promise<void>;
   readonly onNewChat: () => void;
+  readonly onNewChatInProject?: (projectId: string) => void;
   readonly onNewSharedChat?: () => void;
   readonly onPinChat?: (chatId: string, pinned: boolean) => void | Promise<void>;
   readonly onRenameChat: (chatId: string, title: string) => void | Promise<void>;
+  readonly onRenameProject?: (project: ChatProject) => void;
   readonly onShareChat?: (chatId: string) => void | Promise<void>;
   readonly onRunPlaybook?: (prompt: string) => void;
   readonly onSelectChat: (chatId: string) => void;
@@ -151,7 +161,9 @@ export function ChatSidebar({
   const recentPanelRef = useRef<HTMLDivElement>(null);
   const recentDragRef = useRef<{ startY: number; startHeight: number } | null>(null);
   const recentFillsHeight = recent.open && recent.heightPx === null;
-  const filteredChats = filterChatsByTitle(chats, query);
+  const recentChats = chats.filter((chat) => chat.projectId === null);
+  const filteredChats = filterChatsByTitle(recentChats, query);
+  const filteredProjectChats = filterChatsByTitle(chats, query);
   const hasActiveQuery = query.trim().length > 0;
   // Defer platform-specific labels to avoid SSR/client hydration mismatches.
   const shortcutLabel = mounted ? newChatShortcutLabel() : "";
@@ -276,6 +288,118 @@ export function ChatSidebar({
     const next = editValue;
     cancelRename();
     void onRenameChat(chatId, next);
+  };
+
+  const renderChatRow = (chat: ChatSummary) => {
+    const selected = chat.id === activeChatId;
+    const editing = editingId === chat.id;
+    const pinned = chat.pinnedAt !== null;
+    return (
+      <div
+        className={cn(
+          "group flex items-center gap-0.5 rounded-md",
+          selected ? "bg-muted text-foreground" : "hover:bg-muted/55",
+        )}
+      >
+        {editing ? (
+          <input
+            aria-label={`Rename ${chat.title}`}
+            className="border-border bg-background text-foreground focus-visible:ring-ring/50 mx-1 my-0.5 min-w-0 flex-1 rounded-md border px-1.5 py-1 text-[13px] outline-none focus-visible:ring-2"
+            onBlur={() => commitRename(chat.id)}
+            onChange={(event) => setEditValue(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                commitRename(chat.id);
+              } else if (event.key === "Escape") {
+                event.preventDefault();
+                cancelRename();
+              }
+            }}
+            ref={renameInputRef}
+            value={editValue}
+          />
+        ) : (
+          <button
+            aria-current={selected ? "page" : undefined}
+            className={cn(
+              "min-w-0 flex-1 cursor-pointer px-2 py-1.5 text-left text-[13px]",
+              selected
+                ? "text-foreground font-medium"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            onClick={() => onSelectChat(chat.id)}
+            type="button"
+          >
+            <span className="flex min-w-0 items-center gap-1.5">
+              <span className="line-clamp-1 min-w-0 flex-1">{chat.title}</span>
+              {pinned ? (
+                <PinIcon aria-label="Pinned" className="text-muted-foreground/55 size-3 shrink-0" />
+              ) : null}
+              {chat.visibility === "shared" ? (
+                <UsersIcon
+                  aria-label="Shared with workspace"
+                  className="text-muted-foreground/55 size-3 shrink-0"
+                />
+              ) : null}
+            </span>
+          </button>
+        )}
+        {!editing ? (
+          <ChatRowMenu
+            canShare={Boolean(
+              canCreateShared &&
+              onShareChat &&
+              chat.visibility === "personal" &&
+              viewerUserId &&
+              chat.userId === viewerUserId,
+            )}
+            chatTitle={chat.title}
+            onArchive={
+              onArchiveChat
+                ? () => {
+                    void onArchiveChat(chat.id);
+                  }
+                : undefined
+            }
+            onCreateProject={
+              onCreateProjectAndMove
+                ? () => {
+                    void onCreateProjectAndMove(chat.id);
+                  }
+                : undefined
+            }
+            onDelete={() => onDeleteChat(chat.id)}
+            onMoveToProject={
+              onMoveChatToProject
+                ? (nextProjectId) => {
+                    void onMoveChatToProject(chat.id, nextProjectId);
+                  }
+                : undefined
+            }
+            onPin={
+              onPinChat
+                ? () => {
+                    void onPinChat(chat.id, !pinned);
+                  }
+                : undefined
+            }
+            onRename={() => beginRename(chat)}
+            onShare={
+              onShareChat
+                ? () => {
+                    void onShareChat(chat.id);
+                  }
+                : undefined
+            }
+            pinned={pinned}
+            projectId={chat.projectId}
+            projects={projects}
+            selected={selected}
+          />
+        ) : null}
+      </div>
+    );
   };
 
   if (compact) {
@@ -494,6 +618,18 @@ export function ChatSidebar({
         </nav>
       </div>
 
+      {onCreateProject || projects.length > 0 ? (
+        <SidebarProjects
+          chats={filteredProjectChats}
+          onCreateProject={onCreateProject}
+          onDeleteProject={onDeleteProject}
+          onNewChatInProject={onNewChatInProject}
+          onRenameProject={onRenameProject}
+          projects={projects}
+          renderChatRow={renderChatRow}
+        />
+      ) : null}
+
       {recent.open ? (
         <IconTooltip label="Drag to resize · Double-click to fill" side="top">
           <div
@@ -608,7 +744,7 @@ export function ChatSidebar({
                     </span>
                   </div>
                 ) : null}
-                {chats.length === 0 && !showDraftRow && !hasActiveQuery ? (
+                {recentChats.length === 0 && !showDraftRow && !hasActiveQuery ? (
                   <p className="text-muted-foreground/65 px-2 py-4 text-center text-xs">
                     No chats yet
                   </p>
@@ -619,128 +755,9 @@ export function ChatSidebar({
                   </p>
                 ) : null}
                 <ul className="flex flex-col gap-1">
-                  {filteredChats.map((chat) => {
-                    const selected = chat.id === activeChatId;
-                    const editing = editingId === chat.id;
-                    const pinned = chat.pinnedAt !== null;
-                    return (
-                      <li key={chat.id}>
-                        <div
-                          className={cn(
-                            "group flex items-center gap-0.5 rounded-md",
-                            selected ? "bg-muted text-foreground" : "hover:bg-muted/55",
-                          )}
-                        >
-                          {editing ? (
-                            <input
-                              aria-label={`Rename ${chat.title}`}
-                              className="border-border bg-background text-foreground focus-visible:ring-ring/50 mx-1 my-0.5 min-w-0 flex-1 rounded-md border px-1.5 py-1 text-[13px] outline-none focus-visible:ring-2"
-                              onBlur={() => commitRename(chat.id)}
-                              onChange={(event) => setEditValue(event.target.value)}
-                              onKeyDown={(event) => {
-                                if (event.key === "Enter") {
-                                  event.preventDefault();
-                                  commitRename(chat.id);
-                                } else if (event.key === "Escape") {
-                                  event.preventDefault();
-                                  cancelRename();
-                                }
-                              }}
-                              ref={renameInputRef}
-                              value={editValue}
-                            />
-                          ) : (
-                            <button
-                              aria-current={selected ? "page" : undefined}
-                              className={cn(
-                                "min-w-0 flex-1 cursor-pointer px-2 py-1.5 text-left text-[13px]",
-                                selected
-                                  ? "text-foreground font-medium"
-                                  : "text-muted-foreground hover:text-foreground",
-                              )}
-                              onClick={() => onSelectChat(chat.id)}
-                              type="button"
-                            >
-                              <span className="flex min-w-0 items-center gap-1.5">
-                                <span className="line-clamp-1 min-w-0 flex-1">{chat.title}</span>
-                                {chat.projectId ? (
-                                  <FolderIcon
-                                    aria-label="In a project"
-                                    className="text-muted-foreground/55 size-3 shrink-0"
-                                  />
-                                ) : null}
-                                {pinned ? (
-                                  <PinIcon
-                                    aria-label="Pinned"
-                                    className="text-muted-foreground/55 size-3 shrink-0"
-                                  />
-                                ) : null}
-                                {chat.visibility === "shared" ? (
-                                  <UsersIcon
-                                    aria-label="Shared with workspace"
-                                    className="text-muted-foreground/55 size-3 shrink-0"
-                                  />
-                                ) : null}
-                              </span>
-                            </button>
-                          )}
-                          {!editing ? (
-                            <ChatRowMenu
-                              canShare={Boolean(
-                                canCreateShared &&
-                                onShareChat &&
-                                chat.visibility === "personal" &&
-                                viewerUserId &&
-                                chat.userId === viewerUserId,
-                              )}
-                              chatTitle={chat.title}
-                              onArchive={
-                                onArchiveChat
-                                  ? () => {
-                                      void onArchiveChat(chat.id);
-                                    }
-                                  : undefined
-                              }
-                              onCreateProject={
-                                onCreateProjectAndMove
-                                  ? () => {
-                                      void onCreateProjectAndMove(chat.id);
-                                    }
-                                  : undefined
-                              }
-                              onDelete={() => onDeleteChat(chat.id)}
-                              onMoveToProject={
-                                onMoveChatToProject
-                                  ? (nextProjectId) => {
-                                      void onMoveChatToProject(chat.id, nextProjectId);
-                                    }
-                                  : undefined
-                              }
-                              onPin={
-                                onPinChat
-                                  ? () => {
-                                      void onPinChat(chat.id, !pinned);
-                                    }
-                                  : undefined
-                              }
-                              onRename={() => beginRename(chat)}
-                              onShare={
-                                onShareChat
-                                  ? () => {
-                                      void onShareChat(chat.id);
-                                    }
-                                  : undefined
-                              }
-                              pinned={pinned}
-                              projectId={chat.projectId}
-                              projects={projects}
-                              selected={selected}
-                            />
-                          ) : null}
-                        </div>
-                      </li>
-                    );
-                  })}
+                  {filteredChats.map((chat) => (
+                    <li key={chat.id}>{renderChatRow(chat)}</li>
+                  ))}
                 </ul>
               </div>
             </div>
