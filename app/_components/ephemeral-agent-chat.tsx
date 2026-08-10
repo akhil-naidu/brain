@@ -34,6 +34,7 @@ import {
   type PendingAttachment,
 } from "@/lib/chat/attachments";
 import { createChat, getChat, isChatApiConflictError, updateChat } from "@/lib/chat/chats-api";
+import { takePendingChatProjectId } from "@/lib/chat/pending-chat-project";
 import { takePendingChatVisibility } from "@/lib/chat/pending-chat-visibility";
 import { WELCOME_PROMPTS } from "@/lib/chat/welcome-prompts";
 import { getChatMessageLengthError } from "@/lib/chat/limits";
@@ -224,6 +225,7 @@ export function EphemeralAgentChat({
       const chat = await createChat({
         title: createFallbackTitle(titleSource),
         visibility: takePendingChatVisibility(),
+        projectId: takePendingChatProjectId(),
       });
       chatIdRef.current = chat.id;
       revisionRef.current = chat.revision;

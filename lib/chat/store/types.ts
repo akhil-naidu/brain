@@ -43,6 +43,7 @@ export type CreateChatInput = {
   readonly title?: string;
   readonly workspaceId: string;
   readonly visibility?: ChatVisibility;
+  readonly projectId?: string | null;
 };
 
 export type CreateChatProjectInput = {

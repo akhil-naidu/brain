@@ -160,13 +160,25 @@ export function createPostgresChatStore(): ChatStore {
       const id = input.id?.trim() || randomUUID();
       const title = input.title?.trim() || DEFAULT_CHAT_TITLE;
       const createdAt = nowIso();
+      const projectId = input.projectId?.trim() || null;
+      if (projectId) {
+        const projectResult = await pool.query<PgRow>(
+          `SELECT id FROM chat_project
+           WHERE id = $1 AND workspace_id = $2 AND user_id = $3`,
+          [projectId, workspaceId, userId],
+        );
+        if (!projectResult.rows[0]) {
+          throw new Error("Project not found.");
+        }
+      }
 
       await pool.query(
         `INSERT INTO chat (
            id, user_id, workspace_id, visibility, title, eve_session, revision,
-           turn_lock_user_id, turn_lock_until, created_at, updated_at
-         ) VALUES ($1, $2, $3, $4, $5, NULL, 0, NULL, NULL, $6, $7)`,
-        [id, userId, workspaceId, visibility, title, createdAt, createdAt],
+           turn_lock_user_id, turn_lock_until, pinned_at, archived_at, project_id,
+           created_at, updated_at
+         ) VALUES ($1, $2, $3, $4, $5, NULL, 0, NULL, NULL, NULL, NULL, $6, $7, $8)`,
+        [id, userId, workspaceId, visibility, title, projectId, createdAt, createdAt],
       );
 
       const result = await pool.query<PgRow>(ACCESSIBLE_CHAT_SQL, [id, workspaceId, userId]);

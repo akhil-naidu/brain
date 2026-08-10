@@ -24,10 +24,10 @@ function isCurrentChatStore(store: ChatStore | undefined): store is ChatStore {
   // Recreate after HMR when the cached singleton predates newer store methods.
   return Boolean(
     store &&
-      typeof store.listProjects === "function" &&
-      typeof store.createProject === "function" &&
-      typeof store.updateProject === "function" &&
-      typeof store.deleteProject === "function",
+    typeof store.listProjects === "function" &&
+    typeof store.createProject === "function" &&
+    typeof store.updateProject === "function" &&
+    typeof store.deleteProject === "function",
   );
 }
 

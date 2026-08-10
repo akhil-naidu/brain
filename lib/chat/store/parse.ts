@@ -51,6 +51,7 @@ export const createChatBodySchema = z.object({
   id: z.string().optional(),
   title: z.string().optional(),
   visibility: chatVisibilitySchema.optional(),
+  projectId: z.string().nullable().optional(),
 });
 
 export const turnLockActionSchema = z.enum(["acquire", "release", "heartbeat"]);

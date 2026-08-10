@@ -50,12 +50,20 @@ export async function POST(request: Request) {
     );
   }
 
-  const chat = await getChatStore().createChat(session.session.userId, {
-    id: parsed.data.id,
-    title: parsed.data.title,
-    workspaceId: session.session.workspaceId,
-    visibility,
-  });
-
-  return NextResponse.json({ chat }, { status: 201 });
+  try {
+    const chat = await getChatStore().createChat(session.session.userId, {
+      id: parsed.data.id,
+      title: parsed.data.title,
+      workspaceId: session.session.workspaceId,
+      visibility,
+      projectId: parsed.data.projectId,
+    });
+    return NextResponse.json({ chat }, { status: 201 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to create chat.";
+    if (message === "Project not found.") {
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+    throw error;
+  }
 }

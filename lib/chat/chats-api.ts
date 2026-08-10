@@ -132,6 +132,7 @@ export async function createChat(input?: {
   readonly id?: string;
   readonly title?: string;
   readonly visibility?: ChatVisibility;
+  readonly projectId?: string | null;
 }): Promise<ChatRecord> {
   const response = await fetch("/api/chats", {
     method: "POST",
