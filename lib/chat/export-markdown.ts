@@ -62,3 +62,41 @@ export async function copyTextToClipboard(text: string): Promise<void> {
   }
   await navigator.clipboard.writeText(text);
 }
+
+/** Sanitize a chat title (or other label) into a safe download basename. */
+export function sanitizeDownloadFilenameBase(input: string, fallback = "brain-chat"): string {
+  const cleaned = input
+    .normalize("NFKD")
+    .replace(/[^\p{L}\p{N}\-_.\s]+/gu, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^\.+|\.+$/g, "")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+  return cleaned.length > 0 ? cleaned : fallback;
+}
+
+export function markdownDownloadFilename(
+  title?: string | null,
+  fallback: "brain-chat" | "brain-message" = "brain-chat",
+): string {
+  const base = sanitizeDownloadFilenameBase(title?.trim() ?? "", fallback);
+  return base.toLowerCase().endsWith(".md") ? base : `${base}.md`;
+}
+
+/** Trigger a browser download for a text file (Markdown export). */
+export function downloadTextFile(filename: string, text: string): void {
+  if (typeof document === "undefined" || typeof URL === "undefined") {
+    throw new Error("Download is not available in this environment.");
+  }
+  const blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.rel = "noopener";
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}

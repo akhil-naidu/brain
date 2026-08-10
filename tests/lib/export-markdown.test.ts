@@ -1,6 +1,12 @@
 import type { EveMessage } from "eve/react";
-import { describe, expect, it } from "vitest";
-import { messageToMarkdown, messagesToMarkdown } from "@/lib/chat/export-markdown";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  downloadTextFile,
+  markdownDownloadFilename,
+  messageToMarkdown,
+  messagesToMarkdown,
+  sanitizeDownloadFilenameBase,
+} from "@/lib/chat/export-markdown";
 
 describe("messagesToMarkdown", () => {
   it("returns empty string for empty threads", () => {
@@ -77,5 +83,51 @@ describe("messageToMarkdown", () => {
       parts: [{ type: "step-start" }],
     };
     expect(messageToMarkdown(message)).toBe("");
+  });
+});
+
+describe("markdown download helpers", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("sanitizes titles and falls back when empty", () => {
+    expect(sanitizeDownloadFilenameBase("Sprint notes / v2")).toBe("Sprint-notes-v2");
+    expect(sanitizeDownloadFilenameBase("   ")).toBe("brain-chat");
+    expect(markdownDownloadFilename("Weekly brief")).toBe("Weekly-brief.md");
+    expect(markdownDownloadFilename(null, "brain-message")).toBe("brain-message.md");
+  });
+
+  it("downloads the same markdown body the serializers produce", () => {
+    const message: EveMessage = {
+      id: "a1",
+      role: "assistant",
+      parts: [{ type: "text", text: "Export me" }],
+    };
+    const markdown = messageToMarkdown(message);
+    expect(markdown).toBe("Export me");
+
+    const createObjectURL = vi.fn((value: Blob) => {
+      expect(value).toBeInstanceOf(Blob);
+      expect(value.type).toBe("text/markdown;charset=utf-8");
+      return "blob:mock";
+    });
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal("URL", { createObjectURL, revokeObjectURL });
+
+    const anchor = document.createElement("a");
+    const click = vi.spyOn(anchor, "click").mockImplementation(() => undefined);
+    const remove = vi.spyOn(anchor, "remove").mockImplementation(() => undefined);
+    const createElement = vi.spyOn(document, "createElement").mockReturnValue(anchor);
+    const append = vi.spyOn(document.body, "append").mockImplementation(() => undefined);
+
+    downloadTextFile(markdownDownloadFilename(null, "brain-message"), markdown);
+
+    expect(createElement).toHaveBeenCalledWith("a");
+    expect(anchor.download).toBe("brain-message.md");
+    expect(click).toHaveBeenCalledOnce();
+    expect(append).toHaveBeenCalledWith(anchor);
+    expect(remove).toHaveBeenCalledOnce();
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:mock");
   });
 });
