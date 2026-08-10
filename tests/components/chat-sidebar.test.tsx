@@ -225,12 +225,13 @@ describe("ChatSidebar chat actions menu", () => {
 });
 
 describe("ChatSidebar navigation", () => {
-  it("exposes destination links for chats, workspaces, playbooks, schedules, and tools", () => {
+  it("exposes destination links for chats, projects, workspaces, playbooks, schedules, and tools", () => {
     renderSidebar();
     expect(screen.getByRole("link", { name: "All chats" }).getAttribute("href")).toBe("/chats");
     expect(screen.getByRole("link", { name: "All chats" }).getAttribute("aria-current")).toBe(
       "page",
     );
+    expect(screen.getByRole("link", { name: "Projects" }).getAttribute("href")).toBe("/projects");
     expect(screen.getByRole("link", { name: "Workspaces" }).getAttribute("href")).toBe(
       "/workspaces",
     );
@@ -422,89 +423,5 @@ describe("ChatSidebar search", () => {
 
     expect(screen.getByRole("searchbox", { name: "Search chats" }).getAttribute("value")).toBe("");
     expect(screen.getByText("First chat")).toBeDefined();
-  });
-});
-
-describe("ChatSidebar projects", () => {
-  const projectChats: readonly ChatSummary[] = [
-    chats[0]!,
-    {
-      ...chats[1]!,
-      id: "chat-project",
-      title: "In research",
-      projectId: "proj-1",
-    },
-  ];
-
-  const project = {
-    id: "proj-1",
-    name: "Research",
-    createdAt: "2026-08-10T00:00:00.000Z",
-    updatedAt: "2026-08-10T00:00:00.000Z",
-    userId: "user-a",
-    workspaceId: "ws-1",
-  } as const;
-
-  it("lists project chats under Projects and keeps Recent unassigned", () => {
-    render(
-      <ChatSidebar
-        activeChatId="chat-1"
-        brand={<span>Brain</span>}
-        chats={projectChats}
-        currentTitle="First chat"
-        onCreateProject={vi.fn()}
-        onDeleteChat={vi.fn()}
-        onNewChat={vi.fn()}
-        onRenameChat={vi.fn()}
-        onSelectChat={vi.fn()}
-        projects={[project]}
-      />,
-    );
-
-    expect(screen.getByText("Projects")).toBeDefined();
-    expect(screen.getByText("Research")).toBeDefined();
-    expect(screen.getByText("In research")).toBeDefined();
-    expect(screen.getByText("First chat")).toBeDefined();
-    expect(screen.queryByText("ClickUp planning")).toBeNull();
-  });
-
-  it("creates a project and starts a chat in a project", async () => {
-    const onCreateProject = vi.fn();
-    const onNewChatInProject = vi.fn();
-    const onRenameProject = vi.fn();
-    const onDeleteProject = vi.fn();
-
-    render(
-      <ChatSidebar
-        activeChatId="chat-1"
-        brand={<span>Brain</span>}
-        chats={projectChats}
-        currentTitle="First chat"
-        onCreateProject={onCreateProject}
-        onDeleteChat={vi.fn()}
-        onDeleteProject={onDeleteProject}
-        onNewChat={vi.fn()}
-        onNewChatInProject={onNewChatInProject}
-        onRenameChat={vi.fn()}
-        onRenameProject={onRenameProject}
-        onSelectChat={vi.fn()}
-        projects={[project]}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "New project" }));
-    expect(onCreateProject).toHaveBeenCalled();
-
-    fireEvent.pointerDown(screen.getByRole("button", { name: "Project actions for Research" }));
-    fireEvent.click(await screen.findByRole("menuitem", { name: "New chat" }));
-    expect(onNewChatInProject).toHaveBeenCalledWith("proj-1");
-
-    fireEvent.pointerDown(screen.getByRole("button", { name: "Project actions for Research" }));
-    fireEvent.click(await screen.findByRole("menuitem", { name: "Rename" }));
-    expect(onRenameProject).toHaveBeenCalledWith(project);
-
-    fireEvent.pointerDown(screen.getByRole("button", { name: "Project actions for Research" }));
-    fireEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
-    expect(onDeleteProject).toHaveBeenCalledWith("proj-1");
   });
 });

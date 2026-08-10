@@ -5,6 +5,7 @@ import {
   Building2Icon,
   CalendarClockIcon,
   ChevronDownIcon,
+  FolderIcon,
   HammerIcon,
   MessageSquareIcon,
   PanelLeftIcon,
@@ -19,7 +20,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { ChatRowMenu } from "@/components/chat/chat-row-menu";
-import { SidebarProjects } from "@/components/chat/sidebar-projects";
 import { WorkspaceSwitcher } from "@/components/chat/workspace-switcher";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -91,17 +91,13 @@ export function ChatSidebar({
   currentTitle,
   draftVisibility = "personal",
   onArchiveChat,
-  onCreateProject,
   onCreateProjectAndMove,
   onDeleteChat,
-  onDeleteProject,
   onMoveChatToProject,
   onNewChat,
-  onNewChatInProject,
   onNewSharedChat,
   onPinChat,
   onRenameChat,
-  onRenameProject,
   onShareChat,
   onSelectChat,
   onToggleSidebar,
@@ -119,17 +115,13 @@ export function ChatSidebar({
   readonly currentTitle: string | null;
   readonly draftVisibility?: "personal" | "shared";
   readonly onArchiveChat?: (chatId: string) => void | Promise<void>;
-  readonly onCreateProject?: () => void;
   readonly onCreateProjectAndMove?: (chatId: string) => void | Promise<void>;
   readonly onDeleteChat: (chatId: string) => void;
-  readonly onDeleteProject?: (projectId: string) => void;
   readonly onMoveChatToProject?: (chatId: string, projectId: string | null) => void | Promise<void>;
   readonly onNewChat: () => void;
-  readonly onNewChatInProject?: (projectId: string) => void;
   readonly onNewSharedChat?: () => void;
   readonly onPinChat?: (chatId: string, pinned: boolean) => void | Promise<void>;
   readonly onRenameChat: (chatId: string, title: string) => void | Promise<void>;
-  readonly onRenameProject?: (project: ChatProject) => void;
   readonly onShareChat?: (chatId: string) => void | Promise<void>;
   readonly onRunPlaybook?: (prompt: string) => void;
   readonly onSelectChat: (chatId: string) => void;
@@ -142,6 +134,7 @@ export function ChatSidebar({
 }) {
   const pathname = usePathname();
   const chatsActive = pathname === "/chats" || pathname === "/chat";
+  const projectsActive = pathname === "/projects";
   const workspacesActive = pathname === "/workspaces" || pathname.startsWith("/workspaces/");
   const playbooksActive = pathname === "/playbooks";
   const schedulesActive = pathname === "/schedules";
@@ -161,9 +154,7 @@ export function ChatSidebar({
   const recentPanelRef = useRef<HTMLDivElement>(null);
   const recentDragRef = useRef<{ startY: number; startHeight: number } | null>(null);
   const recentFillsHeight = recent.open && recent.heightPx === null;
-  const recentChats = chats.filter((chat) => chat.projectId === null);
-  const filteredChats = filterChatsByTitle(recentChats, query);
-  const filteredProjectChats = filterChatsByTitle(chats, query);
+  const filteredChats = filterChatsByTitle(chats, query);
   const hasActiveQuery = query.trim().length > 0;
   // Defer platform-specific labels to avoid SSR/client hydration mismatches.
   const shortcutLabel = mounted ? newChatShortcutLabel() : "";
@@ -333,6 +324,12 @@ export function ChatSidebar({
           >
             <span className="flex min-w-0 items-center gap-1.5">
               <span className="line-clamp-1 min-w-0 flex-1">{chat.title}</span>
+              {chat.projectId ? (
+                <FolderIcon
+                  aria-label="In a project"
+                  className="text-muted-foreground/55 size-3 shrink-0"
+                />
+              ) : null}
               {pinned ? (
                 <PinIcon aria-label="Pinned" className="text-muted-foreground/55 size-3 shrink-0" />
               ) : null}
@@ -469,6 +466,20 @@ export function ChatSidebar({
               </Link>
             </Button>
           </IconTooltip>
+          <IconTooltip label="Projects" side="right">
+            <Button
+              aria-current={projectsActive ? "page" : undefined}
+              aria-label="Projects"
+              asChild
+              className={compactNavClass(projectsActive)}
+              size="icon-sm"
+              variant="ghost"
+            >
+              <Link href="/projects">
+                <FolderIcon className="size-4" />
+              </Link>
+            </Button>
+          </IconTooltip>
           <IconTooltip label="Workspaces" side="right">
             <Button
               aria-current={workspacesActive ? "page" : undefined}
@@ -597,6 +608,12 @@ export function ChatSidebar({
             label="All chats"
           />
           <SidebarNavLink
+            active={projectsActive}
+            href="/projects"
+            icon={FolderIcon}
+            label="Projects"
+          />
+          <SidebarNavLink
             active={workspacesActive}
             href="/workspaces"
             icon={Building2Icon}
@@ -617,18 +634,6 @@ export function ChatSidebar({
           <SidebarNavLink active={toolsActive} href="/tools" icon={HammerIcon} label="Tools" />
         </nav>
       </div>
-
-      {onCreateProject || projects.length > 0 ? (
-        <SidebarProjects
-          chats={filteredProjectChats}
-          onCreateProject={onCreateProject}
-          onDeleteProject={onDeleteProject}
-          onNewChatInProject={onNewChatInProject}
-          onRenameProject={onRenameProject}
-          projects={projects}
-          renderChatRow={renderChatRow}
-        />
-      ) : null}
 
       {recent.open ? (
         <IconTooltip label="Drag to resize · Double-click to fill" side="top">
@@ -744,7 +749,7 @@ export function ChatSidebar({
                     </span>
                   </div>
                 ) : null}
-                {recentChats.length === 0 && !showDraftRow && !hasActiveQuery ? (
+                {chats.length === 0 && !showDraftRow && !hasActiveQuery ? (
                   <p className="text-muted-foreground/65 px-2 py-4 text-center text-xs">
                     No chats yet
                   </p>
