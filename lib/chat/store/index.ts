@@ -20,8 +20,15 @@ const globalForStore = globalThis as typeof globalThis & {
   brainChatStore?: ChatStore;
 };
 
+function isCurrentChatStore(store: ChatStore | undefined): store is ChatStore {
+  // Recreate after HMR when the cached singleton predates newer store methods.
+  return Boolean(
+    store && typeof store.listProjects === "function" && typeof store.createProject === "function",
+  );
+}
+
 export function getChatStore(): ChatStore {
-  if (!globalForStore.brainChatStore) {
+  if (!isCurrentChatStore(globalForStore.brainChatStore)) {
     globalForStore.brainChatStore = createPostgresChatStore();
   }
   return globalForStore.brainChatStore;

@@ -362,7 +362,10 @@ export function getAuthDb(env: Record<string, string | undefined> = process.env)
 export async function ensureAuthReady(
   env: Record<string, string | undefined> = process.env,
 ): Promise<void> {
-  await getBrainAuthBundle(env).ready;
+  const bundle = getBrainAuthBundle(env);
+  await bundle.ready;
+  // Re-apply idempotent Brain DDL when BRAIN_SCHEMA_REVISION bumps (dev HMR).
+  await ensureWorkspaceSchema(bundle.pool);
 }
 
 export async function countAuthUsers(

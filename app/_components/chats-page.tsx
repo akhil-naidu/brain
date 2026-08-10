@@ -69,6 +69,7 @@ export function ChatsPage() {
       setViewerUserId(listed.viewerUserId);
       setError(null);
     } catch (cause) {
+      setChats([]);
       setError(cause instanceof Error ? cause.message : "Unable to load chats.");
     } finally {
       setLoading(false);
@@ -172,7 +173,11 @@ export function ChatsPage() {
         <Button
           aria-pressed={status === "active"}
           onClick={() => {
+            if (status === "active") {
+              return;
+            }
             setLoading(true);
+            setChats([]);
             setStatus("active");
           }}
           size="sm"
@@ -184,7 +189,11 @@ export function ChatsPage() {
         <Button
           aria-pressed={status === "archived"}
           onClick={() => {
+            if (status === "archived") {
+              return;
+            }
             setLoading(true);
+            setChats([]);
             setStatus("archived");
           }}
           size="sm"

@@ -1,7 +1,20 @@
 import type { Pool } from "pg";
 
+/**
+ * Bump when Brain DDL changes so long-lived dev processes re-apply
+ * idempotent ALTERs without a full restart.
+ */
+export const BRAIN_SCHEMA_REVISION = 2;
+
+const globalForSchema = globalThis as typeof globalThis & {
+  brainSchemaRevision?: number;
+};
+
 /** Idempotent Brain-owned tables (Better Auth tables come from getMigrations). */
 export async function ensureBrainSchema(pool: Pool): Promise<void> {
+  if (globalForSchema.brainSchemaRevision === BRAIN_SCHEMA_REVISION) {
+    return;
+  }
   await pool.query(`
     CREATE TABLE IF NOT EXISTS brain_workspace (
       id TEXT PRIMARY KEY NOT NULL,
@@ -171,4 +184,5 @@ export async function ensureBrainSchema(pool: Pool): Promise<void> {
     ) VALUES (1, 'invite-only', TRUE, TRUE, TRUE)
     ON CONFLICT (id) DO NOTHING;
   `);
+  globalForSchema.brainSchemaRevision = BRAIN_SCHEMA_REVISION;
 }
