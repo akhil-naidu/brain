@@ -285,6 +285,10 @@ export function ChatSidebar({
     const selected = chat.id === activeChatId;
     const editing = editingId === chat.id;
     const pinned = chat.pinnedAt !== null;
+    const projectName = chat.projectId
+      ? projects.find((project) => project.id === chat.projectId)?.name
+      : undefined;
+    const projectLabel = projectName ? `In ${projectName}` : "In a project";
     return (
       <div
         className={cn(
@@ -325,10 +329,14 @@ export function ChatSidebar({
             <span className="flex min-w-0 items-center gap-1.5">
               <span className="line-clamp-1 min-w-0 flex-1">{chat.title}</span>
               {chat.projectId ? (
-                <FolderIcon
-                  aria-label="In a project"
-                  className="text-muted-foreground/55 size-3 shrink-0"
-                />
+                <IconTooltip label={projectLabel} side="right">
+                  <span aria-label={projectLabel} className="inline-flex shrink-0">
+                    <FolderIcon
+                      aria-hidden
+                      className="text-muted-foreground/55 size-3"
+                    />
+                  </span>
+                </IconTooltip>
               ) : null}
               {pinned ? (
                 <PinIcon aria-label="Pinned" className="text-muted-foreground/55 size-3 shrink-0" />
