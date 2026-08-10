@@ -87,15 +87,36 @@ export function isBrainChatModelId(value: string): boolean {
   return modelById.has(value);
 }
 
+/** True for `custom:<uuid>` selectable ids (OpenAI-compatible BYO models). */
+export function isCustomBrainModelId(value: string): boolean {
+  return /^custom:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+}
+
+/**
+ * Normalizes a picker / client-context model id.
+ * Curated and custom ids pass through; unknown values fall back to the curated default.
+ */
 export function resolveBrainChatModelId(value: string | null | undefined): string {
-  if (typeof value === "string" && isBrainChatModelId(value)) {
-    return value;
+  if (typeof value === "string") {
+    if (isBrainChatModelId(value) || isCustomBrainModelId(value)) {
+      return value;
+    }
   }
   return DEFAULT_BRAIN_CHAT_MODEL_ID;
 }
 
 export function getBrainChatModel(value: string | null | undefined): BrainChatModel {
   const id = resolveBrainChatModelId(value);
+  if (isCustomBrainModelId(id)) {
+    return {
+      id,
+      label: "Custom model",
+      description: "OpenAI-compatible custom model",
+      contextWindowTokens: DEFAULT_MODEL.contextWindowTokens,
+    };
+  }
   const model = modelById.get(id);
   return model ?? DEFAULT_MODEL;
 }

@@ -52,4 +52,31 @@ describe("createTurnClientContext", () => {
 
     expect(context.modelId).toBe("deepseek/deepseek-v4-pro");
   });
+
+  it("passes through custom model ids and workspace id", () => {
+    const customId = "custom:11111111-1111-4111-8111-111111111111";
+    const context = createTurnClientContext({
+      modelId: customId,
+      workspaceId: "ws-team",
+      enabledConnections: {
+        asana: false,
+        atlassian: false,
+        clickup: false,
+        dflow: false,
+        github: false,
+        gmail: false,
+        linear: false,
+        mongodb: false,
+        notion: false,
+        sentry: false,
+        slack: false,
+        snowflake: false,
+        toolbox: false,
+        zernio: false,
+      },
+    });
+
+    expect(context.modelId).toBe(customId);
+    expect(context.workspaceId).toBe("ws-team");
+  });
 });

@@ -1,35 +1,45 @@
-import { createOpenAI } from "@ai-sdk/openai";
 import { defineAgent, defineDynamic } from "eve";
-import { extractSelectedModelIdFromMessages } from "./lib/client-context-model";
-import { DEFAULT_BRAIN_CHAT_MODEL_ID, getBrainChatModel } from "./lib/models";
+import {
+  extractSelectedModelIdFromMessages,
+  extractWorkspaceIdFromMessages,
+} from "./lib/client-context-model";
+import {
+  createCommandCodeFallbackModel,
+  resolveChatModelSelection,
+} from "./lib/resolve-chat-model";
 
-const commandcode = createOpenAI({
-  apiKey: process.env.COMMAND_CODE_API_KEY,
-  baseURL: "https://api.commandcode.ai/provider/v1",
-  name: "commandcode",
-});
-
-const defaultModel = getBrainChatModel(DEFAULT_BRAIN_CHAT_MODEL_ID);
+const fallback = createCommandCodeFallbackModel();
 
 export default defineAgent({
   // Command Code exposes chat completions, not the OpenAI /responses API.
   // Live LanguageModel objects must be selected on step.started (not session/turn).
   model: defineDynamic({
-    fallback: commandcode.chat(defaultModel.id),
+    fallback: fallback.model,
     events: {
-      "step.started": (_event, ctx) => {
-        const selected = getBrainChatModel(extractSelectedModelIdFromMessages(ctx.messages));
-        if (selected.id === defaultModel.id) {
+      "step.started": async (_event, ctx) => {
+        const authWorkspace =
+          typeof ctx.session.auth.current?.attributes?.workspaceId === "string"
+            ? ctx.session.auth.current.attributes.workspaceId
+            : typeof ctx.session.auth.initiator?.attributes?.workspaceId === "string"
+              ? ctx.session.auth.initiator.attributes.workspaceId
+              : null;
+        const workspaceId = extractWorkspaceIdFromMessages(ctx.messages) ?? authWorkspace ?? null;
+        const selected = await resolveChatModelSelection({
+          modelId: extractSelectedModelIdFromMessages(ctx.messages),
+          workspaceId,
+        });
+
+        if (selected.selectableId === fallback.selectableId) {
           return null;
         }
 
         return {
-          model: commandcode.chat(selected.id),
-          modelContextWindowTokens: selected.contextWindowTokens,
+          model: selected.model,
+          modelContextWindowTokens: selected.modelContextWindowTokens,
         };
       },
     },
   }),
   // Required for non-Gateway models so compaction can size the context.
-  modelContextWindowTokens: defaultModel.contextWindowTokens,
+  modelContextWindowTokens: fallback.modelContextWindowTokens,
 });

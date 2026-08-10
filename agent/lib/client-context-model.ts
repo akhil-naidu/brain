@@ -53,8 +53,9 @@ function parseClientContextObject(raw: string): Readonly<Record<string, unknown>
   return record;
 }
 
-/** Reads the newest turn clientContext modelId from eve message history. */
-export function extractSelectedModelIdFromMessages(messages: readonly ModelMessage[]): string {
+function newestClientContext(
+  messages: readonly ModelMessage[],
+): Readonly<Record<string, unknown>> | null {
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const message = messages[index];
     if (!message || message.role !== "user") {
@@ -67,15 +68,35 @@ export function extractSelectedModelIdFromMessages(messages: readonly ModelMessa
     }
 
     const context = parseClientContextObject(text);
-    if (!context) {
-      continue;
-    }
-
-    const modelId = context["modelId"];
-    if (typeof modelId === "string") {
-      return resolveBrainChatModelId(modelId);
+    if (context) {
+      return context;
     }
   }
+  return null;
+}
 
+/** Reads the newest turn clientContext modelId from eve message history. */
+export function extractSelectedModelIdFromMessages(messages: readonly ModelMessage[]): string {
+  const context = newestClientContext(messages);
+  if (!context) {
+    return resolveBrainChatModelId(undefined);
+  }
+  const modelId = context["modelId"];
+  if (typeof modelId === "string") {
+    return resolveBrainChatModelId(modelId);
+  }
   return resolveBrainChatModelId(undefined);
+}
+
+/** Reads workspaceId from the newest turn client context when present. */
+export function extractWorkspaceIdFromMessages(messages: readonly ModelMessage[]): string | null {
+  const context = newestClientContext(messages);
+  if (!context) {
+    return null;
+  }
+  const workspaceId = context["workspaceId"];
+  if (typeof workspaceId === "string" && workspaceId.trim()) {
+    return workspaceId.trim();
+  }
+  return null;
 }
