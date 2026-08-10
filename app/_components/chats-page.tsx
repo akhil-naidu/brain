@@ -1,28 +1,19 @@
 "use client";
 
-import {
-  ArchiveRestoreIcon,
-  MessageSquareIcon,
-  PencilIcon,
-  SearchIcon,
-  Trash2Icon,
-  UserPlusIcon,
-  UsersIcon,
-  XIcon,
-} from "lucide-react";
+import { FolderIcon, MessageSquareIcon, PinIcon, SearchIcon, UsersIcon, XIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ChatRowMenu } from "@/components/chat/chat-row-menu";
 import { SettingsRowsSkeleton } from "@/components/loading/skeletons";
 import { SettingsPanel, SettingsShell } from "@/components/settings/settings-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { IconTooltip } from "@/components/ui/tooltip";
+import { createChatProject, listChatProjects } from "@/lib/chat/chat-projects-api";
 import { CHATS_CHANGED_EVENT, notifyChatsChanged } from "@/lib/chat/chat-list-events";
 import { chatUrl, deleteChat, listChats, updateChat } from "@/lib/chat/chats-api";
 import { filterChatsByTitle } from "@/lib/chat/filter-chats";
 import { DEFAULT_CHAT_TITLE, normalizeChatTitle } from "@/lib/chat/title";
-import type { ChatSummary } from "@/lib/chat/store/types";
-import { cn } from "@/lib/utils";
+import type { ChatProject, ChatSummary } from "@/lib/chat/store/types";
 
 type ChatListStatus = "active" | "archived";
 
@@ -39,9 +30,14 @@ function formatUpdatedAt(value: string): string {
   }).format(date);
 }
 
+function revisionOpts(chat: ChatSummary | undefined) {
+  return chat?.visibility === "shared" ? { expectedRevision: chat.revision } : {};
+}
+
 export function ChatsPage() {
   const router = useRouter();
   const [chats, setChats] = useState<readonly ChatSummary[]>([]);
+  const [projects, setProjects] = useState<readonly ChatProject[]>([]);
   const [status, setStatus] = useState<ChatListStatus>("active");
   const [canCreateShared, setCanCreateShared] = useState(false);
   const [viewerUserId, setViewerUserId] = useState<string | null>(null);
@@ -63,8 +59,9 @@ export function ChatsPage() {
 
   const refresh = useCallback(async () => {
     try {
-      const listed = await listChats({ status });
+      const [listed, projectList] = await Promise.all([listChats({ status }), listChatProjects()]);
       setChats(listed.chats);
+      setProjects(projectList);
       setCanCreateShared(listed.canCreateShared);
       setViewerUserId(listed.viewerUserId);
       setError(null);
@@ -96,9 +93,10 @@ export function ChatsPage() {
 
   async function handleRename(chatId: string) {
     const title = normalizeChatTitle(renameValue);
+    const existing = chats.find((chat) => chat.id === chatId);
     setBusyId(chatId);
     try {
-      await updateChat(chatId, { title });
+      await updateChat(chatId, { title, ...revisionOpts(existing) });
       setRenamingId(null);
       notifyChatsChanged();
       await refresh();
@@ -135,14 +133,39 @@ export function ChatsPage() {
     }
   }
 
-  async function handleUnarchive(chatId: string) {
+  async function handlePin(chatId: string, pinned: boolean) {
+    const existing = chats.find((chat) => chat.id === chatId);
     setBusyId(chatId);
     try {
-      const existing = chats.find((chat) => chat.id === chatId);
-      await updateChat(chatId, {
-        archived: false,
-        ...(existing?.visibility === "shared" ? { expectedRevision: existing.revision } : {}),
-      });
+      await updateChat(chatId, { pinned, ...revisionOpts(existing) });
+      notifyChatsChanged();
+      await refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to update pin.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleArchive(chatId: string) {
+    const existing = chats.find((chat) => chat.id === chatId);
+    setBusyId(chatId);
+    try {
+      await updateChat(chatId, { archived: true, ...revisionOpts(existing) });
+      notifyChatsChanged();
+      await refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to archive chat.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleUnarchive(chatId: string) {
+    const existing = chats.find((chat) => chat.id === chatId);
+    setBusyId(chatId);
+    try {
+      await updateChat(chatId, { archived: false, ...revisionOpts(existing) });
       notifyChatsChanged();
       await refresh();
     } catch (cause) {
@@ -152,9 +175,43 @@ export function ChatsPage() {
     }
   }
 
+  async function handleMoveToProject(chatId: string, projectId: string | null) {
+    const existing = chats.find((chat) => chat.id === chatId);
+    setBusyId(chatId);
+    try {
+      await updateChat(chatId, { projectId, ...revisionOpts(existing) });
+      notifyChatsChanged();
+      await refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to move chat.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleCreateProjectAndMove(chatId: string) {
+    const name = window.prompt("Project name")?.trim();
+    if (!name) {
+      return;
+    }
+    const existing = chats.find((chat) => chat.id === chatId);
+    setBusyId(chatId);
+    try {
+      const project = await createChatProject({ name });
+      setProjects((current) => [project, ...current.filter((item) => item.id !== project.id)]);
+      await updateChat(chatId, { projectId: project.id, ...revisionOpts(existing) });
+      notifyChatsChanged();
+      await refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to create project.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   return (
     <SettingsShell
-      description="Browse, rename, share, archive, and delete chats in the active workspace."
+      description="Browse, rename, share, pin, archive, and organize chats in the active workspace."
       meta={
         <Button
           onClick={() => {
@@ -251,9 +308,13 @@ export function ChatsPage() {
                 status === "active" && canCreateShared && isOwner && chat.visibility === "personal";
               const busy = busyId === chat.id;
               const renaming = renamingId === chat.id;
+              const pinned = chat.pinnedAt !== null;
+              const projectName = chat.projectId
+                ? projects.find((project) => project.id === chat.projectId)?.name
+                : null;
 
               return (
-                <li className="flex items-center gap-2 px-3 py-2.5 sm:px-4" key={chat.id}>
+                <li className="group flex items-center gap-2 px-3 py-2.5 sm:px-4" key={chat.id}>
                   {renaming ? (
                     <form
                       className="flex min-w-0 flex-1 items-center gap-2"
@@ -309,6 +370,18 @@ export function ChatsPage() {
                         <span className="min-w-0 flex-1">
                           <span className="text-foreground flex min-w-0 items-center gap-2 text-sm font-medium">
                             <span className="truncate">{title}</span>
+                            {pinned ? (
+                              <PinIcon
+                                aria-label="Pinned"
+                                className="text-muted-foreground/55 size-3.5 shrink-0"
+                              />
+                            ) : null}
+                            {projectName ? (
+                              <span className="text-muted-foreground bg-muted/60 inline-flex max-w-[8rem] shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium tracking-wide uppercase">
+                                <FolderIcon className="size-2.5 shrink-0" />
+                                <span className="truncate">{projectName}</span>
+                              </span>
+                            ) : null}
                             {chat.visibility === "shared" ? (
                               <span className="text-muted-foreground bg-muted/60 shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-medium tracking-wide uppercase">
                                 Shared
@@ -320,75 +393,67 @@ export function ChatsPage() {
                           </span>
                         </span>
                       </button>
-                      <div className="flex shrink-0 items-center gap-0.5">
-                        {status === "archived" ? (
-                          <IconTooltip label="Unarchive" side="top">
-                            <Button
-                              aria-label={`Unarchive ${title}`}
-                              className="text-muted-foreground size-8"
-                              disabled={busy}
-                              onClick={() => {
-                                void handleUnarchive(chat.id);
-                              }}
-                              size="icon-sm"
-                              type="button"
-                              variant="ghost"
-                            >
-                              <ArchiveRestoreIcon className="size-3.5" />
-                            </Button>
-                          </IconTooltip>
-                        ) : null}
-                        {canShare ? (
-                          <IconTooltip label="Share with workspace" side="top">
-                            <Button
-                              aria-label={`Share ${title}`}
-                              className="text-muted-foreground size-8"
-                              disabled={busy}
-                              onClick={() => {
-                                void handleShare(chat.id);
-                              }}
-                              size="icon-sm"
-                              type="button"
-                              variant="ghost"
-                            >
-                              <UserPlusIcon className="size-3.5" />
-                            </Button>
-                          </IconTooltip>
-                        ) : null}
-                        {status === "active" ? (
-                          <IconTooltip label="Rename" side="top">
-                            <Button
-                              aria-label={`Rename ${title}`}
-                              className="text-muted-foreground size-8"
-                              disabled={busy}
-                              onClick={() => {
+                      <ChatRowMenu
+                        canShare={canShare}
+                        chatTitle={title}
+                        onArchive={
+                          status === "active"
+                            ? () => {
+                                void handleArchive(chat.id);
+                              }
+                            : undefined
+                        }
+                        onCreateProject={
+                          status === "active"
+                            ? () => {
+                                void handleCreateProjectAndMove(chat.id);
+                              }
+                            : undefined
+                        }
+                        onDelete={() => {
+                          void handleDelete(chat.id);
+                        }}
+                        onMoveToProject={
+                          status === "active"
+                            ? (projectId) => {
+                                void handleMoveToProject(chat.id, projectId);
+                              }
+                            : undefined
+                        }
+                        onPin={
+                          status === "active"
+                            ? () => {
+                                void handlePin(chat.id, !pinned);
+                              }
+                            : undefined
+                        }
+                        onRename={
+                          status === "active"
+                            ? () => {
                                 setRenamingId(chat.id);
                                 setRenameValue(title);
-                              }}
-                              size="icon-sm"
-                              type="button"
-                              variant="ghost"
-                            >
-                              <PencilIcon className="size-3.5" />
-                            </Button>
-                          </IconTooltip>
-                        ) : null}
-                        <IconTooltip label="Delete" side="top">
-                          <Button
-                            aria-label={`Delete ${title}`}
-                            className={cn("text-muted-foreground size-8", "hover:text-destructive")}
-                            disabled={busy}
-                            onClick={() => {
-                              void handleDelete(chat.id);
-                            }}
-                            size="icon-sm"
-                            type="button"
-                            variant="ghost"
-                          >
-                            <Trash2Icon className="size-3.5" />
-                          </Button>
-                        </IconTooltip>
-                      </div>
+                              }
+                            : undefined
+                        }
+                        onShare={
+                          canShare
+                            ? () => {
+                                void handleShare(chat.id);
+                              }
+                            : undefined
+                        }
+                        onUnarchive={
+                          status === "archived"
+                            ? () => {
+                                void handleUnarchive(chat.id);
+                              }
+                            : undefined
+                        }
+                        pinned={pinned}
+                        projectId={chat.projectId}
+                        projects={projects}
+                        triggerVisible="always"
+                      />
                     </>
                   )}
                 </li>

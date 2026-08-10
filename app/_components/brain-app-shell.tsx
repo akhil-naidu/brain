@@ -8,6 +8,7 @@ import { ChatNavProvider, useChatNav } from "@/app/_components/chat-nav-context"
 import { ChatShellProvider } from "@/app/_components/chat-shell-context";
 import { BetaBadge } from "@/components/brand/beta-badge";
 import { BrainMark } from "@/components/brain-mark";
+import { ChatRowMenu } from "@/components/chat/chat-row-menu";
 import { ChatSidebar } from "@/components/chat/sidebar";
 import { UserProfileMenu } from "@/components/chat/user-profile-menu";
 import { AppToaster } from "@/components/ui/app-toast";
@@ -318,6 +319,7 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
   const draftVisibility = handlers?.draftVisibility ?? "personal";
   const isChatRoute = pathname === "/chat";
   const currentTitle = isChatRoute ? (handlers?.currentTitle ?? null) : null;
+  const activeChat = activeChatId ? (chats.find((chat) => chat.id === activeChatId) ?? null) : null;
 
   // Dedicated pages render their own titles; keep the chrome title for chat only.
   const headerTitle = isChatRoute
@@ -517,6 +519,46 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
                 )}
               </Button>
             </IconTooltip>
+          ) : null}
+          {activeChat ? (
+            <ChatRowMenu
+              canShare={Boolean(
+                canCreateShared &&
+                activeChat.visibility === "personal" &&
+                viewerUserId &&
+                activeChat.userId === viewerUserId,
+              )}
+              chatTitle={activeChat.title}
+              onArchive={() => {
+                void onArchiveChat(activeChat.id);
+              }}
+              onCreateProject={() => {
+                void onCreateProjectAndMove(activeChat.id);
+              }}
+              onDelete={() => {
+                onDeleteChat(activeChat.id);
+              }}
+              onMoveToProject={(projectId) => {
+                void onMoveChatToProject(activeChat.id, projectId);
+              }}
+              onPin={() => {
+                void onPinChat(activeChat.id, activeChat.pinnedAt === null);
+              }}
+              onRename={() => {
+                const next = window.prompt("Rename chat", activeChat.title);
+                if (next === null) {
+                  return;
+                }
+                void onRenameChat(activeChat.id, next);
+              }}
+              onShare={() => {
+                void onShareChat(activeChat.id);
+              }}
+              pinned={activeChat.pinnedAt !== null}
+              projectId={activeChat.projectId}
+              projects={projects}
+              triggerVisible="always"
+            />
           ) : null}
           <UserProfileMenu />
         </header>

@@ -1,23 +1,17 @@
 "use client";
 
 import {
-  ArchiveIcon,
   BookmarkIcon,
   Building2Icon,
   CalendarClockIcon,
   ChevronDownIcon,
   FolderIcon,
-  FolderPlusIcon,
   HammerIcon,
   MessageSquareIcon,
-  MoreHorizontalIcon,
   PanelLeftIcon,
-  PencilIcon,
   PinIcon,
   PlusIcon,
   SearchIcon,
-  ShareIcon,
-  Trash2Icon,
   UserPlusIcon,
   UsersIcon,
   XIcon,
@@ -25,19 +19,10 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { ChatRowMenu } from "@/components/chat/chat-row-menu";
 import { WorkspaceSwitcher } from "@/components/chat/workspace-switcher";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { IconTooltip } from "@/components/ui/tooltip";
 import { filterChatsByTitle } from "@/lib/chat/filter-chats";
@@ -91,169 +76,6 @@ function SidebarNavLink({
       <Icon className="size-3.5 shrink-0 opacity-80" />
       <span className="truncate">{label}</span>
     </Link>
-  );
-}
-
-function ChatRowMenu({
-  canShare,
-  chatTitle,
-  onArchive,
-  onCreateProject,
-  onDelete,
-  onMoveToProject,
-  onPin,
-  onRename,
-  onShare,
-  pinned,
-  projectId,
-  projects,
-  selected,
-}: {
-  readonly canShare: boolean;
-  readonly chatTitle: string;
-  readonly onArchive?: () => void;
-  readonly onCreateProject?: () => void;
-  readonly onDelete: () => void;
-  readonly onMoveToProject?: (projectId: string | null) => void;
-  readonly onPin?: () => void;
-  readonly onRename: () => void;
-  readonly onShare?: () => void;
-  readonly pinned: boolean;
-  readonly projectId: string | null;
-  readonly projects: readonly ChatProject[];
-  readonly selected: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const canMove = Boolean(onMoveToProject || onCreateProject);
-
-  return (
-    <DropdownMenu onOpenChange={setOpen} open={open}>
-      <DropdownMenuTrigger asChild>
-        <Button
-          aria-label={`Chat actions for ${chatTitle}`}
-          className={cn(
-            "text-muted-foreground/55 hover:text-foreground mr-0.5 size-6 shrink-0 transition-opacity",
-            open || selected
-              ? "opacity-100"
-              : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
-          )}
-          size="icon-sm"
-          type="button"
-          variant="ghost"
-        >
-          <MoreHorizontalIcon className="size-3.5" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="end"
-        className="border-border bg-popover w-48 rounded-md p-1"
-        collisionPadding={12}
-        sideOffset={4}
-      >
-        {canShare && onShare ? (
-          <DropdownMenuItem
-            className="gap-2"
-            onSelect={() => {
-              onShare();
-            }}
-          >
-            <ShareIcon className="size-4" />
-            Share
-          </DropdownMenuItem>
-        ) : null}
-        <DropdownMenuItem
-          className="gap-2"
-          onSelect={() => {
-            onRename();
-          }}
-        >
-          <PencilIcon className="size-4" />
-          Rename
-        </DropdownMenuItem>
-        {onPin ? (
-          <DropdownMenuItem
-            className="gap-2"
-            onSelect={() => {
-              onPin();
-            }}
-          >
-            <PinIcon className="size-4" />
-            {pinned ? "Unpin chat" : "Pin chat"}
-          </DropdownMenuItem>
-        ) : null}
-        {onArchive ? (
-          <DropdownMenuItem
-            className="gap-2"
-            onSelect={() => {
-              onArchive();
-            }}
-          >
-            <ArchiveIcon className="size-4" />
-            Archive
-          </DropdownMenuItem>
-        ) : null}
-        <DropdownMenuItem
-          className="gap-2"
-          onSelect={() => {
-            onDelete();
-          }}
-          variant="destructive"
-        >
-          <Trash2Icon className="size-4" />
-          Delete
-        </DropdownMenuItem>
-        {canMove ? (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger className="gap-2">
-                <FolderIcon className="size-4" />
-                Move to project
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="border-border bg-popover w-48 rounded-md p-1">
-                {projectId && onMoveToProject ? (
-                  <DropdownMenuItem
-                    className="gap-2"
-                    onSelect={() => {
-                      onMoveToProject(null);
-                    }}
-                  >
-                    Remove from project
-                  </DropdownMenuItem>
-                ) : null}
-                {projects.map((project) => (
-                  <DropdownMenuItem
-                    className="gap-2"
-                    disabled={project.id === projectId}
-                    key={project.id}
-                    onSelect={() => {
-                      onMoveToProject?.(project.id);
-                    }}
-                  >
-                    <FolderIcon className="size-4" />
-                    <span className="truncate">{project.name}</span>
-                  </DropdownMenuItem>
-                ))}
-                {onCreateProject ? (
-                  <>
-                    {projects.length > 0 || projectId ? <DropdownMenuSeparator /> : null}
-                    <DropdownMenuItem
-                      className="gap-2"
-                      onSelect={() => {
-                        onCreateProject();
-                      }}
-                    >
-                      <FolderPlusIcon className="size-4" />
-                      New project
-                    </DropdownMenuItem>
-                  </>
-                ) : null}
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-          </>
-        ) : null}
-      </DropdownMenuContent>
-    </DropdownMenu>
   );
 }
 
