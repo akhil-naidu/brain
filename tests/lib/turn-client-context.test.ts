@@ -7,12 +7,17 @@ describe("createTurnClientContext", () => {
       modelId: "deepseek/deepseek-v4-flash",
       enabledConnections: {
         asana: true,
+        atlassian: false,
         clickup: false,
         dflow: true,
         github: false,
         gmail: true,
+        linear: false,
+        notion: true,
+        sentry: false,
         slack: true,
         snowflake: false,
+        zernio: false,
       },
     });
 
@@ -27,12 +32,17 @@ describe("createTurnClientContext", () => {
       modelId: "not-real",
       enabledConnections: {
         asana: true,
+        atlassian: true,
         clickup: true,
         dflow: true,
         github: true,
         gmail: true,
+        linear: true,
+        notion: true,
+        sentry: true,
         slack: true,
         snowflake: true,
+        zernio: true,
       },
     });
 

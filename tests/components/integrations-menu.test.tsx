@@ -17,6 +17,11 @@ const fetchConnectionStatuses = vi.hoisted(() =>
     { id: "slack", displayName: "Slack", status: "needs_sign_in" as const },
     { id: "asana", displayName: "Asana", status: "needs_setup" as const, detail: "Set ASANA" },
     { id: "gmail", displayName: "Gmail", status: "needs_sign_in" as const },
+    { id: "notion", displayName: "Notion", status: "needs_sign_in" as const },
+    { id: "linear", displayName: "Linear", status: "needs_sign_in" as const },
+    { id: "atlassian", displayName: "Atlassian", status: "needs_sign_in" as const },
+    { id: "zernio", displayName: "Zernio", status: "needs_sign_in" as const },
+    { id: "sentry", displayName: "Sentry", status: "needs_sign_in" as const },
     { id: "dflow", displayName: "dFlow", status: "needs_sign_in" as const },
     { id: "github", displayName: "GitHub", status: "needs_setup" as const, detail: "Set GITHUB" },
     {
@@ -330,12 +335,17 @@ describe("IntegrationsMenu status", () => {
       <IntegrationsMenu
         enabledConnections={{
           asana: true,
+          atlassian: false,
           clickup: true,
           dflow: true,
           github: false,
           gmail: true,
+          linear: false,
+          notion: true,
+          sentry: false,
           slack: true,
           snowflake: false,
+          zernio: false,
         }}
         onConnectionEnabledChange={vi.fn()}
       />,
@@ -367,12 +377,17 @@ describe("IntegrationsMenu status", () => {
       <IntegrationsMenu
         enabledConnections={{
           asana: false,
+          atlassian: false,
           clickup: false,
           dflow: false,
           github: false,
           gmail: false,
+          linear: false,
+          notion: false,
+          sentry: false,
           slack: false,
           snowflake: false,
+          zernio: false,
         }}
         onConnectionEnabledChange={vi.fn()}
       />,

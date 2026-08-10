@@ -61,12 +61,17 @@ vi.mock("@/app/_components/chat-shell-context", () => ({
   useChatShell: () => ({
     enabledConnections: {
       asana: true,
+      atlassian: true,
       clickup: true,
       dflow: true,
       github: true,
       gmail: true,
+      linear: true,
+      notion: true,
+      sentry: true,
       slack: true,
       snowflake: true,
+      zernio: true,
     },
     selectedModelId: "deepseek/deepseek-v4-pro",
     setConnectionEnabled: vi.fn(),
