@@ -58,6 +58,7 @@ export const turnLockActionSchema = z.enum(["acquire", "release", "heartbeat"]);
 export const updateChatBodySchema = z.object({
   title: z.string().optional(),
   visibility: chatVisibilitySchema.optional(),
+  pinned: z.boolean().optional(),
   eveSession: sessionStateSchema.nullable().optional(),
   appendEvents: z.array(streamEventSchema).optional(),
   events: z.array(streamEventSchema).optional(),

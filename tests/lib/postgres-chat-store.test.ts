@@ -85,6 +85,24 @@ if (!DATABASE_URL) {
       expect(listed.map((chat) => chat.id)).toEqual([first.id, second.id]);
     });
 
+    it("pins chats above unpinned ones and clears pin", async () => {
+      const store = openStore();
+      const userId = "user-a";
+      const workspaceId = "ws-a";
+      const older = await store.createChat(userId, { title: "Older", workspaceId });
+      const newer = await store.createChat(userId, { title: "Newer", workspaceId });
+
+      const pinned = await store.updateChat(userId, workspaceId, older.id, { pinned: true });
+      expect(pinned?.pinnedAt).toBeTruthy();
+
+      const listed = await store.listChats(userId, workspaceId);
+      expect(listed.map((chat) => chat.id)).toEqual([older.id, newer.id]);
+      expect(listed[0]?.pinnedAt).toBeTruthy();
+
+      const unpinned = await store.updateChat(userId, workspaceId, older.id, { pinned: false });
+      expect(unpinned?.pinnedAt).toBeNull();
+    });
+
     it("isolates chats between users and workspaces", async () => {
       const store = openStore();
       const a = await store.createChat("user-a", { title: "A only", workspaceId: "ws-1" });

@@ -30,13 +30,14 @@ import {
 import { stashPendingChatVisibility } from "@/lib/chat/pending-chat-visibility";
 import { stashPendingPlaybookRun } from "@/lib/chat/pending-playbook-run";
 import { readSidebarExpanded, writeSidebarExpanded } from "@/lib/chat/sidebar-expanded";
+import { sortChatSummaries } from "@/lib/chat/sort-chats";
 import { normalizeChatTitle } from "@/lib/chat/title";
 import type { ChatSummary } from "@/lib/chat/store/types";
 import { cn } from "@/lib/utils";
 
 function upsertChatSummary(chats: readonly ChatSummary[], chat: ChatSummary): ChatSummary[] {
   const rest = chats.filter((item) => item.id !== chat.id);
-  return [chat, ...rest].toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  return sortChatSummaries([chat, ...rest]);
 }
 
 function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
@@ -181,6 +182,23 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
     [handlers, refreshChats],
   );
 
+  const onPinChat = useCallback(
+    async (chatId: string, pinned: boolean) => {
+      try {
+        const existing = chats.find((chat) => chat.id === chatId);
+        const chat = await updateChat(chatId, {
+          pinned,
+          ...(existing?.visibility === "shared" ? { expectedRevision: existing.revision } : {}),
+        });
+        setChats((current) => upsertChatSummary(current, chat));
+        notifyChatsChanged();
+      } catch {
+        await refreshChats();
+      }
+    },
+    [chats, refreshChats],
+  );
+
   const onRunPlaybook = useCallback(
     (prompt: string) => {
       stashPendingChatVisibility("personal");
@@ -285,6 +303,7 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
     draftVisibility: pathname === "/chat" ? draftVisibility : "personal",
     onDeleteChat,
     onNewSharedChat,
+    onPinChat,
     onRenameChat,
     onShareChat,
     onRunPlaybook,

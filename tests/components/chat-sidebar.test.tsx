@@ -18,6 +18,7 @@ const chats: readonly ChatSummary[] = [
     visibility: "personal",
     userId: "user-a",
     revision: 0,
+    pinnedAt: null,
   },
   {
     id: "chat-2",
@@ -27,6 +28,7 @@ const chats: readonly ChatSummary[] = [
     visibility: "shared",
     userId: "user-a",
     revision: 0,
+    pinnedAt: null,
   },
 ];
 
@@ -120,6 +122,50 @@ describe("ChatSidebar chat actions menu", () => {
     fireEvent.pointerDown(screen.getByRole("button", { name: "Chat actions for First chat" }));
     fireEvent.click(await screen.findByRole("menuitem", { name: "Share" }));
     expect(onShareChat).toHaveBeenCalledWith("chat-1");
+  });
+
+  it("pins and unpins a chat through onPinChat", async () => {
+    const onPinChat = vi.fn();
+    const { rerender } = render(
+      <ChatSidebar
+        activeChatId="chat-1"
+        brand={<span>Brain</span>}
+        chats={chats}
+        currentTitle="First chat"
+        onDeleteChat={vi.fn()}
+        onNewChat={vi.fn()}
+        onPinChat={onPinChat}
+        onRenameChat={vi.fn()}
+        onSelectChat={vi.fn()}
+      />,
+    );
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Chat actions for First chat" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Pin chat" }));
+    expect(onPinChat).toHaveBeenCalledWith("chat-1", true);
+
+    const pinnedChats: readonly ChatSummary[] = [
+      { ...chats[0]!, pinnedAt: "2026-08-10T00:00:00.000Z" },
+      chats[1]!,
+    ];
+    rerender(
+      <ChatSidebar
+        activeChatId="chat-1"
+        brand={<span>Brain</span>}
+        chats={pinnedChats}
+        currentTitle="First chat"
+        onDeleteChat={vi.fn()}
+        onNewChat={vi.fn()}
+        onPinChat={onPinChat}
+        onRenameChat={vi.fn()}
+        onSelectChat={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText("Pinned")).toBeDefined();
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Chat actions for First chat" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Unpin chat" }));
+    expect(onPinChat).toHaveBeenCalledWith("chat-1", false);
   });
 });
 

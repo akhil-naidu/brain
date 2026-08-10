@@ -10,6 +10,7 @@ import {
   MoreHorizontalIcon,
   PanelLeftIcon,
   PencilIcon,
+  PinIcon,
   PlusIcon,
   SearchIcon,
   ShareIcon,
@@ -90,15 +91,19 @@ function ChatRowMenu({
   canShare,
   chatTitle,
   onDelete,
+  onPin,
   onRename,
   onShare,
+  pinned,
   selected,
 }: {
   readonly canShare: boolean;
   readonly chatTitle: string;
   readonly onDelete: () => void;
+  readonly onPin?: () => void;
   readonly onRename: () => void;
   readonly onShare?: () => void;
+  readonly pinned: boolean;
   readonly selected: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -147,6 +152,17 @@ function ChatRowMenu({
           <PencilIcon className="size-4" />
           Rename
         </DropdownMenuItem>
+        {onPin ? (
+          <DropdownMenuItem
+            className="gap-2"
+            onSelect={() => {
+              onPin();
+            }}
+          >
+            <PinIcon className="size-4" />
+            {pinned ? "Unpin chat" : "Pin chat"}
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuItem
           className="gap-2"
           onSelect={() => {
@@ -174,6 +190,7 @@ export function ChatSidebar({
   onDeleteChat,
   onNewChat,
   onNewSharedChat,
+  onPinChat,
   onRenameChat,
   onShareChat,
   onSelectChat,
@@ -193,6 +210,7 @@ export function ChatSidebar({
   readonly onDeleteChat: (chatId: string) => void;
   readonly onNewChat: () => void;
   readonly onNewSharedChat?: () => void;
+  readonly onPinChat?: (chatId: string, pinned: boolean) => void | Promise<void>;
   readonly onRenameChat: (chatId: string, title: string) => void | Promise<void>;
   readonly onShareChat?: (chatId: string) => void | Promise<void>;
   readonly onRunPlaybook?: (prompt: string) => void;
@@ -695,6 +713,7 @@ export function ChatSidebar({
                   {filteredChats.map((chat) => {
                     const selected = chat.id === activeChatId;
                     const editing = editingId === chat.id;
+                    const pinned = chat.pinnedAt !== null;
                     return (
                       <li key={chat.id}>
                         <div
@@ -735,6 +754,12 @@ export function ChatSidebar({
                             >
                               <span className="flex min-w-0 items-center gap-1.5">
                                 <span className="line-clamp-1 min-w-0 flex-1">{chat.title}</span>
+                                {pinned ? (
+                                  <PinIcon
+                                    aria-label="Pinned"
+                                    className="text-muted-foreground/55 size-3 shrink-0"
+                                  />
+                                ) : null}
                                 {chat.visibility === "shared" ? (
                                   <UsersIcon
                                     aria-label="Shared with workspace"
@@ -748,13 +773,20 @@ export function ChatSidebar({
                             <ChatRowMenu
                               canShare={Boolean(
                                 canCreateShared &&
-                                  onShareChat &&
-                                  chat.visibility === "personal" &&
-                                  viewerUserId &&
-                                  chat.userId === viewerUserId,
+                                onShareChat &&
+                                chat.visibility === "personal" &&
+                                viewerUserId &&
+                                chat.userId === viewerUserId,
                               )}
                               chatTitle={chat.title}
                               onDelete={() => onDeleteChat(chat.id)}
+                              onPin={
+                                onPinChat
+                                  ? () => {
+                                      void onPinChat(chat.id, !pinned);
+                                    }
+                                  : undefined
+                              }
                               onRename={() => beginRename(chat)}
                               onShare={
                                 onShareChat
@@ -763,6 +795,7 @@ export function ChatSidebar({
                                     }
                                   : undefined
                               }
+                              pinned={pinned}
                               selected={selected}
                             />
                           ) : null}

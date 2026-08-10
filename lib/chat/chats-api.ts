@@ -18,6 +18,7 @@ const chatSummarySchema = z.object({
   visibility: chatVisibilitySchema.default("personal"),
   userId: z.string().default(""),
   revision: z.number().int().nonnegative().default(0),
+  pinnedAt: z.string().nullable().default(null),
 });
 
 const chatRecordSchema = chatSummarySchema.extend({
@@ -50,6 +51,7 @@ function toChatRecord(value: unknown): ChatRecord {
     visibility: parsed.visibility,
     userId: parsed.userId,
     revision: parsed.revision,
+    pinnedAt: parsed.pinnedAt,
     workspaceId: parsed.workspaceId ?? "",
     eveSession: parsed.eveSession === null ? null : parseSessionState(parsed.eveSession),
     events: parsed.events.map(parseStreamEvent),
@@ -149,6 +151,7 @@ export async function updateChat(
   input: {
     readonly title?: string;
     readonly visibility?: ChatVisibility;
+    readonly pinned?: boolean;
     readonly eveSession?: SessionState | null;
     readonly appendEvents?: readonly HandleMessageStreamEvent[];
     readonly events?: readonly HandleMessageStreamEvent[];

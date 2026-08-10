@@ -85,6 +85,7 @@ function toSummary(row: PgRow): ChatSummary {
     visibility: parseVisibility(row["visibility"]),
     userId: requireString(row, "user_id"),
     revision: requireNumber(row, "revision"),
+    pinnedAt: optionalString(row, "pinned_at"),
   };
 }
 
@@ -162,11 +163,12 @@ export function createPostgresChatStore(): ChatStore {
 
     async listChats(userId: string, workspaceId: string): Promise<readonly ChatSummary[]> {
       const result = await pool.query<PgRow>(
-        `SELECT id, title, eve_session, created_at, updated_at, user_id, workspace_id, visibility, revision
+        `SELECT id, title, eve_session, created_at, updated_at, user_id, workspace_id, visibility,
+                revision, pinned_at
          FROM chat
          WHERE workspace_id = $1
            AND (user_id = $2 OR visibility = 'shared')
-         ORDER BY updated_at DESC`,
+         ORDER BY (pinned_at IS NULL) ASC, updated_at DESC`,
         [workspaceId, userId],
       );
       return result.rows.map(toSummary);
@@ -254,7 +256,8 @@ export function createPostgresChatStore(): ChatStore {
           willPromoteToShared = currentVisibility !== "shared";
         }
 
-        const hasMetaContent = input.title !== undefined || willPromoteToShared;
+        const hasMetaContent =
+          input.title !== undefined || input.pinned !== undefined || willPromoteToShared;
         const hasContent = hasTurnContent || hasMetaContent;
 
         if (!hasContent) {
@@ -309,6 +312,14 @@ export function createPostgresChatStore(): ChatStore {
           await client.query(
             "UPDATE chat SET title = $1, updated_at = $2 WHERE id = $3 AND workspace_id = $4",
             [title, updatedAt, id, workspaceId],
+          );
+          touched = true;
+        }
+
+        if (input.pinned !== undefined) {
+          await client.query(
+            "UPDATE chat SET pinned_at = $1, updated_at = $2 WHERE id = $3 AND workspace_id = $4",
+            [input.pinned ? updatedAt : null, updatedAt, id, workspaceId],
           );
           touched = true;
         }

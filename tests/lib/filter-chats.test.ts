@@ -11,6 +11,7 @@ const chats: readonly ChatSummary[] = [
     visibility: "personal",
     userId: "user-a",
     revision: 0,
+    pinnedAt: null,
   },
   {
     id: "2",
@@ -20,6 +21,7 @@ const chats: readonly ChatSummary[] = [
     visibility: "personal",
     userId: "user-a",
     revision: 0,
+    pinnedAt: null,
   },
 ];
 

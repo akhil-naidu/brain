@@ -10,6 +10,8 @@ export type ChatSummary = {
   readonly visibility: ChatVisibility;
   readonly userId: string;
   readonly revision: number;
+  /** ISO timestamp when pinned; null when unpinned. */
+  readonly pinnedAt: string | null;
 };
 
 export type ChatRecord = ChatSummary & {
@@ -30,6 +32,8 @@ export type TurnLockAction = "acquire" | "release" | "heartbeat";
 export type UpdateChatInput = {
   readonly title?: string;
   readonly visibility?: ChatVisibility;
+  /** When true, pin; when false, unpin. */
+  readonly pinned?: boolean;
   readonly eveSession?: SessionState | null;
   readonly appendEvents?: readonly HandleMessageStreamEvent[];
   /** When set, replaces the full event log (used for turn snapshots). */
