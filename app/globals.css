@@ -1,5 +1,9 @@
 @import "tailwindcss";
 @source "../node_modules/streamdown/dist/*.js";
+@source "../node_modules/@streamdown/code/dist/*.js";
+@source "../node_modules/@streamdown/cjk/dist/*.js";
+@source "../node_modules/@streamdown/math/dist/*.js";
+@source "../node_modules/@streamdown/mermaid/dist/*.js";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -542,4 +546,36 @@ html[data-eve-chat-sidebar="closed"] [data-desktop-sidebar] {
   .features-mock {
     transform: none;
   }
+}
+
+/* Streamdown chat polish: align blocks with message padding; keep overflow readable. */
+.brain-markdown [data-streamdown="table-wrapper"],
+.brain-markdown [data-streamdown="code-block"],
+.brain-markdown [data-streamdown="mermaid-block"] {
+  margin-inline: 0.75rem;
+  max-width: calc(100% - 1.5rem);
+}
+
+.brain-markdown [data-streamdown="table-wrapper"] {
+  overflow: hidden;
+}
+
+.brain-markdown [data-streamdown="table"] {
+  min-width: max-content;
+}
+
+.brain-markdown [data-streamdown="code-block-body"],
+.brain-markdown [data-streamdown="mermaid"] {
+  max-width: 100%;
+}
+
+.brain-markdown [data-streamdown="mermaid"] svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.dark .brain-markdown [data-streamdown="mermaid"] .error,
+.dark .brain-markdown [data-streamdown="mermaid-block"] .bg-red-50 {
+  background-color: color-mix(in oklab, var(--destructive) 16%, var(--card));
+  color: var(--foreground);
 }
