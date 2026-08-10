@@ -14,6 +14,17 @@ export type ChatSummary = {
   readonly pinnedAt: string | null;
   /** ISO timestamp when archived; null when active. */
   readonly archivedAt: string | null;
+  /** Optional project folder id within the workspace. */
+  readonly projectId: string | null;
+};
+
+export type ChatProject = {
+  readonly id: string;
+  readonly name: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly userId: string;
+  readonly workspaceId: string;
 };
 
 export type ListChatsOptions = {
@@ -34,6 +45,12 @@ export type CreateChatInput = {
   readonly visibility?: ChatVisibility;
 };
 
+export type CreateChatProjectInput = {
+  readonly id?: string;
+  readonly name: string;
+  readonly workspaceId: string;
+};
+
 export type TurnLockAction = "acquire" | "release" | "heartbeat";
 
 export type UpdateChatInput = {
@@ -43,6 +60,8 @@ export type UpdateChatInput = {
   readonly pinned?: boolean;
   /** When true, archive; when false, unarchive. */
   readonly archived?: boolean;
+  /** Set to a project id, or null to remove from a project. */
+  readonly projectId?: string | null;
   readonly eveSession?: SessionState | null;
   readonly appendEvents?: readonly HandleMessageStreamEvent[];
   /** When set, replaces the full event log (used for turn snapshots). */
@@ -78,6 +97,8 @@ export interface ChatStore {
     id: string,
     options?: DeleteChatOptions,
   ): Promise<boolean>;
+  listProjects(userId: string, workspaceId: string): Promise<readonly ChatProject[]>;
+  createProject(userId: string, input: CreateChatProjectInput): Promise<ChatProject>;
   /** One-time migration helper: move chats from one owner id to another. */
   reassignOwner(fromUserId: string, toUserId: string): Promise<number>;
   /** Assign workspace_id for all chats owned by user that still lack one. */

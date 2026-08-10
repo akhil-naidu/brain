@@ -13,6 +13,7 @@ function summary(
     revision: 0,
     pinnedAt: null,
     archivedAt: null,
+    projectId: null,
     ...partial,
   };
 }

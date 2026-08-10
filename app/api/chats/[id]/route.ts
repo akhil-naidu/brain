@@ -65,6 +65,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         visibility: parsed.data.visibility,
         pinned: parsed.data.pinned,
         archived: parsed.data.archived,
+        projectId: parsed.data.projectId,
         eveSession:
           parsed.data.eveSession === undefined
             ? undefined

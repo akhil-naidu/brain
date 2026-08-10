@@ -13,6 +13,7 @@ import { UserProfileMenu } from "@/components/chat/user-profile-menu";
 import { AppToaster } from "@/components/ui/app-toast";
 import { Button } from "@/components/ui/button";
 import { IconTooltip } from "@/components/ui/tooltip";
+import { createChatProject, listChatProjects } from "@/lib/chat/chat-projects-api";
 import {
   chatUrl,
   deleteChat,
@@ -32,7 +33,7 @@ import { stashPendingPlaybookRun } from "@/lib/chat/pending-playbook-run";
 import { readSidebarExpanded, writeSidebarExpanded } from "@/lib/chat/sidebar-expanded";
 import { sortChatSummaries } from "@/lib/chat/sort-chats";
 import { normalizeChatTitle } from "@/lib/chat/title";
-import type { ChatSummary } from "@/lib/chat/store/types";
+import type { ChatProject, ChatSummary } from "@/lib/chat/store/types";
 import { cn } from "@/lib/utils";
 
 function upsertChatSummary(chats: readonly ChatSummary[], chat: ChatSummary): ChatSummary[] {
@@ -47,6 +48,7 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [chats, setChats] = useState<readonly ChatSummary[]>([]);
+  const [projects, setProjects] = useState<readonly ChatProject[]>([]);
   const [canCreateShared, setCanCreateShared] = useState(false);
   const [viewerUserId, setViewerUserId] = useState<string | null>(null);
   const [searchFocusRequest, setSearchFocusRequest] = useState(0);
@@ -77,17 +79,27 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
     }
   }, []);
 
+  const refreshProjects = useCallback(async () => {
+    try {
+      setProjects(await listChatProjects());
+    } catch {
+      setProjects([]);
+    }
+  }, []);
+
   useEffect(() => {
     void refreshChats();
-  }, [pathname, refreshChats]);
+    void refreshProjects();
+  }, [pathname, refreshChats, refreshProjects]);
 
   useEffect(() => {
     const onChatsChanged = () => {
       void refreshChats();
+      void refreshProjects();
     };
     window.addEventListener(CHATS_CHANGED_EVENT, onChatsChanged);
     return () => window.removeEventListener(CHATS_CHANGED_EVENT, onChatsChanged);
-  }, [refreshChats]);
+  }, [refreshChats, refreshProjects]);
 
   const setExpanded = useCallback((expanded: boolean) => {
     setSidebarExpanded(expanded);
@@ -221,6 +233,47 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
     [chats, handlers, refreshChats, router],
   );
 
+  const onMoveChatToProject = useCallback(
+    async (chatId: string, projectId: string | null) => {
+      try {
+        const existing = chats.find((chat) => chat.id === chatId);
+        const chat = await updateChat(chatId, {
+          projectId,
+          ...(existing?.visibility === "shared" ? { expectedRevision: existing.revision } : {}),
+        });
+        setChats((current) => upsertChatSummary(current, chat));
+        notifyChatsChanged();
+      } catch {
+        await refreshChats();
+      }
+    },
+    [chats, refreshChats],
+  );
+
+  const onCreateProjectAndMove = useCallback(
+    async (chatId: string) => {
+      const name = window.prompt("Project name")?.trim();
+      if (!name) {
+        return;
+      }
+      try {
+        const project = await createChatProject({ name });
+        setProjects((current) => [project, ...current.filter((item) => item.id !== project.id)]);
+        const existing = chats.find((chat) => chat.id === chatId);
+        const chat = await updateChat(chatId, {
+          projectId: project.id,
+          ...(existing?.visibility === "shared" ? { expectedRevision: existing.revision } : {}),
+        });
+        setChats((current) => upsertChatSummary(current, chat));
+        notifyChatsChanged();
+      } catch {
+        await refreshProjects();
+        await refreshChats();
+      }
+    },
+    [chats, refreshChats, refreshProjects],
+  );
+
   const onRunPlaybook = useCallback(
     (prompt: string) => {
       stashPendingChatVisibility("personal");
@@ -324,12 +377,15 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
     currentTitle: pathname === "/chat" ? currentTitle : null,
     draftVisibility: pathname === "/chat" ? draftVisibility : "personal",
     onArchiveChat,
+    onCreateProjectAndMove,
     onDeleteChat,
+    onMoveChatToProject,
     onNewSharedChat,
     onPinChat,
     onRenameChat,
     onShareChat,
     onRunPlaybook,
+    projects,
     searchFocusRequest,
     showChatDraft: pathname === "/chat",
     viewerUserId,

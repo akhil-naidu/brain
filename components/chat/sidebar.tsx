@@ -6,6 +6,8 @@ import {
   Building2Icon,
   CalendarClockIcon,
   ChevronDownIcon,
+  FolderIcon,
+  FolderPlusIcon,
   HammerIcon,
   MessageSquareIcon,
   MoreHorizontalIcon,
@@ -30,6 +32,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -48,7 +54,7 @@ import {
   type SidebarRecentState,
 } from "@/lib/chat/sidebar-recent";
 import { DEFAULT_CHAT_TITLE } from "@/lib/chat/title";
-import type { ChatSummary } from "@/lib/chat/store/types";
+import type { ChatProject, ChatSummary } from "@/lib/chat/store/types";
 import { cn } from "@/lib/utils";
 
 function compactNavClass(active: boolean) {
@@ -92,24 +98,33 @@ function ChatRowMenu({
   canShare,
   chatTitle,
   onArchive,
+  onCreateProject,
   onDelete,
+  onMoveToProject,
   onPin,
   onRename,
   onShare,
   pinned,
+  projectId,
+  projects,
   selected,
 }: {
   readonly canShare: boolean;
   readonly chatTitle: string;
   readonly onArchive?: () => void;
+  readonly onCreateProject?: () => void;
   readonly onDelete: () => void;
+  readonly onMoveToProject?: (projectId: string | null) => void;
   readonly onPin?: () => void;
   readonly onRename: () => void;
   readonly onShare?: () => void;
   readonly pinned: boolean;
+  readonly projectId: string | null;
+  readonly projects: readonly ChatProject[];
   readonly selected: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const canMove = Boolean(onMoveToProject || onCreateProject);
 
   return (
     <DropdownMenu onOpenChange={setOpen} open={open}>
@@ -131,7 +146,7 @@ function ChatRowMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="border-border bg-popover w-44 rounded-md p-1"
+        className="border-border bg-popover w-48 rounded-md p-1"
         collisionPadding={12}
         sideOffset={4}
       >
@@ -187,6 +202,56 @@ function ChatRowMenu({
           <Trash2Icon className="size-4" />
           Delete
         </DropdownMenuItem>
+        {canMove ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className="gap-2">
+                <FolderIcon className="size-4" />
+                Move to project
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="border-border bg-popover w-48 rounded-md p-1">
+                {projectId && onMoveToProject ? (
+                  <DropdownMenuItem
+                    className="gap-2"
+                    onSelect={() => {
+                      onMoveToProject(null);
+                    }}
+                  >
+                    Remove from project
+                  </DropdownMenuItem>
+                ) : null}
+                {projects.map((project) => (
+                  <DropdownMenuItem
+                    className="gap-2"
+                    disabled={project.id === projectId}
+                    key={project.id}
+                    onSelect={() => {
+                      onMoveToProject?.(project.id);
+                    }}
+                  >
+                    <FolderIcon className="size-4" />
+                    <span className="truncate">{project.name}</span>
+                  </DropdownMenuItem>
+                ))}
+                {onCreateProject ? (
+                  <>
+                    {projects.length > 0 || projectId ? <DropdownMenuSeparator /> : null}
+                    <DropdownMenuItem
+                      className="gap-2"
+                      onSelect={() => {
+                        onCreateProject();
+                      }}
+                    >
+                      <FolderPlusIcon className="size-4" />
+                      New project
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          </>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -202,7 +267,9 @@ export function ChatSidebar({
   currentTitle,
   draftVisibility = "personal",
   onArchiveChat,
+  onCreateProjectAndMove,
   onDeleteChat,
+  onMoveChatToProject,
   onNewChat,
   onNewSharedChat,
   onPinChat,
@@ -210,6 +277,7 @@ export function ChatSidebar({
   onShareChat,
   onSelectChat,
   onToggleSidebar,
+  projects = [],
   searchFocusRequest = 0,
   showChatDraft = false,
   viewerUserId = null,
@@ -223,7 +291,9 @@ export function ChatSidebar({
   readonly currentTitle: string | null;
   readonly draftVisibility?: "personal" | "shared";
   readonly onArchiveChat?: (chatId: string) => void | Promise<void>;
+  readonly onCreateProjectAndMove?: (chatId: string) => void | Promise<void>;
   readonly onDeleteChat: (chatId: string) => void;
+  readonly onMoveChatToProject?: (chatId: string, projectId: string | null) => void | Promise<void>;
   readonly onNewChat: () => void;
   readonly onNewSharedChat?: () => void;
   readonly onPinChat?: (chatId: string, pinned: boolean) => void | Promise<void>;
@@ -232,6 +302,7 @@ export function ChatSidebar({
   readonly onRunPlaybook?: (prompt: string) => void;
   readonly onSelectChat: (chatId: string) => void;
   readonly onToggleSidebar?: () => void;
+  readonly projects?: readonly ChatProject[];
   readonly searchFocusRequest?: number;
   /** When true, show the in-progress draft chat row if no chat is selected. */
   readonly showChatDraft?: boolean;
@@ -770,6 +841,12 @@ export function ChatSidebar({
                             >
                               <span className="flex min-w-0 items-center gap-1.5">
                                 <span className="line-clamp-1 min-w-0 flex-1">{chat.title}</span>
+                                {chat.projectId ? (
+                                  <FolderIcon
+                                    aria-label="In a project"
+                                    className="text-muted-foreground/55 size-3 shrink-0"
+                                  />
+                                ) : null}
                                 {pinned ? (
                                   <PinIcon
                                     aria-label="Pinned"
@@ -802,7 +879,21 @@ export function ChatSidebar({
                                     }
                                   : undefined
                               }
+                              onCreateProject={
+                                onCreateProjectAndMove
+                                  ? () => {
+                                      void onCreateProjectAndMove(chat.id);
+                                    }
+                                  : undefined
+                              }
                               onDelete={() => onDeleteChat(chat.id)}
+                              onMoveToProject={
+                                onMoveChatToProject
+                                  ? (nextProjectId) => {
+                                      void onMoveChatToProject(chat.id, nextProjectId);
+                                    }
+                                  : undefined
+                              }
                               onPin={
                                 onPinChat
                                   ? () => {
@@ -819,6 +910,8 @@ export function ChatSidebar({
                                   : undefined
                               }
                               pinned={pinned}
+                              projectId={chat.projectId}
+                              projects={projects}
                               selected={selected}
                             />
                           ) : null}

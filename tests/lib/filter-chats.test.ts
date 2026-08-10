@@ -13,6 +13,7 @@ const chats: readonly ChatSummary[] = [
     revision: 0,
     pinnedAt: null,
     archivedAt: null,
+    projectId: null,
   },
   {
     id: "2",
@@ -24,6 +25,7 @@ const chats: readonly ChatSummary[] = [
     revision: 0,
     pinnedAt: null,
     archivedAt: null,
+    projectId: null,
   },
 ];
 

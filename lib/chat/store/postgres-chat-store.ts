@@ -10,7 +10,9 @@ import type {
   ChatStore,
   ChatSummary,
   ChatVisibility,
+  ChatProject,
   CreateChatInput,
+  CreateChatProjectInput,
   DeleteChatOptions,
   ListChatsOptions,
   UpdateChatInput,
@@ -88,6 +90,18 @@ function toSummary(row: PgRow): ChatSummary {
     revision: requireNumber(row, "revision"),
     pinnedAt: optionalString(row, "pinned_at"),
     archivedAt: optionalString(row, "archived_at"),
+    projectId: optionalString(row, "project_id"),
+  };
+}
+
+function toProject(row: PgRow): ChatProject {
+  return {
+    id: requireString(row, "id"),
+    name: requireString(row, "name"),
+    createdAt: requireString(row, "created_at"),
+    updatedAt: requireString(row, "updated_at"),
+    userId: requireString(row, "user_id"),
+    workspaceId: requireString(row, "workspace_id"),
   };
 }
 
@@ -173,7 +187,7 @@ export function createPostgresChatStore(): ChatStore {
         status === "archived" ? "AND archived_at IS NOT NULL" : "AND archived_at IS NULL";
       const result = await pool.query<PgRow>(
         `SELECT id, title, eve_session, created_at, updated_at, user_id, workspace_id, visibility,
-                revision, pinned_at, archived_at
+                revision, pinned_at, archived_at, project_id
          FROM chat
          WHERE workspace_id = $1
            AND (user_id = $2 OR visibility = 'shared')
@@ -270,6 +284,7 @@ export function createPostgresChatStore(): ChatStore {
           input.title !== undefined ||
           input.pinned !== undefined ||
           input.archived !== undefined ||
+          input.projectId !== undefined ||
           willPromoteToShared;
         const hasContent = hasTurnContent || hasMetaContent;
 
@@ -341,6 +356,25 @@ export function createPostgresChatStore(): ChatStore {
           await client.query(
             "UPDATE chat SET archived_at = $1, updated_at = $2 WHERE id = $3 AND workspace_id = $4",
             [input.archived ? updatedAt : null, updatedAt, id, workspaceId],
+          );
+          touched = true;
+        }
+
+        if (input.projectId !== undefined) {
+          const nextProjectId = input.projectId?.trim() || null;
+          if (nextProjectId) {
+            const projectResult = await client.query<PgRow>(
+              `SELECT id FROM chat_project
+               WHERE id = $1 AND workspace_id = $2 AND user_id = $3`,
+              [nextProjectId, workspaceId, userId],
+            );
+            if (!projectResult.rows[0]) {
+              return null;
+            }
+          }
+          await client.query(
+            "UPDATE chat SET project_id = $1, updated_at = $2 WHERE id = $3 AND workspace_id = $4",
+            [nextProjectId, updatedAt, id, workspaceId],
           );
           touched = true;
         }
@@ -491,6 +525,41 @@ export function createPostgresChatStore(): ChatStore {
         [workspaceId, userId, UNSET_WORKSPACE_ID],
       );
       return result.rowCount ?? 0;
+    },
+
+    async listProjects(userId: string, workspaceId: string): Promise<readonly ChatProject[]> {
+      const result = await pool.query<PgRow>(
+        `SELECT id, name, created_at, updated_at, user_id, workspace_id
+         FROM chat_project
+         WHERE user_id = $1 AND workspace_id = $2
+         ORDER BY updated_at DESC`,
+        [userId, workspaceId],
+      );
+      return result.rows.map(toProject);
+    },
+
+    async createProject(userId: string, input: CreateChatProjectInput): Promise<ChatProject> {
+      const name = input.name.trim();
+      if (!name) {
+        throw new Error("Project name is required.");
+      }
+      const id = input.id?.trim() || randomUUID();
+      const createdAt = nowIso();
+      await pool.query(
+        `INSERT INTO chat_project (id, user_id, workspace_id, name, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [id, userId, input.workspaceId, name, createdAt, createdAt],
+      );
+      const result = await pool.query<PgRow>(
+        `SELECT id, name, created_at, updated_at, user_id, workspace_id
+         FROM chat_project WHERE id = $1 AND user_id = $2 AND workspace_id = $3`,
+        [id, userId, input.workspaceId],
+      );
+      const row = result.rows[0];
+      if (!row) {
+        throw new Error(`Failed to create project ${id}`);
+      }
+      return toProject(row);
     },
 
     close(): void {

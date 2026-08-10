@@ -20,6 +20,7 @@ const chats: readonly ChatSummary[] = [
     revision: 0,
     pinnedAt: null,
     archivedAt: null,
+    projectId: null,
   },
   {
     id: "chat-2",
@@ -31,6 +32,7 @@ const chats: readonly ChatSummary[] = [
     revision: 0,
     pinnedAt: null,
     archivedAt: null,
+    projectId: null,
   },
 ];
 
@@ -189,6 +191,36 @@ describe("ChatSidebar chat actions menu", () => {
     fireEvent.pointerDown(screen.getByRole("button", { name: "Chat actions for First chat" }));
     fireEvent.click(await screen.findByRole("menuitem", { name: "Archive" }));
     expect(onArchiveChat).toHaveBeenCalledWith("chat-1");
+  });
+
+  it("exposes move to project when project handlers are provided", async () => {
+    render(
+      <ChatSidebar
+        activeChatId="chat-1"
+        brand={<span>Brain</span>}
+        chats={chats}
+        currentTitle="First chat"
+        onCreateProjectAndMove={vi.fn()}
+        onDeleteChat={vi.fn()}
+        onMoveChatToProject={vi.fn()}
+        onNewChat={vi.fn()}
+        onRenameChat={vi.fn()}
+        onSelectChat={vi.fn()}
+        projects={[
+          {
+            id: "proj-1",
+            name: "Research",
+            createdAt: "2026-08-10T00:00:00.000Z",
+            updatedAt: "2026-08-10T00:00:00.000Z",
+            userId: "user-a",
+            workspaceId: "ws-1",
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Chat actions for First chat" }));
+    expect(await screen.findByRole("menuitem", { name: "Move to project" })).toBeDefined();
   });
 });
 

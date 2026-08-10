@@ -35,6 +35,7 @@ if (!DATABASE_URL) {
       const pool = getPool();
       await pool.query("DELETE FROM chat_event");
       await pool.query("DELETE FROM chat");
+      await pool.query("DELETE FROM chat_project");
     });
 
     afterAll(async () => {
@@ -101,6 +102,29 @@ if (!DATABASE_URL) {
 
       const unpinned = await store.updateChat(userId, workspaceId, older.id, { pinned: false });
       expect(unpinned?.pinnedAt).toBeNull();
+    });
+
+    it("creates projects and moves chats into them", async () => {
+      const store = openStore();
+      const userId = "user-a";
+      const workspaceId = "ws-a";
+      const chat = await store.createChat(userId, { title: "In project", workspaceId });
+      const project = await store.createProject(userId, {
+        name: "Research",
+        workspaceId,
+      });
+
+      expect((await store.listProjects(userId, workspaceId)).map((item) => item.id)).toEqual([
+        project.id,
+      ]);
+
+      const moved = await store.updateChat(userId, workspaceId, chat.id, {
+        projectId: project.id,
+      });
+      expect(moved?.projectId).toBe(project.id);
+
+      const cleared = await store.updateChat(userId, workspaceId, chat.id, { projectId: null });
+      expect(cleared?.projectId).toBeNull();
     });
 
     it("hides archived chats from the active list", async () => {
