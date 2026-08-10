@@ -178,14 +178,19 @@ function ComposerHarness({
   );
 }
 
+function typeIntoComposer(editor: HTMLElement, text: string) {
+  editor.textContent = text;
+  fireEvent.input(editor);
+}
+
 describe("ChatComposer submit guard", () => {
   it("does not submit Enter while an IME composition is active", () => {
     const onSubmit = vi.fn();
     render(<ComposerHarness maxLength={10} onSubmit={onSubmit} />);
-    const textarea = screen.getByRole("textbox", { name: "Message Brain" });
+    const editor = screen.getByRole("textbox", { name: "Message Brain" });
 
-    fireEvent.change(textarea, { target: { value: "日本" } });
-    fireEvent.keyDown(textarea, { isComposing: true, key: "Enter" });
+    typeIntoComposer(editor, "日本");
+    fireEvent.keyDown(editor, { isComposing: true, key: "Enter" });
 
     expect(onSubmit).not.toHaveBeenCalled();
   });
@@ -193,14 +198,14 @@ describe("ChatComposer submit guard", () => {
   it("counts emoji as one grapheme and blocks only over-limit input", () => {
     const onSubmit = vi.fn();
     render(<ComposerHarness maxLength={1} onSubmit={onSubmit} />);
-    const textarea = screen.getByRole("textbox", { name: "Message Brain" });
+    const editor = screen.getByRole("textbox", { name: "Message Brain" });
 
-    fireEvent.change(textarea, { target: { value: "😀" } });
-    fireEvent.keyDown(textarea, { key: "Enter" });
+    typeIntoComposer(editor, "😀");
+    fireEvent.keyDown(editor, { key: "Enter" });
     expect(onSubmit).toHaveBeenLastCalledWith("😀");
 
-    fireEvent.change(textarea, { target: { value: "😀😀" } });
-    fireEvent.keyDown(textarea, { key: "Enter" });
+    typeIntoComposer(editor, "😀😀");
+    fireEvent.keyDown(editor, { key: "Enter" });
     expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 });

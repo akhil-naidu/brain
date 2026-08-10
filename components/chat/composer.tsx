@@ -16,15 +16,38 @@ import {
   useId,
   useLayoutEffect,
   useRef,
+  useState,
   type ClipboardEvent,
   type DragEvent,
   type FormEvent,
   type KeyboardEvent,
   type ReactNode,
 } from "react";
+import {
+  ComposerCommandMenu,
+  visibleComposerCommandItems,
+} from "@/components/chat/composer-command-menu";
 import { Button } from "@/components/ui/button";
 import { IconTooltip, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { canSubmitChatTurn, type PendingAttachment } from "@/lib/chat/attachments";
+import {
+  COMPOSER_COMMAND_GROUPS,
+  type ComposerCommandGroup,
+  type ComposerCommandItem,
+} from "@/lib/chat/composer-commands";
+import {
+  clearComposerEditor,
+  clearComposerTriggerRange,
+  COMPOSER_MENTION_ATTR,
+  COMPOSER_MENTION_REMOVE_ATTR,
+  getComposerPlainState,
+  isComposerEditorEmpty,
+  removeComposerMentionElement,
+  replaceTriggerWithMentionBadge,
+  serializeComposerEditor,
+  setComposerEditorPlainText,
+} from "@/lib/chat/composer-rich-editor";
+import { findComposerTrigger, type ComposerTrigger } from "@/lib/chat/composer-trigger";
 import { getChatMessageLength, MAX_CHAT_MESSAGE_CHARS } from "@/lib/chat/limits";
 import { cn } from "@/lib/utils";
 
@@ -75,9 +98,12 @@ function AttachmentGlyph({
   );
 }
 
+const EMPTY_COMMAND_ITEMS: readonly ComposerCommandItem[] = [];
+
 export function ChatComposer({
   attachments = EMPTY_ATTACHMENTS,
   className,
+  commandItems = EMPTY_COMMAND_ITEMS,
   disabled = false,
   disabledReason,
   focusOnMount = true,
@@ -87,15 +113,17 @@ export function ChatComposer({
   maxLength = MAX_CHAT_MESSAGE_CHARS,
   onAddFiles,
   onChange,
+  onCommandAction,
   onFocusChange,
   onRemoveAttachment,
   onStop,
   onSubmit,
-  placeholder = "Ask Brain anything...",
+  placeholder = "Ask Brain anything…  (/ commands, @ mention)",
   value,
 }: {
   readonly attachments?: readonly PendingAttachment[];
   readonly className?: string;
+  readonly commandItems?: readonly ComposerCommandItem[];
   readonly disabled?: boolean;
   readonly disabledReason?: string;
   readonly focusOnMount?: boolean;
@@ -105,6 +133,10 @@ export function ChatComposer({
   readonly maxLength?: number;
   readonly onAddFiles?: (files: readonly File[]) => void;
   readonly onChange: (value: string) => void;
+  readonly onCommandAction?: (
+    item: ComposerCommandItem,
+    triggerKind: ComposerTrigger["kind"],
+  ) => void | Promise<void>;
   /** Fires when the message textarea gains or loses focus (not toolbar menus). */
   readonly onFocusChange?: (focused: boolean) => void;
   readonly onRemoveAttachment?: (id: string) => void;
@@ -116,8 +148,15 @@ export function ChatComposer({
   const composerId = useId();
   const disabledReasonId = useId();
   const fileInputId = useId();
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const lastEmittedValueRef = useRef(value);
+  const [trigger, setTrigger] = useState<ComposerTrigger | null>(null);
+  const [activeCommandIndex, setActiveCommandIndex] = useState(0);
+  const [activeCommandGroup, setActiveCommandGroup] = useState<ComposerCommandGroup>("Connections");
+  const [editorEmpty, setEditorEmpty] = useState(() => value.trim().length === 0);
+  const triggerRef = useRef<ComposerTrigger | null>(null);
+  triggerRef.current = trigger;
   const textareaDisabled = disabled || isBusy || isPreparing;
   const shouldFocusOnMountRef = useRef(focusOnMount && !textareaDisabled);
   const trimmedValue = value.trim();
@@ -130,6 +169,43 @@ export function ChatComposer({
     !isBusy &&
     !isPreparing &&
     !isOverMaxLength;
+  const menuOpen = Boolean(trigger && commandItems.length > 0 && !textareaDisabled);
+  const visibleCommands = trigger
+    ? visibleComposerCommandItems(commandItems, trigger.query, activeCommandGroup)
+    : EMPTY_COMMAND_ITEMS;
+
+  const syncTriggerFromEditor = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor || textareaDisabled || commandItems.length === 0) {
+      setTrigger(null);
+      return;
+    }
+    const { text, caret } = getComposerPlainState(editor);
+    const previous = triggerRef.current;
+    const nextTrigger = findComposerTrigger(text, caret);
+    const openedNew =
+      Boolean(nextTrigger) &&
+      (!previous || previous.kind !== nextTrigger?.kind || previous.start !== nextTrigger?.start);
+    if (openedNew) {
+      setActiveCommandGroup("Connections");
+      setActiveCommandIndex(0);
+    } else if (nextTrigger && previous && nextTrigger.query !== previous.query) {
+      setActiveCommandIndex(0);
+    }
+    setTrigger(nextTrigger);
+  }, [commandItems.length, textareaDisabled]);
+
+  const emitEditorValue = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) {
+      return;
+    }
+    const next = serializeComposerEditor(editor);
+    lastEmittedValueRef.current = next;
+    setEditorEmpty(isComposerEditorEmpty(editor));
+    onChange(next);
+    syncTriggerFromEditor();
+  }, [onChange, syncTriggerFromEditor]);
 
   useEffect(() => {
     if (!shouldFocusOnMountRef.current || document.activeElement !== document.body) {
@@ -137,21 +213,39 @@ export function ChatComposer({
     }
 
     const frame = window.requestAnimationFrame(() => {
-      textareaRef.current?.focus({ preventScroll: true });
+      editorRef.current?.focus({ preventScroll: true });
     });
 
     return () => window.cancelAnimationFrame(frame);
   }, []);
 
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) {
+      return;
+    }
+    if (value === lastEmittedValueRef.current) {
+      return;
+    }
+    // Parent cleared or replaced the draft (send / retry) — sync plain text.
+    if (value.trim().length === 0) {
+      clearComposerEditor(editor);
+    } else {
+      setComposerEditorPlainText(editor, value);
+    }
+    lastEmittedValueRef.current = value;
+    setEditorEmpty(isComposerEditorEmpty(editor));
+    setTrigger(null);
+  }, [value]);
+
   useLayoutEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) {
+    const editor = editorRef.current;
+    if (!editor) {
       return;
     }
 
-    // Collapse first so scrollHeight reflects the current value, then grow until max-h.
-    textarea.style.height = "0px";
-    textarea.style.height = `${textarea.scrollHeight}px`;
+    editor.style.height = "0px";
+    editor.style.height = `${Math.min(editor.scrollHeight, 224)}px`;
   }, [value]);
 
   const submitValue = useCallback(() => {
@@ -161,6 +255,13 @@ export function ChatComposer({
     if (getChatMessageLength(value.trim()) > maxLength) {
       return;
     }
+    const editor = editorRef.current;
+    if (editor) {
+      clearComposerEditor(editor);
+      lastEmittedValueRef.current = "";
+      setEditorEmpty(true);
+    }
+    setTrigger(null);
     void onSubmit(value);
   }, [attachments, disabled, isBusy, isPreparing, maxLength, onSubmit, value]);
 
@@ -172,10 +273,97 @@ export function ChatComposer({
     [submitValue],
   );
 
-  const handleKeyDown = useCallback(
-    (event: KeyboardEvent<HTMLTextAreaElement>) => {
+  const selectCommand = useCallback(
+    (item: ComposerCommandItem) => {
+      const editor = editorRef.current;
+      if (!editor) {
+        return;
+      }
+      const { text, caret } = getComposerPlainState(editor);
+      const active = trigger ?? findComposerTrigger(text, caret);
+      if (!active) {
+        return;
+      }
+
+      const actionConsumesDraft =
+        active.kind === "/" &&
+        (item.action.type === "run-playbook" ||
+          item.action.type === "navigate" ||
+          item.action.type === "new-chat-in-project");
+
+      const next = actionConsumesDraft
+        ? clearComposerTriggerRange(editor, active)
+        : replaceTriggerWithMentionBadge(editor, active, {
+            itemId: item.id,
+            kind: item.kind,
+            label: item.label,
+            mentionText: item.mentionText.trim(),
+          });
+
+      lastEmittedValueRef.current = next;
+      setEditorEmpty(isComposerEditorEmpty(editor));
+      onChange(next);
+      setTrigger(null);
+      editor.focus();
+      syncTriggerFromEditor();
+
+      void onCommandAction?.(item, active.kind);
+    },
+    [onChange, onCommandAction, syncTriggerFromEditor, trigger],
+  );
+
+  const handleEditorKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>) => {
       if (event.nativeEvent.isComposing) {
         return;
+      }
+
+      if (menuOpen) {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          setTrigger(null);
+          return;
+        }
+        if (event.key === "ArrowDown") {
+          event.preventDefault();
+          setActiveCommandIndex((current) =>
+            visibleCommands.length === 0 ? 0 : (current + 1) % visibleCommands.length,
+          );
+          return;
+        }
+        if (event.key === "ArrowUp") {
+          event.preventDefault();
+          setActiveCommandIndex((current) =>
+            visibleCommands.length === 0
+              ? 0
+              : (current - 1 + visibleCommands.length) % visibleCommands.length,
+          );
+          return;
+        }
+        if (
+          trigger?.query.length === 0 &&
+          (event.key === "ArrowLeft" || event.key === "ArrowRight")
+        ) {
+          event.preventDefault();
+          const currentIndex = Math.max(0, COMPOSER_COMMAND_GROUPS.indexOf(activeCommandGroup));
+          const delta = event.key === "ArrowRight" ? 1 : -1;
+          const nextGroup =
+            COMPOSER_COMMAND_GROUPS[
+              (currentIndex + delta + COMPOSER_COMMAND_GROUPS.length) %
+                COMPOSER_COMMAND_GROUPS.length
+            ] ?? activeCommandGroup;
+          setActiveCommandGroup(nextGroup);
+          setActiveCommandIndex(0);
+          return;
+        }
+        if (event.key === "Enter" && !event.shiftKey) {
+          event.preventDefault();
+          const item = visibleCommands[activeCommandIndex];
+          if (item) {
+            selectCommand(item);
+          }
+          return;
+        }
       }
 
       if (event.key === "Enter" && !event.shiftKey) {
@@ -183,7 +371,15 @@ export function ChatComposer({
         submitValue();
       }
     },
-    [submitValue],
+    [
+      activeCommandGroup,
+      activeCommandIndex,
+      menuOpen,
+      selectCommand,
+      submitValue,
+      trigger,
+      visibleCommands,
+    ],
   );
 
   const addFiles = useCallback(
@@ -200,23 +396,31 @@ export function ChatComposer({
   );
 
   const handlePaste = useCallback(
-    (event: ClipboardEvent<HTMLTextAreaElement>) => {
+    (event: ClipboardEvent<HTMLDivElement>) => {
       const files = event.clipboardData?.files;
-      if (!files || files.length === 0 || !onAddFiles) {
-        return;
+      if (files && files.length > 0 && onAddFiles) {
+        const imageFiles = Array.from(files).filter((file) => file.type.startsWith("image/"));
+        if (imageFiles.length > 0) {
+          event.preventDefault();
+          onAddFiles(imageFiles);
+          return;
+        }
       }
-      const imageFiles = Array.from(files).filter((file) => file.type.startsWith("image/"));
-      if (imageFiles.length === 0) {
+
+      // Keep mentions intact — paste as plain text at the caret.
+      const pasted = event.clipboardData?.getData("text/plain");
+      if (pasted == null) {
         return;
       }
       event.preventDefault();
-      onAddFiles(imageFiles);
+      document.execCommand("insertText", false, pasted);
+      emitEditorValue();
     },
-    [onAddFiles],
+    [emitEditorValue, onAddFiles],
   );
 
   const handleDrop = useCallback(
-    (event: DragEvent<HTMLTextAreaElement>) => {
+    (event: DragEvent<HTMLDivElement>) => {
       if (!onAddFiles || textareaDisabled) {
         return;
       }
@@ -233,13 +437,27 @@ export function ChatComposer({
   const form = (
     <form
       className={cn(
-        "border-border/50 bg-muted/30 dark:bg-muted/25 has-[[data-chat-composer-input]:focus]:border-border/80 has-[[data-chat-composer-input]:focus]:bg-muted/40 dark:has-[[data-chat-composer-input]:focus]:bg-muted/35 min-w-0 rounded-3xl border shadow-md transition-[border-color,background-color,box-shadow] duration-300 ease-out has-[[data-chat-composer-input]:focus]:shadow-lg",
+        "border-border/50 bg-muted/30 dark:bg-muted/25 has-[[data-chat-composer-input]:focus]:border-border/80 has-[[data-chat-composer-input]:focus]:bg-muted/40 dark:has-[[data-chat-composer-input]:focus]:bg-muted/35 relative min-w-0 rounded-3xl border shadow-md transition-[border-color,background-color,box-shadow] duration-300 ease-out has-[[data-chat-composer-input]:focus]:shadow-lg",
         className,
       )}
       aria-describedby={disabledReason ? disabledReasonId : undefined}
       data-chat-composer
       onSubmit={handleSubmit}
     >
+      {menuOpen && trigger ? (
+        <ComposerCommandMenu
+          activeGroup={activeCommandGroup}
+          activeIndex={activeCommandIndex}
+          items={commandItems}
+          onHoverIndex={setActiveCommandIndex}
+          onSelect={selectCommand}
+          onSelectGroup={(group) => {
+            setActiveCommandGroup(group);
+            setActiveCommandIndex(0);
+          }}
+          trigger={trigger}
+        />
+      ) : null}
       {attachments.length > 0 ? (
         <ul className="flex flex-wrap gap-2 px-3.5 pt-3.5 sm:px-4">
           {attachments.map((file) => (
@@ -285,32 +503,102 @@ export function ChatComposer({
       <label className="sr-only" htmlFor={composerId}>
         Message Brain
       </label>
-      <textarea
-        aria-describedby={disabledReason ? disabledReasonId : undefined}
-        className="placeholder:text-muted-foreground/50 max-h-56 min-h-12 w-full resize-none overflow-y-auto bg-transparent px-4 pt-3.5 pb-2 text-base leading-6 transition-[min-height] duration-300 ease-out outline-none focus:min-h-16 disabled:cursor-not-allowed disabled:opacity-60 md:text-[15px]"
-        data-chat-composer-input
-        disabled={textareaDisabled}
-        id={composerId}
-        onBlur={() => {
-          onFocusChange?.(false);
-        }}
-        onChange={(event) => onChange(event.target.value)}
-        onDragOver={(event) => {
-          if (onAddFiles && !textareaDisabled) {
-            event.preventDefault();
+      <div className="relative">
+        {editorEmpty ? (
+          <div className="text-muted-foreground/50 pointer-events-none absolute inset-x-4 top-3.5 text-base leading-6 md:text-[15px]">
+            {placeholder}
+          </div>
+        ) : null}
+        <div
+          aria-activedescendant={
+            menuOpen ? `composer-command-option-${activeCommandIndex}` : undefined
           }
-        }}
-        onDrop={handleDrop}
-        onFocus={() => {
-          onFocusChange?.(true);
-        }}
-        onKeyDown={handleKeyDown}
-        onPaste={handlePaste}
-        placeholder={placeholder}
-        ref={textareaRef}
-        rows={1}
-        value={value}
-      />
+          aria-controls={menuOpen ? "composer-command-menu" : undefined}
+          aria-describedby={disabledReason ? disabledReasonId : undefined}
+          aria-disabled={textareaDisabled || undefined}
+          aria-label="Message Brain"
+          aria-multiline="true"
+          aria-placeholder={placeholder}
+          className={cn(
+            "max-h-56 min-h-12 w-full overflow-y-auto bg-transparent px-4 pt-3.5 pb-2 text-base leading-6 break-words whitespace-pre-wrap transition-[min-height] duration-300 ease-out outline-none focus:min-h-16 md:text-[15px]",
+            textareaDisabled && "cursor-not-allowed opacity-60",
+          )}
+          contentEditable={!textareaDisabled}
+          data-chat-composer-input
+          id={composerId}
+          onBlur={() => {
+            onFocusChange?.(false);
+            window.setTimeout(() => {
+              if (document.activeElement !== editorRef.current) {
+                setTrigger(null);
+              }
+            }, 120);
+          }}
+          onClick={(event) => {
+            const target = event.target;
+            if (target instanceof Element) {
+              const removeButton = target.closest(`[${COMPOSER_MENTION_REMOVE_ATTR}]`);
+              if (removeButton) {
+                const mention = removeButton.closest(`[${COMPOSER_MENTION_ATTR}]`);
+                const editor = editorRef.current;
+                if (mention instanceof HTMLElement && editor) {
+                  const next = removeComposerMentionElement(editor, mention);
+                  lastEmittedValueRef.current = next;
+                  setEditorEmpty(isComposerEditorEmpty(editor));
+                  onChange(next);
+                  editor.focus();
+                  syncTriggerFromEditor();
+                }
+                return;
+              }
+            }
+            syncTriggerFromEditor();
+          }}
+          onMouseDown={(event) => {
+            const target = event.target;
+            if (target instanceof Element && target.closest(`[${COMPOSER_MENTION_REMOVE_ATTR}]`)) {
+              // Keep editor focus / selection stable while removing the chip.
+              event.preventDefault();
+            }
+          }}
+          onDragOver={(event) => {
+            if (onAddFiles && !textareaDisabled) {
+              event.preventDefault();
+            }
+          }}
+          onDrop={handleDrop}
+          onFocus={() => {
+            onFocusChange?.(true);
+          }}
+          onInput={() => {
+            emitEditorValue();
+          }}
+          onKeyDown={handleEditorKeyDown}
+          onKeyUp={(event) => {
+            if (
+              event.key === "ArrowUp" ||
+              event.key === "ArrowDown" ||
+              event.key === "ArrowLeft" ||
+              event.key === "ArrowRight" ||
+              event.key === "Enter" ||
+              event.key === "Escape"
+            ) {
+              return;
+            }
+            syncTriggerFromEditor();
+          }}
+          onPaste={handlePaste}
+          onSelect={() => {
+            syncTriggerFromEditor();
+          }}
+          ref={editorRef}
+          // contenteditable surfaces must use role=textbox (no native textarea equivalent).
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- rich mention chips require contentEditable
+          role="textbox"
+          suppressContentEditableWarning
+          tabIndex={textareaDisabled ? -1 : 0}
+        />
+      </div>
       <div className="flex items-center justify-between gap-2 px-2.5 pt-0.5 pb-2.5 sm:px-3">
         <div className="flex min-w-0 flex-1 scrollbar-none items-center gap-0.5 overflow-x-auto">
           {footerStart}
