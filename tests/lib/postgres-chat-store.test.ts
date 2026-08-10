@@ -127,6 +127,24 @@ if (!DATABASE_URL) {
       expect(cleared?.projectId).toBeNull();
     });
 
+    it("creates a chat already assigned to a project", async () => {
+      const store = openStore();
+      const userId = "user-a";
+      const workspaceId = "ws-a";
+      const project = await store.createProject(userId, {
+        name: "Research",
+        workspaceId,
+      });
+
+      const chat = await store.createChat(userId, {
+        title: "Seeded in project",
+        workspaceId,
+        projectId: project.id,
+      });
+      expect(chat.projectId).toBe(project.id);
+      expect((await store.getChat(userId, workspaceId, chat.id))?.projectId).toBe(project.id);
+    });
+
     it("renames and deletes projects, clearing chat membership", async () => {
       const store = openStore();
       const userId = "user-a";
