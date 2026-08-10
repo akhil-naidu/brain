@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ProjectsPage } from "@/app/_components/projects-page";
 import { listChatProjects, updateChatProject } from "@/lib/chat/chat-projects-api";
-import { listChats } from "@/lib/chat/chats-api";
+import { createChat, listChats } from "@/lib/chat/chats-api";
 
 const push = vi.fn();
 
@@ -19,6 +19,7 @@ vi.mock("@/lib/chat/chat-projects-api", () => ({
 
 vi.mock("@/lib/chat/chats-api", () => ({
   listChats: vi.fn(),
+  createChat: vi.fn(),
   chatUrl: (id: string) => `/chat?c=${id}`,
 }));
 
@@ -68,12 +69,32 @@ describe("ProjectsPage", () => {
     expect(screen.getByText("1 chat")).toBeDefined();
   });
 
-  it("starts a new chat in a project", async () => {
+  it("creates a chat in the project and opens it", async () => {
+    vi.mocked(createChat).mockResolvedValue({
+      id: "chat-new",
+      title: "New chat",
+      createdAt: "2026-08-10T00:00:00.000Z",
+      updatedAt: "2026-08-10T00:00:00.000Z",
+      visibility: "personal",
+      userId: "user-a",
+      workspaceId: "ws-1",
+      revision: 0,
+      pinnedAt: null,
+      archivedAt: null,
+      projectId: "proj-1",
+      eveSession: null,
+      events: [],
+    });
+
     render(<ProjectsPage />);
     await screen.findByText("Research");
 
     fireEvent.click(screen.getByRole("button", { name: "New chat" }));
-    expect(push).toHaveBeenCalledWith("/chat");
+
+    await waitFor(() => {
+      expect(createChat).toHaveBeenCalledWith({ projectId: "proj-1", visibility: "personal" });
+    });
+    expect(push).toHaveBeenCalledWith("/chat?c=chat-new");
   });
 
   it("opens the create dialog", async () => {

@@ -20,9 +20,7 @@ import {
   updateChatProject,
 } from "@/lib/chat/chat-projects-api";
 import { CHATS_CHANGED_EVENT, notifyChatsChanged } from "@/lib/chat/chat-list-events";
-import { chatUrl, listChats } from "@/lib/chat/chats-api";
-import { stashPendingChatProjectId } from "@/lib/chat/pending-chat-project";
-import { stashPendingChatVisibility } from "@/lib/chat/pending-chat-visibility";
+import { chatUrl, createChat, listChats } from "@/lib/chat/chats-api";
 import type { ChatProject, ChatSummary } from "@/lib/chat/store/types";
 
 export function ProjectsPage() {
@@ -104,10 +102,16 @@ export function ProjectsPage() {
     }
   }
 
-  function handleNewChatInProject(projectId: string) {
-    stashPendingChatProjectId(projectId);
-    stashPendingChatVisibility("personal");
-    router.push("/chat");
+  async function handleNewChatInProject(projectId: string) {
+    setBusyId(projectId);
+    try {
+      const chat = await createChat({ projectId, visibility: "personal" });
+      notifyChatsChanged();
+      router.push(chatUrl(chat.id));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to create chat.");
+      setBusyId(null);
+    }
   }
 
   return (
@@ -173,7 +177,7 @@ export function ProjectsPage() {
                       <Button
                         disabled={busy}
                         onClick={() => {
-                          handleNewChatInProject(project.id);
+                          void handleNewChatInProject(project.id);
                         }}
                         size="sm"
                         type="button"

@@ -30,6 +30,7 @@ import {
   isSlashFocusChatSearchEvent,
   isToggleSidebarShortcutEvent,
 } from "@/lib/chat/keyboard";
+import { stashPendingChatProjectId } from "@/lib/chat/pending-chat-project";
 import { stashPendingChatVisibility } from "@/lib/chat/pending-chat-visibility";
 import { stashPendingPlaybookRun } from "@/lib/chat/pending-playbook-run";
 import { readSidebarExpanded, writeSidebarExpanded } from "@/lib/chat/sidebar-expanded";
@@ -114,6 +115,7 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
   }, [setExpanded, sidebarExpanded]);
 
   const onNewChat = useCallback(() => {
+    stashPendingChatProjectId(null);
     stashPendingChatVisibility("personal");
     if (handlers) {
       handlers.onNewChat();
@@ -123,6 +125,7 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
   }, [handlers, router]);
 
   const onNewSharedChat = useCallback(() => {
+    stashPendingChatProjectId(null);
     stashPendingChatVisibility("shared");
     if (handlers?.onNewSharedChat) {
       handlers.onNewSharedChat();

@@ -18,6 +18,7 @@ import {
   updateChat,
 } from "@/lib/chat/chats-api";
 import { notifyChatsChanged } from "@/lib/chat/chat-list-events";
+import { stashPendingChatProjectId } from "@/lib/chat/pending-chat-project";
 import {
   peekPendingChatVisibility,
   stashPendingChatVisibility,
@@ -166,6 +167,7 @@ export function ChatWorkspace() {
 
   const handleNewChat = useCallback(() => {
     void runWithDisposal(() => {
+      stashPendingChatProjectId(null);
       stashPendingChatVisibility("personal");
       replaceChatUrl(null);
       setDraft("");
@@ -175,6 +177,7 @@ export function ChatWorkspace() {
 
   const handleNewSharedChat = useCallback(() => {
     void runWithDisposal(() => {
+      stashPendingChatProjectId(null);
       stashPendingChatVisibility("shared");
       replaceChatUrl(null);
       setDraft("");
