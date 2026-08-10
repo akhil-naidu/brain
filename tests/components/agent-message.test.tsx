@@ -2,6 +2,7 @@ import type { EveMessage } from "eve/react";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AgentMessage } from "@/components/chat/message";
+import * as exportMarkdown from "@/lib/chat/export-markdown";
 
 afterEach(cleanup);
 
@@ -156,6 +157,57 @@ describe("AgentMessage more menu", () => {
     await waitFor(() => {
       expect(writeText).toHaveBeenCalledWith("Hello from Brain");
     });
+  });
+
+  it("downloads markdown and creates a ClickUp Doc from the overflow menu", async () => {
+    const onCreateClickUpDoc = vi.fn();
+    const downloadTextFile = vi
+      .spyOn(exportMarkdown, "downloadTextFile")
+      .mockImplementation(() => undefined);
+
+    render(
+      <AgentMessage
+        canCreateClickUpDoc
+        canRespond={false}
+        isStreaming={false}
+        message={assistantMessage}
+        onCreateClickUpDoc={onCreateClickUpDoc}
+        onInputResponses={vi.fn()}
+      />,
+    );
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "More message actions" }));
+    await waitFor(() => {
+      expect(screen.getByRole("menuitem", { name: "Download as Markdown" })).toBeDefined();
+    });
+    fireEvent.click(screen.getByRole("menuitem", { name: "Download as Markdown" }));
+    expect(downloadTextFile).toHaveBeenCalledWith("brain-message.md", "Hello from Brain");
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "More message actions" }));
+    await waitFor(() => {
+      expect(screen.getByRole("menuitem", { name: "Create ClickUp Doc" })).toBeDefined();
+    });
+    fireEvent.click(screen.getByRole("menuitem", { name: "Create ClickUp Doc" }));
+    expect(onCreateClickUpDoc).toHaveBeenCalledOnce();
+  });
+
+  it("hides Create ClickUp Doc when gated off", async () => {
+    render(
+      <AgentMessage
+        canCreateClickUpDoc={false}
+        canRespond={false}
+        isStreaming={false}
+        message={assistantMessage}
+        onCreateClickUpDoc={vi.fn()}
+        onInputResponses={vi.fn()}
+      />,
+    );
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "More message actions" }));
+    await waitFor(() => {
+      expect(screen.getByRole("menuitem", { name: "Download as Markdown" })).toBeDefined();
+    });
+    expect(screen.queryByRole("menuitem", { name: "Create ClickUp Doc" })).toBeNull();
   });
 });
 
