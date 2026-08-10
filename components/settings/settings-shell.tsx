@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 export function SettingsShell({
@@ -67,12 +67,15 @@ export function SettingsSection({
 export function SettingsPanel({
   children,
   className,
+  ...props
 }: {
   readonly children: ReactNode;
   readonly className?: string;
-}) {
+} & Omit<ComponentProps<"div">, "children" | "className">) {
   return (
-    <div className={cn("border-border/80 bg-card/40 rounded-xl border", className)}>{children}</div>
+    <div className={cn("border-border/80 bg-card/40 rounded-xl border", className)} {...props}>
+      {children}
+    </div>
   );
 }
 

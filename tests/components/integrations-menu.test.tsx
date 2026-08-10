@@ -45,9 +45,14 @@ const fetchMcpToolsCatalog = vi.hoisted(() =>
 );
 
 const push = vi.hoisted(() => vi.fn());
+const showToast = vi.hoisted(() => vi.fn());
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
+}));
+
+vi.mock("@/lib/ui/toast-store", () => ({
+  showToast,
 }));
 
 vi.mock("@/lib/chat/connections-status-api", async () => {
@@ -71,6 +76,7 @@ afterEach(() => {
   fetchConnectionStatuses.mockClear();
   fetchMcpToolsCatalog.mockClear();
   push.mockClear();
+  showToast.mockClear();
 });
 
 describe("integrationStatusText", () => {
@@ -379,7 +385,13 @@ describe("IntegrationsMenu status", () => {
 
     fireEvent.click(screen.getAllByRole("switch", { name: /Enable GitHub/i })[0]!);
 
-    expect(push).toHaveBeenCalledWith("/tools");
+    expect(showToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Set up required",
+        variant: "info",
+      }),
+    );
+    expect(push).toHaveBeenCalledWith("/tools?focus=github");
     expect(screen.queryByText(/Tools page first/i)).toBeNull();
   });
 });

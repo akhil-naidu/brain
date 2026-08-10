@@ -21,6 +21,7 @@ import {
   fetchMcpToolsCatalog,
   type McpToolsCatalogResponse,
 } from "@/lib/chat/connections-tools-api";
+import { showToast } from "@/lib/ui/toast-store";
 import { cn } from "@/lib/utils";
 
 export {
@@ -108,7 +109,7 @@ export function IntegrationsMenu({
     }
   }, [enabledConnections, onConnectionEnabledChange, statusById]);
 
-  const toggleConnection = (key: keyof EnabledConnections) => {
+  const toggleConnection = (key: keyof EnabledConnections, label: string) => {
     const enabled = enabledConnections[key];
     const status = statusById?.get(key);
     const allowEnable = canEnableConnection(status);
@@ -122,7 +123,26 @@ export function IntegrationsMenu({
     }
     // Set up / Connect live on Tools — keep the chat menu enable-only.
     setMenuOpen(false);
-    router.push("/tools");
+    if (status?.status === "needs_setup") {
+      showToast({
+        title: "Set up required",
+        message: `Set up ${label} on Tools, then enable it for chat.`,
+        variant: "info",
+      });
+    } else if (status?.status === "needs_sign_in") {
+      showToast({
+        title: "Connect required",
+        message: `Connect ${label} on Tools, then enable it for chat.`,
+        variant: "info",
+      });
+    } else {
+      showToast({
+        title: "Manage on Tools",
+        message: `Finish setting up ${label} on Tools.`,
+        variant: "info",
+      });
+    }
+    router.push(`/tools?focus=${encodeURIComponent(key)}`);
   };
 
   return (
@@ -196,7 +216,7 @@ export function IntegrationsMenu({
                 aria-label={`${enabled ? "Disable" : "Enable"} ${label} for this chat`}
                 className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left"
                 onClick={() => {
-                  toggleConnection(key);
+                  toggleConnection(key, label);
                 }}
                 role="menuitemcheckbox"
                 type="button"
@@ -288,7 +308,7 @@ export function IntegrationsMenu({
                 aria-label={`${enabled ? "Disable" : "Enable"} ${label} for this chat`}
                 className="inline-flex shrink-0 cursor-pointer items-center"
                 onClick={() => {
-                  toggleConnection(key);
+                  toggleConnection(key, label);
                 }}
                 role="switch"
                 type="button"

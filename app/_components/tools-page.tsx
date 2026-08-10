@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Settings2Icon, UnplugIcon } from "lucide-react";
 import { useChatShell } from "@/app/_components/chat-shell-context";
 import type { EnabledConnections } from "@/app/_components/chat-shell-context";
@@ -36,9 +37,14 @@ import {
   fetchMcpToolsCatalog,
   type McpToolsCatalogResponse,
 } from "@/lib/chat/connections-tools-api";
+import { showToast } from "@/lib/ui/toast-store";
 import { cn } from "@/lib/utils";
 
 export function ToolsPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const focusConnectionId = searchParams.get("focus");
   const { enabledConnections, setConnectionEnabled } = useChatShell();
   const [statusById, setStatusById] = useState<ReadonlyMap<string, ConnectionStatus> | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
@@ -48,7 +54,6 @@ export function ToolsPage() {
   const [loadingCatalog, setLoadingCatalog] = useState(true);
   const [connectingId, setConnectingId] = useState<keyof EnabledConnections | null>(null);
   const [disconnectingId, setDisconnectingId] = useState<keyof EnabledConnections | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
   const [configureId, setConfigureId] = useState<string | null>(null);
 
   const loadCatalog = useCallback(() => {
@@ -114,12 +119,18 @@ export function ToolsPage() {
     if (!connectingId || !statusById) {
       return;
     }
-    if (statusById.get(connectingId)?.status === "connected") {
-      setConnectionEnabled(connectingId, true);
-      setConnectingId(null);
-      setActionError(null);
-      loadCatalog();
+    if (statusById.get(connectingId)?.status !== "connected") {
+      return;
     }
+    const label = CONNECTION_ITEMS.find((item) => item.key === connectingId)?.label ?? connectingId;
+    setConnectionEnabled(connectingId, true);
+    setConnectingId(null);
+    loadCatalog();
+    showToast({
+      title: "Connected",
+      message: `${label} is connected and enabled for chat.`,
+      variant: "success",
+    });
   }, [connectingId, loadCatalog, setConnectionEnabled, statusById]);
 
   useEffect(() => {
@@ -134,9 +145,30 @@ export function ToolsPage() {
     }
   }, [enabledConnections, setConnectionEnabled, statusById]);
 
+  useEffect(() => {
+    if (!focusConnectionId || loadingStatus) {
+      return undefined;
+    }
+    const panel = document.querySelector<HTMLElement>(
+      `[data-connection-id="${CSS.escape(focusConnectionId)}"]`,
+    );
+    if (!panel) {
+      return undefined;
+    }
+    panel.scrollIntoView({ behavior: "smooth", block: "center" });
+    panel.classList.add("ring-2", "ring-foreground/20");
+    const timer = window.setTimeout(() => {
+      panel.classList.remove("ring-2", "ring-foreground/20");
+    }, 2200);
+    router.replace(pathname, { scroll: false });
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [focusConnectionId, loadingStatus, pathname, router]);
+
   const startConnect = (connectionId: keyof EnabledConnections) => {
+    const label = CONNECTION_ITEMS.find((item) => item.key === connectionId)?.label ?? connectionId;
     setConnectingId(connectionId);
-    setActionError(null);
     void (async () => {
       try {
         const { authorizeUrl } = await startConnectionAuthorize(connectionId);
@@ -145,23 +177,41 @@ export function ToolsPage() {
           throw new Error("Authorization URL cannot be opened.");
         }
         window.open(safeUrl, "_blank", "noopener,noreferrer");
+        showToast({
+          title: "Finish sign-in",
+          message: `Complete ${label} authorization in the new tab.`,
+          variant: "info",
+        });
       } catch (error) {
         setConnectingId(null);
-        setActionError(error instanceof Error ? error.message : "Unable to start sign-in.");
+        showToast({
+          title: "Unable to connect",
+          message: error instanceof Error ? error.message : "Unable to start sign-in.",
+          variant: "error",
+        });
       }
     })();
   };
 
   const startDisconnect = (connectionId: keyof EnabledConnections) => {
+    const label = CONNECTION_ITEMS.find((item) => item.key === connectionId)?.label ?? connectionId;
     setDisconnectingId(connectionId);
-    setActionError(null);
     void (async () => {
       try {
         await disconnectConnection(connectionId);
         setConnectionEnabled(connectionId, false);
         refreshToolsPage();
+        showToast({
+          title: "Disconnected",
+          message: `${label} was disconnected for this workspace.`,
+          variant: "success",
+        });
       } catch (error) {
-        setActionError(error instanceof Error ? error.message : "Unable to disconnect.");
+        showToast({
+          title: "Unable to disconnect",
+          message: error instanceof Error ? error.message : "Unable to disconnect.",
+          variant: "error",
+        });
       } finally {
         setDisconnectingId(null);
       }
@@ -187,10 +237,15 @@ export function ToolsPage() {
       }
       title="Tools"
     >
-      {statusError || actionError ? (
-        <p className="text-destructive text-sm" role="alert">
-          {actionError ?? statusError}
-        </p>
+      {statusError ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-destructive text-sm" role="alert">
+            {statusError}
+          </p>
+          <Button onClick={() => loadStatus()} size="sm" type="button" variant="outline">
+            Retry
+          </Button>
+        </div>
       ) : null}
 
       <SettingsSection description="Connect once, then enable a tool when you want it available for the next chat turn.">
@@ -229,7 +284,14 @@ export function ToolsPage() {
               const isConnected = status?.status === "connected";
 
               return (
-                <SettingsPanel className="p-4" key={key}>
+                <SettingsPanel
+                  className={cn(
+                    "p-4 transition-[box-shadow]",
+                    focusConnectionId === key ? "ring-foreground/20 ring-2" : null,
+                  )}
+                  data-connection-id={key}
+                  key={key}
+                >
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex min-w-0 items-start gap-3">
                       <span className="border-border bg-background flex size-10 shrink-0 items-center justify-center rounded-xl border">
@@ -277,7 +339,6 @@ export function ToolsPage() {
                           <Button
                             aria-label={connectionConfigureLabel(status)}
                             onClick={() => {
-                              setActionError(null);
                               setConfigureId(key);
                             }}
                             size="icon-sm"
@@ -326,18 +387,24 @@ export function ToolsPage() {
                           disabled={!enabled && !allowEnable}
                           onCheckedChange={(checked) => {
                             if (checked && !allowEnable) {
-                              setActionError(
-                                status?.status === "needs_setup"
-                                  ? adminSetupHint
-                                    ? adminSetupHint
-                                    : `Set up ${label} with App settings, then connect it.`
-                                  : status?.status === "needs_sign_in"
-                                    ? `Connect ${label} before turning it on.`
-                                    : `Wait for ${label} status, then connect it.`,
-                              );
+                              showToast({
+                                title:
+                                  status?.status === "needs_setup"
+                                    ? "Set up required"
+                                    : status?.status === "needs_sign_in"
+                                      ? "Connect required"
+                                      : "Not ready",
+                                message:
+                                  status?.status === "needs_setup"
+                                    ? (adminSetupHint ??
+                                      `Set up ${label} with App settings, then connect it.`)
+                                    : status?.status === "needs_sign_in"
+                                      ? `Connect ${label} before turning it on.`
+                                      : `Wait for ${label} status, then connect it.`,
+                                variant: "info",
+                              });
                               return;
                             }
-                            setActionError(null);
                             setConnectionEnabled(key, checked);
                           }}
                         />
@@ -388,7 +455,13 @@ export function ToolsPage() {
           }
         }}
         onSaved={() => {
+          const label = CONNECTION_ITEMS.find((item) => item.key === configureId)?.label ?? "App";
           refreshToolsPage();
+          showToast({
+            title: "Saved",
+            message: `${label} credentials were saved.`,
+            variant: "success",
+          });
         }}
         open={configureId !== null}
       />

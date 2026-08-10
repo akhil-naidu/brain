@@ -10,6 +10,7 @@ import { BetaBadge } from "@/components/brand/beta-badge";
 import { BrainMark } from "@/components/brain-mark";
 import { ChatSidebar } from "@/components/chat/sidebar";
 import { UserProfileMenu } from "@/components/chat/user-profile-menu";
+import { AppToaster } from "@/components/ui/app-toast";
 import { Button } from "@/components/ui/button";
 import { IconTooltip } from "@/components/ui/tooltip";
 import {
@@ -432,6 +433,7 @@ export function BrainAppShell({ children }: { readonly children: ReactNode }) {
     <ChatShellProvider>
       <ChatNavProvider>
         <BrainAppShellInner>{children}</BrainAppShellInner>
+        <AppToaster />
       </ChatNavProvider>
     </ChatShellProvider>
   );
