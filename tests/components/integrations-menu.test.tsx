@@ -1,6 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { IntegrationsConnectionActions } from "@/components/chat/integrations-connection-actions";
 import { IntegrationsMenu } from "@/components/chat/integrations-menu";
 import {
   canEnableConnection,
@@ -20,6 +19,12 @@ const fetchConnectionStatuses = vi.hoisted(() =>
     { id: "gmail", displayName: "Gmail", status: "needs_sign_in" as const },
     { id: "dflow", displayName: "dFlow", status: "needs_sign_in" as const },
     { id: "github", displayName: "GitHub", status: "needs_setup" as const, detail: "Set GITHUB" },
+    {
+      id: "snowflake",
+      displayName: "Snowflake",
+      status: "needs_setup" as const,
+      detail: "Set SNOWFLAKE_MCP_SERVER_URL",
+    },
   ]),
 );
 
@@ -137,6 +142,19 @@ describe("shouldOfferConnectionDisconnect", () => {
     ).toBe(false);
     expect(shouldOfferConnectionDisconnect(undefined)).toBe(false);
   });
+
+  it("hides Disconnect for PAT/env connections like Snowflake", () => {
+    expect(
+      shouldOfferConnectionDisconnect(
+        {
+          id: "snowflake",
+          displayName: "Snowflake",
+          status: "connected",
+        },
+        "snowflake",
+      ),
+    ).toBe(false);
+  });
 });
 
 describe("shouldOfferConnectionConfigure", () => {
@@ -196,6 +214,17 @@ describe("shouldOfferConnectionConfigure", () => {
         "clickup",
       ),
     ).toBe(false);
+    expect(
+      shouldOfferConnectionConfigure(
+        {
+          id: "snowflake",
+          displayName: "Snowflake",
+          status: "needs_setup",
+          canConfigureApp: true,
+        },
+        "snowflake",
+      ),
+    ).toBe(true);
     expect(shouldOfferConnectionConfigure(undefined, "slack")).toBe(false);
   });
 
@@ -243,6 +272,17 @@ describe("connectionAdminSetupHint", () => {
         canConfigureApp: false,
       }),
     ).toBeNull();
+    expect(
+      connectionAdminSetupHint(
+        {
+          id: "snowflake",
+          displayName: "Snowflake",
+          status: "needs_setup",
+          canConfigureApp: false,
+        },
+        "snowflake",
+      ),
+    ).toMatch(/workspace admin/i);
   });
 });
 
@@ -257,6 +297,7 @@ describe("IntegrationsMenu status", () => {
           github: false,
           gmail: true,
           slack: true,
+          snowflake: false,
         }}
         onConnectionEnabledChange={vi.fn()}
       />,
@@ -267,91 +308,5 @@ describe("IntegrationsMenu status", () => {
     await waitFor(() => {
       expect(fetchConnectionStatuses).toHaveBeenCalled();
     });
-  });
-});
-
-describe("IntegrationsConnectionActions", () => {
-  it("offers Set up icon and Connect button for static apps when allowed", () => {
-    const onConfigure = vi.fn();
-    const onConnect = vi.fn();
-    render(
-      <IntegrationsConnectionActions
-        connectionId="asana"
-        isConnecting={false}
-        isDisconnecting={false}
-        onConfigure={onConfigure}
-        onConnect={onConnect}
-        onDisconnect={vi.fn()}
-        status={{
-          id: "asana",
-          displayName: "Asana",
-          status: "needs_setup",
-          canConfigureApp: true,
-        }}
-      />,
-    );
-    fireEvent.click(screen.getByRole("button", { name: "Set up" }));
-    expect(onConfigure).toHaveBeenCalledTimes(1);
-
-    cleanup();
-    render(
-      <IntegrationsConnectionActions
-        connectionId="slack"
-        isConnecting={false}
-        isDisconnecting={false}
-        onConfigure={vi.fn()}
-        onConnect={onConnect}
-        onDisconnect={vi.fn()}
-        status={{
-          id: "slack",
-          displayName: "Slack",
-          status: "needs_sign_in",
-          canConfigureApp: true,
-        }}
-      />,
-    );
-    fireEvent.click(screen.getByRole("button", { name: "Connect" }));
-    expect(onConnect).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole("button", { name: "App settings" })).toBeTruthy();
-  });
-
-  it("hides configure for members who cannot manage app credentials", () => {
-    const { container } = render(
-      <IntegrationsConnectionActions
-        connectionId="slack"
-        isConnecting={false}
-        isDisconnecting={false}
-        onConfigure={vi.fn()}
-        onConnect={vi.fn()}
-        onDisconnect={vi.fn()}
-        status={{
-          id: "slack",
-          displayName: "Slack",
-          status: "needs_setup",
-          canConfigureApp: false,
-        }}
-      />,
-    );
-    expect(screen.queryByRole("button", { name: "Set up" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "App settings" })).toBeNull();
-    expect(container.querySelectorAll("button").length).toBe(0);
-  });
-
-  it("hides configure for DCR apps", () => {
-    const { container } = render(
-      <IntegrationsConnectionActions
-        connectionId="clickup"
-        isConnecting={false}
-        isDisconnecting={false}
-        onConfigure={vi.fn()}
-        onConnect={vi.fn()}
-        onDisconnect={vi.fn()}
-        status={{ id: "clickup", displayName: "ClickUp", status: "connected" }}
-      />,
-    );
-    expect(screen.queryByRole("button", { name: "Set up" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "App settings" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Disconnect" })).toBeTruthy();
-    expect(container.querySelectorAll("button").length).toBe(1);
   });
 });

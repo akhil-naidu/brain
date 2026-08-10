@@ -1,7 +1,7 @@
 # connection-connect-menu Specification
 
 ## Purpose
-Lets signed-in users Connect, Disconnect, and configure MCP OAuth app credentials from the chat integrations menu and the Tools MCP connections surface (workspace BYOA for owners/admins; host credentials for the instance admin) without a chat turn or a separate Workspace apps tab.
+Lets signed-in users Connect, Disconnect, and configure MCP OAuth app credentials from the Tools MCP connections surface (workspace BYOA for owners/admins; host credentials for the instance admin) without a chat turn or a separate Workspace apps tab. The chat integrations menu stays a compact enable-for-this-chat toggle list with a Manage tools link.
 ## Requirements
 ### Requirement: Menu OAuth start API
 The host MUST expose an authorize endpoint that starts MCP OAuth for a supported connection and the signed-in user’s principal without requiring a chat turn.
@@ -47,16 +47,20 @@ When a signed-in user starts Menu Connect, Brain MUST persist pending OAuth stat
 - **WHEN** a user starts Menu authorize in workspace A and separately starts Menu authorize for the same connection in workspace B
 - **THEN** each workspace has distinct pending state and completing B’s callback does not consume A’s pending state
 
-### Requirement: Connect control in the integrations menu
-The integrations menu MUST offer Connect for connections that need sign-in.
+### Requirement: Connect control on the Tools page
+The Tools page MUST offer Connect for connections that need sign-in. The chat integrations menu MUST NOT embed Connect; it MUST link to Manage tools for setup and sign-in.
 
 #### Scenario: Connect shown when sign-in is needed
-- **WHEN** the integrations menu loads status and a connection is needs_sign_in
+- **WHEN** the Tools page loads status and a connection is needs_sign_in
 - **THEN** that row shows a Connect control that starts the authorize flow
 
 #### Scenario: Connect hidden when setup is missing
 - **WHEN** a connection is needs_setup
-- **THEN** the menu does not offer Connect for that row
+- **THEN** Tools does not offer Connect for that row
+
+#### Scenario: Chat menu defers Connect to Tools
+- **WHEN** the integrations menu shows a connection as needs_sign_in
+- **THEN** that row does not show Connect and enabling is blocked until the user connects on Tools
 
 ### Requirement: Menu disconnect API
 The host MUST expose a disconnect endpoint that clears the stored OAuth token for a supported connection and the signed-in user. Disconnect MUST clear that user’s pending Menu OAuth for the connection when present and MUST NOT clear another user’s pending attempt.
@@ -77,16 +81,16 @@ The host MUST expose a disconnect endpoint that clears the stored OAuth token fo
 - **WHEN** a client without a valid session requests disconnect
 - **THEN** the system rejects the request
 
-### Requirement: Disconnect control in the integrations menu
-The integrations menu MUST offer Disconnect for connections that are connected.
+### Requirement: Disconnect control on the Tools page
+The Tools page MUST offer Disconnect for connections that are connected (except host PAT/env connections that have no per-user token to clear). The chat integrations menu MUST NOT embed Disconnect.
 
 #### Scenario: Disconnect shown when connected
-- **WHEN** the integrations menu loads status and a connection is connected
+- **WHEN** the Tools page loads status and a connection is connected with a clearable user token
 - **THEN** that row shows a Disconnect control that clears the local token and refreshes status
 
 #### Scenario: Disconnect hidden when not connected
 - **WHEN** a connection is needs_sign_in or needs_setup
-- **THEN** the menu does not offer Disconnect for that row
+- **THEN** Tools does not offer Disconnect for that row
 
 ### Requirement: Menu credential setup mutations require the operator
 Brain MUST allow any signed-in user to read setup metadata for a static-credential connection (without secrets). Brain MUST allow only the host operator to create, update, or delete UI-stored host app credentials via the setup API.
@@ -123,35 +127,35 @@ The host MUST expose a setup endpoint for static-credential MCP connections that
 - **WHEN** setup is requested for a DCR connection that does not need static app credentials
 - **THEN** the endpoint fails with a clear error
 
-### Requirement: Configure and connect controls in chat and Tools
-The Tools page and the chat integrations menu MUST offer Set up / App settings for static-credential MCP connections only to users who can manage credentials (workspace owner/admin for workspace BYOA, or host operator for host credentials). Both surfaces MUST offer Connect when status is needs_sign_in and Disconnect when connected. DCR connections MUST NOT show Set up / App settings. Workspace members who cannot manage credentials MUST NOT see Set up / App settings; when status is needs_setup they MUST see that a workspace admin needs to set up the app.
+### Requirement: Configure and connect controls on Tools
+The Tools page MUST offer Set up / App settings for static-credential OAuth apps and PAT apps (Snowflake MCP URL + PAT) only to users who can manage credentials (workspace owner/admin for workspace BYOA, or host operator for host credentials). Tools MUST offer Connect when status is needs_sign_in and Disconnect when connected (except PAT connections, which clear credentials via App settings). DCR connections MUST NOT show Set up / App settings. Workspace members who cannot manage credentials MUST NOT see Set up / App settings; when status is needs_setup they MUST see that a workspace admin needs to set up the app. The chat integrations menu MUST remain enable-only plus Manage tools.
 
 #### Scenario: Set up shown when setup is needed for admins
-- **WHEN** Tools or the integrations menu loads status, a static-credential connection is needs_setup, and the user can manage credentials
+- **WHEN** Tools loads status, a static-credential connection is needs_setup, and the user can manage credentials
 - **THEN** that row shows a Set up control that opens a dialog to enter app id/secret and copy the return link
 
 #### Scenario: Members see admin setup needed without Set up
-- **WHEN** Tools or the integrations menu loads status, a static-credential connection is needs_setup, and the user cannot manage credentials
+- **WHEN** Tools loads status, a static-credential connection is needs_setup, and the user cannot manage credentials
 - **THEN** that row does not show Set up or App settings and indicates a workspace admin must set up the app
 
 #### Scenario: App settings available after setup for admins
 - **WHEN** a static-credential connection is needs_sign_in or connected and the user can manage credentials
-- **THEN** Tools and the integrations menu still offer App settings for that row so credentials can be replaced or cleared
+- **THEN** Tools still offers App settings for that row so credentials can be replaced or cleared
 
-#### Scenario: Connect from integrations menu
-- **WHEN** the integrations menu shows a connection as needs_sign_in
-- **THEN** that row offers Connect that starts Menu OAuth without navigating away from chat
+#### Scenario: Connect from Tools
+- **WHEN** Tools shows a connection as needs_sign_in
+- **THEN** that row offers Connect that starts Menu OAuth
 
 #### Scenario: DCR connections hide configure
 - **WHEN** a connection uses dynamic client registration (no static app credentials)
-- **THEN** Tools and the integrations menu do not offer Set up or App settings for that row
+- **THEN** Tools does not offer Set up or App settings for that row
 
 ### Requirement: Enable toggle requires a connected app
 The integrations menu MUST only allow turning a connection on when that connection is connected. Turning off remains allowed anytime.
 
 #### Scenario: Toggle on blocked before connect
 - **WHEN** a connection is needs_setup or needs_sign_in
-- **THEN** the user cannot turn that connection on, and the menu explains they must set up or connect first
+- **THEN** the user cannot turn that connection on, and the menu explains they must set up or connect on the Tools page first
 
 #### Scenario: Toggle on allowed when connected
 - **WHEN** a connection is connected
