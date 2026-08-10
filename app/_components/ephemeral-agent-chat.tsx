@@ -26,6 +26,7 @@ import { PlaybooksPanel } from "@/components/chat/playbooks-panel";
 import { usePlaybooks } from "@/components/chat/use-playbooks";
 import { SchedulesMenu } from "@/components/chat/schedules-menu";
 import { SchedulesPanel } from "@/components/chat/schedules-panel";
+import { ChatProjectBadge } from "@/components/chat/chat-project-badge";
 import { WelcomePrompts } from "@/components/chat/welcome-prompts";
 import {
   buildUserContentMessage,
@@ -33,6 +34,7 @@ import {
   filesToPendingAttachments,
   type PendingAttachment,
 } from "@/lib/chat/attachments";
+import { listChatProjects } from "@/lib/chat/chat-projects-api";
 import { createChat, getChat, isChatApiConflictError, updateChat } from "@/lib/chat/chats-api";
 import { takePendingChatProjectId } from "@/lib/chat/pending-chat-project";
 import { takePendingChatVisibility } from "@/lib/chat/pending-chat-visibility";
@@ -115,6 +117,7 @@ export function EphemeralAgentChat({
   onOpenChat,
   onThreadActionsReady,
   onUserMessage,
+  projectId = null,
 }: {
   readonly chatId: string | null;
   readonly draft: string;
@@ -129,6 +132,7 @@ export function EphemeralAgentChat({
   readonly onOpenChat?: (chatId: string) => void;
   readonly onThreadActionsReady?: (actions: ChatThreadActions | null) => void;
   readonly onUserMessage?: (text: string) => void;
+  readonly projectId?: string | null;
 }) {
   const { enabledConnections, selectedModelId, setConnectionEnabled, setSelectedModelId } =
     useChatShell();
@@ -137,6 +141,7 @@ export function EphemeralAgentChat({
   const [schedulesRefreshKey, setSchedulesRefreshKey] = useState(0);
   const [composerFocused, setComposerFocused] = useState(false);
   const [attachments, setAttachments] = useState<readonly PendingAttachment[]>([]);
+  const [projectName, setProjectName] = useState<string | null>(null);
   const seedEvents = initialEvents ?? EMPTY_EVENTS;
   const [session] = useState(() =>
     new Client({ host: "", preserveCompletedSessions: true }).session(initialSession ?? undefined),
@@ -154,6 +159,29 @@ export function EphemeralAgentChat({
       revisionRef.current = Math.max(revisionRef.current, initialRevision);
     }
   }, [initialRevision, initialVisibility]);
+
+  useEffect(() => {
+    if (!projectId) {
+      setProjectName(null);
+      return undefined;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const listed = await listChatProjects();
+        if (!cancelled) {
+          setProjectName(listed.find((project) => project.id === projectId)?.name ?? null);
+        }
+      } catch {
+        if (!cancelled) {
+          setProjectName(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
   const cancellationRef = useRef<Cancellation>({ requested: false });
   const agentStopRef = useRef<() => void>(() => undefined);
   const disposalBoundaryRef = useRef(false);
@@ -901,6 +929,11 @@ export function EphemeralAgentChat({
                   Brain
                   <BetaBadge size="md" />
                 </h1>
+                {projectName ? (
+                  <div className="mt-4 flex justify-center">
+                    <ChatProjectBadge name={projectName} size="md" />
+                  </div>
+                ) : null}
                 {missingApiKey ? (
                   <div className="mx-auto mt-4 max-w-md text-center">
                     <p className="text-foreground text-sm font-medium">
@@ -913,7 +946,9 @@ export function EphemeralAgentChat({
                 ) : (
                   <>
                     <p className="text-muted-foreground mx-auto mt-2 max-w-sm text-sm leading-relaxed">
-                      Ask across your connected work apps — tasks, mail, Slack, deploys, and more.
+                      {projectName
+                        ? `New chat in ${projectName}. Ask across your connected work apps — tasks, mail, Slack, deploys, and more.`
+                        : "Ask across your connected work apps — tasks, mail, Slack, deploys, and more."}
                     </p>
                     <div
                       className={cn(

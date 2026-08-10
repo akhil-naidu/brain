@@ -5,6 +5,7 @@ import type { ChatThreadActions } from "@/app/_components/ephemeral-agent-chat";
 
 export type ChatNavHandlers = {
   readonly activeChatId: string | null;
+  readonly activeProjectId: string | null;
   readonly currentTitle: string | null;
   readonly draftVisibility: "personal" | "shared";
   readonly threadActions: ChatThreadActions | null;

@@ -8,6 +8,7 @@ import { ChatNavProvider, useChatNav } from "@/app/_components/chat-nav-context"
 import { ChatShellProvider } from "@/app/_components/chat-shell-context";
 import { BetaBadge } from "@/components/brand/beta-badge";
 import { BrainMark } from "@/components/brain-mark";
+import { ChatProjectBadge } from "@/components/chat/chat-project-badge";
 import { ChatRowMenu } from "@/components/chat/chat-row-menu";
 import { ProjectEditorDialog } from "@/components/chat/project-editor-dialog";
 import { ChatSidebar } from "@/components/chat/sidebar";
@@ -324,6 +325,10 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
   const isChatRoute = pathname === "/chat";
   const currentTitle = isChatRoute ? (handlers?.currentTitle ?? null) : null;
   const activeChat = activeChatId ? (chats.find((chat) => chat.id === activeChatId) ?? null) : null;
+  const activeProjectId = activeChat?.projectId ?? handlers?.activeProjectId ?? null;
+  const activeProjectName = activeProjectId
+    ? (projects.find((project) => project.id === activeProjectId)?.name ?? null)
+    : null;
 
   // Dedicated pages render their own titles; keep the chrome title for chat only.
   const headerTitle = isChatRoute
@@ -490,6 +495,9 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
                 <p className="text-foreground min-w-0 truncate text-sm font-medium tracking-tight">
                   {headerTitle}
                 </p>
+                {isChatRoute && activeProjectName ? (
+                  <ChatProjectBadge name={activeProjectName} />
+                ) : null}
                 {isChatRoute && draftVisibility === "shared" ? (
                   <span className="text-muted-foreground bg-muted/60 shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-medium tracking-wide uppercase">
                     Shared

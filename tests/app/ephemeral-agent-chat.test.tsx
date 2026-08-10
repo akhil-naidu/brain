@@ -85,6 +85,10 @@ vi.mock("@/lib/chat/setup-api", () => ({
   fetchSetupStatus: async () => ({ commandCodeApiKeyConfigured: true }),
 }));
 
+vi.mock("@/lib/chat/chat-projects-api", () => ({
+  listChatProjects: vi.fn(async () => []),
+}));
+
 vi.mock("@/lib/chat/chats-api", () => ({
   createChat: vi.fn(async () => ({
     createdAt: new Date().toISOString(),
@@ -206,6 +210,7 @@ vi.mock("@/lib/chat/subagent-child-failures", () => ({
 }));
 
 import { EphemeralAgentChat } from "@/app/_components/ephemeral-agent-chat";
+import { listChatProjects } from "@/lib/chat/chat-projects-api";
 
 afterEach(() => {
   cleanup();
@@ -222,9 +227,11 @@ afterEach(() => {
   sessionMock.state.sessionId = "sess-1";
   callbacks.onEvent = undefined;
   callbacks.onFinish = undefined;
+  vi.mocked(listChatProjects).mockReset();
+  vi.mocked(listChatProjects).mockResolvedValue([]);
 });
 
-function renderChat(draft = "") {
+function renderChat(draft = "", projectId: string | null = null) {
   const onDraftChange = vi.fn();
   let dispose: (() => Promise<boolean>) | null = null;
   render(
@@ -235,6 +242,7 @@ function renderChat(draft = "") {
         dispose = next;
       }}
       onDraftChange={onDraftChange}
+      projectId={projectId}
     />,
   );
   return {
@@ -249,6 +257,26 @@ function renderChat(draft = "") {
 }
 
 describe("EphemeralAgentChat", () => {
+  it("shows project context on an empty project chat", async () => {
+    vi.mocked(listChatProjects).mockResolvedValue([
+      {
+        id: "proj-1",
+        name: "Research",
+        createdAt: "2026-08-10T00:00:00.000Z",
+        updatedAt: "2026-08-10T00:00:00.000Z",
+        userId: "user-a",
+        workspaceId: "ws-1",
+      },
+    ]);
+
+    renderChat("", "proj-1");
+
+    expect(await screen.findByRole("link", { name: "Research" })).toBeDefined();
+    expect(
+      screen.getByText(/New chat in Research\. Ask across your connected work apps/),
+    ).toBeDefined();
+  });
+
   it("rejects oversized messages at the send boundary", async () => {
     const { onDraftChange } = renderChat();
 

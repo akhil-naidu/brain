@@ -34,6 +34,7 @@ type ActiveChatState = {
   readonly initialEvents: readonly HandleMessageStreamEvent[];
   readonly initialRevision: number;
   readonly initialVisibility: ChatVisibility;
+  readonly projectId: string | null;
   readonly remountKey: number;
 };
 
@@ -45,6 +46,7 @@ function emptyActive(remountKey: number, visibility: ChatVisibility = "personal"
     initialEvents: [],
     initialRevision: 0,
     initialVisibility: visibility,
+    projectId: null,
     remountKey,
   };
 }
@@ -86,6 +88,7 @@ export function ChatWorkspace() {
             initialEvents: chat.events,
             initialRevision: chat.revision,
             initialVisibility: chat.visibility,
+            projectId: chat.projectId,
             remountKey: 0,
           });
         } catch {
@@ -209,6 +212,7 @@ export function ChatWorkspace() {
           initialEvents: chat.events,
           initialRevision: chat.revision,
           initialVisibility: chat.visibility,
+          projectId: chat.projectId,
           remountKey: current.remountKey + 1,
         }));
       });
@@ -280,6 +284,7 @@ export function ChatWorkspace() {
       title: chat.title,
       initialRevision: chat.revision,
       initialVisibility: chat.visibility,
+      projectId: chat.projectId,
     }));
     notifyChatsChanged();
   }, []);
@@ -292,6 +297,7 @@ export function ChatWorkspace() {
             title: chat.title,
             initialRevision: chat.revision,
             initialVisibility: chat.visibility,
+            projectId: chat.projectId,
           }
         : current,
     );
@@ -307,6 +313,7 @@ export function ChatWorkspace() {
   useEffect(() => {
     setHandlers({
       activeChatId: active.id,
+      activeProjectId: active.projectId,
       currentTitle: active.title,
       draftVisibility: active.initialVisibility,
       threadActions,
@@ -324,6 +331,7 @@ export function ChatWorkspace() {
   }, [
     active.id,
     active.initialVisibility,
+    active.projectId,
     active.title,
     copyState,
     handleCopyChat,
@@ -370,6 +378,7 @@ export function ChatWorkspace() {
       onOpenChat={handleSelectChat}
       onThreadActionsReady={handleThreadActionsReady}
       onUserMessage={handleUserMessage}
+      projectId={active.projectId}
     />
   );
 }
