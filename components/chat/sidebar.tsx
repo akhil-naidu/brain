@@ -331,10 +331,7 @@ export function ChatSidebar({
               {chat.projectId ? (
                 <IconTooltip label={projectLabel} side="right">
                   <span aria-label={projectLabel} className="inline-flex shrink-0">
-                    <FolderIcon
-                      aria-hidden
-                      className="text-muted-foreground/55 size-3"
-                    />
+                    <FolderIcon aria-hidden className="text-muted-foreground/55 size-3" />
                   </span>
                 </IconTooltip>
               ) : null}

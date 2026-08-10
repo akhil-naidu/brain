@@ -1,11 +1,11 @@
 ## Purpose
 
-Lets users attach images, PDFs, and text files to a chat turn so Brain can reason about them with other work tools.
+Lets users attach images, PDFs, and common text/code files to a chat turn so Brain can reason about them with other work tools.
 
 ## Requirements
 
 ### Requirement: Attach files in the composer
-The chat composer MUST let the user attach supported files (images, PDF, and common text files) before sending a turn, including via file picker, image paste, and drag-and-drop when available.
+The chat composer MUST let the user attach supported files (images, PDF, and common text/code/config files such as `.md`, `.json`, `.ts`, `.yaml`, `.csv`) before sending a turn, including via file picker, image paste, and drag-and-drop when available. When the browser omits or genericizes MIME type, the system MUST still accept files that match the supported extension allowlist.
 
 #### Scenario: Add an attachment from the picker
 - **WHEN** the user chooses a supported file from the attach control

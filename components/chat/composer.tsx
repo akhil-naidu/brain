@@ -29,7 +29,12 @@ import {
 } from "@/components/chat/composer-command-menu";
 import { Button } from "@/components/ui/button";
 import { IconTooltip, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { canSubmitChatTurn, type PendingAttachment } from "@/lib/chat/attachments";
+import {
+  attachmentExtension,
+  canSubmitChatTurn,
+  CHAT_ATTACHMENT_ACCEPT,
+  type PendingAttachment,
+} from "@/lib/chat/attachments";
 import {
   COMPOSER_COMMAND_GROUPS,
   type ComposerCommandGroup,
@@ -64,11 +69,6 @@ function formatAttachmentSize(size: number): string {
   return `${(size / 1_048_576).toFixed(1)} MB`;
 }
 
-function attachmentExtension(filename: string): string | null {
-  const match = /\.([a-z0-9]{1,5})$/i.exec(filename.trim());
-  return match?.[1]?.toUpperCase() ?? null;
-}
-
 function AttachmentGlyph({
   filename,
   mediaType,
@@ -77,22 +77,15 @@ function AttachmentGlyph({
   readonly mediaType: string;
 }) {
   const extension = attachmentExtension(filename);
-  const isText =
-    mediaType.startsWith("text/") ||
-    mediaType === "application/pdf" ||
-    extension === "MD" ||
-    extension === "CSV" ||
-    extension === "TXT" ||
-    extension === "PDF";
-  const Icon = isText ? FileTextIcon : FileIcon;
+  const isImage = mediaType.startsWith("image/");
+  const Icon = isImage ? FileIcon : FileTextIcon;
+  const label = extension?.toUpperCase() ?? null;
 
   return (
     <span className="bg-background/80 text-muted-foreground border-border/60 flex size-8 shrink-0 flex-col items-center justify-center rounded-md border">
       <Icon className="size-3.5" />
-      {extension ? (
-        <span className="mt-px text-[8px] leading-none font-semibold tracking-wide">
-          {extension}
-        </span>
+      {label ? (
+        <span className="mt-px text-[8px] leading-none font-semibold tracking-wide">{label}</span>
       ) : null}
     </span>
   );
@@ -618,7 +611,7 @@ export function ChatComposer({
           {onAddFiles ? (
             <>
               <input
-                accept="image/*,.pdf,.txt,.md,.csv,application/pdf,text/plain,text/markdown,text/csv"
+                accept={CHAT_ATTACHMENT_ACCEPT}
                 className="sr-only"
                 disabled={textareaDisabled}
                 id={fileInputId}
@@ -630,7 +623,7 @@ export function ChatComposer({
                 ref={fileInputRef}
                 type="file"
               />
-              <IconTooltip label="Attach image, PDF, or text" side="top">
+              <IconTooltip label="Attach image, PDF, or text/code" side="top">
                 <button
                   aria-label="Attach file"
                   className="text-muted-foreground/65 hover:bg-background/45 hover:text-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-full transition-colors disabled:pointer-events-none disabled:opacity-50"
