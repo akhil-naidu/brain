@@ -4,11 +4,23 @@ import { cjk } from "@streamdown/cjk";
 import { code } from "@streamdown/code";
 import { math } from "@streamdown/math";
 import { mermaid } from "@streamdown/mermaid";
-import { memo, type ComponentProps } from "react";
+import { memo, useMemo, useSyncExternalStore, type ComponentProps } from "react";
 import { Streamdown } from "streamdown";
+import {
+  getDocumentIsDark,
+  getMermaidThemeConfig,
+  subscribeDocumentTheme,
+} from "@/lib/chat/markdown-theme";
 import { cn } from "@/lib/utils";
 
 const streamdownPlugins = { cjk, code, math, mermaid };
+
+/** Keep copy/download/fullscreen for the surfaces users reuse from chat. */
+const streamdownControls = {
+  code: { copy: true, download: true },
+  table: { copy: true, download: true, fullscreen: true },
+  mermaid: { copy: true, download: true, fullscreen: true, panZoom: true },
+} as const;
 
 export type MarkdownProps = ComponentProps<typeof Streamdown>;
 
@@ -128,14 +140,25 @@ const markdownComponents: MarkdownProps["components"] = {
 };
 
 export const Markdown = memo(function Markdown({ className, ...props }: MarkdownProps) {
+  const isDark = useSyncExternalStore(subscribeDocumentTheme, getDocumentIsDark, () => false);
+  const mermaidOptions = useMemo(
+    () => ({
+      config: getMermaidThemeConfig(isDark),
+    }),
+    [isDark],
+  );
+
   return (
     <Streamdown
       className={cn(
-        "min-w-0 text-[15px] leading-6 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+        "brain-markdown min-w-0 text-[15px] leading-6 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         className,
       )}
       components={markdownComponents}
+      controls={streamdownControls}
+      mermaid={mermaidOptions}
       plugins={streamdownPlugins}
+      shikiTheme={["github-light", "github-dark"]}
       {...props}
     />
   );
