@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 
 import { Markdown } from "@/components/chat/markdown";
+import { renderTextWithMentionBadges } from "@/lib/chat/mention-text";
 
 const STREAM_TEXT_TICK_MS = 60;
 const STREAM_TEXT_CACHE_LIMIT = 40;
 const streamingTextCache = new Map<string, string>();
 
 export function UserTextPart({ text }: { readonly text: string }) {
-  return <div className="break-words whitespace-pre-wrap">{text}</div>;
+  return <div className="break-words whitespace-pre-wrap">{renderTextWithMentionBadges(text)}</div>;
 }
 
 export function AssistantTextPart({

@@ -7,6 +7,7 @@ import {
   isTurnFailureEvent,
 } from "eve/client";
 import { useEveAgent } from "eve/react";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useChatShell } from "@/app/_components/chat-shell-context";
 import {
@@ -35,9 +36,19 @@ import {
   type PendingAttachment,
 } from "@/lib/chat/attachments";
 import { listChatProjects } from "@/lib/chat/chat-projects-api";
-import { createChat, getChat, isChatApiConflictError, updateChat } from "@/lib/chat/chats-api";
+import { notifyChatsChanged } from "@/lib/chat/chat-list-events";
+import {
+  chatUrl,
+  createChat,
+  getChat,
+  isChatApiConflictError,
+  updateChat,
+} from "@/lib/chat/chats-api";
+import { buildComposerCommandItems, type ComposerCommandItem } from "@/lib/chat/composer-commands";
+import type { ComposerTrigger } from "@/lib/chat/composer-trigger";
 import { takePendingChatProjectId } from "@/lib/chat/pending-chat-project";
 import { takePendingChatVisibility } from "@/lib/chat/pending-chat-visibility";
+import { listScheduledPlaybooks, type ScheduledPlaybook } from "@/lib/chat/scheduled-playbooks-api";
 import { WELCOME_PROMPTS } from "@/lib/chat/welcome-prompts";
 import { getChatMessageLengthError } from "@/lib/chat/limits";
 import {
@@ -47,7 +58,7 @@ import {
   MISSING_COMMAND_CODE_API_KEY_TITLE,
 } from "@/lib/chat/provider-setup";
 import { fetchSetupStatus } from "@/lib/chat/setup-api";
-import type { ChatRecord, ChatSummary, ChatVisibility } from "@/lib/chat/store/types";
+import type { ChatProject, ChatRecord, ChatSummary, ChatVisibility } from "@/lib/chat/store/types";
 import { useSubagentChildFailures } from "@/lib/chat/subagent-child-failures";
 import { createFallbackTitle } from "@/lib/chat/title";
 import { copyTextToClipboard, messagesToMarkdown } from "@/lib/chat/export-markdown";
@@ -134,6 +145,7 @@ export function EphemeralAgentChat({
   readonly onUserMessage?: (text: string) => void;
   readonly projectId?: string | null;
 }) {
+  const router = useRouter();
   const { enabledConnections, selectedModelId, setConnectionEnabled, setSelectedModelId } =
     useChatShell();
   const { playbooks, savePlaybook, deletePlaybook } = usePlaybooks();
@@ -142,6 +154,43 @@ export function EphemeralAgentChat({
   const [composerFocused, setComposerFocused] = useState(false);
   const [attachments, setAttachments] = useState<readonly PendingAttachment[]>([]);
   const [projectName, setProjectName] = useState<string | null>(null);
+  const [projects, setProjects] = useState<readonly ChatProject[]>([]);
+  const [schedules, setSchedules] = useState<readonly ScheduledPlaybook[]>([]);
+
+  const commandItems = useMemo(
+    () =>
+      buildComposerCommandItems({
+        playbooks,
+        projects,
+        schedules,
+        enabledConnections,
+      }),
+    [enabledConnections, playbooks, projects, schedules],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const [projectList, scheduleList] = await Promise.all([
+          listChatProjects(),
+          listScheduledPlaybooks(),
+        ]);
+        if (!cancelled) {
+          setProjects(projectList);
+          setSchedules(scheduleList);
+        }
+      } catch {
+        if (!cancelled) {
+          setProjects([]);
+          setSchedules([]);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const seedEvents = initialEvents ?? EMPTY_EVENTS;
   const [session] = useState(() =>
     new Client({ host: "", preserveCompletedSessions: true }).session(initialSession ?? undefined),
@@ -759,6 +808,51 @@ export function EphemeralAgentChat({
     ],
   );
 
+  const handleCommandAction = useCallback(
+    async (item: ComposerCommandItem, triggerKind: ComposerTrigger["kind"]) => {
+      const action = item.action;
+
+      if (triggerKind === "@") {
+        if (action.type === "enable-connection") {
+          setConnectionEnabled(action.connectionId, true);
+        }
+        return;
+      }
+
+      switch (action.type) {
+        case "enable-connection":
+          setConnectionEnabled(action.connectionId, true);
+          return;
+        case "run-playbook":
+          await handleSubmit(action.prompt);
+          return;
+        case "new-chat-in-project": {
+          try {
+            const chat = await createChat({
+              projectId: action.projectId,
+              visibility: "personal",
+            });
+            notifyChatsChanged();
+            if (onOpenChat) {
+              onOpenChat(chat.id);
+            } else {
+              router.push(chatUrl(chat.id));
+            }
+          } catch (error) {
+            showClientError(toErrorMessage(error, "Unable to open project chat."));
+          }
+          return;
+        }
+        case "navigate":
+          router.push(action.href);
+          return;
+        case "none":
+          return;
+      }
+    },
+    [handleSubmit, onOpenChat, router, setConnectionEnabled, showClientError],
+  );
+
   const failedUserText = useMemo(() => {
     if (lastMessage?.role !== "user" || lastMessage.metadata?.status !== "failed") {
       return null;
@@ -1034,6 +1128,7 @@ export function EphemeralAgentChat({
           ) : null}
           <ChatComposer
             attachments={attachments}
+            commandItems={commandItems}
             disabled={missingApiKey}
             disabledReason={
               missingApiKey
@@ -1084,6 +1179,7 @@ export function EphemeralAgentChat({
             isBusy={isBusy}
             onAddFiles={handleAddFiles}
             onChange={onDraftChange}
+            onCommandAction={handleCommandAction}
             onFocusChange={(focused) => {
               setComposerFocused(isEmptyThread ? focused : false);
             }}
@@ -1092,7 +1188,7 @@ export function EphemeralAgentChat({
             }}
             onStop={requestCancellation}
             onSubmit={handleSubmit}
-            placeholder="Ask Brain anything..."
+            placeholder="Ask Brain anything…  (/ commands, @ mention)"
             value={draft}
           />
         </div>

@@ -52,6 +52,11 @@ vi.mock("eve/react", () => ({
   },
 }));
 
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/chat",
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 vi.mock("@/app/_components/chat-shell-context", () => ({
   useChatShell: () => ({
     enabledConnections: {
@@ -87,6 +92,10 @@ vi.mock("@/lib/chat/setup-api", () => ({
 
 vi.mock("@/lib/chat/chat-projects-api", () => ({
   listChatProjects: vi.fn(async () => []),
+}));
+
+vi.mock("@/lib/chat/scheduled-playbooks-api", () => ({
+  listScheduledPlaybooks: vi.fn(async () => []),
 }));
 
 vi.mock("@/lib/chat/chats-api", () => ({
