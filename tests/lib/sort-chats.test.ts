@@ -12,6 +12,7 @@ function summary(
     userId: "user-a",
     revision: 0,
     pinnedAt: null,
+    archivedAt: null,
     ...partial,
   };
 }

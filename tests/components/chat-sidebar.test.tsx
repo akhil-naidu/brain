@@ -19,6 +19,7 @@ const chats: readonly ChatSummary[] = [
     userId: "user-a",
     revision: 0,
     pinnedAt: null,
+    archivedAt: null,
   },
   {
     id: "chat-2",
@@ -29,6 +30,7 @@ const chats: readonly ChatSummary[] = [
     userId: "user-a",
     revision: 0,
     pinnedAt: null,
+    archivedAt: null,
   },
 ];
 
@@ -166,6 +168,27 @@ describe("ChatSidebar chat actions menu", () => {
     fireEvent.pointerDown(screen.getByRole("button", { name: "Chat actions for First chat" }));
     fireEvent.click(await screen.findByRole("menuitem", { name: "Unpin chat" }));
     expect(onPinChat).toHaveBeenCalledWith("chat-1", false);
+  });
+
+  it("archives a chat through onArchiveChat", async () => {
+    const onArchiveChat = vi.fn();
+    render(
+      <ChatSidebar
+        activeChatId="chat-1"
+        brand={<span>Brain</span>}
+        chats={chats}
+        currentTitle="First chat"
+        onArchiveChat={onArchiveChat}
+        onDeleteChat={vi.fn()}
+        onNewChat={vi.fn()}
+        onRenameChat={vi.fn()}
+        onSelectChat={vi.fn()}
+      />,
+    );
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Chat actions for First chat" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Archive" }));
+    expect(onArchiveChat).toHaveBeenCalledWith("chat-1");
   });
 });
 

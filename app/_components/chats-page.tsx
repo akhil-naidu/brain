@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArchiveRestoreIcon,
   MessageSquareIcon,
   PencilIcon,
   SearchIcon,
@@ -23,6 +24,8 @@ import { DEFAULT_CHAT_TITLE, normalizeChatTitle } from "@/lib/chat/title";
 import type { ChatSummary } from "@/lib/chat/store/types";
 import { cn } from "@/lib/utils";
 
+type ChatListStatus = "active" | "archived";
+
 function formatUpdatedAt(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -39,6 +42,7 @@ function formatUpdatedAt(value: string): string {
 export function ChatsPage() {
   const router = useRouter();
   const [chats, setChats] = useState<readonly ChatSummary[]>([]);
+  const [status, setStatus] = useState<ChatListStatus>("active");
   const [canCreateShared, setCanCreateShared] = useState(false);
   const [viewerUserId, setViewerUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,7 +63,7 @@ export function ChatsPage() {
 
   const refresh = useCallback(async () => {
     try {
-      const listed = await listChats();
+      const listed = await listChats({ status });
       setChats(listed.chats);
       setCanCreateShared(listed.canCreateShared);
       setViewerUserId(listed.viewerUserId);
@@ -69,7 +73,7 @@ export function ChatsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [status]);
 
   useEffect(() => {
     void refresh();
@@ -130,9 +134,26 @@ export function ChatsPage() {
     }
   }
 
+  async function handleUnarchive(chatId: string) {
+    setBusyId(chatId);
+    try {
+      const existing = chats.find((chat) => chat.id === chatId);
+      await updateChat(chatId, {
+        archived: false,
+        ...(existing?.visibility === "shared" ? { expectedRevision: existing.revision } : {}),
+      });
+      notifyChatsChanged();
+      await refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to unarchive chat.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   return (
     <SettingsShell
-      description="Browse, rename, share, and delete chats in the active workspace."
+      description="Browse, rename, share, archive, and delete chats in the active workspace."
       meta={
         <Button
           onClick={() => {
@@ -147,6 +168,33 @@ export function ChatsPage() {
       }
       title="All chats"
     >
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          aria-pressed={status === "active"}
+          onClick={() => {
+            setLoading(true);
+            setStatus("active");
+          }}
+          size="sm"
+          type="button"
+          variant={status === "active" ? "secondary" : "ghost"}
+        >
+          Active
+        </Button>
+        <Button
+          aria-pressed={status === "archived"}
+          onClick={() => {
+            setLoading(true);
+            setStatus("archived");
+          }}
+          size="sm"
+          type="button"
+          variant={status === "archived" ? "secondary" : "ghost"}
+        >
+          Archived
+        </Button>
+      </div>
+
       <div className="relative">
         <SearchIcon className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2" />
         <Input
@@ -181,14 +229,17 @@ export function ChatsPage() {
           <p className="text-muted-foreground px-4 py-8 text-center text-sm">
             {query.trim()
               ? "No chats match your search."
-              : "No chats yet. Start a new conversation."}
+              : status === "archived"
+                ? "No archived chats."
+                : "No chats yet. Start a new conversation."}
           </p>
         ) : (
           <ul className="divide-border/70 divide-y">
             {filtered.map((chat) => {
               const title = chat.title.trim() || DEFAULT_CHAT_TITLE;
               const isOwner = !viewerUserId || chat.userId === viewerUserId;
-              const canShare = canCreateShared && isOwner && chat.visibility === "personal";
+              const canShare =
+                status === "active" && canCreateShared && isOwner && chat.visibility === "personal";
               const busy = busyId === chat.id;
               const renaming = renamingId === chat.id;
 
@@ -261,6 +312,23 @@ export function ChatsPage() {
                         </span>
                       </button>
                       <div className="flex shrink-0 items-center gap-0.5">
+                        {status === "archived" ? (
+                          <IconTooltip label="Unarchive" side="top">
+                            <Button
+                              aria-label={`Unarchive ${title}`}
+                              className="text-muted-foreground size-8"
+                              disabled={busy}
+                              onClick={() => {
+                                void handleUnarchive(chat.id);
+                              }}
+                              size="icon-sm"
+                              type="button"
+                              variant="ghost"
+                            >
+                              <ArchiveRestoreIcon className="size-3.5" />
+                            </Button>
+                          </IconTooltip>
+                        ) : null}
                         {canShare ? (
                           <IconTooltip label="Share with workspace" side="top">
                             <Button
@@ -278,22 +346,24 @@ export function ChatsPage() {
                             </Button>
                           </IconTooltip>
                         ) : null}
-                        <IconTooltip label="Rename" side="top">
-                          <Button
-                            aria-label={`Rename ${title}`}
-                            className="text-muted-foreground size-8"
-                            disabled={busy}
-                            onClick={() => {
-                              setRenamingId(chat.id);
-                              setRenameValue(title);
-                            }}
-                            size="icon-sm"
-                            type="button"
-                            variant="ghost"
-                          >
-                            <PencilIcon className="size-3.5" />
-                          </Button>
-                        </IconTooltip>
+                        {status === "active" ? (
+                          <IconTooltip label="Rename" side="top">
+                            <Button
+                              aria-label={`Rename ${title}`}
+                              className="text-muted-foreground size-8"
+                              disabled={busy}
+                              onClick={() => {
+                                setRenamingId(chat.id);
+                                setRenameValue(title);
+                              }}
+                              size="icon-sm"
+                              type="button"
+                              variant="ghost"
+                            >
+                              <PencilIcon className="size-3.5" />
+                            </Button>
+                          </IconTooltip>
+                        ) : null}
                         <IconTooltip label="Delete" side="top">
                           <Button
                             aria-label={`Delete ${title}`}

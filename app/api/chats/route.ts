@@ -5,12 +5,18 @@ import { createChatBodySchema } from "@/lib/chat/store/parse";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await requireWorkspaceSession();
   if (!session.ok) {
     return session.response;
   }
-  const chats = await getChatStore().listChats(session.session.userId, session.session.workspaceId);
+  const statusParam = new URL(request.url).searchParams.get("status");
+  const status = statusParam === "archived" ? "archived" : "active";
+  const chats = await getChatStore().listChats(
+    session.session.userId,
+    session.session.workspaceId,
+    { status },
+  );
   return NextResponse.json({
     chats,
     canCreateShared: session.session.workspace.kind === "team",

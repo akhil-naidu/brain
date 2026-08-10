@@ -103,6 +103,35 @@ if (!DATABASE_URL) {
       expect(unpinned?.pinnedAt).toBeNull();
     });
 
+    it("hides archived chats from the active list", async () => {
+      const store = openStore();
+      const userId = "user-a";
+      const workspaceId = "ws-a";
+      const keep = await store.createChat(userId, { title: "Keep", workspaceId });
+      const archive = await store.createChat(userId, { title: "Archive me", workspaceId });
+
+      const archived = await store.updateChat(userId, workspaceId, archive.id, {
+        archived: true,
+      });
+      expect(archived?.archivedAt).toBeTruthy();
+
+      expect((await store.listChats(userId, workspaceId)).map((chat) => chat.id)).toEqual([
+        keep.id,
+      ]);
+      expect(
+        (await store.listChats(userId, workspaceId, { status: "archived" })).map((chat) => chat.id),
+      ).toEqual([archive.id]);
+
+      const restored = await store.updateChat(userId, workspaceId, archive.id, {
+        archived: false,
+      });
+      expect(restored?.archivedAt).toBeNull();
+      expect((await store.listChats(userId, workspaceId)).map((chat) => chat.id)).toEqual([
+        archive.id,
+        keep.id,
+      ]);
+    });
+
     it("isolates chats between users and workspaces", async () => {
       const store = openStore();
       const a = await store.createChat("user-a", { title: "A only", workspaceId: "ws-1" });

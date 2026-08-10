@@ -19,6 +19,7 @@ const chatSummarySchema = z.object({
   userId: z.string().default(""),
   revision: z.number().int().nonnegative().default(0),
   pinnedAt: z.string().nullable().default(null),
+  archivedAt: z.string().nullable().default(null),
 });
 
 const chatRecordSchema = chatSummarySchema.extend({
@@ -52,6 +53,7 @@ function toChatRecord(value: unknown): ChatRecord {
     userId: parsed.userId,
     revision: parsed.revision,
     pinnedAt: parsed.pinnedAt,
+    archivedAt: parsed.archivedAt,
     workspaceId: parsed.workspaceId ?? "",
     eveSession: parsed.eveSession === null ? null : parseSessionState(parsed.eveSession),
     events: parsed.events.map(parseStreamEvent),
@@ -98,8 +100,17 @@ export type ListChatsResult = {
   readonly viewerUserId: string | null;
 };
 
-export async function listChats(): Promise<ListChatsResult> {
-  const response = await fetch("/api/chats", { cache: "no-store" });
+export async function listChats(options?: {
+  readonly status?: "active" | "archived";
+}): Promise<ListChatsResult> {
+  const params = new URLSearchParams();
+  if (options?.status === "archived") {
+    params.set("status", "archived");
+  }
+  const query = params.toString();
+  const response = await fetch(query ? `/api/chats?${query}` : "/api/chats", {
+    cache: "no-store",
+  });
   const data = await readBody(response);
   const parsed = z
     .object({
@@ -152,6 +163,7 @@ export async function updateChat(
     readonly title?: string;
     readonly visibility?: ChatVisibility;
     readonly pinned?: boolean;
+    readonly archived?: boolean;
     readonly eveSession?: SessionState | null;
     readonly appendEvents?: readonly HandleMessageStreamEvent[];
     readonly events?: readonly HandleMessageStreamEvent[];

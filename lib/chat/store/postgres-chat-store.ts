@@ -12,6 +12,7 @@ import type {
   ChatVisibility,
   CreateChatInput,
   DeleteChatOptions,
+  ListChatsOptions,
   UpdateChatInput,
 } from "@/lib/chat/store/types";
 
@@ -86,6 +87,7 @@ function toSummary(row: PgRow): ChatSummary {
     userId: requireString(row, "user_id"),
     revision: requireNumber(row, "revision"),
     pinnedAt: optionalString(row, "pinned_at"),
+    archivedAt: optionalString(row, "archived_at"),
   };
 }
 
@@ -161,13 +163,21 @@ export function createPostgresChatStore(): ChatStore {
       return toRecord(row, events);
     },
 
-    async listChats(userId: string, workspaceId: string): Promise<readonly ChatSummary[]> {
+    async listChats(
+      userId: string,
+      workspaceId: string,
+      options?: ListChatsOptions,
+    ): Promise<readonly ChatSummary[]> {
+      const status = options?.status ?? "active";
+      const archivedClause =
+        status === "archived" ? "AND archived_at IS NOT NULL" : "AND archived_at IS NULL";
       const result = await pool.query<PgRow>(
         `SELECT id, title, eve_session, created_at, updated_at, user_id, workspace_id, visibility,
-                revision, pinned_at
+                revision, pinned_at, archived_at
          FROM chat
          WHERE workspace_id = $1
            AND (user_id = $2 OR visibility = 'shared')
+           ${archivedClause}
          ORDER BY (pinned_at IS NULL) ASC, updated_at DESC`,
         [workspaceId, userId],
       );
@@ -257,7 +267,10 @@ export function createPostgresChatStore(): ChatStore {
         }
 
         const hasMetaContent =
-          input.title !== undefined || input.pinned !== undefined || willPromoteToShared;
+          input.title !== undefined ||
+          input.pinned !== undefined ||
+          input.archived !== undefined ||
+          willPromoteToShared;
         const hasContent = hasTurnContent || hasMetaContent;
 
         if (!hasContent) {
@@ -320,6 +333,14 @@ export function createPostgresChatStore(): ChatStore {
           await client.query(
             "UPDATE chat SET pinned_at = $1, updated_at = $2 WHERE id = $3 AND workspace_id = $4",
             [input.pinned ? updatedAt : null, updatedAt, id, workspaceId],
+          );
+          touched = true;
+        }
+
+        if (input.archived !== undefined) {
+          await client.query(
+            "UPDATE chat SET archived_at = $1, updated_at = $2 WHERE id = $3 AND workspace_id = $4",
+            [input.archived ? updatedAt : null, updatedAt, id, workspaceId],
           );
           touched = true;
         }

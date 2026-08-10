@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArchiveIcon,
   BookmarkIcon,
   Building2Icon,
   CalendarClockIcon,
@@ -90,6 +91,7 @@ function SidebarNavLink({
 function ChatRowMenu({
   canShare,
   chatTitle,
+  onArchive,
   onDelete,
   onPin,
   onRename,
@@ -99,6 +101,7 @@ function ChatRowMenu({
 }: {
   readonly canShare: boolean;
   readonly chatTitle: string;
+  readonly onArchive?: () => void;
   readonly onDelete: () => void;
   readonly onPin?: () => void;
   readonly onRename: () => void;
@@ -163,6 +166,17 @@ function ChatRowMenu({
             {pinned ? "Unpin chat" : "Pin chat"}
           </DropdownMenuItem>
         ) : null}
+        {onArchive ? (
+          <DropdownMenuItem
+            className="gap-2"
+            onSelect={() => {
+              onArchive();
+            }}
+          >
+            <ArchiveIcon className="size-4" />
+            Archive
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuItem
           className="gap-2"
           onSelect={() => {
@@ -187,6 +201,7 @@ export function ChatSidebar({
   compact = false,
   currentTitle,
   draftVisibility = "personal",
+  onArchiveChat,
   onDeleteChat,
   onNewChat,
   onNewSharedChat,
@@ -207,6 +222,7 @@ export function ChatSidebar({
   readonly compact?: boolean;
   readonly currentTitle: string | null;
   readonly draftVisibility?: "personal" | "shared";
+  readonly onArchiveChat?: (chatId: string) => void | Promise<void>;
   readonly onDeleteChat: (chatId: string) => void;
   readonly onNewChat: () => void;
   readonly onNewSharedChat?: () => void;
@@ -779,6 +795,13 @@ export function ChatSidebar({
                                 chat.userId === viewerUserId,
                               )}
                               chatTitle={chat.title}
+                              onArchive={
+                                onArchiveChat
+                                  ? () => {
+                                      void onArchiveChat(chat.id);
+                                    }
+                                  : undefined
+                              }
                               onDelete={() => onDeleteChat(chat.id)}
                               onPin={
                                 onPinChat

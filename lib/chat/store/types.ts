@@ -12,6 +12,13 @@ export type ChatSummary = {
   readonly revision: number;
   /** ISO timestamp when pinned; null when unpinned. */
   readonly pinnedAt: string | null;
+  /** ISO timestamp when archived; null when active. */
+  readonly archivedAt: string | null;
+};
+
+export type ListChatsOptions = {
+  /** Defaults to active (non-archived) chats. */
+  readonly status?: "active" | "archived";
 };
 
 export type ChatRecord = ChatSummary & {
@@ -34,6 +41,8 @@ export type UpdateChatInput = {
   readonly visibility?: ChatVisibility;
   /** When true, pin; when false, unpin. */
   readonly pinned?: boolean;
+  /** When true, archive; when false, unarchive. */
+  readonly archived?: boolean;
   readonly eveSession?: SessionState | null;
   readonly appendEvents?: readonly HandleMessageStreamEvent[];
   /** When set, replaces the full event log (used for turn snapshots). */
@@ -51,7 +60,11 @@ export type DeleteChatOptions = {
 
 export interface ChatStore {
   createChat(userId: string, input: CreateChatInput): Promise<ChatRecord>;
-  listChats(userId: string, workspaceId: string): Promise<readonly ChatSummary[]>;
+  listChats(
+    userId: string,
+    workspaceId: string,
+    options?: ListChatsOptions,
+  ): Promise<readonly ChatSummary[]>;
   getChat(userId: string, workspaceId: string, id: string): Promise<ChatRecord | null>;
   updateChat(
     userId: string,

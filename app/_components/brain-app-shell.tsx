@@ -199,6 +199,28 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
     [chats, refreshChats],
   );
 
+  const onArchiveChat = useCallback(
+    async (chatId: string) => {
+      try {
+        const existing = chats.find((chat) => chat.id === chatId);
+        await updateChat(chatId, {
+          archived: true,
+          ...(existing?.visibility === "shared" ? { expectedRevision: existing.revision } : {}),
+        });
+        setChats((current) => current.filter((chat) => chat.id !== chatId));
+        notifyChatsChanged();
+        if (handlers?.activeChatId === chatId) {
+          handlers.onNewChat();
+        } else if (readChatIdFromLocation() === chatId) {
+          router.push("/chat");
+        }
+      } catch {
+        await refreshChats();
+      }
+    },
+    [chats, handlers, refreshChats, router],
+  );
+
   const onRunPlaybook = useCallback(
     (prompt: string) => {
       stashPendingChatVisibility("personal");
@@ -301,6 +323,7 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
     chats,
     currentTitle: pathname === "/chat" ? currentTitle : null,
     draftVisibility: pathname === "/chat" ? draftVisibility : "personal",
+    onArchiveChat,
     onDeleteChat,
     onNewSharedChat,
     onPinChat,
