@@ -18,6 +18,8 @@ This agent must stay **self-hostable and independent of Vercel infrastructure**.
 - ClickUp / Notion / Linear / Atlassian / Zernio / Sentry / dFlow: official MCP with self-hosted OAuth / DCR (`agent/connections/{clickup,notion,linear,atlassian,zernio,sentry,dflow}.ts`)
 - Slack / Asana / Gmail / GitHub: official MCP with self-hosted OAuth + env client credentials (`agent/connections/{slack,asana,gmail,github}.ts`)
 - Snowflake: managed MCP with workspace/host UI MCP URL + PAT (env `SNOWFLAKE_MCP_SERVER_URL` / `SNOWFLAKE_PAT_TOKEN` as fallback; no OAuth app) (`agent/connections/snowflake.ts`)
+- MongoDB: official MCP over Streamable HTTP — Tools → Set up for MCP URL (+ optional bearer); env `MONGODB_MCP_URL` / `MONGODB_MCP_TOKEN` as fallback (`agent/connections/mongodb.ts`)
+- MCP Toolbox: Google MCP Toolbox for Databases over Streamable HTTP — Tools → Set up for MCP URL (+ optional bearer); env `TOOLBOX_MCP_URL` / `TOOLBOX_MCP_TOKEN` as fallback (`agent/connections/toolbox.ts`)
 
 See `.cursor/rules/no-vercel-infra.mdc`.
 

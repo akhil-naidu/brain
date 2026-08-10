@@ -2,7 +2,7 @@
 
 **Beta** · self-hosted work assistant for your team.
 
-Browser chat, MCP connections (Slack, Asana, Gmail, Notion, Linear, Atlassian, Zernio, Sentry, GitHub, ClickUp, dFlow, Snowflake), workspaces, playbooks, and schedules — running on **your** host with **your** Postgres. No Vercel AI Gateway, Neon, or Vercel Connect required.
+Browser chat, MCP connections (Slack, Asana, Gmail, Notion, Linear, Atlassian, Zernio, Sentry, GitHub, ClickUp, dFlow, Snowflake, MongoDB, MCP Toolbox), workspaces, playbooks, and schedules — running on **your** host with **your** Postgres. No Vercel AI Gateway, Neon, or Vercel Connect required.
 
 Built with [Next.js](https://nextjs.org/) + [`eve`](https://eve.dev/) (`withEve()`).
 
