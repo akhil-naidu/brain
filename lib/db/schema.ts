@@ -4,7 +4,7 @@ import type { Pool } from "pg";
  * Bump when Brain DDL changes so long-lived dev processes re-apply
  * idempotent ALTERs without a full restart.
  */
-export const BRAIN_SCHEMA_REVISION = 2;
+export const BRAIN_SCHEMA_REVISION = 3;
 
 const globalForSchema = globalThis as typeof globalThis & {
   brainSchemaRevision?: number;
@@ -178,6 +178,27 @@ export async function ensureBrainSchema(pool: Pool): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS morning_brief_schedule_workspace_idx
       ON morning_brief_schedule (workspace_id);
+
+    CREATE TABLE IF NOT EXISTS brain_custom_model (
+      id TEXT PRIMARY KEY NOT NULL,
+      scope TEXT NOT NULL CHECK (scope IN ('instance', 'workspace')),
+      workspace_id TEXT REFERENCES brain_workspace(id) ON DELETE CASCADE,
+      label TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      base_url TEXT NOT NULL,
+      provider_model_id TEXT NOT NULL,
+      context_window_tokens INTEGER NOT NULL,
+      api_key_ciphertext TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      CHECK (
+        (scope = 'instance' AND workspace_id IS NULL)
+        OR (scope = 'workspace' AND workspace_id IS NOT NULL)
+      )
+    );
+
+    CREATE INDEX IF NOT EXISTS brain_custom_model_scope_workspace_idx
+      ON brain_custom_model (scope, workspace_id);
 
     INSERT INTO brain_instance_policy (
       id, signup_mode, auto_personal_workspace, allow_create_workspace, allow_forgot_password
