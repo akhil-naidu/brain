@@ -2,6 +2,7 @@ import { z } from "zod";
 
 const setupStatusSchema = z.object({
   commandCodeApiKeyConfigured: z.boolean(),
+  customModelsAvailable: z.boolean().default(false),
 });
 
 export type SetupStatus = z.infer<typeof setupStatusSchema>;
