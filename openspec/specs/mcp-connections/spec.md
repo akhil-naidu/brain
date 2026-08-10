@@ -91,6 +91,25 @@ The system MUST provide a dFlow MCP connection using the official dFlow Cloud MC
 - **WHEN** the model calls a dFlow create/update or GitHub setup tool
 - **THEN** the connection approval policy requires user approval
 
+### Requirement: Task and issue write tools require user approval
+MCP connections that create or mutate work items (tasks, issues, comments that change work, status updates, assignees) MUST require in-chat user approval before execution. Only explicitly reviewed read/list/get tools MAY skip approval (`not-applicable`). Unknown tool names MUST require approval (fail closed). Brain MUST NOT auto-approve create/update/delete task tools by default; remembered “always allow” is out of scope until separately specified.
+
+#### Scenario: ClickUp task writes require approval
+- **WHEN** the model calls `clickup_create_task` or `clickup_update_task`
+- **THEN** the connection approval policy requires user approval
+
+#### Scenario: ClickUp task reads skip approval
+- **WHEN** the model calls a reviewed ClickUp read tool such as `clickup_get_task` or `clickup_filter_tasks`
+- **THEN** the connection approval policy treats that tool as not requiring user approval
+
+#### Scenario: Linear issue writes require approval
+- **WHEN** the model calls `save_issue` (or another Linear write tool not on the reviewed read-only list)
+- **THEN** the connection approval policy requires user approval
+
+#### Scenario: Asana task writes require approval
+- **WHEN** the model calls an Asana create/update task tool that is not on the reviewed read-only list
+- **THEN** the connection approval policy requires user approval
+
 ### Requirement: Snowflake MCP connection with account MCP URL and PAT
 The system MUST provide a Snowflake-managed MCP connection authenticated with a programmatic access token (PAT), matching the official Cursor Snowflake plugin model (URL + PAT, no OAuth app). Workspace owners/admins MUST be able to save MCP server URL + PAT via Tools Set up / App settings (workspace BYOA). Host operator credentials and `SNOWFLAKE_MCP_SERVER_URL` / `SNOWFLAKE_PAT_TOKEN` MUST remain fallbacks. Resolution MUST prefer workspace UI credentials, then host UI credentials, then env. Snowflake MUST NOT require an OAuth app client id/secret, Vercel Connect, dynamic client registration, or Menu Connect OAuth.
 
