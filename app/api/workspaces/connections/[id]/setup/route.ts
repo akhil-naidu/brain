@@ -8,7 +8,16 @@ import {
   resolveProviderAppCredentials,
   writeWorkspaceAppCredentials,
 } from "@/agent/lib/connection-credentials";
-import { getChatConnectionProvider, isSnowflakeConnectionId } from "@/agent/lib/connection-status";
+import {
+  getChatConnectionProvider,
+  isHttpMcpUrlConnectionId,
+  isSnowflakeConnectionId,
+} from "@/agent/lib/connection-status";
+import {
+  buildWorkspaceHttpMcpSetupResponse,
+  clearWorkspaceHttpMcpSetup,
+  saveWorkspaceHttpMcpSetup,
+} from "@/agent/lib/http-mcp-setup";
 import {
   buildWorkspaceSnowflakeSetupResponse,
   clearWorkspaceSnowflakeSetup,
@@ -46,6 +55,17 @@ export async function GET(request: Request, context: RouteContext) {
   if (isSnowflakeConnectionId(id)) {
     return NextResponse.json(
       await buildWorkspaceSnowflakeSetupResponse({
+        workspaceId,
+        canManageCredentials,
+        origin,
+      }),
+    );
+  }
+
+  if (isHttpMcpUrlConnectionId(id)) {
+    return NextResponse.json(
+      await buildWorkspaceHttpMcpSetupResponse({
+        connectionId: id,
         workspaceId,
         canManageCredentials,
         origin,
@@ -124,6 +144,19 @@ export async function PUT(request: Request, context: RouteContext) {
     }
   }
 
+  if (isHttpMcpUrlConnectionId(id)) {
+    try {
+      const displayName = await saveWorkspaceHttpMcpSetup(session.session.workspaceId, id, {
+        mcpServerUrl: parsed.data.clientId,
+        bearerToken: parsed.data.clientSecret,
+      });
+      return NextResponse.json({ ok: true, displayName });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to save credentials.";
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+  }
+
   const provider = getChatConnectionProvider(id);
   if (!provider) {
     return NextResponse.json({ error: "Unknown connection." }, { status: 404 });
@@ -173,6 +206,11 @@ export async function DELETE(_request: Request, context: RouteContext) {
   if (isSnowflakeConnectionId(id)) {
     await clearWorkspaceSnowflakeSetup(session.session.workspaceId);
     return NextResponse.json({ ok: true, displayName: SNOWFLAKE_DISPLAY_NAME });
+  }
+
+  if (isHttpMcpUrlConnectionId(id)) {
+    const displayName = await clearWorkspaceHttpMcpSetup(session.session.workspaceId, id);
+    return NextResponse.json({ ok: true, displayName });
   }
 
   const provider = getChatConnectionProvider(id);

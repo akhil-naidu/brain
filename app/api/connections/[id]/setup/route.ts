@@ -8,7 +8,16 @@ import {
   resolveProviderAppCredentials,
   writeStoredAppCredentials,
 } from "@/agent/lib/connection-credentials";
-import { getChatConnectionProvider, isSnowflakeConnectionId } from "@/agent/lib/connection-status";
+import {
+  getChatConnectionProvider,
+  isHttpMcpUrlConnectionId,
+  isSnowflakeConnectionId,
+} from "@/agent/lib/connection-status";
+import {
+  buildHostHttpMcpSetupResponse,
+  clearHostHttpMcpSetup,
+  saveHostHttpMcpSetup,
+} from "@/agent/lib/http-mcp-setup";
 import {
   buildHostSnowflakeSetupResponse,
   clearHostSnowflakeSetup,
@@ -44,6 +53,16 @@ export async function GET(request: Request, context: RouteContext) {
   if (isSnowflakeConnectionId(id)) {
     return NextResponse.json(
       await buildHostSnowflakeSetupResponse({ canManageCredentials, origin }),
+    );
+  }
+
+  if (isHttpMcpUrlConnectionId(id)) {
+    return NextResponse.json(
+      await buildHostHttpMcpSetupResponse({
+        connectionId: id,
+        canManageCredentials,
+        origin,
+      }),
     );
   }
 
@@ -104,6 +123,19 @@ export async function PUT(request: Request, context: RouteContext) {
     }
   }
 
+  if (isHttpMcpUrlConnectionId(id)) {
+    try {
+      const displayName = await saveHostHttpMcpSetup(id, {
+        mcpServerUrl: parsed.data.clientId,
+        bearerToken: parsed.data.clientSecret,
+      });
+      return NextResponse.json({ ok: true, displayName });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to save credentials.";
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+  }
+
   const provider = getChatConnectionProvider(id);
   if (!provider) {
     return NextResponse.json({ error: "Unknown connection." }, { status: 404 });
@@ -146,6 +178,11 @@ export async function DELETE(_request: Request, context: RouteContext) {
   if (isSnowflakeConnectionId(id)) {
     await clearHostSnowflakeSetup();
     return NextResponse.json({ ok: true, displayName: SNOWFLAKE_DISPLAY_NAME });
+  }
+
+  if (isHttpMcpUrlConnectionId(id)) {
+    const displayName = await clearHostHttpMcpSetup(id);
+    return NextResponse.json({ ok: true, displayName });
   }
 
   const provider = getChatConnectionProvider(id);

@@ -12,6 +12,12 @@ import { sentryProvider } from "../connections/sentry";
 import { slackProvider } from "../connections/slack";
 import { zernioProvider } from "../connections/zernio";
 import { getProviderCredentialSetupError } from "./connection-credentials";
+import { getHttpMcpCredentialSetupError } from "./http-mcp-credentials";
+import {
+  HTTP_MCP_URL_CONNECTIONS,
+  isHttpMcpUrlConnectionId,
+  type HttpMcpUrlConnection,
+} from "./http-mcp-url";
 import { getStoredTokenAuthState, type McpOAuthProvider } from "./mcp-oauth";
 import { getSnowflakeCredentialSetupError } from "./snowflake-credentials";
 import { SNOWFLAKE_CONNECTION_NAME, SNOWFLAKE_DISPLAY_NAME } from "./snowflake-mcp-url";
@@ -39,6 +45,8 @@ export const CHAT_CONNECTION_PROVIDERS: readonly McpOAuthProvider[] = [
   dflowProvider,
   githubProvider,
 ];
+
+export { HTTP_MCP_URL_CONNECTIONS, isHttpMcpUrlConnectionId };
 
 export function getChatConnectionProvider(id: string): McpOAuthProvider | undefined {
   return CHAT_CONNECTION_PROVIDERS.find((provider) => provider.name === id);
@@ -93,6 +101,28 @@ export async function resolveSnowflakeConnectionAuthStatus(
   };
 }
 
+export async function resolveHttpMcpConnectionAuthStatus(
+  connection: HttpMcpUrlConnection,
+  principal: ConnectionPrincipal,
+  env: { readonly [key: string]: string | undefined } = process.env,
+): Promise<ConnectionStatusItem> {
+  const workspaceId = principal.type === "user" ? workspaceIdFromIssuer(principal.issuer) : null;
+  const setupError = await getHttpMcpCredentialSetupError(connection.name, workspaceId, env);
+  if (setupError) {
+    return {
+      id: connection.name,
+      displayName: connection.displayName,
+      status: "needs_setup",
+      detail: setupError,
+    };
+  }
+  return {
+    id: connection.name,
+    displayName: connection.displayName,
+    status: "connected",
+  };
+}
+
 export async function listChatConnectionStatuses(
   principal: ConnectionPrincipal,
   env: { readonly [key: string]: string | undefined } = process.env,
@@ -102,5 +132,14 @@ export async function listChatConnectionStatuses(
       resolveConnectionAuthStatus(provider, principal, env),
     ),
   );
-  return [...oauthStatuses, await resolveSnowflakeConnectionAuthStatus(principal, env)];
+  const httpMcpStatuses = await Promise.all(
+    HTTP_MCP_URL_CONNECTIONS.map((connection) =>
+      resolveHttpMcpConnectionAuthStatus(connection, principal, env),
+    ),
+  );
+  return [
+    ...oauthStatuses,
+    await resolveSnowflakeConnectionAuthStatus(principal, env),
+    ...httpMcpStatuses,
+  ];
 }

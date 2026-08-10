@@ -20,10 +20,12 @@ const SCHEDULED_CONNECTIONS = {
   github: true,
   gmail: true,
   linear: true,
+  mongodb: true,
   notion: true,
   sentry: true,
   slack: true,
   snowflake: true,
+  toolbox: true,
   zernio: true,
 } as const;
 

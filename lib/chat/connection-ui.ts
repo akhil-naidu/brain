@@ -1,4 +1,8 @@
-import { connectionOffersAppSetup, connectionUsesPatAuth } from "@/lib/chat/connection-catalog";
+import {
+  connectionOffersAppSetup,
+  connectionUsesHttpMcpUrl,
+  connectionUsesPatAuth,
+} from "@/lib/chat/connection-catalog";
 import { connectionStatusLabel, type ConnectionStatus } from "@/lib/chat/connections-status-api";
 
 export function integrationStatusText(input: {
@@ -26,15 +30,18 @@ export function shouldOfferConnectionDisconnect(
   status: ConnectionStatus | undefined,
   connectionId?: string,
 ): boolean {
-  if (connectionId && connectionUsesPatAuth(connectionId)) {
+  if (
+    connectionId &&
+    (connectionUsesPatAuth(connectionId) || connectionUsesHttpMcpUrl(connectionId))
+  ) {
     return false;
   }
   return status?.status === "connected";
 }
 
 /**
- * Static OAuth apps and PAT apps (Snowflake) can be configured by workspace
- * admins / host operator. DCR apps (ClickUp, dFlow) never need it.
+ * Static OAuth apps, PAT (Snowflake), and HTTP MCP URL apps can be configured
+ * by workspace admins / host operator. DCR apps (ClickUp, dFlow) never need it.
  */
 export function shouldOfferConnectionConfigure(
   status: ConnectionStatus | undefined,

@@ -230,6 +230,9 @@ export function ConnectionSetupDialog({
   };
 
   const isPatSetup = info?.setupKind === "pat";
+  const isHttpMcpSetup = info?.setupKind === "http_mcp";
+  const isMcpUrlSetup = isPatSetup || isHttpMcpSetup;
+  const showSecretField = Boolean(info?.requiresClientSecret || info?.optionalClientSecret);
   const canSave =
     canManage &&
     clientId.trim().length > 0 &&
@@ -238,17 +241,24 @@ export function ConnectionSetupDialog({
     !loading;
 
   const appName = info?.displayName ?? "this app";
-  const description = isPatSetup
-    ? target === "workspace"
-      ? `Paste the Snowflake-managed MCP server URL and a programmatic access token (PAT) for this workspace. No OAuth app is required.`
-      : target === "host"
-        ? `Paste the Snowflake-managed MCP server URL and a programmatic access token (PAT) for this Brain host. No OAuth app is required.`
-        : `A workspace owner/admin can save ${appName} MCP URL and PAT for this workspace, or the host operator can save host-wide credentials.`
-    : target === "workspace"
-      ? `Enter the app ID and secret from your ${appName} account settings for this workspace. You can change these anytime. If already connected, Disconnect and Connect again after changing the app.`
-      : target === "host"
-        ? `Enter the app ID and secret from your ${appName} account settings for this Brain host. You can change these anytime. If already connected, Disconnect and Connect again after changing the app.`
-        : `A workspace owner/admin can save ${appName} credentials for this workspace via Set up / App settings, or the host operator can save host-wide credentials. You can still copy the return link below.`;
+  const description = isHttpMcpSetup
+    ? (info.setupHint ??
+      (target === "workspace"
+        ? `Paste the ${appName} Streamable HTTP MCP server URL for this workspace. No OAuth app is required.`
+        : target === "host"
+          ? `Paste the ${appName} Streamable HTTP MCP server URL for this Brain host. No OAuth app is required.`
+          : `A workspace owner/admin can save the ${appName} MCP URL for this workspace, or the host operator can save a host-wide URL.`))
+    : isPatSetup
+      ? target === "workspace"
+        ? `Paste the Snowflake-managed MCP server URL and a programmatic access token (PAT) for this workspace. No OAuth app is required.`
+        : target === "host"
+          ? `Paste the Snowflake-managed MCP server URL and a programmatic access token (PAT) for this Brain host. No OAuth app is required.`
+          : `A workspace owner/admin can save ${appName} MCP URL and PAT for this workspace, or the host operator can save host-wide credentials.`
+      : target === "workspace"
+        ? `Enter the app ID and secret from your ${appName} account settings for this workspace. You can change these anytime. If already connected, Disconnect and Connect again after changing the app.`
+        : target === "host"
+          ? `Enter the app ID and secret from your ${appName} account settings for this Brain host. You can change these anytime. If already connected, Disconnect and Connect again after changing the app.`
+          : `A workspace owner/admin can save ${appName} credentials for this workspace via Set up / App settings, or the host operator can save host-wide credentials. You can still copy the return link below.`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -301,7 +311,7 @@ export function ConnectionSetupDialog({
               </div>
             ) : null}
 
-            {info && !isPatSetup ? (
+            {info && !isMcpUrlSetup ? (
               <div className="bg-muted/40 rounded-md px-3 py-2">
                 <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
                   Return link
@@ -326,11 +336,12 @@ export function ConnectionSetupDialog({
 
             {!canManage && info ? (
               <output className="text-muted-foreground text-sm">
-                You can&apos;t save {isPatSetup ? "Snowflake credentials" : "app credentials"} with
-                your current role.
+                You can&apos;t save{" "}
+                {isMcpUrlSetup ? `${info.displayName} MCP settings` : "app credentials"} with your
+                current role.
                 {info.hasCredentials
-                  ? isPatSetup
-                    ? " Credentials are already configured — enable Snowflake for chat on Tools."
+                  ? isMcpUrlSetup
+                    ? ` Credentials are already configured — enable ${info.displayName} for chat on Tools.`
                     : " Credentials are already configured — use Connect after setup is complete."
                   : " Ask a workspace owner/admin, or the host operator."}
               </output>
@@ -340,26 +351,32 @@ export function ConnectionSetupDialog({
               <>
                 <Field>
                   <FieldLabel htmlFor="connection-setup-client-id">
-                    {isPatSetup ? "MCP server URL" : "App ID"}
+                    {isMcpUrlSetup ? "MCP server URL" : "App ID"}
                   </FieldLabel>
                   <Input
                     autoComplete="off"
                     id="connection-setup-client-id"
                     onChange={(event) => setClientId(event.target.value)}
                     placeholder={
-                      isPatSetup
-                        ? "https://org-account.snowflakecomputing.com/api/v2/.../mcp-servers/name"
-                        : "Paste app ID"
+                      isHttpMcpSetup
+                        ? (info?.urlPlaceholder ?? "https://…/mcp")
+                        : isPatSetup
+                          ? "https://org-account.snowflakecomputing.com/api/v2/.../mcp-servers/name"
+                          : "Paste app ID"
                     }
                     spellCheck={false}
                     value={clientId}
                   />
                 </Field>
 
-                {info?.requiresClientSecret ? (
+                {showSecretField ? (
                   <Field>
                     <FieldLabel htmlFor="connection-setup-client-secret">
-                      {isPatSetup ? "Programmatic access token (PAT)" : "App secret"}
+                      {isHttpMcpSetup
+                        ? "Bearer token (optional)"
+                        : isPatSetup
+                          ? "Programmatic access token (PAT)"
+                          : "App secret"}
                     </FieldLabel>
                     <Input
                       autoComplete="off"
@@ -367,12 +384,16 @@ export function ConnectionSetupDialog({
                       onChange={(event) => setClientSecret(event.target.value)}
                       placeholder={
                         hasRemovableCredentials
-                          ? isPatSetup
-                            ? "Leave blank to keep current PAT"
-                            : "Leave blank to keep current secret"
-                          : isPatSetup
-                            ? "Paste Snowflake PAT"
-                            : "Paste app secret"
+                          ? isHttpMcpSetup
+                            ? "Leave blank to keep current token"
+                            : isPatSetup
+                              ? "Leave blank to keep current PAT"
+                              : "Leave blank to keep current secret"
+                          : isHttpMcpSetup
+                            ? "Optional Authorization bearer"
+                            : isPatSetup
+                              ? "Paste Snowflake PAT"
+                              : "Paste app secret"
                       }
                       spellCheck={false}
                       type="password"
@@ -385,8 +406,10 @@ export function ConnectionSetupDialog({
                   <p className="text-muted-foreground text-xs">
                     Details are already saved
                     {target === "workspace" ? " for this workspace" : " on this host"}. Saving
-                    updates the {isPatSetup ? "MCP URL" : "app ID"}; leave the{" "}
-                    {isPatSetup ? "PAT" : "secret"} blank to keep it.
+                    updates the {isMcpUrlSetup ? "MCP URL" : "app ID"}
+                    {showSecretField
+                      ? `; leave the ${isHttpMcpSetup ? "token" : isPatSetup ? "PAT" : "secret"} blank to keep it.`
+                      : "."}
                   </p>
                 ) : null}
               </>

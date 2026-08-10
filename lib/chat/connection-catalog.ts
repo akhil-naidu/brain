@@ -7,10 +7,12 @@ import {
   GitHubIcon,
   GmailIcon,
   LinearIcon,
+  MongoDbIcon,
   NotionIcon,
   SentryIcon,
   SlackIcon,
   SnowflakeIcon,
+  ToolboxIcon,
   ZernioIcon,
 } from "@/components/icons";
 import type { EnabledConnections } from "@/app/_components/chat-shell-context";
@@ -35,8 +37,22 @@ export const PAT_CONNECTION_IDS = ["snowflake"] as const satisfies ReadonlyArray
   keyof EnabledConnections
 >;
 
+/** Remote Streamable HTTP MCP (MCP URL + optional bearer). Set up; no OAuth Connect. */
+export const HTTP_MCP_URL_CONNECTION_IDS = ["mongodb", "toolbox"] as const satisfies ReadonlyArray<
+  keyof EnabledConnections
+>;
+
 export function connectionUsesPatAuth(connectionId: string): boolean {
   return (PAT_CONNECTION_IDS as readonly string[]).includes(connectionId);
+}
+
+export function connectionUsesHttpMcpUrl(connectionId: string): boolean {
+  return (HTTP_MCP_URL_CONNECTION_IDS as readonly string[]).includes(connectionId);
+}
+
+/** @deprecated Use connectionUsesHttpMcpUrl */
+export function connectionUsesLocalHttp(connectionId: string): boolean {
+  return connectionUsesHttpMcpUrl(connectionId);
 }
 
 /** @deprecated Use connectionUsesPatAuth */
@@ -49,7 +65,11 @@ export function connectionNeedsStaticAppCredentials(connectionId: string): boole
 }
 
 export function connectionOffersAppSetup(connectionId: string): boolean {
-  return connectionNeedsStaticAppCredentials(connectionId) || connectionUsesPatAuth(connectionId);
+  return (
+    connectionNeedsStaticAppCredentials(connectionId) ||
+    connectionUsesPatAuth(connectionId) ||
+    connectionUsesHttpMcpUrl(connectionId)
+  );
 }
 
 export const CONNECTION_ITEMS: readonly ConnectionItem[] = [
@@ -124,6 +144,18 @@ export const CONNECTION_ITEMS: readonly ConnectionItem[] = [
     label: "Snowflake",
     description: "Cortex, SQL, and warehouse tools via Snowflake MCP.",
     Icon: SnowflakeIcon,
+  },
+  {
+    key: "mongodb",
+    label: "MongoDB",
+    description: "Query and schema tools via MongoDB MCP (HTTP URL).",
+    Icon: MongoDbIcon,
+  },
+  {
+    key: "toolbox",
+    label: "MCP Toolbox",
+    description: "SQL tools via MCP Toolbox for Databases (HTTP URL).",
+    Icon: ToolboxIcon,
   },
 ];
 

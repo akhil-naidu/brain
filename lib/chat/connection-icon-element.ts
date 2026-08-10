@@ -156,6 +156,41 @@ const CONNECTION_SVG: Readonly<Record<string, SvgIconSpec>> = {
       },
     ],
   },
+  mongodb: {
+    viewBox: "0 0 24 24",
+    children: [
+      {
+        type: "path",
+        d: "M12 2c1.2 3.2 2.8 5.4 3.6 8.2.7 2.4.5 4.7-.6 6.7-.8 1.5-2 2.6-3 3.6v1.5h-1v-1.5c-1-.9-2.2-2-3-3.5-1.1-2-.8-4.4-.1-6.8C8.7 7.4 10.4 5.2 12 2z",
+        fill: "#00684A",
+      },
+      {
+        type: "path",
+        d: "M12 14.5v5",
+        stroke: "#13AA52",
+      },
+    ],
+  },
+  toolbox: {
+    viewBox: "0 0 24 24",
+    children: [
+      {
+        type: "path",
+        d: "M4 9.5h16v9.25A1.75 1.75 0 0 1 18.25 20.5H5.75A1.75 1.75 0 0 1 4 18.75V9.5z",
+        fill: "#4285F4",
+      },
+      {
+        type: "path",
+        d: "M8 9.5V7.25A2.25 2.25 0 0 1 10.25 5h3.5A2.25 2.25 0 0 1 16 7.25V9.5",
+        stroke: "#1967D2",
+      },
+      {
+        type: "path",
+        d: "M4 12.5h16",
+        stroke: "#E8F0FE",
+      },
+    ],
+  },
 };
 
 function createSvgFromSpec(

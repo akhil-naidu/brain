@@ -90,8 +90,10 @@ export async function disconnectConnection(
 const connectionSetupSchema = z.object({
   id: z.string(),
   displayName: z.string(),
-  setupKind: z.enum(["oauth", "pat"]).optional(),
+  setupKind: z.enum(["oauth", "pat", "http_mcp"]).optional(),
   requiresClientSecret: z.boolean(),
+  /** When true, show an optional bearer/token field (HTTP MCP URL setup). */
+  optionalClientSecret: z.boolean().optional(),
   hasStoredCredentials: z.boolean().optional(),
   hasWorkspaceCredentials: z.boolean().optional(),
   hasCredentials: z.boolean(),
@@ -103,6 +105,8 @@ const connectionSetupSchema = z.object({
   callbackPath: z.string(),
   callbackUrl: z.string().url(),
   canManageCredentials: z.boolean(),
+  setupHint: z.string().optional(),
+  urlPlaceholder: z.string().optional(),
 });
 
 export type ConnectionSetupInfo = z.infer<typeof connectionSetupSchema>;

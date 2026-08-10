@@ -3,9 +3,12 @@ import type { ConnectionPrincipal } from "eve/connections";
 import { SNOWFLAKE_CONNECTION_NAME, SNOWFLAKE_DISPLAY_NAME } from "@/agent/connections/snowflake";
 import {
   CHAT_CONNECTION_PROVIDERS,
+  HTTP_MCP_URL_CONNECTIONS,
   listChatConnectionStatuses,
   type ConnectionStatusItem,
 } from "@/agent/lib/connection-status";
+import { resolveHttpMcpCredentials } from "@/agent/lib/http-mcp-credentials";
+import type { HttpMcpUrlConnection } from "@/agent/lib/http-mcp-url";
 import { getStoredAccessToken, type McpOAuthProvider } from "@/agent/lib/mcp-oauth";
 import { resolveSnowflakeCredentials } from "@/agent/lib/snowflake-credentials";
 import { workspaceIdFromIssuer } from "@/lib/auth/principal";
@@ -51,21 +54,21 @@ function isHttpFallbackRetryable(error: unknown): boolean {
 
 async function listToolsAtUrl(
   mcpUrl: string,
-  accessToken: string,
+  accessToken?: string,
 ): Promise<readonly McpCatalogTool[]> {
-  const headers = { Authorization: `Bearer ${accessToken}` };
+  const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined;
   let client: Awaited<ReturnType<typeof createMCPClient>> | undefined;
   try {
     try {
       client = await createMCPClient({
-        transport: { type: "http", url: mcpUrl, headers },
+        transport: { type: "http", url: mcpUrl, ...(headers ? { headers } : {}) },
       });
     } catch (error) {
       if (!isHttpFallbackRetryable(error)) {
         throw error;
       }
       client = await createMCPClient({
-        transport: { type: "sse", url: mcpUrl, headers },
+        transport: { type: "sse", url: mcpUrl, ...(headers ? { headers } : {}) },
       });
     }
     const listed = await client.listTools();
@@ -162,6 +165,44 @@ async function catalogEntryForSnowflake(
   }
 }
 
+async function catalogEntryForHttpMcp(
+  connection: HttpMcpUrlConnection,
+  principal: ConnectionPrincipal,
+  env: { readonly [key: string]: string | undefined },
+): Promise<McpCatalogConnection> {
+  const workspaceId = principal.type === "user" ? workspaceIdFromIssuer(principal.issuer) : null;
+  const credentials = await resolveHttpMcpCredentials(connection.name, workspaceId, env);
+  if (!credentials) {
+    return {
+      connectionId: connection.name,
+      connectionName: connection.displayName,
+      tools: [],
+      error: `${connection.displayName} MCP URL is not configured.`,
+    };
+  }
+
+  try {
+    const tools = await listToolsAtUrl(credentials.mcpServerUrl, credentials.bearerToken);
+    return {
+      connectionId: connection.name,
+      connectionName: connection.displayName,
+      tools,
+      error: null,
+    };
+  } catch (error) {
+    const message =
+      error instanceof Error && error.message.trim()
+        ? error.message.trim()
+        : `Unable to list tools for ${connection.displayName}.`;
+    return {
+      connectionId: connection.name,
+      connectionName: connection.displayName,
+      tools: [],
+      error: message,
+    };
+  }
+}
+
 export async function buildMcpToolsCatalog(
   principal: ConnectionPrincipal,
   env: { readonly [key: string]: string | undefined } = process.env,
@@ -179,8 +220,11 @@ export async function buildMcpToolsCatalog(
   );
   const providers = CHAT_CONNECTION_PROVIDERS.filter((provider) => connectedIds.has(provider.name));
   const includeSnowflake = connectedIds.has(SNOWFLAKE_CONNECTION_NAME);
+  const httpMcpConnections = HTTP_MCP_URL_CONNECTIONS.filter((connection) =>
+    connectedIds.has(connection.name),
+  );
 
-  if (providers.length === 0 && !includeSnowflake) {
+  if (providers.length === 0 && !includeSnowflake && httpMcpConnections.length === 0) {
     return { connections: [] };
   }
 
@@ -224,6 +268,11 @@ export async function buildMcpToolsCatalog(
   if (includeSnowflake) {
     connections.push(await catalogEntryForSnowflake(principal, env));
   }
+
+  const httpMcpEntries = await Promise.all(
+    httpMcpConnections.map((connection) => catalogEntryForHttpMcp(connection, principal, env)),
+  );
+  connections.push(...httpMcpEntries);
 
   return { connections };
 }
