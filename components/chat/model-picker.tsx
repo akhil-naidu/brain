@@ -1,6 +1,6 @@
 "use client";
 
-import { BRAIN_CHAT_MODELS, getBrainChatModel } from "@/agent/lib/models";
+import { getBrainChatModel } from "@/agent/lib/models";
 import {
   Select,
   SelectContent,
@@ -9,17 +9,36 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { CatalogModelDto } from "@/lib/chat/custom-models-api";
 
 export function ModelPicker({
   disabled = false,
+  models,
   onModelIdChange,
   selectedModelId,
 }: {
   readonly disabled?: boolean;
+  readonly models: readonly CatalogModelDto[];
   readonly onModelIdChange: (modelId: string) => void;
   readonly selectedModelId: string;
 }) {
-  const selected = getBrainChatModel(selectedModelId);
+  const options =
+    models.length > 0
+      ? models
+      : [
+          {
+            id: getBrainChatModel(selectedModelId).id,
+            label: getBrainChatModel(selectedModelId).label,
+            description: getBrainChatModel(selectedModelId).description,
+            contextWindowTokens: getBrainChatModel(selectedModelId).contextWindowTokens,
+            source: "command-code" as const,
+          },
+        ];
+
+  const selected =
+    options.find((model) => model.id === selectedModelId) ??
+    options[0] ??
+    getBrainChatModel(selectedModelId);
 
   return (
     <Select disabled={disabled} onValueChange={onModelIdChange} value={selected.id}>
@@ -31,7 +50,7 @@ export function ModelPicker({
         <SelectValue placeholder={selected.label} />
       </SelectTrigger>
       <SelectContent align="start" className="min-w-[16.5rem]">
-        {BRAIN_CHAT_MODELS.map((model) => (
+        {options.map((model) => (
           <SelectItem className="items-start py-2" key={model.id} value={model.id}>
             <div className="flex min-w-0 flex-col gap-0.5">
               <SelectItemText>{model.label}</SelectItemText>

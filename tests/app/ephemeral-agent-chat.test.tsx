@@ -59,6 +59,16 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/app/_components/chat-shell-context", () => ({
   useChatShell: () => ({
+    catalogModels: [
+      {
+        id: "deepseek/deepseek-v4-pro",
+        label: "DeepSeek V4 Pro",
+        description: "Default",
+        contextWindowTokens: 1_000_000,
+        source: "command-code",
+      },
+    ],
+    catalogReady: true,
     enabledConnections: {
       asana: true,
       atlassian: true,
@@ -75,9 +85,11 @@ vi.mock("@/app/_components/chat-shell-context", () => ({
       toolbox: true,
       zernio: true,
     },
+    refreshModelCatalog: vi.fn(),
     selectedModelId: "deepseek/deepseek-v4-pro",
     setConnectionEnabled: vi.fn(),
     setSelectedModelId: vi.fn(),
+    workspaceId: "ws-1",
   }),
 }));
 
@@ -94,7 +106,10 @@ vi.mock("@/components/chat/scheduled-playbooks-panel", () => ({
 }));
 
 vi.mock("@/lib/chat/setup-api", () => ({
-  fetchSetupStatus: async () => ({ commandCodeApiKeyConfigured: true }),
+  fetchSetupStatus: async () => ({
+    commandCodeApiKeyConfigured: true,
+    customModelsAvailable: false,
+  }),
 }));
 
 vi.mock("@/lib/chat/chat-projects-api", () => ({

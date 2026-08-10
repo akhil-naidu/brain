@@ -156,8 +156,14 @@ export function EphemeralAgentChat({
   readonly projectId?: string | null;
 }) {
   const router = useRouter();
-  const { enabledConnections, selectedModelId, setConnectionEnabled, setSelectedModelId } =
-    useChatShell();
+  const {
+    catalogModels,
+    enabledConnections,
+    selectedModelId,
+    setConnectionEnabled,
+    setSelectedModelId,
+    workspaceId,
+  } = useChatShell();
   const { playbooks, savePlaybook, deletePlaybook } = usePlaybooks();
   const [schedulesOpen, setSchedulesOpen] = useState(false);
   const [schedulesRefreshKey, setSchedulesRefreshKey] = useState(0);
@@ -264,6 +270,7 @@ export function EphemeralAgentChat({
   }, []);
 
   const [commandCodeConfigured, setCommandCodeConfigured] = useState<boolean | null>(null);
+  const [customModelsAvailable, setCustomModelsAvailable] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -272,11 +279,13 @@ export function EphemeralAgentChat({
         const status = await fetchSetupStatus();
         if (!cancelled) {
           setCommandCodeConfigured(status.commandCodeApiKeyConfigured);
+          setCustomModelsAvailable(status.customModelsAvailable);
         }
       } catch {
         if (!cancelled) {
           // If setup status is unavailable, don't block chat; fall back to error rewriting.
           setCommandCodeConfigured(null);
+          setCustomModelsAvailable(false);
         }
       }
     })();
@@ -571,7 +580,7 @@ export function EphemeralAgentChat({
     : null;
   const displayError = clientError ?? agentError;
   const visibleError = displayError && displayError.id !== dismissedError ? displayError : null;
-  const missingApiKey = commandCodeConfigured === false;
+  const missingApiKey = commandCodeConfigured === false && !customModelsAvailable;
 
   const hasVisibleAssistantWork = useMemo(() => {
     if (!lastMessage || lastMessage.role !== "assistant") {
@@ -681,8 +690,9 @@ export function EphemeralAgentChat({
       createTurnClientContext({
         enabledConnections,
         modelId: selectedModelId,
+        workspaceId,
       }),
-    [enabledConnections, selectedModelId],
+    [enabledConnections, selectedModelId, workspaceId],
   );
 
   const handleInputResponses = useCallback(
@@ -1242,6 +1252,7 @@ export function EphemeralAgentChat({
                 ) : null}
                 <ModelPicker
                   disabled={isBusy || missingApiKey}
+                  models={catalogModels}
                   onModelIdChange={setSelectedModelId}
                   selectedModelId={selectedModelId}
                 />
