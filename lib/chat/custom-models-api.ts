@@ -127,3 +127,30 @@ export async function deleteCustomModel(id: string): Promise<void> {
     throw new Error(await readError(response));
   }
 }
+
+const discoveredModelSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+});
+
+export type DiscoveredModelDto = z.infer<typeof discoveredModelSchema>;
+
+export async function discoverCustomModels(input: {
+  readonly baseUrl: string;
+  readonly apiKey?: string | null;
+}): Promise<readonly DiscoveredModelDto[]> {
+  const response = await fetch("/api/models/discover", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      baseUrl: input.baseUrl,
+      apiKey: input.apiKey?.trim() ? input.apiKey : undefined,
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(await readError(response));
+  }
+  const data: unknown = await response.json();
+  const parsed = z.object({ models: z.array(discoveredModelSchema) }).parse(data);
+  return parsed.models;
+}

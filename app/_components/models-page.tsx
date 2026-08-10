@@ -23,11 +23,13 @@ import { Input } from "@/components/ui/input";
 import {
   createCustomModel,
   deleteCustomModel,
+  discoverCustomModels,
   fetchCustomModelsManage,
   updateCustomModel,
   type CatalogModelDto,
   type CustomModelDto,
   type CustomModelWriteInput,
+  type DiscoveredModelDto,
 } from "@/lib/chat/custom-models-api";
 import { showToast } from "@/lib/ui/toast-store";
 import { cn } from "@/lib/utils";
@@ -188,6 +190,9 @@ export function ModelsPage() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<CustomModelDto | null>(null);
+  const [discovering, setDiscovering] = useState(false);
+  const [discovered, setDiscovered] = useState<readonly DiscoveredModelDto[]>([]);
+  const [discoverError, setDiscoverError] = useState<string | null>(null);
 
   const canAddAnything = canManageInstance || canManageWorkspace;
   const defaultCreateScope: ModelScope = canManageWorkspace ? "workspace" : "instance";
@@ -219,6 +224,12 @@ export function ModelsPage() {
     load();
   }, [load]);
 
+  const resetDiscovery = () => {
+    setDiscovered([]);
+    setDiscoverError(null);
+    setDiscovering(false);
+  };
+
   const openCreate = (scope: ModelScope = defaultCreateScope, preset?: FormState) => {
     if (scope === "instance" && !canManageInstance) {
       return;
@@ -226,11 +237,13 @@ export function ModelsPage() {
     if (scope === "workspace" && !canManageWorkspace) {
       return;
     }
+    resetDiscovery();
     setEditor({ mode: "create", scope });
     setForm(preset ?? EMPTY_FORM);
   };
 
   const openEdit = (model: CustomModelDto) => {
+    resetDiscovery();
     setEditor({ mode: "edit", scope: model.scope, model });
     setForm(formFromModel(model));
   };
@@ -238,6 +251,26 @@ export function ModelsPage() {
   const closeEditor = () => {
     setEditor(null);
     setSaving(false);
+    resetDiscovery();
+  };
+
+  const runDiscovery = async () => {
+    setDiscovering(true);
+    setDiscoverError(null);
+    setDiscovered([]);
+    try {
+      const candidates = await discoverCustomModels({
+        baseUrl: form.baseUrl,
+        apiKey: form.apiKey.trim() ? form.apiKey : undefined,
+      });
+      setDiscovered(candidates);
+    } catch (discoveryError) {
+      setDiscoverError(
+        discoveryError instanceof Error ? discoveryError.message : "Unable to discover models.",
+      );
+    } finally {
+      setDiscovering(false);
+    }
   };
 
   const submitEditor = async () => {
@@ -541,15 +574,55 @@ export function ModelsPage() {
               />
             </div>
             <div className="grid gap-1.5">
-              <label className="text-sm font-medium" htmlFor="model-base-url">
-                Base URL
-              </label>
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-sm font-medium" htmlFor="model-base-url">
+                  Base URL
+                </label>
+                <Button
+                  disabled={discovering || !form.baseUrl.trim()}
+                  onClick={() => void runDiscovery()}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  {discovering ? "Fetching…" : "Fetch models"}
+                </Button>
+              </div>
               <Input
                 id="model-base-url"
-                onChange={(event) => setForm((prev) => ({ ...prev, baseUrl: event.target.value }))}
+                onChange={(event) => {
+                  setForm((prev) => ({ ...prev, baseUrl: event.target.value }));
+                  setDiscovered([]);
+                  setDiscoverError(null);
+                }}
                 placeholder="http://127.0.0.1:11434/v1"
                 value={form.baseUrl}
               />
+              {discoverError ? (
+                <p className="text-destructive text-xs">{discoverError}</p>
+              ) : discovered.length > 0 ? (
+                <div className="border-border/70 max-h-36 space-y-1 overflow-y-auto rounded-xl border p-1.5">
+                  {discovered.map((model) => (
+                    <button
+                      className={cn(
+                        "hover:bg-muted/50 w-full cursor-pointer rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors",
+                        form.providerModelId === model.id && "bg-muted text-foreground",
+                      )}
+                      key={model.id}
+                      onClick={() => {
+                        setForm((prev) => ({
+                          ...prev,
+                          providerModelId: model.id,
+                          label: prev.label.trim() ? prev.label : model.label,
+                        }));
+                      }}
+                      type="button"
+                    >
+                      <span className="font-mono">{model.id}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="grid gap-1.5">
