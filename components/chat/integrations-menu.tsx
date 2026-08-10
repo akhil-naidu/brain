@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { HammerIcon, Settings2Icon } from "lucide-react";
+import { HammerIcon, ListIcon, Settings2Icon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,11 +11,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { IconTooltip } from "@/components/ui/tooltip";
 import type { EnabledConnections } from "@/app/_components/chat-shell-context";
 import { CONNECTION_ITEMS } from "@/lib/chat/connection-catalog";
 import { canEnableConnection, integrationStatusText } from "@/lib/chat/connection-ui";
 import { fetchConnectionStatuses, type ConnectionStatus } from "@/lib/chat/connections-status-api";
+import {
+  fetchMcpToolsCatalog,
+  type McpToolsCatalogResponse,
+} from "@/lib/chat/connections-tools-api";
 import { cn } from "@/lib/utils";
 
 export {
@@ -35,11 +41,14 @@ export function IntegrationsMenu({
     enabled: boolean,
   ) => void;
 }) {
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [statusById, setStatusById] = useState<ReadonlyMap<string, ConnectionStatus> | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(false);
-  const [toggleError, setToggleError] = useState<string | null>(null);
+  const [catalog, setCatalog] = useState<McpToolsCatalogResponse | null>(null);
+  const [loadingCatalog, setLoadingCatalog] = useState(false);
+  const [toolsPopoverId, setToolsPopoverId] = useState<string | null>(null);
 
   const loadStatus = () => {
     setLoadingStatus(true);
@@ -58,6 +67,20 @@ export function IntegrationsMenu({
     })();
   };
 
+  const loadCatalog = () => {
+    setLoadingCatalog(true);
+    void (async () => {
+      try {
+        const next = await fetchMcpToolsCatalog();
+        setCatalog(next);
+      } catch {
+        setCatalog(null);
+      } finally {
+        setLoadingCatalog(false);
+      }
+    })();
+  };
+
   useEffect(() => {
     if (!menuOpen) {
       return undefined;
@@ -65,6 +88,7 @@ export function IntegrationsMenu({
 
     const onFocus = () => {
       loadStatus();
+      loadCatalog();
     };
     window.addEventListener("focus", onFocus);
     return () => {
@@ -84,6 +108,23 @@ export function IntegrationsMenu({
     }
   }, [enabledConnections, onConnectionEnabledChange, statusById]);
 
+  const toggleConnection = (key: keyof EnabledConnections) => {
+    const enabled = enabledConnections[key];
+    const status = statusById?.get(key);
+    const allowEnable = canEnableConnection(status);
+    if (enabled) {
+      onConnectionEnabledChange(key, false);
+      return;
+    }
+    if (allowEnable) {
+      onConnectionEnabledChange(key, true);
+      return;
+    }
+    // Set up / Connect live on Tools — keep the chat menu enable-only.
+    setMenuOpen(false);
+    router.push("/tools");
+  };
+
   return (
     <DropdownMenu
       open={menuOpen}
@@ -91,8 +132,9 @@ export function IntegrationsMenu({
         setMenuOpen(open);
         if (open) {
           loadStatus();
+          loadCatalog();
         } else {
-          setToggleError(null);
+          setToolsPopoverId(null);
         }
       }}
     >
@@ -103,6 +145,7 @@ export function IntegrationsMenu({
             className="text-muted-foreground/65 hover:bg-background/45 hover:text-foreground focus-visible:bg-background/45 focus-visible:text-foreground dark:text-muted-foreground/55 inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors focus-visible:outline-none [&_*]:cursor-pointer"
             onPointerDown={() => {
               loadStatus();
+              loadCatalog();
             }}
             type="button"
           >
@@ -112,7 +155,7 @@ export function IntegrationsMenu({
       </IconTooltip>
       <DropdownMenuContent
         align="start"
-        className="border-border bg-popover w-72 rounded-md p-1"
+        className="border-border bg-popover max-h-[min(28rem,70vh)] w-80 overflow-y-auto rounded-md p-1"
         sideOffset={4}
       >
         <p className="text-muted-foreground px-2 py-1.5 text-[11px] font-medium tracking-wide uppercase">
@@ -121,11 +164,6 @@ export function IntegrationsMenu({
         {statusError ? (
           <p className="text-destructive px-2 py-1.5 text-xs" role="alert">
             {statusError}
-          </p>
-        ) : null}
-        {toggleError ? (
-          <p className="text-destructive px-2 py-1.5 text-xs" role="alert">
-            {toggleError}
           </p>
         ) : null}
         {CONNECTION_ITEMS.map(({ Icon, key, label }) => {
@@ -137,70 +175,141 @@ export function IntegrationsMenu({
             statusError,
           });
           const allowEnable = canEnableConnection(status);
+          const catalogEntry = catalog?.connections.find((entry) => entry.connectionId === key);
+          const isConnected = status?.status === "connected";
+          const toolCount = catalogEntry && !catalogEntry.error ? catalogEntry.tools.length : null;
+          const toolsLabel =
+            loadingCatalog && !catalogEntry
+              ? `Loading ${label} tools`
+              : toolCount === null
+                ? `${label} tools`
+                : `${label} tools (${toolCount})`;
 
           return (
-            <DropdownMenuItem
-              aria-checked={enabled}
-              aria-disabled={!enabled && !allowEnable}
-              className="focus:bg-muted/70 h-auto cursor-pointer gap-2 rounded-sm px-2 py-1.5 text-sm"
+            <div
+              className="hover:bg-muted/70 flex items-center gap-1 rounded-sm px-2 py-1.5"
               key={key}
-              onSelect={(event) => {
-                event.preventDefault();
-                if (enabled) {
-                  setToggleError(null);
-                  onConnectionEnabledChange(key, false);
-                  return;
-                }
-                if (!allowEnable) {
-                  setToggleError(
-                    status?.status === "needs_setup"
-                      ? `Set up ${label} on the Tools page first.`
-                      : status?.status === "needs_sign_in"
-                        ? `Connect ${label} on the Tools page first.`
-                        : `Wait for ${label} status, then manage it on Tools.`,
-                  );
-                  return;
-                }
-                setToggleError(null);
-                onConnectionEnabledChange(key, true);
-              }}
-              role="menuitemcheckbox"
             >
-              <span className="border-border bg-background flex size-7 shrink-0 items-center justify-center rounded-md border">
-                <Icon className="size-[18px]" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="text-foreground block truncate text-sm">{label}</span>
-                <span
-                  className={cn(
-                    "mt-0.5 block truncate text-[11px]",
-                    status?.status === "connected"
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : status?.status === "needs_setup"
-                        ? "text-destructive"
-                        : "text-muted-foreground",
-                  )}
-                  title={status?.detail}
-                >
-                  {statusText}
+              <button
+                aria-checked={enabled}
+                aria-disabled={!enabled && !allowEnable}
+                aria-label={`${enabled ? "Disable" : "Enable"} ${label} for this chat`}
+                className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left"
+                onClick={() => {
+                  toggleConnection(key);
+                }}
+                role="menuitemcheckbox"
+                type="button"
+              >
+                <span className="border-border bg-background flex size-7 shrink-0 items-center justify-center rounded-md border">
+                  <Icon className="size-[18px]" />
                 </span>
-              </span>
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors",
-                  enabled ? "bg-emerald-500" : "bg-muted",
-                  !enabled && !allowEnable ? "opacity-50" : null,
-                )}
+                <span className="min-w-0 flex-1">
+                  <span className="text-foreground block truncate text-sm">{label}</span>
+                  <span
+                    className={cn(
+                      "mt-0.5 block truncate text-[11px]",
+                      status?.status === "connected"
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : status?.status === "needs_setup"
+                          ? "text-destructive"
+                          : "text-muted-foreground",
+                    )}
+                    title={status?.detail}
+                  >
+                    {statusText}
+                  </span>
+                </span>
+              </button>
+              {isConnected ? (
+                <Popover
+                  onOpenChange={(open) => {
+                    setToolsPopoverId(open ? key : null);
+                  }}
+                  open={toolsPopoverId === key}
+                >
+                  <IconTooltip label={toolsLabel} side="top">
+                    <PopoverTrigger asChild>
+                      <button
+                        aria-label={toolsLabel}
+                        className={cn(
+                          "text-muted-foreground hover:bg-muted hover:text-foreground inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors",
+                          toolsPopoverId === key ? "bg-muted text-foreground" : null,
+                        )}
+                        onPointerDown={(event) => {
+                          event.stopPropagation();
+                        }}
+                        type="button"
+                      >
+                        <ListIcon className="size-3.5" />
+                      </button>
+                    </PopoverTrigger>
+                  </IconTooltip>
+                  <PopoverContent
+                    align="start"
+                    className="w-64 p-2"
+                    onOpenAutoFocus={(event) => {
+                      event.preventDefault();
+                    }}
+                    side="right"
+                    sideOffset={8}
+                  >
+                    <p className="text-muted-foreground px-1 pb-1.5 text-[11px] font-medium tracking-wide uppercase">
+                      {label} tools
+                    </p>
+                    {loadingCatalog && !catalogEntry ? (
+                      <p className="text-muted-foreground px-1 text-xs">Loading tools…</p>
+                    ) : catalogEntry?.error ? (
+                      <p className="text-destructive px-1 text-xs" role="alert">
+                        {catalogEntry.error}
+                      </p>
+                    ) : catalogEntry && catalogEntry.tools.length > 0 ? (
+                      <ul className="flex max-h-48 flex-col gap-0.5 overflow-y-auto">
+                        {catalogEntry.tools.map((tool) => (
+                          <li key={`${key}:${tool.name}`}>
+                            <span
+                              className="text-foreground block truncate rounded-md px-1 py-0.5 font-mono text-[11px]"
+                              title={tool.description || tool.name}
+                            >
+                              {tool.name}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-muted-foreground px-1 text-xs">No tools returned</p>
+                    )}
+                  </PopoverContent>
+                </Popover>
+              ) : null}
+              <button
+                aria-checked={enabled}
+                aria-disabled={!enabled && !allowEnable}
+                aria-label={`${enabled ? "Disable" : "Enable"} ${label} for this chat`}
+                className="inline-flex shrink-0 cursor-pointer items-center"
+                onClick={() => {
+                  toggleConnection(key);
+                }}
+                role="switch"
+                type="button"
               >
                 <span
+                  aria-hidden="true"
                   className={cn(
-                    "size-3 rounded-full bg-white shadow-sm transition-transform",
-                    enabled ? "translate-x-[15px]" : "translate-x-0.5",
+                    "relative inline-flex h-4 w-7 items-center rounded-full transition-colors",
+                    enabled ? "bg-emerald-500" : "bg-muted",
+                    !enabled && !allowEnable ? "opacity-50" : null,
                   )}
-                />
-              </span>
-            </DropdownMenuItem>
+                >
+                  <span
+                    className={cn(
+                      "size-3 rounded-full bg-white shadow-sm transition-transform",
+                      enabled ? "translate-x-[15px]" : "translate-x-0.5",
+                    )}
+                  />
+                </span>
+              </button>
+            </div>
           );
         })}
         <DropdownMenuSeparator />

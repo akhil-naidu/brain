@@ -28,6 +28,28 @@ const fetchConnectionStatuses = vi.hoisted(() =>
   ]),
 );
 
+const fetchMcpToolsCatalog = vi.hoisted(() =>
+  vi.fn(async () => ({
+    connections: [
+      {
+        connectionId: "clickup",
+        connectionName: "ClickUp",
+        tools: [
+          { name: "clickup_search", description: "Search" },
+          { name: "clickup_create_task", description: "Create" },
+        ],
+        error: null,
+      },
+    ],
+  })),
+);
+
+const push = vi.hoisted(() => vi.fn());
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push }),
+}));
+
 vi.mock("@/lib/chat/connections-status-api", async () => {
   const actual = await vi.importActual("@/lib/chat/connections-status-api");
   return {
@@ -36,9 +58,19 @@ vi.mock("@/lib/chat/connections-status-api", async () => {
   };
 });
 
+vi.mock("@/lib/chat/connections-tools-api", async () => {
+  const actual = await vi.importActual("@/lib/chat/connections-tools-api");
+  return {
+    ...actual,
+    fetchMcpToolsCatalog,
+  };
+});
+
 afterEach(() => {
   cleanup();
   fetchConnectionStatuses.mockClear();
+  fetchMcpToolsCatalog.mockClear();
+  push.mockClear();
 });
 
 describe("integrationStatusText", () => {
@@ -287,7 +319,7 @@ describe("connectionAdminSetupHint", () => {
 });
 
 describe("IntegrationsMenu status", () => {
-  it("loads connection status when the menu trigger is pressed", async () => {
+  it("loads connection status and tools when the menu trigger is pressed", async () => {
     render(
       <IntegrationsMenu
         enabledConnections={{
@@ -307,6 +339,47 @@ describe("IntegrationsMenu status", () => {
 
     await waitFor(() => {
       expect(fetchConnectionStatuses).toHaveBeenCalled();
+      expect(fetchMcpToolsCatalog).toHaveBeenCalled();
     });
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /ClickUp tools/i })).toBeTruthy();
+    });
+    expect(screen.queryByText("clickup_search")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /ClickUp tools/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("ClickUp tools")).toBeTruthy();
+      expect(screen.getByText("clickup_search")).toBeTruthy();
+      expect(screen.getByText("clickup_create_task")).toBeTruthy();
+    });
+  });
+
+  it("sends users to Tools when enabling an unconfigured app", async () => {
+    render(
+      <IntegrationsMenu
+        enabledConnections={{
+          asana: false,
+          clickup: false,
+          dflow: false,
+          github: false,
+          gmail: false,
+          slack: false,
+          snowflake: false,
+        }}
+        onConnectionEnabledChange={vi.fn()}
+      />,
+    );
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Tools" }));
+    await waitFor(() => {
+      expect(screen.getAllByRole("switch", { name: /Enable GitHub/i }).length).toBeGreaterThan(0);
+    });
+
+    fireEvent.click(screen.getAllByRole("switch", { name: /Enable GitHub/i })[0]!);
+
+    expect(push).toHaveBeenCalledWith("/tools");
+    expect(screen.queryByText(/Tools page first/i)).toBeNull();
   });
 });
