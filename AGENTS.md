@@ -15,8 +15,7 @@ This agent must stay **self-hostable and independent of Vercel infrastructure**.
 - Auth: Better Auth email/password sessions (self-hosted Postgres) — never `vercelOidc()` or Vercel Connect
 - Sandbox: microsandbox / Docker / local — not Vercel Sandbox
 - OAuth for connections: `defineInteractiveAuthorization` or your own `getToken`
-- ClickUp: official MCP with self-hosted OAuth / DCR (`agent/connections/clickup.ts`)
-- dFlow: official Cloud MCP with self-hosted OAuth / DCR (`agent/connections/dflow.ts`)
+- ClickUp / Notion / Linear / Atlassian / Zernio / Sentry / dFlow: official MCP with self-hosted OAuth / DCR (`agent/connections/{clickup,notion,linear,atlassian,zernio,sentry,dflow}.ts`)
 - Slack / Asana / Gmail / GitHub: official MCP with self-hosted OAuth + env client credentials (`agent/connections/{slack,asana,gmail,github}.ts`)
 - Snowflake: managed MCP with workspace/host UI MCP URL + PAT (env `SNOWFLAKE_MCP_SERVER_URL` / `SNOWFLAKE_PAT_TOKEN` as fallback; no OAuth app) (`agent/connections/snowflake.ts`)
 

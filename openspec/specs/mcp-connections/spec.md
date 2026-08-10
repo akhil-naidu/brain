@@ -1,6 +1,6 @@
 ## Purpose
 
-Defines Brain's official MCP connections (ClickUp, Slack, Asana, Gmail, dFlow, GitHub, Snowflake) and how OAuth credentials are obtained for user-scoped tool access without Vercel Connect.
+Defines Brain's official MCP connections (ClickUp, Slack, Asana, Gmail, Notion, Linear, Atlassian, Zernio, Sentry, dFlow, GitHub, Snowflake) and how OAuth credentials are obtained for user-scoped tool access without Vercel Connect.
 ## Requirements
 ### Requirement: ClickUp MCP connection with dynamic client registration
 The system MUST provide a ClickUp MCP connection using the official ClickUp MCP endpoint and OAuth with dynamic client registration. ClickUp MUST NOT require static client id/secret env vars.
@@ -8,6 +8,41 @@ The system MUST provide a ClickUp MCP connection using the official ClickUp MCP 
 #### Scenario: ClickUp connection is defined
 - **WHEN** the agent loads connections
 - **THEN** a ClickUp MCP connection is available for task/workspace tools via interactive OAuth / DCR
+
+### Requirement: Notion MCP connection with dynamic client registration
+The system MUST provide a Notion MCP connection using the official Notion MCP endpoint (`https://mcp.notion.com/mcp`) and OAuth with dynamic client registration. Notion MUST NOT require static client id/secret env vars.
+
+#### Scenario: Notion connection is defined
+- **WHEN** the agent loads connections
+- **THEN** a Notion MCP connection is available for workspace search/read/write tools via interactive OAuth / DCR
+
+### Requirement: Linear MCP connection with dynamic client registration
+The system MUST provide a Linear MCP connection using the official Linear MCP endpoint (`https://mcp.linear.app/mcp`) and OAuth with dynamic client registration. Linear MUST NOT require static client id/secret env vars.
+
+#### Scenario: Linear connection is defined
+- **WHEN** the agent loads connections
+- **THEN** a Linear MCP connection is available for issues/projects/teams tools via interactive OAuth / DCR
+
+### Requirement: Atlassian MCP connection with dynamic client registration
+The system MUST provide an Atlassian Rovo MCP connection using the official endpoint (`https://mcp.atlassian.com/v1/mcp/authv2`) and OAuth with dynamic client registration. Atlassian MUST NOT require static client id/secret env vars.
+
+#### Scenario: Atlassian connection is defined
+- **WHEN** the agent loads connections
+- **THEN** an Atlassian MCP connection is available for Jira/Confluence/Compass tools via interactive OAuth / DCR
+
+### Requirement: Zernio MCP connection with dynamic client registration
+The system MUST provide a Zernio MCP connection using the official Zernio MCP endpoint (`https://mcp.zernio.com/mcp`) and OAuth with dynamic client registration. Zernio MUST NOT require static client id/secret env vars.
+
+#### Scenario: Zernio connection is defined
+- **WHEN** the agent loads connections
+- **THEN** a Zernio MCP connection is available for social posting, accounts, analytics, and messaging tools via interactive OAuth / DCR
+
+### Requirement: Sentry MCP connection with dynamic client registration
+The system MUST provide a Sentry MCP connection using the official Sentry MCP endpoint (`https://mcp.sentry.dev/mcp`) and OAuth with dynamic client registration. Sentry MUST NOT require static client id/secret env vars.
+
+#### Scenario: Sentry connection is defined
+- **WHEN** the agent loads connections
+- **THEN** a Sentry MCP connection is available for organizations, projects, issues, and Seer tools via interactive OAuth / DCR
 
 ### Requirement: Slack MCP connection with env client credentials
 The system MUST provide a Slack MCP connection using official Slack MCP. App credentials MUST be resolvable from UI-stored host credentials or `SLACK_MCP_CLIENT_ID` / `SLACK_MCP_CLIENT_SECRET`, with stored credentials preferred.
