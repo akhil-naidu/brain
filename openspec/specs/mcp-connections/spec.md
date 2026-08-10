@@ -1,6 +1,6 @@
 ## Purpose
 
-Defines Brain's official MCP connections (ClickUp, Slack, Asana, Gmail) and how OAuth credentials are obtained for user-scoped tool access without Vercel Connect.
+Defines Brain's official MCP connections (ClickUp, Slack, Asana, Gmail, dFlow, GitHub, Snowflake) and how OAuth credentials are obtained for user-scoped tool access without Vercel Connect.
 ## Requirements
 ### Requirement: ClickUp MCP connection with dynamic client registration
 The system MUST provide a ClickUp MCP connection using the official ClickUp MCP endpoint and OAuth with dynamic client registration. ClickUp MUST NOT require static client id/secret env vars.
@@ -55,6 +55,21 @@ The system MUST provide a dFlow MCP connection using the official dFlow Cloud MC
 #### Scenario: dFlow write tools require approval
 - **WHEN** the model calls a dFlow create/update or GitHub setup tool
 - **THEN** the connection approval policy requires user approval
+
+### Requirement: Snowflake MCP connection with account MCP URL and PAT
+The system MUST provide a Snowflake-managed MCP connection authenticated with a programmatic access token (PAT), matching the official Cursor Snowflake plugin model (URL + PAT, no OAuth app). Workspace owners/admins MUST be able to save MCP server URL + PAT via Tools Set up / App settings (workspace BYOA). Host operator credentials and `SNOWFLAKE_MCP_SERVER_URL` / `SNOWFLAKE_PAT_TOKEN` MUST remain fallbacks. Resolution MUST prefer workspace UI credentials, then host UI credentials, then env. Snowflake MUST NOT require an OAuth app client id/secret, Vercel Connect, dynamic client registration, or Menu Connect OAuth.
+
+#### Scenario: Snowflake connection is defined
+- **WHEN** the agent loads connections and Snowflake credentials resolve for the active workspace
+- **THEN** a Snowflake MCP connection is available using Bearer PAT auth against that workspace’s MCP server URL
+
+#### Scenario: Snowflake needs URL or PAT
+- **WHEN** workspace, host, and env Snowflake credentials are all missing or invalid
+- **THEN** connection status reports needs_setup like other MCP apps that need Set up
+
+#### Scenario: Snowflake Set up without OAuth Connect
+- **WHEN** a workspace admin views Snowflake on Tools
+- **THEN** the UI offers Set up / App settings for MCP URL + PAT and does not offer OAuth Connect or Disconnect
 
 ### Requirement: MCP OAuth grants are per signed-in user
 MCP interactive authorization for Brain’s official connections MUST store and resolve access tokens for the authenticated user’s eve principal **within the active workspace**. One user’s connected grants MUST NOT be usable by another signed-in user. Grants in workspace A MUST NOT be used when the active workspace is B.
