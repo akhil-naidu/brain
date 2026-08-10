@@ -20,6 +20,8 @@ describe("composer commands", () => {
       dflow: false,
       github: false,
       snowflake: false,
+      mongodb: false,
+      toolbox: false,
     },
     playbooks: [
       {

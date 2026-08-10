@@ -30,6 +30,18 @@ const fetchConnectionStatuses = vi.hoisted(() =>
       status: "needs_setup" as const,
       detail: "Set SNOWFLAKE_MCP_SERVER_URL",
     },
+    {
+      id: "mongodb",
+      displayName: "MongoDB",
+      status: "needs_setup" as const,
+      detail: "Set up MongoDB to continue",
+    },
+    {
+      id: "toolbox",
+      displayName: "MCP Toolbox",
+      status: "needs_setup" as const,
+      detail: "Set up MCP Toolbox to continue",
+    },
   ]),
 );
 
@@ -198,6 +210,45 @@ describe("shouldOfferConnectionDisconnect", () => {
       ),
     ).toBe(false);
   });
+
+  it("hides Disconnect for HTTP MCP URL connections", () => {
+    expect(
+      shouldOfferConnectionDisconnect(
+        {
+          id: "mongodb",
+          displayName: "MongoDB",
+          status: "connected",
+        },
+        "mongodb",
+      ),
+    ).toBe(false);
+    expect(
+      shouldOfferConnectionDisconnect(
+        {
+          id: "toolbox",
+          displayName: "MCP Toolbox",
+          status: "connected",
+        },
+        "toolbox",
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("shouldOfferConnectionConfigure for HTTP MCP URL", () => {
+  it("offers Set up when canConfigureApp is true", () => {
+    expect(
+      shouldOfferConnectionConfigure(
+        {
+          id: "mongodb",
+          displayName: "MongoDB",
+          status: "needs_setup",
+          canConfigureApp: true,
+        },
+        "mongodb",
+      ),
+    ).toBe(true);
+  });
 });
 
 describe("shouldOfferConnectionConfigure", () => {
@@ -341,10 +392,12 @@ describe("IntegrationsMenu status", () => {
           github: false,
           gmail: true,
           linear: false,
+          mongodb: false,
           notion: true,
           sentry: false,
           slack: true,
           snowflake: false,
+          toolbox: false,
           zernio: false,
         }}
         onConnectionEnabledChange={vi.fn()}
@@ -385,10 +438,12 @@ describe("IntegrationsMenu status", () => {
           github: false,
           gmail: false,
           linear: false,
+          mongodb: false,
           notion: false,
           sentry: false,
           slack: false,
           snowflake: false,
+          toolbox: false,
           zernio: false,
         }}
         onConnectionEnabledChange={vi.fn()}
