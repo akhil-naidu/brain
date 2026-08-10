@@ -1,11 +1,16 @@
 import type { ConnectionPrincipal } from "eve/connections";
 import { workspaceIdFromIssuer } from "@/lib/auth/principal";
 import { asanaProvider } from "../connections/asana";
+import { atlassianProvider } from "../connections/atlassian";
 import { clickupProvider } from "../connections/clickup";
 import { dflowProvider } from "../connections/dflow";
 import { githubProvider } from "../connections/github";
 import { gmailProvider } from "../connections/gmail";
+import { linearProvider } from "../connections/linear";
+import { notionProvider } from "../connections/notion";
+import { sentryProvider } from "../connections/sentry";
 import { slackProvider } from "../connections/slack";
+import { zernioProvider } from "../connections/zernio";
 import { getProviderCredentialSetupError } from "./connection-credentials";
 import { getStoredTokenAuthState, type McpOAuthProvider } from "./mcp-oauth";
 import { getSnowflakeCredentialSetupError } from "./snowflake-credentials";
@@ -26,6 +31,11 @@ export const CHAT_CONNECTION_PROVIDERS: readonly McpOAuthProvider[] = [
   slackProvider,
   asanaProvider,
   gmailProvider,
+  notionProvider,
+  linearProvider,
+  atlassianProvider,
+  zernioProvider,
+  sentryProvider,
   dflowProvider,
   githubProvider,
 ];

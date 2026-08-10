@@ -1,12 +1,17 @@
 import type { ComponentType } from "react";
 import {
   AsanaIcon,
+  AtlassianIcon,
   ClickUpIcon,
   DflowIcon,
   GitHubIcon,
   GmailIcon,
+  LinearIcon,
+  NotionIcon,
+  SentryIcon,
   SlackIcon,
   SnowflakeIcon,
+  ZernioIcon,
 } from "@/components/icons";
 import type { EnabledConnections } from "@/app/_components/chat-shell-context";
 
@@ -71,6 +76,36 @@ export const CONNECTION_ITEMS: readonly ConnectionItem[] = [
     label: "Gmail",
     description: "Read and draft email with the Gmail MCP connection.",
     Icon: GmailIcon,
+  },
+  {
+    key: "notion",
+    label: "Notion",
+    description: "Pages, databases, and search via official Notion MCP.",
+    Icon: NotionIcon,
+  },
+  {
+    key: "linear",
+    label: "Linear",
+    description: "Issues, projects, and cycles via official Linear MCP.",
+    Icon: LinearIcon,
+  },
+  {
+    key: "atlassian",
+    label: "Atlassian",
+    description: "Jira, Confluence, and Compass via Atlassian Rovo MCP.",
+    Icon: AtlassianIcon,
+  },
+  {
+    key: "zernio",
+    label: "Zernio",
+    description: "Social posting, ads, and messaging via Zernio MCP.",
+    Icon: ZernioIcon,
+  },
+  {
+    key: "sentry",
+    label: "Sentry",
+    description: "Issues, traces, and Seer analysis via Sentry MCP.",
+    Icon: SentryIcon,
   },
   {
     key: "dflow",

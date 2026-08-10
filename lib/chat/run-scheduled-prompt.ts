@@ -14,12 +14,17 @@ export type ScheduledSlackResult =
 
 const SCHEDULED_CONNECTIONS = {
   asana: true,
+  atlassian: true,
   clickup: true,
   dflow: true,
   github: true,
   gmail: true,
+  linear: true,
+  notion: true,
+  sentry: true,
   slack: true,
   snowflake: true,
+  zernio: true,
 } as const;
 
 async function deliverToSlackIfConfigured(input: {

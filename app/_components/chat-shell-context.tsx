@@ -20,6 +20,11 @@ export type EnabledConnections = {
   readonly slack: boolean;
   readonly asana: boolean;
   readonly gmail: boolean;
+  readonly notion: boolean;
+  readonly linear: boolean;
+  readonly atlassian: boolean;
+  readonly zernio: boolean;
+  readonly sentry: boolean;
   readonly dflow: boolean;
   readonly github: boolean;
   readonly snowflake: boolean;
@@ -52,6 +57,11 @@ export function ChatShellProvider({ children }: { readonly children: ReactNode }
     slack: false,
     asana: false,
     gmail: false,
+    notion: false,
+    linear: false,
+    atlassian: false,
+    zernio: false,
+    sentry: false,
     dflow: false,
     github: false,
     snowflake: false,

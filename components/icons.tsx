@@ -101,3 +101,58 @@ export function SnowflakeIcon({ className }: { readonly className?: string }) {
     </svg>
   );
 }
+
+/** Notion mark (simplified). */
+export function NotionIcon({ className }: { readonly className?: string }) {
+  return (
+    <svg aria-hidden="true" className={className} fill="currentColor" viewBox="0 0 24 24">
+      <path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 2.35c-.42-.326-.98-.7-2.055-.607L3.01 2.914c-.514.047-.6.327-.514.607l1.963.687zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-14.106.793c-.56.046-.818.327-.818 1.027zm13.748.607c.093.42 0 .84-.42.888l-.7.14v10.264c-.607.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.953l1.45.327s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.62c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.14c-.093-.514.28-.887.747-.933l3.223-.186z" />
+    </svg>
+  );
+}
+
+/** Linear mark (simplified). */
+export function LinearIcon({ className }: { readonly className?: string }) {
+  return (
+    <svg aria-hidden="true" className={className} fill="#5E6AD2" viewBox="0 0 24 24">
+      <path d="M3 14.5 12.5 3a1.5 1.5 0 0 1 2.5 1.1V9a1 1 0 0 0 1 1h4.4A1.5 1.5 0 0 1 21 12.5L11.5 21A1.5 1.5 0 0 1 9 19.9V15a1 1 0 0 0-1-1H3.6A1.5 1.5 0 0 1 3 14.5z" />
+    </svg>
+  );
+}
+
+/** Atlassian mark (simplified). */
+export function AtlassianIcon({ className }: { readonly className?: string }) {
+  return (
+    <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
+      <path
+        d="M7.62 18.52 1.5 8.2c-.34-.57-.04-1.3.63-1.45 1.9-.42 5.5-.84 8.37 1.6L7.62 18.52zm8.76 0 2.88-4.88c.4-.67-.05-1.53-.82-1.53H9.7c-.42 0-.8.23-.99.6L7.62 18.52h8.76zm.87-13.77c2.87-2.44 6.47-2.02 8.37-1.6.67.15.97.88.63 1.45l-6.12 10.32-4.88-8.17c-.19-.37-.57-.6-.99-.6h-1.5c1.2-1.15 2.78-1.92 4.49-1.4z"
+        fill="#2684FF"
+      />
+    </svg>
+  );
+}
+
+/** Zernio mark (simplified). */
+export function ZernioIcon({ className }: { readonly className?: string }) {
+  return (
+    <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
+      <rect fill="#111827" height="20" rx="5" width="20" x="2" y="2" />
+      <path
+        d="M7.5 7.5h9l-9 9h9"
+        stroke="#F8FAFC"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+/** Sentry mark (simplified). */
+export function SentryIcon({ className }: { readonly className?: string }) {
+  return (
+    <svg aria-hidden="true" className={className} fill="#362D59" viewBox="0 0 24 24">
+      <path d="M13.91 2.5a1.4 1.4 0 0 0-2.42 0L2.2 18.2A1.4 1.4 0 0 0 3.41 20.3h4.2a7.3 7.3 0 0 1 9.78-9.78V4.9A1.4 1.4 0 0 0 13.91 2.5zm1.48 10.2a5.9 5.9 0 0 0-5.89 5.9h3.1a2.8 2.8 0 0 1 2.79-2.8v-3.1zm1.4 4.5a1.4 1.4 0 0 0-1.4 1.4v2.2h2.2a1.4 1.4 0 0 0 1.4-1.4 2.2 2.2 0 0 0-2.2-2.2z" />
+    </svg>
+  );
+}
