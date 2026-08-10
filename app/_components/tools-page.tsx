@@ -217,9 +217,9 @@ export function ToolsPage() {
                 statusError,
               });
               const showConnect = shouldOfferConnectionConnect(status);
-              const showDisconnect = shouldOfferConnectionDisconnect(status);
+              const showDisconnect = shouldOfferConnectionDisconnect(status, key);
               const showConfigure = shouldOfferConnectionConfigure(status, key);
-              const adminSetupHint = connectionAdminSetupHint(status);
+              const adminSetupHint = connectionAdminSetupHint(status, key);
               const allowEnable = canEnableConnection(status);
               const isConnecting = connectingId === key;
               const isDisconnecting = disconnectingId === key;

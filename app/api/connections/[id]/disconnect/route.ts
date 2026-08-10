@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { disconnectMenuConnection } from "@/agent/lib/connection-authorize";
-import { getChatConnectionProvider } from "@/agent/lib/connection-status";
+import { getChatConnectionProvider, isSnowflakeConnectionId } from "@/agent/lib/connection-status";
 import { brainUserPrincipal } from "@/lib/auth/principal";
 import { requireWorkspaceSession } from "@/lib/auth/require-workspace-session";
 
@@ -17,6 +17,15 @@ export async function DELETE(_request: Request, context: RouteContext) {
   }
 
   const { id } = await context.params;
+  if (isSnowflakeConnectionId(id)) {
+    return NextResponse.json(
+      {
+        error:
+          "Snowflake uses a workspace MCP URL and PAT — clear them in App settings instead of Disconnect.",
+      },
+      { status: 400 },
+    );
+  }
   const provider = getChatConnectionProvider(id);
   if (!provider) {
     return NextResponse.json({ error: "Unknown connection." }, { status: 404 });

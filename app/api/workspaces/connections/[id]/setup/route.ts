@@ -8,7 +8,13 @@ import {
   resolveProviderAppCredentials,
   writeWorkspaceAppCredentials,
 } from "@/agent/lib/connection-credentials";
-import { getChatConnectionProvider } from "@/agent/lib/connection-status";
+import { getChatConnectionProvider, isSnowflakeConnectionId } from "@/agent/lib/connection-status";
+import {
+  buildWorkspaceSnowflakeSetupResponse,
+  clearWorkspaceSnowflakeSetup,
+  saveWorkspaceSnowflakeSetup,
+} from "@/agent/lib/snowflake-setup";
+import { SNOWFLAKE_DISPLAY_NAME } from "@/agent/lib/snowflake-mcp-url";
 import { assertByoaAllowed, resolveLicenseEntitlements } from "@/lib/auth/license";
 import { requireWorkspaceSession } from "@/lib/auth/require-workspace-session";
 import { isWorkspaceAdminRole } from "@/lib/auth/workspaces/types";
@@ -33,6 +39,20 @@ export async function GET(request: Request, context: RouteContext) {
     return session.response;
   }
   const { id } = await context.params;
+  const workspaceId = session.session.workspaceId;
+  const origin = resolvePublicOrigin(request);
+  const canManageCredentials = isWorkspaceAdminRole(session.session.role);
+
+  if (isSnowflakeConnectionId(id)) {
+    return NextResponse.json(
+      await buildWorkspaceSnowflakeSetupResponse({
+        workspaceId,
+        canManageCredentials,
+        origin,
+      }),
+    );
+  }
+
   const provider = getChatConnectionProvider(id);
   if (!provider) {
     return NextResponse.json({ error: "Unknown connection." }, { status: 404 });
@@ -44,21 +64,18 @@ export async function GET(request: Request, context: RouteContext) {
     );
   }
 
-  const workspaceId = session.session.workspaceId;
   const stored = await readWorkspaceAppCredentials(workspaceId, provider.name);
   const resolved = await resolveProviderAppCredentials(provider, process.env, workspaceId);
-  const origin = resolvePublicOrigin(request);
   const callbackPath = connectionCallbackPath(provider.name);
-  const canManageCredentials = isWorkspaceAdminRole(session.session.role);
 
   return NextResponse.json({
     id: provider.name,
     displayName: provider.displayName,
+    setupKind: "oauth",
     requiresClientSecret: Boolean(provider.clientSecretEnv),
     hasWorkspaceCredentials: Boolean(stored?.clientId),
     hasCredentials: Boolean(resolved?.clientId),
     credentialSource: resolved?.source ?? null,
-    // Non-secret client id for managers to edit; never return client secrets.
     storedClientId: canManageCredentials ? (stored?.clientId ?? null) : null,
     clientIdEnv: provider.clientIdEnv,
     clientSecretEnv: provider.clientSecretEnv,
@@ -88,6 +105,25 @@ export async function PUT(request: Request, context: RouteContext) {
   }
 
   const { id } = await context.params;
+  const body: unknown = await request.json().catch(() => null);
+  const parsed = putBodySchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Client ID is required." }, { status: 400 });
+  }
+
+  if (isSnowflakeConnectionId(id)) {
+    try {
+      await saveWorkspaceSnowflakeSetup(session.session.workspaceId, {
+        mcpServerUrl: parsed.data.clientId,
+        patToken: parsed.data.clientSecret,
+      });
+      return NextResponse.json({ ok: true, displayName: SNOWFLAKE_DISPLAY_NAME });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to save credentials.";
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+  }
+
   const provider = getChatConnectionProvider(id);
   if (!provider) {
     return NextResponse.json({ error: "Unknown connection." }, { status: 404 });
@@ -97,12 +133,6 @@ export async function PUT(request: Request, context: RouteContext) {
       { error: `${provider.displayName} does not need app credentials in Brain.` },
       { status: 400 },
     );
-  }
-
-  const body: unknown = await request.json().catch(() => null);
-  const parsed = putBodySchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Client ID is required." }, { status: 400 });
   }
 
   const existing = await readWorkspaceAppCredentials(session.session.workspaceId, provider.name);
@@ -139,6 +169,12 @@ export async function DELETE(_request: Request, context: RouteContext) {
   }
 
   const { id } = await context.params;
+
+  if (isSnowflakeConnectionId(id)) {
+    await clearWorkspaceSnowflakeSetup(session.session.workspaceId);
+    return NextResponse.json({ ok: true, displayName: SNOWFLAKE_DISPLAY_NAME });
+  }
+
   const provider = getChatConnectionProvider(id);
   if (!provider) {
     return NextResponse.json({ error: "Unknown connection." }, { status: 404 });

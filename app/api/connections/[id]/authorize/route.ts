@@ -3,7 +3,7 @@ import {
   menuConnectionCallbackUrl,
   startMenuConnectionAuthorization,
 } from "@/agent/lib/connection-authorize";
-import { getChatConnectionProvider } from "@/agent/lib/connection-status";
+import { getChatConnectionProvider, isSnowflakeConnectionId } from "@/agent/lib/connection-status";
 import { brainUserPrincipal } from "@/lib/auth/principal";
 import { requireWorkspaceSession } from "@/lib/auth/require-workspace-session";
 import { resolvePublicOrigin } from "@/lib/http/public-origin";
@@ -21,6 +21,15 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const { id } = await context.params;
+  if (isSnowflakeConnectionId(id)) {
+    return NextResponse.json(
+      {
+        error:
+          "Snowflake uses a workspace MCP server URL and PAT (Set up / App settings) — not OAuth Connect.",
+      },
+      { status: 400 },
+    );
+  }
   const provider = getChatConnectionProvider(id);
   if (!provider) {
     return NextResponse.json({ error: "Unknown connection." }, { status: 404 });

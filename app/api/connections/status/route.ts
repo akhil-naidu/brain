@@ -4,7 +4,7 @@ import { brainUserPrincipal } from "@/lib/auth/principal";
 import { isOperatorUserId } from "@/lib/auth/require-operator-session";
 import { requireWorkspaceSession } from "@/lib/auth/require-workspace-session";
 import { isWorkspaceAdminRole } from "@/lib/auth/workspaces/types";
-import { connectionNeedsStaticAppCredentials } from "@/lib/chat/connection-catalog";
+import { connectionOffersAppSetup } from "@/lib/chat/connection-catalog";
 
 export const runtime = "nodejs";
 
@@ -23,8 +23,7 @@ export async function GET() {
     )
   ).map((connection) =>
     Object.assign({}, connection, {
-      canConfigureApp:
-        connectionNeedsStaticAppCredentials(connection.id) && canConfigureAppCredentials,
+      canConfigureApp: connectionOffersAppSetup(connection.id) && canConfigureAppCredentials,
     }),
   );
 

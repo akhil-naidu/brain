@@ -90,12 +90,13 @@ export async function disconnectConnection(
 const connectionSetupSchema = z.object({
   id: z.string(),
   displayName: z.string(),
+  setupKind: z.enum(["oauth", "pat"]).optional(),
   requiresClientSecret: z.boolean(),
   hasStoredCredentials: z.boolean().optional(),
   hasWorkspaceCredentials: z.boolean().optional(),
   hasCredentials: z.boolean(),
   credentialSource: z.enum(["workspace", "stored", "env"]).nullable(),
-  /** Saved app id for managers to edit. Secrets are never returned. */
+  /** Saved app id / MCP URL for managers to edit. Secrets are never returned. */
   storedClientId: z.string().nullable().optional(),
   clientIdEnv: z.string().optional(),
   clientSecretEnv: z.string().optional(),

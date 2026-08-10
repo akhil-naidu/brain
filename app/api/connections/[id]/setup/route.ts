@@ -8,7 +8,13 @@ import {
   resolveProviderAppCredentials,
   writeStoredAppCredentials,
 } from "@/agent/lib/connection-credentials";
-import { getChatConnectionProvider } from "@/agent/lib/connection-status";
+import { getChatConnectionProvider, isSnowflakeConnectionId } from "@/agent/lib/connection-status";
+import {
+  buildHostSnowflakeSetupResponse,
+  clearHostSnowflakeSetup,
+  saveHostSnowflakeSetup,
+} from "@/agent/lib/snowflake-setup";
+import { SNOWFLAKE_DISPLAY_NAME } from "@/agent/lib/snowflake-mcp-url";
 import { isOperatorUserId, requireOperatorSession } from "@/lib/auth/require-operator-session";
 import { requireSessionUserId } from "@/lib/auth/require-session";
 import { resolvePublicOrigin } from "@/lib/http/public-origin";
@@ -32,6 +38,15 @@ export async function GET(request: Request, context: RouteContext) {
     return session.response;
   }
   const { id } = await context.params;
+  const origin = resolvePublicOrigin(request);
+  const canManageCredentials = await isOperatorUserId(session.userId);
+
+  if (isSnowflakeConnectionId(id)) {
+    return NextResponse.json(
+      await buildHostSnowflakeSetupResponse({ canManageCredentials, origin }),
+    );
+  }
+
   const provider = getChatConnectionProvider(id);
   if (!provider) {
     return NextResponse.json({ error: "Unknown connection." }, { status: 404 });
@@ -45,18 +60,16 @@ export async function GET(request: Request, context: RouteContext) {
 
   const stored = await readStoredAppCredentials(provider.name);
   const resolved = await resolveProviderAppCredentials(provider);
-  const origin = resolvePublicOrigin(request);
   const callbackPath = connectionCallbackPath(provider.name);
-  const canManageCredentials = await isOperatorUserId(session.userId);
 
   return NextResponse.json({
     id: provider.name,
     displayName: provider.displayName,
+    setupKind: "oauth",
     requiresClientSecret: Boolean(provider.clientSecretEnv),
     hasStoredCredentials: Boolean(stored?.clientId),
     hasCredentials: Boolean(resolved?.clientId),
     credentialSource: resolved?.source ?? null,
-    // Non-secret client id for managers to edit; never return client secrets.
     storedClientId: canManageCredentials ? (stored?.clientId ?? null) : null,
     clientIdEnv: provider.clientIdEnv,
     clientSecretEnv: provider.clientSecretEnv,
@@ -72,6 +85,25 @@ export async function PUT(request: Request, context: RouteContext) {
     return session.response;
   }
   const { id } = await context.params;
+  const body: unknown = await request.json().catch(() => null);
+  const parsed = putBodySchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Client ID is required." }, { status: 400 });
+  }
+
+  if (isSnowflakeConnectionId(id)) {
+    try {
+      await saveHostSnowflakeSetup({
+        mcpServerUrl: parsed.data.clientId,
+        patToken: parsed.data.clientSecret,
+      });
+      return NextResponse.json({ ok: true, displayName: SNOWFLAKE_DISPLAY_NAME });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to save credentials.";
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+  }
+
   const provider = getChatConnectionProvider(id);
   if (!provider) {
     return NextResponse.json({ error: "Unknown connection." }, { status: 404 });
@@ -81,12 +113,6 @@ export async function PUT(request: Request, context: RouteContext) {
       { error: `${provider.displayName} does not need app credentials in Brain.` },
       { status: 400 },
     );
-  }
-
-  const body: unknown = await request.json().catch(() => null);
-  const parsed = putBodySchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Client ID is required." }, { status: 400 });
   }
 
   const existing = await readStoredAppCredentials(provider.name);
@@ -116,6 +142,12 @@ export async function DELETE(_request: Request, context: RouteContext) {
     return session.response;
   }
   const { id } = await context.params;
+
+  if (isSnowflakeConnectionId(id)) {
+    await clearHostSnowflakeSetup();
+    return NextResponse.json({ ok: true, displayName: SNOWFLAKE_DISPLAY_NAME });
+  }
+
   const provider = getChatConnectionProvider(id);
   if (!provider) {
     return NextResponse.json({ error: "Unknown connection." }, { status: 404 });

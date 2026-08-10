@@ -1,4 +1,4 @@
-import { connectionNeedsStaticAppCredentials } from "@/lib/chat/connection-catalog";
+import { connectionOffersAppSetup, connectionUsesPatAuth } from "@/lib/chat/connection-catalog";
 import { connectionStatusLabel, type ConnectionStatus } from "@/lib/chat/connections-status-api";
 
 export function integrationStatusText(input: {
@@ -22,28 +22,36 @@ export function shouldOfferConnectionConnect(status: ConnectionStatus | undefine
   return status?.status === "needs_sign_in";
 }
 
-export function shouldOfferConnectionDisconnect(status: ConnectionStatus | undefined): boolean {
+export function shouldOfferConnectionDisconnect(
+  status: ConnectionStatus | undefined,
+  connectionId?: string,
+): boolean {
+  if (connectionId && connectionUsesPatAuth(connectionId)) {
+    return false;
+  }
   return status?.status === "connected";
 }
 
 /**
- * Static-credential apps can be configured by workspace admins / host operator
- * (initial Set up or later App settings). Members never see this control.
- * DCR apps (ClickUp, dFlow) never need it.
+ * Static OAuth apps and PAT apps (Snowflake) can be configured by workspace
+ * admins / host operator. DCR apps (ClickUp, dFlow) never need it.
  */
 export function shouldOfferConnectionConfigure(
   status: ConnectionStatus | undefined,
   connectionId: string,
 ): boolean {
-  return Boolean(status?.canConfigureApp) && connectionNeedsStaticAppCredentials(connectionId);
+  return Boolean(status?.canConfigureApp) && connectionOffersAppSetup(connectionId);
 }
 
 export function connectionConfigureLabel(status: ConnectionStatus | undefined): string {
   return status?.status === "needs_setup" ? "Set up" : "App settings";
 }
 
-/** Member-facing hint when app credentials are missing and they cannot configure. */
-export function connectionAdminSetupHint(status: ConnectionStatus | undefined): string | null {
+/** Member-facing hint when credentials are missing and they cannot configure. */
+export function connectionAdminSetupHint(
+  status: ConnectionStatus | undefined,
+  _connectionId?: string,
+): string | null {
   if (status?.status !== "needs_setup" || status.canConfigureApp) {
     return null;
   }
