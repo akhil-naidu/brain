@@ -237,6 +237,7 @@ describe("ChatSidebar navigation", () => {
     );
     expect(screen.getByRole("link", { name: "Playbooks" }).getAttribute("href")).toBe("/playbooks");
     expect(screen.getByRole("link", { name: "Schedules" }).getAttribute("href")).toBe("/schedules");
+    expect(screen.getByRole("link", { name: "Models" }).getAttribute("href")).toBe("/models");
     expect(screen.getByRole("link", { name: "Tools" }).getAttribute("href")).toBe("/tools");
   });
 });

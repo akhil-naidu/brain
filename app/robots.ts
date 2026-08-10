@@ -19,6 +19,7 @@ export default function robots(): MetadataRoute.Robots {
           "/settings",
           "/workspaces",
           "/tools",
+          "/models",
           "/playbooks",
           "/schedules",
           "/invite",

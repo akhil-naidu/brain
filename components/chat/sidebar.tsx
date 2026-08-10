@@ -2,6 +2,7 @@
 
 import {
   BookmarkIcon,
+  BrainCircuitIcon,
   Building2Icon,
   CalendarClockIcon,
   ChevronDownIcon,
@@ -138,6 +139,7 @@ export function ChatSidebar({
   const workspacesActive = pathname === "/workspaces" || pathname.startsWith("/workspaces/");
   const playbooksActive = pathname === "/playbooks";
   const schedulesActive = pathname === "/schedules";
+  const modelsActive = pathname === "/models";
   const toolsActive = pathname === "/tools";
   const showDraftRow = showChatDraft && !activeChatId;
   const draftTitle =
@@ -527,6 +529,20 @@ export function ChatSidebar({
               </Link>
             </Button>
           </IconTooltip>
+          <IconTooltip label="Models" side="right">
+            <Button
+              aria-current={modelsActive ? "page" : undefined}
+              aria-label="Models"
+              asChild
+              className={compactNavClass(modelsActive)}
+              size="icon-sm"
+              variant="ghost"
+            >
+              <Link href="/models">
+                <BrainCircuitIcon className="size-4" />
+              </Link>
+            </Button>
+          </IconTooltip>
           <IconTooltip label="Tools" side="right">
             <Button
               aria-current={toolsActive ? "page" : undefined}
@@ -635,6 +651,12 @@ export function ChatSidebar({
             href="/schedules"
             icon={CalendarClockIcon}
             label="Schedules"
+          />
+          <SidebarNavLink
+            active={modelsActive}
+            href="/models"
+            icon={BrainCircuitIcon}
+            label="Models"
           />
           <SidebarNavLink active={toolsActive} href="/tools" icon={HammerIcon} label="Tools" />
         </nav>
