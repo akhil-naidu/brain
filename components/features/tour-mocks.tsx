@@ -97,9 +97,9 @@ type ConnectionRow = {
 const CONNECTION_ROWS: readonly ConnectionRow[] = [
   { id: "clickup", label: "ClickUp", status: "Connected", tone: "ok", Icon: ClickUpIcon },
   { id: "slack", label: "Slack", status: "Set up needed", action: "Set up", Icon: SlackIcon },
-  { id: "gmail", label: "Gmail", status: "Sign in", action: "Connect", Icon: GmailIcon },
+  { id: "gmail", label: "Gmail", status: "Connect", action: "Connect", Icon: GmailIcon },
   { id: "asana", label: "Asana", status: "Connected", tone: "ok", Icon: AsanaIcon },
-  { id: "dflow", label: "dFlow", status: "Sign in", action: "Connect", Icon: DflowIcon },
+  { id: "dflow", label: "dFlow", status: "Connect", action: "Connect", Icon: DflowIcon },
   { id: "github", label: "GitHub", status: "Set up needed", action: "Set up", Icon: GitHubIcon },
   {
     id: "snowflake",

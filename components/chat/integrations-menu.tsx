@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { HammerIcon, ListIcon, Settings2Icon } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { ChevronDownIcon, HammerIcon, ListIcon, Settings2Icon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -32,6 +31,13 @@ export {
   shouldOfferConnectionDisconnect,
 } from "@/lib/chat/connection-ui";
 
+function updateCanScrollMore(element: HTMLElement | null): boolean {
+  if (!element) {
+    return false;
+  }
+  return element.scrollHeight - element.scrollTop - element.clientHeight > 8;
+}
+
 export function IntegrationsMenu({
   enabledConnections,
   onConnectionEnabledChange,
@@ -43,6 +49,8 @@ export function IntegrationsMenu({
   ) => void;
 }) {
   const router = useRouter();
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const lastMenuLoadAtRef = useRef(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [statusById, setStatusById] = useState<ReadonlyMap<string, ConnectionStatus> | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
@@ -50,6 +58,11 @@ export function IntegrationsMenu({
   const [catalog, setCatalog] = useState<McpToolsCatalogResponse | null>(null);
   const [loadingCatalog, setLoadingCatalog] = useState(false);
   const [toolsPopoverId, setToolsPopoverId] = useState<string | null>(null);
+  const [canScrollMore, setCanScrollMore] = useState(false);
+
+  const refreshScrollCue = () => {
+    setCanScrollMore(updateCanScrollMore(listRef.current));
+  };
 
   const loadStatus = () => {
     setLoadingStatus(true);
@@ -82,14 +95,24 @@ export function IntegrationsMenu({
     })();
   };
 
+  /** Prefetch on pointer down and again on open — debounce so logs aren't doubled. */
+  const loadMenuData = () => {
+    const now = Date.now();
+    if (now - lastMenuLoadAtRef.current < 400) {
+      return;
+    }
+    lastMenuLoadAtRef.current = now;
+    loadStatus();
+    loadCatalog();
+  };
+
   useEffect(() => {
     if (!menuOpen) {
       return undefined;
     }
 
     const onFocus = () => {
-      loadStatus();
-      loadCatalog();
+      loadMenuData();
     };
     window.addEventListener("focus", onFocus);
     return () => {
@@ -108,6 +131,27 @@ export function IntegrationsMenu({
       }
     }
   }, [enabledConnections, onConnectionEnabledChange, statusById]);
+
+  useLayoutEffect(() => {
+    if (!menuOpen) {
+      setCanScrollMore(false);
+      return undefined;
+    }
+
+    refreshScrollCue();
+    const element = listRef.current;
+    if (!element || typeof ResizeObserver === "undefined") {
+      return undefined;
+    }
+
+    const observer = new ResizeObserver(() => {
+      refreshScrollCue();
+    });
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+    };
+  }, [menuOpen, loadingStatus, statusById, statusError]);
 
   const toggleConnection = (key: keyof EnabledConnections, label: string) => {
     const enabled = enabledConnections[key];
@@ -151,8 +195,7 @@ export function IntegrationsMenu({
       onOpenChange={(open) => {
         setMenuOpen(open);
         if (open) {
-          loadStatus();
-          loadCatalog();
+          loadMenuData();
         } else {
           setToolsPopoverId(null);
         }
@@ -164,8 +207,7 @@ export function IntegrationsMenu({
             aria-label="Tools"
             className="text-muted-foreground/65 hover:bg-background/45 hover:text-foreground focus-visible:bg-background/45 focus-visible:text-foreground dark:text-muted-foreground/55 inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors focus-visible:outline-none [&_*]:cursor-pointer"
             onPointerDown={() => {
-              loadStatus();
-              loadCatalog();
+              loadMenuData();
             }}
             type="button"
           >
@@ -175,175 +217,193 @@ export function IntegrationsMenu({
       </IconTooltip>
       <DropdownMenuContent
         align="start"
-        className="border-border bg-popover max-h-[min(28rem,70vh)] w-80 overflow-y-auto rounded-md p-1"
+        className="border-border bg-popover flex max-h-[min(28rem,70vh)] w-80 flex-col overflow-hidden rounded-md p-0"
         sideOffset={4}
       >
-        <p className="text-muted-foreground px-2 py-1.5 text-[11px] font-medium tracking-wide uppercase">
+        <p className="text-muted-foreground shrink-0 px-3 pt-2.5 pb-1 text-[11px] font-medium tracking-wide uppercase">
           Enable for this chat
         </p>
         {statusError ? (
-          <p className="text-destructive px-2 py-1.5 text-xs" role="alert">
+          <p className="text-destructive shrink-0 px-3 pb-1 text-xs" role="alert">
             {statusError}
           </p>
         ) : null}
-        {CONNECTION_ITEMS.map(({ Icon, key, label }) => {
-          const enabled = enabledConnections[key];
-          const status = statusById?.get(key);
-          const statusText = integrationStatusText({
-            loading: loadingStatus && !statusById,
-            status,
-            statusError,
-          });
-          const allowEnable = canEnableConnection(status);
-          const catalogEntry = catalog?.connections.find((entry) => entry.connectionId === key);
-          const isConnected = status?.status === "connected";
-          const toolCount = catalogEntry && !catalogEntry.error ? catalogEntry.tools.length : null;
-          const toolsLabel =
-            loadingCatalog && !catalogEntry
-              ? `Loading ${label} tools`
-              : toolCount === null
-                ? `${label} tools`
-                : `${label} tools (${toolCount})`;
-
-          return (
-            <div
-              className="hover:bg-muted/70 flex items-center gap-1 rounded-sm px-2 py-1.5"
-              key={key}
-            >
-              <button
-                aria-checked={enabled}
-                aria-disabled={!enabled && !allowEnable}
-                aria-label={`${enabled ? "Disable" : "Enable"} ${label} for this chat`}
-                className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left"
-                onClick={() => {
-                  toggleConnection(key, label);
-                }}
-                role="menuitemcheckbox"
-                type="button"
-              >
-                <span className="border-border bg-background flex size-7 shrink-0 items-center justify-center rounded-md border">
-                  <Icon className="size-[18px]" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="text-foreground block truncate text-sm">{label}</span>
-                  <span
-                    className={cn(
-                      "mt-0.5 block truncate text-[11px]",
-                      status?.status === "connected"
-                        ? "text-emerald-600 dark:text-emerald-400"
-                        : status?.status === "needs_setup"
-                          ? "text-destructive"
-                          : "text-muted-foreground",
-                    )}
-                    title={status?.detail}
-                  >
-                    {statusText}
-                  </span>
-                </span>
-              </button>
-              {isConnected ? (
-                <Popover
-                  onOpenChange={(open) => {
-                    setToolsPopoverId(open ? key : null);
-                  }}
-                  open={toolsPopoverId === key}
-                >
-                  <IconTooltip label={toolsLabel} side="top">
-                    <PopoverTrigger asChild>
-                      <button
-                        aria-label={toolsLabel}
-                        className={cn(
-                          "text-muted-foreground hover:bg-muted hover:text-foreground inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors",
-                          toolsPopoverId === key ? "bg-muted text-foreground" : null,
-                        )}
-                        onPointerDown={(event) => {
-                          event.stopPropagation();
-                        }}
-                        type="button"
-                      >
-                        <ListIcon className="size-3.5" />
-                      </button>
-                    </PopoverTrigger>
-                  </IconTooltip>
-                  <PopoverContent
-                    align="start"
-                    className="w-64 p-2"
-                    onOpenAutoFocus={(event) => {
-                      event.preventDefault();
-                    }}
-                    side="right"
-                    sideOffset={8}
-                  >
-                    <p className="text-muted-foreground px-1 pb-1.5 text-[11px] font-medium tracking-wide uppercase">
-                      {label} tools
-                    </p>
-                    {loadingCatalog && !catalogEntry ? (
-                      <p className="text-muted-foreground px-1 text-xs">Loading tools…</p>
-                    ) : catalogEntry?.error ? (
-                      <p className="text-destructive px-1 text-xs" role="alert">
-                        {catalogEntry.error}
-                      </p>
-                    ) : catalogEntry && catalogEntry.tools.length > 0 ? (
-                      <ul className="flex max-h-48 flex-col gap-0.5 overflow-y-auto">
-                        {catalogEntry.tools.map((tool) => (
-                          <li key={`${key}:${tool.name}`}>
-                            <span
-                              className="text-foreground block truncate rounded-md px-1 py-0.5 font-mono text-[11px]"
-                              title={tool.description || tool.name}
-                            >
-                              {tool.name}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-muted-foreground px-1 text-xs">No tools returned</p>
-                    )}
-                  </PopoverContent>
-                </Popover>
-              ) : null}
-              <button
-                aria-checked={enabled}
-                aria-disabled={!enabled && !allowEnable}
-                aria-label={`${enabled ? "Disable" : "Enable"} ${label} for this chat`}
-                className="inline-flex shrink-0 cursor-pointer items-center"
-                onClick={() => {
-                  toggleConnection(key, label);
-                }}
-                role="switch"
-                type="button"
-              >
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    "relative inline-flex h-4 w-7 items-center rounded-full transition-colors",
-                    enabled ? "bg-emerald-500" : "bg-muted",
-                    !enabled && !allowEnable ? "opacity-50" : null,
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "size-3 rounded-full bg-white shadow-sm transition-transform",
-                      enabled ? "translate-x-[15px]" : "translate-x-0.5",
-                    )}
-                  />
-                </span>
-              </button>
-            </div>
-          );
-        })}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild className="cursor-pointer gap-2 rounded-sm px-2 py-1.5 text-sm">
-          <Link
-            href="/tools"
-            onClick={() => {
-              setMenuOpen(false);
-            }}
+        <div className="relative min-h-0 flex-1">
+          <div
+            className="max-h-[min(22rem,55vh)] overflow-y-auto overscroll-contain px-1 pb-1"
+            onScroll={refreshScrollCue}
+            ref={listRef}
           >
-            <Settings2Icon className="size-4" />
-            Manage tools
-          </Link>
-        </DropdownMenuItem>
+            {CONNECTION_ITEMS.map(({ Icon, key, label }) => {
+              const enabled = enabledConnections[key];
+              const status = statusById?.get(key);
+              const statusText = integrationStatusText({
+                loading: loadingStatus && !statusById,
+                status,
+                statusError,
+              });
+              const allowEnable = canEnableConnection(status);
+              const catalogEntry = catalog?.connections.find((entry) => entry.connectionId === key);
+              const isConnected = status?.status === "connected";
+              const toolCount =
+                catalogEntry && !catalogEntry.error ? catalogEntry.tools.length : null;
+              const toolsLabel =
+                loadingCatalog && !catalogEntry
+                  ? `Loading ${label} tools`
+                  : toolCount === null
+                    ? `${label} tools`
+                    : `${label} tools (${toolCount})`;
+
+              return (
+                <div
+                  className="hover:bg-muted/70 flex items-center gap-1 rounded-sm px-2 py-1.5"
+                  key={key}
+                >
+                  <button
+                    aria-checked={enabled}
+                    aria-disabled={!enabled && !allowEnable}
+                    aria-label={`${enabled ? "Disable" : "Enable"} ${label} for this chat`}
+                    className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left"
+                    onClick={() => {
+                      toggleConnection(key, label);
+                    }}
+                    role="menuitemcheckbox"
+                    type="button"
+                  >
+                    <span className="border-border bg-background flex size-7 shrink-0 items-center justify-center rounded-md border">
+                      <Icon className="size-[18px]" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="text-foreground block truncate text-sm">{label}</span>
+                      <span
+                        className={cn(
+                          "mt-0.5 block truncate text-[11px]",
+                          status?.status === "connected"
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : status?.status === "needs_setup"
+                              ? "text-destructive"
+                              : "text-muted-foreground",
+                        )}
+                        title={status?.detail}
+                      >
+                        {statusText}
+                      </span>
+                    </span>
+                  </button>
+                  {isConnected ? (
+                    <Popover
+                      onOpenChange={(open) => {
+                        setToolsPopoverId(open ? key : null);
+                      }}
+                      open={toolsPopoverId === key}
+                    >
+                      <IconTooltip label={toolsLabel} side="top">
+                        <PopoverTrigger asChild>
+                          <button
+                            aria-label={toolsLabel}
+                            className={cn(
+                              "text-muted-foreground hover:bg-muted hover:text-foreground inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors",
+                              toolsPopoverId === key ? "bg-muted text-foreground" : null,
+                            )}
+                            onPointerDown={(event) => {
+                              event.stopPropagation();
+                            }}
+                            type="button"
+                          >
+                            <ListIcon className="size-3.5" />
+                          </button>
+                        </PopoverTrigger>
+                      </IconTooltip>
+                      <PopoverContent
+                        align="start"
+                        className="w-64 p-2"
+                        onOpenAutoFocus={(event) => {
+                          event.preventDefault();
+                        }}
+                        side="right"
+                        sideOffset={8}
+                      >
+                        <p className="text-muted-foreground px-1 pb-1.5 text-[11px] font-medium tracking-wide uppercase">
+                          {label} tools
+                        </p>
+                        {loadingCatalog && !catalogEntry ? (
+                          <p className="text-muted-foreground px-1 text-xs">Loading tools…</p>
+                        ) : catalogEntry?.error ? (
+                          <p className="text-destructive px-1 text-xs" role="alert">
+                            {catalogEntry.error}
+                          </p>
+                        ) : catalogEntry && catalogEntry.tools.length > 0 ? (
+                          <ul className="flex max-h-48 flex-col gap-0.5 overflow-y-auto">
+                            {catalogEntry.tools.map((tool) => (
+                              <li key={`${key}:${tool.name}`}>
+                                <span
+                                  className="text-foreground block truncate rounded-md px-1 py-0.5 font-mono text-[11px]"
+                                  title={tool.description || tool.name}
+                                >
+                                  {tool.name}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-muted-foreground px-1 text-xs">No tools returned</p>
+                        )}
+                      </PopoverContent>
+                    </Popover>
+                  ) : null}
+                  <button
+                    aria-checked={enabled}
+                    aria-disabled={!enabled && !allowEnable}
+                    aria-label={`${enabled ? "Disable" : "Enable"} ${label} for this chat`}
+                    className="inline-flex shrink-0 cursor-pointer items-center"
+                    onClick={() => {
+                      toggleConnection(key, label);
+                    }}
+                    role="switch"
+                    type="button"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        "relative inline-flex h-4 w-7 items-center rounded-full transition-colors",
+                        enabled ? "bg-emerald-500" : "bg-muted",
+                        !enabled && !allowEnable ? "opacity-50" : null,
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "size-3 rounded-full bg-white shadow-sm transition-transform",
+                          enabled ? "translate-x-[15px]" : "translate-x-0.5",
+                        )}
+                      />
+                    </span>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          {canScrollMore ? (
+            <div
+              aria-hidden="true"
+              className="from-popover pointer-events-none absolute inset-x-0 bottom-0 flex justify-center bg-linear-to-t to-transparent pt-6 pb-1"
+            >
+              <ChevronDownIcon className="tools-scroll-nudge text-muted-foreground size-3.5" />
+            </div>
+          ) : null}
+        </div>
+        <div className="border-border bg-popover shrink-0 border-t p-1">
+          <DropdownMenuItem asChild className="cursor-pointer gap-2 rounded-sm px-2 py-1.5 text-sm">
+            <Link
+              href="/tools"
+              onClick={() => {
+                setMenuOpen(false);
+              }}
+            >
+              <Settings2Icon className="size-4" />
+              Manage tools
+            </Link>
+          </DropdownMenuItem>
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   );

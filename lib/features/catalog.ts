@@ -30,7 +30,7 @@ export const HOME_TOUR_SCENES: readonly HomeTourScene[] = [
     summary:
       "ClickUp, Slack, Asana, Gmail, Notion, Linear, Atlassian, Zernio, Sentry, dFlow, GitHub, and Snowflake — set up once, sign in from the menu, then turn tools on when you need them.",
     points: [
-      "See Connected, Sign in, or Set up needed at a glance",
+      "See Connected, Connect, or Set up needed at a glance",
       "Connect, Disconnect, or App settings without leaving chat",
       "Browse loaded MCP tools after Connect",
     ],

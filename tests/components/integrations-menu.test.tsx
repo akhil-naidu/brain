@@ -95,7 +95,7 @@ describe("integrationStatusText", () => {
         status: { id: "slack", displayName: "Slack", status: "needs_sign_in" },
         statusError: null,
       }),
-    ).toBe("Sign in");
+    ).toBe("Connect");
     expect(
       integrationStatusText({
         loading: false,
@@ -351,11 +351,13 @@ describe("IntegrationsMenu status", () => {
       />,
     );
 
-    fireEvent.pointerDown(screen.getByRole("button", { name: "Tools" }));
+    const trigger = screen.getByRole("button", { name: "Tools" });
+    fireEvent.pointerDown(trigger);
+    fireEvent.click(trigger);
 
     await waitFor(() => {
-      expect(fetchConnectionStatuses).toHaveBeenCalled();
-      expect(fetchMcpToolsCatalog).toHaveBeenCalled();
+      expect(fetchConnectionStatuses).toHaveBeenCalledTimes(1);
+      expect(fetchMcpToolsCatalog).toHaveBeenCalledTimes(1);
     });
 
     await waitFor(() => {
@@ -393,7 +395,9 @@ describe("IntegrationsMenu status", () => {
       />,
     );
 
-    fireEvent.pointerDown(screen.getByRole("button", { name: "Tools" }));
+    const trigger = screen.getByRole("button", { name: "Tools" });
+    fireEvent.pointerDown(trigger);
+    fireEvent.click(trigger);
     await waitFor(() => {
       expect(screen.getAllByRole("switch", { name: /Enable GitHub/i }).length).toBeGreaterThan(0);
     });

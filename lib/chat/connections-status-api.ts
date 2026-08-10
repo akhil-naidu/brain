@@ -26,7 +26,7 @@ export async function fetchConnectionStatuses(): Promise<readonly ConnectionStat
 
 const CONNECTION_STATUS_LABELS: Record<ConnectionStatus["status"], string> = {
   connected: "Connected",
-  needs_sign_in: "Sign in",
+  needs_sign_in: "Connect",
   needs_setup: "Set up needed",
 };
 
