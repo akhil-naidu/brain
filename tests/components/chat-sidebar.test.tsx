@@ -53,7 +53,8 @@ describe("ChatSidebar rename", () => {
     const onRenameChat = vi.fn();
     renderSidebar({ onRenameChat });
 
-    fireEvent.click(screen.getByRole("button", { name: "Rename First chat" }));
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Chat actions for First chat" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Rename" }));
     const input = screen.getByRole("textbox", { name: "Rename First chat" });
     fireEvent.change(input, { target: { value: "Renamed chat" } });
     fireEvent.keyDown(input, { key: "Enter" });
@@ -61,17 +62,64 @@ describe("ChatSidebar rename", () => {
     expect(onRenameChat).toHaveBeenCalledWith("chat-1", "Renamed chat");
   });
 
-  it("cancels rename on Escape without calling onRenameChat", () => {
+  it("cancels rename on Escape without calling onRenameChat", async () => {
     const onRenameChat = vi.fn();
     renderSidebar({ onRenameChat });
 
-    fireEvent.click(screen.getByRole("button", { name: "Rename First chat" }));
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Chat actions for First chat" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Rename" }));
     const input = screen.getByRole("textbox", { name: "Rename First chat" });
     fireEvent.change(input, { target: { value: "Should not save" } });
     fireEvent.keyDown(input, { key: "Escape" });
 
     expect(onRenameChat).not.toHaveBeenCalled();
     expect(screen.getByText("First chat")).toBeDefined();
+  });
+});
+
+describe("ChatSidebar chat actions menu", () => {
+  it("exposes rename and delete in the overflow menu", async () => {
+    const onDeleteChat = vi.fn();
+    render(
+      <ChatSidebar
+        activeChatId="chat-1"
+        brand={<span>Brain</span>}
+        chats={chats}
+        currentTitle="First chat"
+        onDeleteChat={onDeleteChat}
+        onNewChat={vi.fn()}
+        onRenameChat={vi.fn()}
+        onSelectChat={vi.fn()}
+      />,
+    );
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Chat actions for First chat" }));
+    expect(await screen.findByRole("menuitem", { name: "Rename" })).toBeDefined();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
+    expect(onDeleteChat).toHaveBeenCalledWith("chat-1");
+  });
+
+  it("shows share for personal chats the viewer owns", async () => {
+    const onShareChat = vi.fn();
+    render(
+      <ChatSidebar
+        activeChatId="chat-1"
+        brand={<span>Brain</span>}
+        canCreateShared
+        chats={chats}
+        currentTitle="First chat"
+        onDeleteChat={vi.fn()}
+        onNewChat={vi.fn()}
+        onRenameChat={vi.fn()}
+        onSelectChat={vi.fn()}
+        onShareChat={onShareChat}
+        viewerUserId="user-a"
+      />,
+    );
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Chat actions for First chat" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Share" }));
+    expect(onShareChat).toHaveBeenCalledWith("chat-1");
   });
 });
 

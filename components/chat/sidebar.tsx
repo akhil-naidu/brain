@@ -7,10 +7,12 @@ import {
   ChevronDownIcon,
   HammerIcon,
   MessageSquareIcon,
+  MoreHorizontalIcon,
   PanelLeftIcon,
   PencilIcon,
   PlusIcon,
   SearchIcon,
+  ShareIcon,
   Trash2Icon,
   UserPlusIcon,
   UsersIcon,
@@ -22,6 +24,12 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { WorkspaceSwitcher } from "@/components/chat/workspace-switcher";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { IconTooltip } from "@/components/ui/tooltip";
 import { filterChatsByTitle } from "@/lib/chat/filter-chats";
@@ -75,6 +83,82 @@ function SidebarNavLink({
       <Icon className="size-3.5 shrink-0 opacity-80" />
       <span className="truncate">{label}</span>
     </Link>
+  );
+}
+
+function ChatRowMenu({
+  canShare,
+  chatTitle,
+  onDelete,
+  onRename,
+  onShare,
+  selected,
+}: {
+  readonly canShare: boolean;
+  readonly chatTitle: string;
+  readonly onDelete: () => void;
+  readonly onRename: () => void;
+  readonly onShare?: () => void;
+  readonly selected: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <DropdownMenu onOpenChange={setOpen} open={open}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          aria-label={`Chat actions for ${chatTitle}`}
+          className={cn(
+            "text-muted-foreground/55 hover:text-foreground mr-0.5 size-6 shrink-0 transition-opacity",
+            open || selected
+              ? "opacity-100"
+              : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
+          )}
+          size="icon-sm"
+          type="button"
+          variant="ghost"
+        >
+          <MoreHorizontalIcon className="size-3.5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        className="border-border bg-popover w-44 rounded-md p-1"
+        collisionPadding={12}
+        sideOffset={4}
+      >
+        {canShare && onShare ? (
+          <DropdownMenuItem
+            className="gap-2"
+            onSelect={() => {
+              onShare();
+            }}
+          >
+            <ShareIcon className="size-4" />
+            Share
+          </DropdownMenuItem>
+        ) : null}
+        <DropdownMenuItem
+          className="gap-2"
+          onSelect={() => {
+            onRename();
+          }}
+        >
+          <PencilIcon className="size-4" />
+          Rename
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="gap-2"
+          onSelect={() => {
+            onDelete();
+          }}
+          variant="destructive"
+        >
+          <Trash2Icon className="size-4" />
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -661,50 +745,26 @@ export function ChatSidebar({
                             </button>
                           )}
                           {!editing ? (
-                            <>
-                              {canCreateShared &&
-                              onShareChat &&
-                              chat.visibility === "personal" &&
-                              viewerUserId &&
-                              chat.userId === viewerUserId ? (
-                                <IconTooltip label="Share with workspace" side="bottom">
-                                  <Button
-                                    aria-label={`Share ${chat.title} with workspace`}
-                                    className="text-muted-foreground/45 hover:text-foreground size-6 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                                    onClick={() => void onShareChat(chat.id)}
-                                    size="icon-sm"
-                                    type="button"
-                                    variant="ghost"
-                                  >
-                                    <UsersIcon className="size-3" />
-                                  </Button>
-                                </IconTooltip>
-                              ) : null}
-                              <IconTooltip label="Rename" side="bottom">
-                                <Button
-                                  aria-label={`Rename ${chat.title}`}
-                                  className="text-muted-foreground/45 hover:text-foreground size-6 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                                  onClick={() => beginRename(chat)}
-                                  size="icon-sm"
-                                  type="button"
-                                  variant="ghost"
-                                >
-                                  <PencilIcon className="size-3" />
-                                </Button>
-                              </IconTooltip>
-                              <IconTooltip label="Delete" side="bottom">
-                                <Button
-                                  aria-label={`Delete ${chat.title}`}
-                                  className="text-muted-foreground/45 hover:text-foreground mr-0.5 size-6 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                                  onClick={() => onDeleteChat(chat.id)}
-                                  size="icon-sm"
-                                  type="button"
-                                  variant="ghost"
-                                >
-                                  <Trash2Icon className="size-3" />
-                                </Button>
-                              </IconTooltip>
-                            </>
+                            <ChatRowMenu
+                              canShare={Boolean(
+                                canCreateShared &&
+                                  onShareChat &&
+                                  chat.visibility === "personal" &&
+                                  viewerUserId &&
+                                  chat.userId === viewerUserId,
+                              )}
+                              chatTitle={chat.title}
+                              onDelete={() => onDeleteChat(chat.id)}
+                              onRename={() => beginRename(chat)}
+                              onShare={
+                                onShareChat
+                                  ? () => {
+                                      void onShareChat(chat.id);
+                                    }
+                                  : undefined
+                              }
+                              selected={selected}
+                            />
                           ) : null}
                         </div>
                       </li>
