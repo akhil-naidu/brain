@@ -42,3 +42,27 @@ export async function createChatProject(input: {
   const parsed = z.object({ project: z.unknown() }).parse(data);
   return toProject(parsed.project);
 }
+
+export async function updateChatProject(
+  id: string,
+  input: { readonly name: string },
+): Promise<ChatProject> {
+  const response = await fetch(`/api/chat-projects/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const data = await readBody(response);
+  const parsed = z.object({ project: z.unknown() }).parse(data);
+  return toProject(parsed.project);
+}
+
+export async function deleteChatProject(id: string): Promise<void> {
+  const response = await fetch(`/api/chat-projects/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+  if (response.status === 204) {
+    return;
+  }
+  await readBody(response);
+}

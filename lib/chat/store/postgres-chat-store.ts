@@ -16,6 +16,7 @@ import type {
   DeleteChatOptions,
   ListChatsOptions,
   UpdateChatInput,
+  UpdateChatProjectInput,
 } from "@/lib/chat/store/types";
 
 const UNSET_WORKSPACE_ID = "__unset__";
@@ -560,6 +561,53 @@ export function createPostgresChatStore(): ChatStore {
         throw new Error(`Failed to create project ${id}`);
       }
       return toProject(row);
+    },
+
+    async updateProject(
+      userId: string,
+      workspaceId: string,
+      id: string,
+      input: UpdateChatProjectInput,
+    ): Promise<ChatProject | null> {
+      const name = input.name.trim();
+      if (!name) {
+        throw new Error("Project name is required.");
+      }
+      const updatedAt = nowIso();
+      const result = await pool.query<PgRow>(
+        `UPDATE chat_project
+         SET name = $1, updated_at = $2
+         WHERE id = $3 AND user_id = $4 AND workspace_id = $5
+         RETURNING id, name, created_at, updated_at, user_id, workspace_id`,
+        [name, updatedAt, id, userId, workspaceId],
+      );
+      const row = result.rows[0];
+      return row ? toProject(row) : null;
+    },
+
+    async deleteProject(userId: string, workspaceId: string, id: string): Promise<boolean> {
+      return withTransaction(async (client) => {
+        const existing = await client.query<PgRow>(
+          `SELECT id FROM chat_project
+           WHERE id = $1 AND user_id = $2 AND workspace_id = $3
+           FOR UPDATE`,
+          [id, userId, workspaceId],
+        );
+        if (!existing.rows[0]) {
+          return false;
+        }
+        await client.query(
+          `UPDATE chat SET project_id = NULL, updated_at = $1
+           WHERE project_id = $2 AND workspace_id = $3`,
+          [nowIso(), id, workspaceId],
+        );
+        const del = await client.query(
+          `DELETE FROM chat_project
+           WHERE id = $1 AND user_id = $2 AND workspace_id = $3`,
+          [id, userId, workspaceId],
+        );
+        return (del.rowCount ?? 0) > 0;
+      });
     },
 
     close(): void {

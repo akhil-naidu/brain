@@ -127,6 +127,27 @@ if (!DATABASE_URL) {
       expect(cleared?.projectId).toBeNull();
     });
 
+    it("renames and deletes projects, clearing chat membership", async () => {
+      const store = openStore();
+      const userId = "user-a";
+      const workspaceId = "ws-a";
+      const chat = await store.createChat(userId, { title: "Member", workspaceId });
+      const project = await store.createProject(userId, {
+        name: "Draft",
+        workspaceId,
+      });
+      await store.updateChat(userId, workspaceId, chat.id, { projectId: project.id });
+
+      const renamed = await store.updateProject(userId, workspaceId, project.id, {
+        name: "Final",
+      });
+      expect(renamed?.name).toBe("Final");
+
+      expect(await store.deleteProject(userId, workspaceId, project.id)).toBe(true);
+      expect(await store.listProjects(userId, workspaceId)).toHaveLength(0);
+      expect((await store.getChat(userId, workspaceId, chat.id))?.projectId).toBeNull();
+    });
+
     it("hides archived chats from the active list", async () => {
       const store = openStore();
       const userId = "user-a";
