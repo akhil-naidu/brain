@@ -91,3 +91,15 @@ export const CONNECTION_ITEMS: readonly ConnectionItem[] = [
     Icon: SnowflakeIcon,
   },
 ];
+
+export function connectionItemForId(connectionId: string): ConnectionItem | undefined {
+  const needle = connectionId.trim().toLowerCase();
+  return CONNECTION_ITEMS.find((item) => item.key === needle);
+}
+
+export function connectionItemForLabel(label: string): ConnectionItem | undefined {
+  const needle = label.trim().toLowerCase();
+  return CONNECTION_ITEMS.find(
+    (item) => item.label.toLowerCase() === needle || item.key === needle,
+  );
+}
