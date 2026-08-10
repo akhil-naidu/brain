@@ -11,6 +11,8 @@ export type ChatNavHandlers = {
   readonly threadActions: ChatThreadActions | null;
   readonly copyState: "idle" | "copied" | "error";
   readonly onCopyChat: () => void;
+  readonly onCreateClickUpDoc: () => void;
+  readonly onDownloadChat: () => void;
   readonly onDeleteChat: (chatId: string) => void;
   readonly onNewChat: () => void;
   readonly onNewSharedChat?: () => void;

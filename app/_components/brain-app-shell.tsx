@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckIcon, CopyIcon } from "lucide-react";
+import { CheckIcon, CopyIcon, DownloadIcon, FileTextIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
@@ -507,38 +507,66 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
             ) : null}
           </div>
           {handlers?.threadActions?.canCopy ? (
-            <IconTooltip
-              label={
-                handlers.copyState === "copied"
-                  ? "Copied"
-                  : handlers.copyState === "error"
-                    ? "Couldn't copy — check clipboard permissions"
-                    : "Copy chat as Markdown"
-              }
-              side="bottom"
-            >
-              <Button
-                aria-label={
+            <>
+              <IconTooltip
+                label={
                   handlers.copyState === "copied"
                     ? "Copied"
                     : handlers.copyState === "error"
-                      ? "Copy failed"
+                      ? "Couldn't copy — check clipboard permissions"
                       : "Copy chat as Markdown"
                 }
-                className={cn(
-                  "text-muted-foreground hover:text-foreground size-8",
-                  handlers.copyState === "error" ? "text-destructive" : undefined,
-                )}
-                onClick={handlers.onCopyChat}
+                side="bottom"
+              >
+                <Button
+                  aria-label={
+                    handlers.copyState === "copied"
+                      ? "Copied"
+                      : handlers.copyState === "error"
+                        ? "Copy failed"
+                        : "Copy chat as Markdown"
+                  }
+                  className={cn(
+                    "text-muted-foreground hover:text-foreground size-8",
+                    handlers.copyState === "error" ? "text-destructive" : undefined,
+                  )}
+                  onClick={handlers.onCopyChat}
+                  size="icon-sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  {handlers.copyState === "copied" ? (
+                    <CheckIcon className="size-4" />
+                  ) : (
+                    <CopyIcon className="size-4" />
+                  )}
+                </Button>
+              </IconTooltip>
+              <IconTooltip label="Download chat as Markdown" side="bottom">
+                <Button
+                  aria-label="Download chat as Markdown"
+                  className="text-muted-foreground hover:text-foreground size-8"
+                  onClick={handlers.onDownloadChat}
+                  size="icon-sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  <DownloadIcon className="size-4" />
+                </Button>
+              </IconTooltip>
+            </>
+          ) : null}
+          {handlers?.threadActions?.canCreateClickUpDoc ? (
+            <IconTooltip label="Create ClickUp Doc from chat" side="bottom">
+              <Button
+                aria-label="Create ClickUp Doc from chat"
+                className="text-muted-foreground hover:text-foreground size-8"
+                onClick={handlers.onCreateClickUpDoc}
                 size="icon-sm"
                 type="button"
                 variant="ghost"
               >
-                {handlers.copyState === "copied" ? (
-                  <CheckIcon className="size-4" />
-                ) : (
-                  <CopyIcon className="size-4" />
-                )}
+                <FileTextIcon className="size-4" />
               </Button>
             </IconTooltip>
           ) : null}
