@@ -8,6 +8,8 @@ import { gmailProvider } from "../connections/gmail";
 import { slackProvider } from "../connections/slack";
 import { getProviderCredentialSetupError } from "./connection-credentials";
 import { getStoredTokenAuthState, type McpOAuthProvider } from "./mcp-oauth";
+import { getSnowflakeCredentialSetupError } from "./snowflake-credentials";
+import { SNOWFLAKE_CONNECTION_NAME, SNOWFLAKE_DISPLAY_NAME } from "./snowflake-mcp-url";
 
 export type ConnectionAuthStatus = "connected" | "needs_sign_in" | "needs_setup";
 
@@ -18,6 +20,7 @@ export type ConnectionStatusItem = {
   readonly detail?: string;
 };
 
+/** OAuth / DCR connections (interactive Connect). */
 export const CHAT_CONNECTION_PROVIDERS: readonly McpOAuthProvider[] = [
   clickupProvider,
   slackProvider,
@@ -29,6 +32,10 @@ export const CHAT_CONNECTION_PROVIDERS: readonly McpOAuthProvider[] = [
 
 export function getChatConnectionProvider(id: string): McpOAuthProvider | undefined {
   return CHAT_CONNECTION_PROVIDERS.find((provider) => provider.name === id);
+}
+
+export function isSnowflakeConnectionId(id: string): boolean {
+  return id === SNOWFLAKE_CONNECTION_NAME;
 }
 
 export async function resolveConnectionAuthStatus(
@@ -55,13 +62,35 @@ export async function resolveConnectionAuthStatus(
   };
 }
 
+export async function resolveSnowflakeConnectionAuthStatus(
+  principal: ConnectionPrincipal,
+  env: { readonly [key: string]: string | undefined } = process.env,
+): Promise<ConnectionStatusItem> {
+  const workspaceId = principal.type === "user" ? workspaceIdFromIssuer(principal.issuer) : null;
+  const setupError = await getSnowflakeCredentialSetupError(workspaceId, env);
+  if (setupError) {
+    return {
+      id: SNOWFLAKE_CONNECTION_NAME,
+      displayName: SNOWFLAKE_DISPLAY_NAME,
+      status: "needs_setup",
+      detail: setupError,
+    };
+  }
+  return {
+    id: SNOWFLAKE_CONNECTION_NAME,
+    displayName: SNOWFLAKE_DISPLAY_NAME,
+    status: "connected",
+  };
+}
+
 export async function listChatConnectionStatuses(
   principal: ConnectionPrincipal,
   env: { readonly [key: string]: string | undefined } = process.env,
 ): Promise<readonly ConnectionStatusItem[]> {
-  return Promise.all(
+  const oauthStatuses = await Promise.all(
     CHAT_CONNECTION_PROVIDERS.map((provider) =>
       resolveConnectionAuthStatus(provider, principal, env),
     ),
   );
+  return [...oauthStatuses, await resolveSnowflakeConnectionAuthStatus(principal, env)];
 }

@@ -1,17 +1,20 @@
 import { createMCPClient } from "@ai-sdk/mcp";
 import type { ConnectionPrincipal } from "eve/connections";
+import { SNOWFLAKE_CONNECTION_NAME, SNOWFLAKE_DISPLAY_NAME } from "@/agent/connections/snowflake";
 import {
   CHAT_CONNECTION_PROVIDERS,
   listChatConnectionStatuses,
   type ConnectionStatusItem,
 } from "@/agent/lib/connection-status";
 import { getStoredAccessToken, type McpOAuthProvider } from "@/agent/lib/mcp-oauth";
+import { resolveSnowflakeCredentials } from "@/agent/lib/snowflake-credentials";
+import { workspaceIdFromIssuer } from "@/lib/auth/principal";
 
 /**
  * Spike note (OpenSpec task 1.x):
  * `GET /eve/v1/info` returns connection metadata + authored/framework tools, but not
  * remote MCP `tools/list` results. Catalog loads via per-connection MCP listTools
- * using the signed-in principal’s stored OAuth token.
+ * using the signed-in principal’s stored OAuth token (or host PAT for Snowflake).
  */
 
 export type McpCatalogTool = {
@@ -46,8 +49,8 @@ function isHttpFallbackRetryable(error: unknown): boolean {
   return status === 400 || status === 404 || status === 405;
 }
 
-async function listToolsWithToken(
-  provider: McpOAuthProvider,
+async function listToolsAtUrl(
+  mcpUrl: string,
   accessToken: string,
 ): Promise<readonly McpCatalogTool[]> {
   const headers = { Authorization: `Bearer ${accessToken}` };
@@ -55,14 +58,14 @@ async function listToolsWithToken(
   try {
     try {
       client = await createMCPClient({
-        transport: { type: "http", url: provider.mcpUrl, headers },
+        transport: { type: "http", url: mcpUrl, headers },
       });
     } catch (error) {
       if (!isHttpFallbackRetryable(error)) {
         throw error;
       }
       client = await createMCPClient({
-        transport: { type: "sse", url: provider.mcpUrl, headers },
+        transport: { type: "sse", url: mcpUrl, headers },
       });
     }
     const listed = await client.listTools();
@@ -75,6 +78,13 @@ async function listToolsWithToken(
       // ignore close errors
     });
   }
+}
+
+async function listToolsWithToken(
+  provider: McpOAuthProvider,
+  accessToken: string,
+): Promise<readonly McpCatalogTool[]> {
+  return listToolsAtUrl(provider.mcpUrl, accessToken);
 }
 
 async function catalogEntryForConnectedProvider(
@@ -113,6 +123,45 @@ async function catalogEntryForConnectedProvider(
   }
 }
 
+async function catalogEntryForSnowflake(
+  principal: ConnectionPrincipal,
+  env: {
+    readonly [key: string]: string | undefined;
+  },
+): Promise<McpCatalogConnection> {
+  const workspaceId = principal.type === "user" ? workspaceIdFromIssuer(principal.issuer) : null;
+  const credentials = await resolveSnowflakeCredentials(workspaceId, env);
+  if (!credentials) {
+    return {
+      connectionId: SNOWFLAKE_CONNECTION_NAME,
+      connectionName: SNOWFLAKE_DISPLAY_NAME,
+      tools: [],
+      error: "Snowflake MCP URL or PAT is not configured.",
+    };
+  }
+
+  try {
+    const tools = await listToolsAtUrl(credentials.mcpServerUrl, credentials.patToken);
+    return {
+      connectionId: SNOWFLAKE_CONNECTION_NAME,
+      connectionName: SNOWFLAKE_DISPLAY_NAME,
+      tools,
+      error: null,
+    };
+  } catch (error) {
+    const message =
+      error instanceof Error && error.message.trim()
+        ? error.message.trim()
+        : `Unable to list tools for ${SNOWFLAKE_DISPLAY_NAME}.`;
+    return {
+      connectionId: SNOWFLAKE_CONNECTION_NAME,
+      connectionName: SNOWFLAKE_DISPLAY_NAME,
+      tools: [],
+      error: message,
+    };
+  }
+}
+
 export async function buildMcpToolsCatalog(
   principal: ConnectionPrincipal,
   env: { readonly [key: string]: string | undefined } = process.env,
@@ -129,8 +178,9 @@ export async function buildMcpToolsCatalog(
     statuses.filter((item) => item.status === "connected").map((item) => item.id),
   );
   const providers = CHAT_CONNECTION_PROVIDERS.filter((provider) => connectedIds.has(provider.name));
+  const includeSnowflake = connectedIds.has(SNOWFLAKE_CONNECTION_NAME);
 
-  if (providers.length === 0) {
+  if (providers.length === 0 && !includeSnowflake) {
     return { connections: [] };
   }
 
@@ -170,6 +220,10 @@ export async function buildMcpToolsCatalog(
       }
     }),
   );
+
+  if (includeSnowflake) {
+    connections.push(await catalogEntryForSnowflake(principal, env));
+  }
 
   return { connections };
 }
