@@ -3,6 +3,7 @@ node_modules
 .eve
 .output
 .nitro
+.source
 dist
 coverage
 pnpm-lock.yaml
@@ -12,4 +13,5 @@ next-env.d.ts
 # Authored prose and specs — keep hand-formatting
 docs
 openspec
+content/docs
 *.md

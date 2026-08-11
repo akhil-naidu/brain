@@ -1,5 +1,8 @@
 import type { NextConfig } from "next";
 import { withEve } from "eve/next";
+import { createMDX } from "fumadocs-mdx/next";
+
+const withMDX = createMDX();
 
 const nextConfig: NextConfig = {
   turbopack: {
@@ -15,4 +18,5 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withEve(nextConfig);
+// MDX first, then eve proxy — keep /eve/v1/* behavior outermost.
+export default withEve(withMDX(nextConfig));
