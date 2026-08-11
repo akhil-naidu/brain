@@ -1,0 +1,15 @@
+---
+title: Instance policies
+description: Control signup mode, workspace creation, and forgot-password.
+---
+
+On **`/settings/instance`**, instance admins set:
+
+| Policy | Options / meaning |
+| --- | --- |
+| **Signup mode** | `open` · `invite-only` · `sso-only` |
+| **Allow create workspace** | Whether users can create additional workspaces |
+| **Auto personal workspace** | Provision a personal workspace for new users |
+| **Allow forgot password** | Self-serve reset (needs SMTP for email delivery) |
+
+Licensed hosts may restrict which policy values are available based on entitlements. Instance admins can still reset user passwords from this page without SMTP.

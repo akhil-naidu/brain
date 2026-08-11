@@ -1,0 +1,4 @@
+{
+  "title": "Enterprise",
+  "pages": ["index", "license", "instance-policies", "sso", "scim"]
+}
