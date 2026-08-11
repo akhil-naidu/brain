@@ -3,7 +3,7 @@ title: Environment variables
 description: Required and optional environment variables for Brain.
 ---
 
-See [`.env.example`](https://github.com/akhil-naidu/brain/blob/main/.env.example) in the repository for the full commented list. Essentials:
+See [`.env.example`](https://github.com/akhil-naidu/brain/blob/main/.env.example) in the repository for the full commented list.
 
 ## Required
 
@@ -11,7 +11,7 @@ See [`.env.example`](https://github.com/akhil-naidu/brain/blob/main/.env.example
 | --- | --- |
 | `BRAIN_DATABASE_URL` | Postgres URL (`DATABASE_URL` also accepted) |
 | `BETTER_AUTH_SECRET` | Session signing (`openssl rand -base64 32`) |
-| `COMMAND_CODE_API_KEY` | Model provider (Command Code — not Vercel AI Gateway) |
+| `COMMAND_CODE_API_KEY` | Command Code models (omit only if you rely solely on custom models) |
 
 ## Production / public origin
 
@@ -27,16 +27,43 @@ See [`.env.example`](https://github.com/akhil-naidu/brain/blob/main/.env.example
 | --- | --- |
 | `BRAIN_INTERNAL_TOKEN` | Bearer between eve ↔ Next for scheduled runs |
 | `BRAIN_INTERNAL_URL` | Next origin for due-sweep (default `http://127.0.0.1:3000`) |
+| `BRAIN_OPERATOR_USER_ID` | Optional host operator for briefs (defaults to first user) |
+| `EVE_BASE_URL` / `BRAIN_EVE_URL` | Optional direct eve HTTP host for server-side runs |
 
-## Optional
+## Email (optional)
 
-- **Email:** `BRAIN_SMTP_*` / `BRAIN_SMTP_URL` for workspace invite delivery
-- **License:** `BRAIN_LICENSE_SECRET` (falls back to `BETTER_AUTH_SECRET`)
-- **MCP client credentials:** `SLACK_MCP_*`, `GITHUB_MCP_*`, `ASANA_MCP_*`, `GOOGLE_MCP_*`, … — optional when using Menu Connect; remain a deploy-time fallback
+| Variable | Purpose |
+| --- | --- |
+| `BRAIN_EMAIL_FROM` | From header for invites / reset mail |
+| `BRAIN_SMTP_URL` | Prefer a single SMTP URL |
+| `BRAIN_SMTP_HOST` / `PORT` / `SECURE` / `USER` / `PASS` | Discrete SMTP fields |
+
+## License
+
+| Variable | Purpose |
+| --- | --- |
+| `BRAIN_LICENSE_SECRET` | Signs/verifies BRAIN1 keys (falls back to `BETTER_AUTH_SECRET`) |
+
+## MCP fallbacks (optional)
+
+Prefer **Tools → Set up** / Menu Connect. Env remains deploy-time fallback:
+
+| Apps | Variables |
+| --- | --- |
+| Slack | `SLACK_MCP_CLIENT_ID`, `SLACK_MCP_CLIENT_SECRET` |
+| Asana | `ASANA_MCP_CLIENT_ID`, `ASANA_MCP_CLIENT_SECRET` |
+| Gmail | `GOOGLE_MCP_CLIENT_ID`, `GOOGLE_MCP_CLIENT_SECRET` |
+| GitHub | `GITHUB_MCP_CLIENT_ID`, `GITHUB_MCP_CLIENT_SECRET` |
+| Snowflake | `SNOWFLAKE_MCP_SERVER_URL`, `SNOWFLAKE_PAT_TOKEN` |
+| MongoDB | `MONGODB_MCP_URL`, `MONGODB_MCP_TOKEN` |
+| MCP Toolbox | `TOOLBOX_MCP_URL`, `TOOLBOX_MCP_TOKEN` |
+
+DCR apps (ClickUp, Notion, Linear, Atlassian, Zernio, Sentry, dFlow) do not need client id/secret env vars.
 
 ## Security notes
 
-- Treat the host as trusted: MCP tokens and some credentials live under `.eve/`
-- Set strong secrets for `BETTER_AUTH_SECRET`, `BRAIN_BOOTSTRAP_TOKEN`, and `BRAIN_INTERNAL_TOKEN` in production
-- Prefer private network + SSL for Postgres (`?sslmode=require` when required)
-- Keep `BRAIN_PUBLIC_URL` accurate behind reverse proxies so OAuth callbacks stay correct
+- Treat the host as trusted: MCP tokens live under `.eve/`  
+- Use strong secrets for `BETTER_AUTH_SECRET`, `BRAIN_BOOTSTRAP_TOKEN`, and `BRAIN_INTERNAL_TOKEN`  
+- Prefer private network + SSL for Postgres (`?sslmode=require` when required)  
+- Keep `BRAIN_PUBLIC_URL` accurate behind reverse proxies so OAuth callbacks stay correct  
+- Vitest uses `BRAIN_TEST_DATABASE_URL` / `brain_test` — never your operator DB
