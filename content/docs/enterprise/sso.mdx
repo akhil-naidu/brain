@@ -1,13 +1,60 @@
 ---
 title: SSO
-description: Configure OIDC or SAML company sign-in for a team workspace.
+description: Configure OIDC or SAML, verify domains with DNS TXT, and enable company sign-in.
 ---
 
-Requires SSO entitlement on a licensed instance.
+Requires the **SSO** license entitlement. Available on **team** workspaces only.
 
-1. Open **`/workspaces/settings?tab=sso`** as workspace owner/admin  
-2. Configure **OIDC** or **SAML**  
-3. Add and verify email domains (DNS verification)  
-4. Users choose **company SSO** on **`/sign-in`**  
+Open **`/workspaces/settings?tab=sso`** (Sign-in tab) as owner or admin.
 
-Instance signup mode may be set to `sso-only` under [Instance policies](/docs/enterprise/instance-policies).
+## Add a provider
+
+| Button | Protocol |
+| --- | --- |
+| **Add OIDC** | OpenID Connect |
+| **Add SAML** | SAML 2.0 |
+
+### OIDC fields
+
+- Provider ID (e.g. `okta-prod`) — `[a-zA-Z0-9_-]+`  
+- Issuer URL  
+- Email domains (comma-separated, e.g. `acme.com, acme.co`)  
+- Client ID / Client secret → **Save OIDC**
+
+### SAML fields
+
+- Provider ID (e.g. `okta-saml`)  
+- Metadata / issuer URL  
+- Email domains  
+- Entry point URL  
+- IdP certificate → **Save SAML**
+
+## Callback URLs
+
+Register these absolute URLs at your IdP (`{BRAIN_PUBLIC_URL}` + path):
+
+| Protocol | Path |
+| --- | --- |
+| OIDC | `/api/auth/sso/callback/{providerId}` |
+| SAML | `/api/auth/sso/saml2/callback/{providerId}` |
+
+Keep `BRAIN_PUBLIC_URL` / `BETTER_AUTH_URL` aligned with the browser origin.
+
+## DNS domain verification
+
+New providers start as **Domain: Unverified (SSO login blocked)** until DNS proves you own each email domain.
+
+1. **Show DNS token** (token lasts **7 days**)  
+2. Publish a **TXT** record:  
+   - **Host:** `_better-auth-token-{providerId}.{domain}`  
+     Example: `_better-auth-token-acme-oidc.acme.com`  
+   - **Value:** the raw token, or `_better-auth-token-{providerId}={token}`  
+3. **Verify DNS**  
+
+Until verified, company SSO sign-in for that provider fails. Domains are unique host-wide.
+
+## Sign-in
+
+On **`/sign-in`**, users with a work email can **Continue with company SSO** when SSO is licensed and available. Successful SSO can auto-add the user as a workspace **member**.
+
+Instance signup mode may be set to **SSO only** under [Instance policies](/docs/enterprise/instance-policies).

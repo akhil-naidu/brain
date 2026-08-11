@@ -1,12 +1,39 @@
 ---
 title: License
-description: Paste or clear a BRAIN1 license and read entitlement chips.
+description: Install a BRAIN1 license, read entitlement chips, and understand unlicensed defaults.
 ---
 
-Open **`/settings/instance`** (instance admin).
+Open **`/settings/instance`** as an instance admin.
 
-- Paste a license key to activate entitlements (user caps, open signup, SSO, multi-workspace, BYOA, …)  
-- Clear the license to return to unlicensed defaults  
-- Entitlement chips summarize what the key allows  
+## Install or clear
 
-Signing secret: `BRAIN_LICENSE_SECRET` (falls back to `BETTER_AUTH_SECRET`).
+1. Paste a `BRAIN1.…` license key and save  
+2. Entitlement chips update immediately  
+3. **Clear** the license to return to unlicensed self-host defaults  
+
+Signing secret: `BRAIN_LICENSE_SECRET` (falls back to `BETTER_AUTH_SECRET`). Keys that are missing, corrupt, or expired behave as **unlicensed**.
+
+## How to obtain a key
+
+Brain license keys are issued for your deployment (contact your Brain vendor / operator channel). Keys are signed for your host secret — do not share production secrets when requesting a key.
+
+## Unlicensed vs licensed
+
+| State | Behavior |
+| --- | --- |
+| **Self-host** (no key) | Features unlocked: unlimited users, SSO, multi-workspace, BYOA, open signup allowed |
+| **Licensed** | Entitlement chips gate policies and UI (see below) |
+
+UI badge: **Licensed** vs **Self-host**. Empty state copy: *No license installed — features stay unlocked for self-host defaults.*
+
+## Entitlement chips
+
+| Chip | Key | When off / capped |
+| --- | --- | --- |
+| `Unlimited users` or `{N} users` | `maxUsers` | New users blocked at cap (signup, invites, SSO JIT, SCIM) |
+| `Open signup` | `openSignup` | Cannot set instance policy to Open signup |
+| `SSO` | `sso` | Company SSO / SCIM locked; cannot choose SSO-only signup |
+| `Multi-workspace` | `multiWorkspace` | Cannot create extra workspaces / enable allow-create |
+| `BYOA` | `byoa` | Workspace-scoped OAuth app credentials rejected |
+
+Each chip shows **on** / **off** (or the user cap).

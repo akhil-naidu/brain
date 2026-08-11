@@ -1,0 +1,24 @@
+---
+title: Instance users
+description: List host users and reset passwords without SMTP.
+---
+
+On **`/settings/instance`**, the **Users** section is visible to instance admins.
+
+## What you see
+
+Each row shows:
+
+- Display name and email  
+- **Password sign-in** or **No password (SSO or unset)**  
+- **Reset password**
+
+## Reset a password
+
+1. Click **Reset password** for the user  
+2. Enter **New password** and **Confirm** (at least 8 characters, max 128)  
+3. Confirm — copy notes that **all of their sessions will be signed out**  
+
+Success: *Password updated. All sessions for that user were signed out.*
+
+Use this when forgot-password is off, SMTP is missing, or a user is locked out of SSO-linked password recovery.

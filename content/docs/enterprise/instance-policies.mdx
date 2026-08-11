@@ -1,15 +1,21 @@
 ---
 title: Instance policies
-description: Control signup mode, workspace creation, and forgot-password.
+description: Control signup mode, workspace creation, auto personal workspace, and forgot-password.
 ---
 
-On **`/settings/instance`**, instance admins set:
+On **`/settings/instance`**, instance admins set host-wide policies. Licensed hosts may lock some options based on [entitlements](/docs/enterprise/license).
 
-| Policy | Options / meaning |
-| --- | --- |
-| **Signup mode** | `open` · `invite-only` · `sso-only` |
-| **Allow create workspace** | Whether users can create additional workspaces |
-| **Auto personal workspace** | Provision a personal workspace for new users |
-| **Allow forgot password** | Self-serve reset (needs SMTP for email delivery) |
+| Policy | UI label | Meaning |
+| --- | --- | --- |
+| Signup mode | Invite only / Open signup / SSO only | Who can create accounts |
+| Allow create workspace | Allow creating workspaces | Users may create additional workspaces |
+| Auto personal workspace | Auto personal workspace | Provision a personal workspace for new users |
+| Allow forgot password | Allow forgot password | Self-serve reset (needs SMTP for email) |
 
-Licensed hosts may restrict which policy values are available based on entitlements. Instance admins can still reset user passwords from this page without SMTP.
+### Signup mode notes
+
+- **Invite only** (default) — registration via invite links  
+- **Open signup** — `/sign-up` available when license allows  
+- **SSO only** — password signup closed; company SSO on `/sign-in` (requires SSO entitlement)  
+
+Self-serve forgot-password also requires SMTP (`BRAIN_EMAIL_FROM` + `BRAIN_SMTP_*`). Instance admins can still [reset passwords](/docs/enterprise/instance-users) without SMTP.

@@ -1,12 +1,39 @@
 ---
 title: SCIM
-description: Provision users with a SCIM token after SSO is configured.
+description: Provision workspace members with SCIM 2.0 (Users only).
 ---
 
-SCIM requires a licensed SSO entitlement **and** a configured SSO provider on the workspace.
+Requires the **SSO** license entitlement. Team workspaces only.
 
-1. **`/workspaces/settings?tab=sso`** → SCIM section  
-2. Generate a SCIM token (revoke anytime)  
-3. Point your IdP at the displayed SCIM base URL  
+Open **`/workspaces/settings?tab=sso`** → **SCIM provisioning**.
 
-Use with [SSO](/docs/enterprise/sso) for company directory sync.
+## What Brain exposes
+
+| Item | Value |
+| --- | --- |
+| SCIM base URL | `{BRAIN_PUBLIC_URL}/api/auth/scim/v2` |
+| Provider id | `brain-scim-{workspaceId}` (shown in UI) |
+| Resource | **Users** only — no Groups / IdP role mapping |
+
+## Token
+
+1. **Generate token** (or **Rotate** / **Revoke**)  
+2. Copy the bearer **once** — *Bearer token (copy now; shown once)*  
+3. Paste base URL + bearer into Okta, Entra ID, or similar  
+
+Status shows **Token active** or **No token**. Tokens are stored hashed on the host.
+
+## Provision and deprovision
+
+| IdP action | Brain result |
+| --- | --- |
+| Create / activate user | Link or create account; add as workspace **member** |
+| Delete / deactivate | Remove membership when safe (**last owner is not removed**) |
+
+SCIM user create still works under invite-only / SSO-only signup modes, but remains subject to **`maxUsers`** and the SSO entitlement.
+
+## IdP tips
+
+- Map **userName** / email to the user’s work email  
+- Use bearer auth against the base URL above  
+- Do not expect Groups sync — assign workspace roles in Brain after provision if needed
