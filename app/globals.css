@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/shadcn.css";
 @import "fumadocs-ui/css/preset.css";
 @source "../node_modules/streamdown/dist/*.js";
 @source "../node_modules/@streamdown/code/dist/*.js";
@@ -62,6 +62,15 @@
   --input: oklch(0.9 0.015 230);
   --ring: oklch(0.55 0.09 230);
   --radius: 0.625rem;
+  /* Docs sidebar: same Brain palette, slight elevation vs canvas */
+  --sidebar: color-mix(in oklab, var(--muted) 45%, var(--background));
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
 }
 
 .dark {
@@ -85,6 +94,15 @@
   --border: #30363d;
   --input: #30363d;
   --ring: oklch(0.72 0.09 230);
+  /* Docs sidebar: same Brain palette, slight elevation vs canvas */
+  --sidebar: color-mix(in oklab, var(--muted) 35%, var(--background));
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
 }
 
 /* Pre-JS / no-class paint: match system dark so CSS tokens are correct before the
@@ -110,6 +128,15 @@
     --border: #30363d;
     --input: #30363d;
     --ring: oklch(0.72 0.09 230);
+    /* Docs sidebar: same Brain palette, slight elevation vs canvas */
+    --sidebar: color-mix(in oklab, var(--muted) 35%, var(--background));
+    --sidebar-foreground: var(--foreground);
+    --sidebar-primary: var(--primary);
+    --sidebar-primary-foreground: var(--primary-foreground);
+    --sidebar-accent: var(--accent);
+    --sidebar-accent-foreground: var(--accent-foreground);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--ring);
   }
 }
 
@@ -665,4 +692,155 @@ html[data-eve-chat-sidebar="closed"] [data-desktop-sidebar] {
 .dark .brain-markdown [data-streamdown="mermaid-block"] .bg-red-50 {
   background-color: color-mix(in oklab, var(--destructive) 16%, var(--card));
   color: var(--foreground);
+}
+
+/* ─── Brain Docs (Fumadocs) ─────────────────────────────────────────────── */
+:root {
+  --fd-layout-width: 1500px;
+}
+
+#nd-docs-layout,
+#nd-notebook-layout {
+  font-family: var(--font-sans);
+  background-color: var(--color-fd-background);
+  background-image:
+    radial-gradient(
+      900px 420px at 18% -8%,
+      color-mix(in oklab, var(--primary) 12%, transparent),
+      transparent 58%
+    ),
+    radial-gradient(
+      700px 360px at 92% 0%,
+      color-mix(in oklab, var(--primary) 7%, transparent),
+      transparent 55%
+    );
+  background-repeat: no-repeat;
+}
+
+.dark #nd-docs-layout,
+.dark #nd-notebook-layout {
+  background-image:
+    radial-gradient(
+      980px 460px at 12% -10%,
+      color-mix(in oklab, var(--primary) 16%, transparent),
+      transparent 56%
+    ),
+    radial-gradient(
+      760px 400px at 100% 0%,
+      color-mix(in oklab, var(--primary) 8%, transparent),
+      transparent 52%
+    );
+}
+
+#nd-docs-layout code,
+#nd-notebook-layout code {
+  font-family: var(--font-mono);
+}
+
+/* Sidebar: Brain-elevated panel, clearly separated from content */
+#nd-sidebar,
+#nd-sidebar-mobile {
+  background-color: var(--sidebar) !important;
+  color: var(--sidebar-foreground);
+  border-color: var(--sidebar-border);
+  border-inline-end: 1px solid var(--sidebar-border);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  padding-block: 0.35rem;
+}
+
+#nd-sidebar a {
+  border-radius: 0.55rem;
+  padding-block: 0.4rem;
+}
+
+#nd-sidebar a[data-active="true"] {
+  background: color-mix(in oklab, var(--primary) 14%, transparent) !important;
+  color: var(--foreground) !important;
+  box-shadow: none;
+}
+
+/* Folder / section labels */
+#nd-sidebar [data-slot="separator"] {
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  font-weight: 600;
+  margin-top: 0.85rem;
+  margin-bottom: 0.35rem;
+  opacity: 0.85;
+}
+
+/* Page title uses Brain display font */
+#nd-page h1 {
+  font-family: var(--font-docs-display), var(--font-sans);
+  letter-spacing: -0.03em;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+#nd-page [class*="DocsDescription"],
+#nd-page h1 + p {
+  color: var(--muted-foreground);
+  font-size: 1.05rem;
+  line-height: 1.55;
+  max-width: 46rem;
+}
+
+/* Prose: clearer rhythm + Brain link color */
+#nd-page article {
+  --spacing: 0.28rem;
+}
+
+#nd-page article a {
+  color: color-mix(in oklab, var(--primary) 82%, var(--foreground));
+  text-decoration-color: color-mix(in oklab, var(--primary) 35%, transparent);
+  text-underline-offset: 0.18em;
+}
+
+#nd-page article a:hover {
+  color: var(--primary);
+  text-decoration-color: var(--primary);
+}
+
+#nd-page article :not(pre) > code {
+  border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+  background: color-mix(in oklab, var(--muted) 75%, transparent);
+  border-radius: 0.4rem;
+  padding: 0.12em 0.38em;
+  font-size: 0.9em;
+}
+
+#nd-page article table {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+#nd-page article th {
+  background: color-mix(in oklab, var(--muted) 70%, transparent);
+  font-weight: 600;
+}
+
+/* TOC active bar uses brand primary (already fd-primary via shadcn) */
+#nd-toc [data-active="true"] {
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+/* Footer prev/next cards */
+#nd-page a[class*="Card"],
+#nd-page [class*="footer"] a {
+  border-radius: 0.9rem;
+  border-color: color-mix(in oklab, var(--border) 85%, transparent);
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+#nd-page a[class*="Card"]:hover,
+#nd-page [class*="footer"] a:hover {
+  border-color: color-mix(in oklab, var(--primary) 35%, var(--border));
+  background: color-mix(in oklab, var(--primary) 6%, var(--card));
 }

@@ -6,8 +6,8 @@ import {
   DocsDescription,
   DocsPage,
   DocsTitle,
-} from "fumadocs-ui/layouts/docs/page";
-import defaultMdxComponents from "fumadocs-ui/mdx";
+} from "fumadocs-ui/layouts/notebook/page";
+import { getDocsMDXComponents } from "@/components/docs/mdx";
 import { source } from "@/lib/docs/source";
 
 type DocsPageProps = {
@@ -22,18 +22,16 @@ export default async function Page(props: DocsPageProps) {
   }
 
   const MDX = page.data.body;
+  const components = getDocsMDXComponents({
+    a: createRelativeLink(source, page),
+  });
 
   return (
-    <DocsPage toc={page.data.toc}>
+    <DocsPage toc={page.data.toc} full={page.data.full}>
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription>{page.data.description}</DocsDescription>
       <DocsBody>
-        <MDX
-          components={{
-            ...defaultMdxComponents,
-            a: createRelativeLink(source, page),
-          }}
-        />
+        <MDX components={components} />
       </DocsBody>
     </DocsPage>
   );
