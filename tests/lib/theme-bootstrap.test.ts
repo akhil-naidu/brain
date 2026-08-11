@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { THEME_BOOTSTRAP_SCRIPT, applyTheme, resolveSystemTheme } from "@/lib/theme/bootstrap";
+import {
+  THEME_BOOTSTRAP_SCRIPT,
+  THEME_STORAGE_KEY,
+  applyTheme,
+  readThemePreference,
+  resolveSystemTheme,
+  resolveTheme,
+  setThemePreference,
+} from "@/lib/theme/bootstrap";
 
 afterEach(() => {
   document.documentElement.classList.remove("dark", "light");
@@ -18,6 +26,35 @@ describe("resolveSystemTheme", () => {
   });
 });
 
+describe("resolveTheme", () => {
+  it("honors explicit light and dark preferences", () => {
+    expect(resolveTheme("light")).toBe("light");
+    expect(resolveTheme("dark")).toBe("dark");
+  });
+
+  it("falls back to system when preference is system", () => {
+    const matchMedia = vi.fn().mockReturnValue({ matches: true });
+    expect(resolveTheme("system", matchMedia)).toBe("dark");
+  });
+});
+
+describe("theme preference storage", () => {
+  it("reads and writes the brain-theme key", () => {
+    const store = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        store.set(key, value);
+      },
+    };
+
+    expect(readThemePreference(storage)).toBe("system");
+    setThemePreference("dark", storage);
+    expect(store.get(THEME_STORAGE_KEY)).toBe("dark");
+    expect(readThemePreference(storage)).toBe("dark");
+  });
+});
+
 describe("applyTheme", () => {
   it("replaces the theme class and color-scheme", () => {
     const root = document.documentElement;
@@ -32,9 +69,10 @@ describe("applyTheme", () => {
 });
 
 describe("THEME_BOOTSTRAP_SCRIPT", () => {
-  it("applies the system preference before React hydrates", () => {
+  it("applies stored or system preference before React hydrates", () => {
     expect(THEME_BOOTSTRAP_SCRIPT).toContain("prefers-color-scheme: dark");
     expect(THEME_BOOTSTRAP_SCRIPT).toContain("classList.add");
     expect(THEME_BOOTSTRAP_SCRIPT).toContain("colorScheme");
+    expect(THEME_BOOTSTRAP_SCRIPT).toContain(THEME_STORAGE_KEY);
   });
 });
