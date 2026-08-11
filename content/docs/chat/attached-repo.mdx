@@ -3,7 +3,7 @@ title: Attached repo and coding
 description: Bind a GitHub repository so Agent mode can clone and edit code in a sandbox.
 ---
 
-Brain is not a full IDE (no LSP or inline apply). In **Agent** mode you can attach a GitHub repo so the agent clones it into a sandbox and works on files there.
+Brain is not a full IDE (no LSP or inline apply). In **Agent** mode you can attach a GitHub repo so the agent clones it into a **temporary sandbox** at `/workspace` — not onto your Brain server disk.
 
 ## Attach a repo
 
@@ -31,8 +31,7 @@ Ask in Agent mode to open a PR after the change is ready. Typical flow:
 3. Push to GitHub  
 4. Open the PR via GitHub MCP (needs [GitHub](/docs/connections/github) connected)  
 
-Brain is not a full IDE — no LSP, no inline apply. Review the PR on GitHub like any other change.
-
+Review the PR on GitHub like any other change.
 
 ## Dual path
 
@@ -42,3 +41,16 @@ Brain is not a full IDE — no LSP, no inline apply. Review the PR on GitHub lik
 | Repo attached (Agent) | Sandbox coding + MCP as needed |
 
 Prefer the sandbox harness for local file edits; use GitHub MCP for remote GitHub API operations (PRs, issues).
+
+## Host requirements (microsandbox)
+
+Brain pins **microsandbox** for the coding sandbox (not Vercel Sandbox).
+
+| Host | Requirement |
+| --- | --- |
+| Linux | KVM available to the container/VM |
+| macOS | Apple Silicon |
+
+If the runtime is missing, coding tools fail with a clear error. Operators may need the microsandbox platform install or **`MSB_PATH`** pointing at the binary. There is no Brain-specific sandbox API key in `.env.example`.
+
+See [Troubleshooting](/docs/self-hosting/troubleshooting) if attached-repo turns fail after deploy.

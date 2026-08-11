@@ -1,6 +1,6 @@
 ---
 title: Accounts and sign-in
-description: Operator bootstrap, email/password auth, invites, and password reset.
+description: Operator bootstrap, email/password auth, invites, sessions, and password reset.
 ---
 
 Brain uses **Better Auth** email/password sessions stored in your Postgres. Chats and MCP tokens belong to the signed-in user (and their active workspace).
@@ -9,9 +9,9 @@ Brain uses **Better Auth** email/password sessions stored in your Postgres. Chat
 
 On an empty database:
 
-1. Open **`/setup`**
-2. Create the operator account (name, email, password)
-3. Sign in and continue to `/chat`
+1. Open **`/setup`**  
+2. Create the operator account (name, email, password)  
+3. Sign in and continue to `/chat`  
 
 In **production**, set `BRAIN_BOOTSTRAP_TOKEN` and provide it at setup (or run `node scripts/bootstrap-operator.mjs`). Local/dev may allow bootstrap without a token when unset.
 
@@ -21,7 +21,7 @@ Only one first user can win the bootstrap race — parallel attempts serialize s
 
 | Page | Purpose |
 | --- | --- |
-| `/sign-in` | Email + password |
+| `/sign-in` | Email + password; **Continue with company SSO** when licensed |
 | `/sign-up` | Create an account when instance policy allows open signup |
 | `/forgot-password` | Request a reset link (when policy allows) |
 | `/reset-password` | Set a new password from the email link |
@@ -29,19 +29,35 @@ Only one first user can win the bootstrap race — parallel attempts serialize s
 
 Default signup mode is **invite-only**. Instance admins can change this under [Instance policies](/docs/enterprise/instance-policies) (subject to [license entitlements](/docs/enterprise/license)).
 
+## Account settings (`/settings/account`)
+
+### Profile
+
+- **Display name** (1–80 characters)  
+- Email is read-only (sign-in email)  
+- **Change password** — current + new + confirm (min 8 characters). Optional **Sign out other devices** (default on) revokes other sessions after the change  
+
+SSO-only users may not have a local password to change.
+
+### Sessions
+
+- List devices (user agent, IP, last active)  
+- **Revoke** a single other device  
+- **Sign out other devices** (keep this one)  
+- **Sign out everywhere** (including this device → `/sign-in`)  
+
+Current device is labeled **This device** and cannot be revoked alone.
+
 ## Password reset
 
 Self-serve forgot-password needs:
 
-- Instance policy allowing forgot password
-- SMTP configured (`BRAIN_EMAIL_FROM` + `BRAIN_SMTP_*`) — see [Environment variables](/docs/reference/environment)
+- Instance policy allowing forgot password  
+- Not SSO-only mode  
+- SMTP configured (`BRAIN_EMAIL_FROM` + `BRAIN_SMTP_*`) — see [Environment variables](/docs/reference/environment)  
 
-Instance admins can still reset passwords from **`/settings/instance`** without SMTP.
-
-## Sessions
-
-Open **`/settings/account`** (Sessions) to review and revoke sessions on other devices.
+Instance admins can still reset passwords from **`/settings/instance`** without SMTP — [Instance users](/docs/enterprise/instance-users).
 
 ## Theme
 
-Brain follows light / dark / system preference. The docs site and app share the same theme preference (`brain-theme` in local storage).
+The **docs** site has a light/dark/system control that stores `brain-theme` in local storage. The signed-in app follows system preference via bootstrap — there is no separate Appearance page in account settings.

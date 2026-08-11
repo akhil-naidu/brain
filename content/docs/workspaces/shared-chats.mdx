@@ -1,6 +1,6 @@
 ---
 title: Shared chats
-description: Collaborate on the same chat thread inside a team workspace.
+description: Collaborate on the same chat thread with turn locks and revision checks.
 ---
 
 In a **team** workspace you can:
@@ -8,6 +8,25 @@ In a **team** workspace you can:
 - Start a **New shared chat** from the sidebar  
 - **Share** an existing personal chat with the team  
 
-Everyone with access opens the same thread. Brain uses concurrency / revision checks so simultaneous edits stay consistent.
+Everyone with access opens the same thread. MCP grants remain **per user** — each member must Connect apps they want the agent to use on their turns.
 
-Personal chats stay private until shared. Projects and history still respect the active workspace — see [History and projects](/docs/chat/history-and-projects).
+## Concurrency
+
+Shared chats enforce:
+
+| Mechanism | Behavior |
+| --- | --- |
+| **Turn lock** | Only one member runs an agent turn at a time (lock TTL ~5 minutes; abandoned locks expire) |
+| **Revision checks** | Saves that race another member’s update are rejected |
+
+Messages you may see:
+
+- *Another member is currently running a turn in this chat.*  
+- *Chat was updated by another member. Refresh and try again.*  
+
+Personal chats do not use turn locks.
+
+## Related
+
+- [History and projects](/docs/chat/history-and-projects)  
+- [Members and invites](/docs/workspaces/members-and-invites)

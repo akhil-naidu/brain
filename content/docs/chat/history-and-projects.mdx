@@ -9,6 +9,15 @@ The sidebar lists recent chats for the **active workspace**. Use search to filte
 
 Full list management: **`/chats`**.
 
+### Search
+
+- Matches **chat titles** only (case-insensitive substring) — not message bodies  
+- Scoped to the **active workspace**  
+- Shortcuts: **⌘K** / **Ctrl+K**, or **/** when focus is not in an input  
+- Empty state: *No chats match*  
+
+Docs site search (`/docs`) is separate and indexes documentation pages.
+
 ### Row actions
 
 - Rename  
@@ -28,4 +37,4 @@ Projects are named folders for chats.
 
 ## Shared chats
 
-In a **team** workspace you can create shared chats or share an existing personal chat. Multiple members can open the same thread; Brain uses concurrency / revision checks so edits stay consistent. See [Shared chats](/docs/workspaces/shared-chats).
+In a **team** workspace you can create shared chats or share an existing personal chat. See [Shared chats](/docs/workspaces/shared-chats) for turn locks and conflict messages.

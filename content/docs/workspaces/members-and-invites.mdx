@@ -1,6 +1,6 @@
 ---
 title: Members and invites
-description: Invite teammates, change roles, and manage people in a team workspace.
+description: Invite teammates, change roles, transfer ownership, and manage people.
 ---
 
 ## Invite someone
@@ -24,3 +24,12 @@ Without SMTP, copy the invite link manually. With SMTP (`BRAIN_EMAIL_FROM` + `BR
 - Transfer ownership (owner only)  
 
 Admins cannot demote or remove other admins, and cannot change the owner’s role.
+
+## Transfer ownership
+
+1. Sign in as the current **owner**  
+2. Open **`/workspaces/settings?tab=people`**  
+3. On another member’s row, click **Make owner**  
+4. Confirm — you become an **admin**; they become **owner**  
+
+Constraints: team workspaces only; target must already be a member; you cannot transfer to yourself.
