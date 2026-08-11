@@ -10,6 +10,8 @@ const nextConfig: NextConfig = {
     // TypeScript 7 (tsgo) does not expose the compiler API Next drives directly,
     // so build-time checking has to go through the TypeScript CLI instead.
     useTypeScriptCli: true,
+    // Enables next/navigation forbidden() / unauthorized() → app/forbidden.tsx / unauthorized.tsx
+    authInterrupts: true,
   },
 };
 
