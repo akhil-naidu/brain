@@ -94,6 +94,46 @@ describe("AgentMessage regenerate", () => {
   });
 });
 
+describe("AgentMessage empty outcome", () => {
+  const emptyAssistant = {
+    id: "assistant-empty",
+    parts: [],
+    role: "assistant" as const,
+    metadata: { status: "complete" as const },
+  } as EveMessage;
+
+  it("shows a stopped placeholder for cancelled empty replies", () => {
+    render(
+      <AgentMessage
+        canRespond={false}
+        emptyOutcome="stopped"
+        isStreaming={false}
+        message={emptyAssistant}
+        onInputResponses={vi.fn()}
+        onRegenerate={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Response stopped")).toBeDefined();
+    expect(screen.getByRole("button", { name: "Regenerate response" })).toBeDefined();
+  });
+
+  it("shows a failed placeholder for errored empty replies", () => {
+    render(
+      <AgentMessage
+        canRespond={false}
+        emptyOutcome="failed"
+        isStreaming={false}
+        message={emptyAssistant}
+        onInputResponses={vi.fn()}
+        onRegenerate={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Couldn't generate a response")).toBeDefined();
+  });
+});
+
 describe("AgentMessage read aloud", () => {
   it("starts and stops speech for an assistant message", () => {
     const speak = vi.fn();

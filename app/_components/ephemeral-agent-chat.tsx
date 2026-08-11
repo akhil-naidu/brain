@@ -78,6 +78,10 @@ import {
   turnIdFromMessage,
 } from "@/lib/chat/edit-branch";
 import { timestampForTurn } from "@/lib/chat/message-timestamp";
+import {
+  hasVisibleAssistantContent,
+  resolveAssistantEmptyOutcome,
+} from "@/lib/chat/assistant-empty-outcome";
 import { canOfferRetry, getLastUserMessage, getRetryableUserPrompt } from "@/lib/chat/retry-prompt";
 import { createTurnClientContext } from "@/lib/chat/turn-client-context";
 import { cn } from "@/lib/utils";
@@ -594,20 +598,9 @@ export function EphemeralAgentChat({
   const visibleError = displayError && displayError.id !== dismissedError ? displayError : null;
   const missingApiKey = commandCodeConfigured === false && !customModelsAvailable;
 
-  const hasVisibleAssistantWork = useMemo(() => {
-    if (!lastMessage || lastMessage.role !== "assistant") {
-      return false;
-    }
-    return lastMessage.parts.some(
-      (part) =>
-        (part.type === "text" && part.text.trim().length > 0) ||
-        part.type === "dynamic-tool" ||
-        part.type === "authorization" ||
-        (part.type === "reasoning" && part.text.trim().length > 0),
-    );
-  }, [lastMessage]);
-
+  const hasVisibleAssistantWork = Boolean(lastMessage && hasVisibleAssistantContent(lastMessage));
   const showThinking = isStreaming && !hasVisibleAssistantWork;
+  const latestAssistantId = lastMessage?.role === "assistant" ? lastMessage.id : null;
 
   useEffect(() => {
     if (agent.status === "error" && agent.error?.message) {
@@ -1167,6 +1160,17 @@ export function EphemeralAgentChat({
           ) : null}
           {messages.map((message) => {
             const isLast = message.id === lastMessage?.id;
+            const isStreamingAssistant = isStreaming && message.role === "assistant" && isLast;
+            const emptyOutcome =
+              message.role === "assistant"
+                ? resolveAssistantEmptyOutcome({
+                    agentStatus: agent.status,
+                    events: agent.events,
+                    isLatestAssistant: message.id === latestAssistantId,
+                    isStreaming: isStreamingAssistant,
+                    message,
+                  })
+                : null;
             return (
               <AgentMessage
                 canCreateClickUpDoc={
@@ -1176,7 +1180,8 @@ export function EphemeralAgentChat({
                 canRespond={isLast ? lastMessageCanRespond : false}
                 childFailuresByCallId={isLast ? childFailuresByCallId : undefined}
                 completedAt={timestampForTurn(turnIdFromMessage(message), agent.events)}
-                isStreaming={isStreaming && message.role === "assistant" && isLast}
+                emptyOutcome={emptyOutcome}
+                isStreaming={isStreamingAssistant}
                 key={message.id}
                 message={message}
                 onCreateClickUpDoc={

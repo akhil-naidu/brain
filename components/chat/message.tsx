@@ -26,6 +26,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { IconTooltip } from "@/components/ui/tooltip";
 import {
+  assistantEmptyOutcomeLabel,
+  type AssistantEmptyOutcome,
+} from "@/lib/chat/assistant-empty-outcome";
+import {
   copyTextToClipboard,
   downloadTextFile,
   markdownDownloadFilename,
@@ -51,6 +55,7 @@ type AgentMessageProps = {
   readonly canRespond: boolean;
   readonly childFailuresByCallId?: ReadonlyMap<string, readonly SubagentChildFailure[]>;
   readonly completedAt?: string | null;
+  readonly emptyOutcome?: AssistantEmptyOutcome | null;
   readonly isStreaming: boolean;
   readonly message: EveMessage;
   readonly onCreateClickUpDoc?: () => void | Promise<void>;
@@ -72,6 +77,7 @@ function AgentMessageView({
   canRespond,
   childFailuresByCallId,
   completedAt = null,
+  emptyOutcome = null,
   isStreaming,
   message,
   onCreateClickUpDoc,
@@ -284,16 +290,23 @@ function AgentMessageView({
               </div>
             </div>
           ) : (
-            <AgentMessageParts
-              canRespond={canRespond}
-              childFailuresByCallId={childFailuresByCallId}
-              isUser={isUser}
-              lastTextIndex={lastTextIndex}
-              messageId={message.id}
-              onInputResponses={onInputResponses}
-              parts={message.parts}
-              showCaret={isStreaming && message.role === "assistant"}
-            />
+            <>
+              <AgentMessageParts
+                canRespond={canRespond}
+                childFailuresByCallId={childFailuresByCallId}
+                isUser={isUser}
+                lastTextIndex={lastTextIndex}
+                messageId={message.id}
+                onInputResponses={onInputResponses}
+                parts={message.parts}
+                showCaret={isStreaming && message.role === "assistant"}
+              />
+              {emptyOutcome && !isStreaming ? (
+                <p className="text-muted-foreground text-sm leading-relaxed italic">
+                  {assistantEmptyOutcomeLabel(emptyOutcome)}
+                </p>
+              ) : null}
+            </>
           )}
         </div>
         {showActions ? (
@@ -493,6 +506,9 @@ export function areAgentMessagePropsEqual(
   next: Readonly<AgentMessageProps>,
 ): boolean {
   if (previous.isStreaming !== next.isStreaming) {
+    return false;
+  }
+  if (previous.emptyOutcome !== next.emptyOutcome) {
     return false;
   }
   if (!isSameMessageProjection(previous.message, next.message)) {
