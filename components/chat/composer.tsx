@@ -53,11 +53,29 @@ import {
   setComposerEditorPlainText,
 } from "@/lib/chat/composer-rich-editor";
 import { findComposerTrigger, type ComposerTrigger } from "@/lib/chat/composer-trigger";
+import { type BrainChatMode, DEFAULT_BRAIN_CHAT_MODE } from "@/lib/chat/chat-mode";
 import { getChatMessageLength, MAX_CHAT_MESSAGE_CHARS } from "@/lib/chat/limits";
 import { cn } from "@/lib/utils";
 
 const EMPTY_ATTACHMENTS: readonly PendingAttachment[] = [];
 const LENGTH_WARN_RATIO = 0.85;
+
+const MODE_COMPOSER_CLASS: Record<BrainChatMode, string> = {
+  ask: "border-[var(--brain-mode-ask-border)] bg-[var(--brain-mode-ask-muted)] has-[[data-chat-composer-input]:focus]:border-[var(--brain-mode-ask)] has-[[data-chat-composer-input]:focus]:bg-[var(--brain-mode-ask-muted)]",
+  agent: "",
+  plan: "border-[var(--brain-mode-plan-border)] bg-[var(--brain-mode-plan-muted)] has-[[data-chat-composer-input]:focus]:border-[var(--brain-mode-plan)] has-[[data-chat-composer-input]:focus]:bg-[var(--brain-mode-plan-muted)]",
+  debug:
+    "border-[var(--brain-mode-debug-border)] bg-[var(--brain-mode-debug-muted)] has-[[data-chat-composer-input]:focus]:border-[var(--brain-mode-debug)] has-[[data-chat-composer-input]:focus]:bg-[var(--brain-mode-debug-muted)]",
+};
+
+const MODE_SEND_CLASS: Record<BrainChatMode, string> = {
+  ask: "bg-[var(--brain-mode-ask)] text-white hover:bg-[var(--brain-mode-ask)]/90 disabled:bg-[var(--brain-mode-ask-muted)] disabled:text-[var(--brain-mode-ask-foreground)]",
+  agent:
+    "bg-foreground text-background hover:bg-foreground/90 disabled:bg-foreground/12 disabled:text-muted-foreground",
+  plan: "bg-[var(--brain-mode-plan)] text-[oklch(0.25_0.05_75)] hover:bg-[var(--brain-mode-plan)]/90 disabled:bg-[var(--brain-mode-plan-muted)] disabled:text-[var(--brain-mode-plan-foreground)]",
+  debug:
+    "bg-[var(--brain-mode-debug)] text-white hover:bg-[var(--brain-mode-debug)]/90 disabled:bg-[var(--brain-mode-debug-muted)] disabled:text-[var(--brain-mode-debug-foreground)]",
+};
 
 function formatAttachmentSize(size: number): string {
   if (size < 1_024) {
@@ -104,6 +122,7 @@ export function ChatComposer({
   isBusy = false,
   isPreparing = false,
   maxLength = MAX_CHAT_MESSAGE_CHARS,
+  mode = DEFAULT_BRAIN_CHAT_MODE,
   onAddFiles,
   onChange,
   onCommandAction,
@@ -124,6 +143,7 @@ export function ChatComposer({
   readonly isBusy?: boolean;
   readonly isPreparing?: boolean;
   readonly maxLength?: number;
+  readonly mode?: BrainChatMode;
   readonly onAddFiles?: (files: readonly File[]) => void;
   readonly onChange: (value: string) => void;
   readonly onCommandAction?: (
@@ -431,10 +451,12 @@ export function ChatComposer({
     <form
       className={cn(
         "border-border/50 bg-muted/30 dark:bg-muted/25 has-[[data-chat-composer-input]:focus]:border-border/80 has-[[data-chat-composer-input]:focus]:bg-muted/40 dark:has-[[data-chat-composer-input]:focus]:bg-muted/35 relative min-w-0 rounded-3xl border shadow-md transition-[border-color,background-color,box-shadow] duration-300 ease-out has-[[data-chat-composer-input]:focus]:shadow-lg",
+        MODE_COMPOSER_CLASS[mode],
         className,
       )}
       aria-describedby={disabledReason ? disabledReasonId : undefined}
       data-chat-composer
+      data-chat-mode={mode}
       onSubmit={handleSubmit}
     >
       {menuOpen && trigger ? (
@@ -664,7 +686,10 @@ export function ChatComposer({
             <IconTooltip label="Send" side="top">
               <Button
                 aria-label="Send message"
-                className="bg-foreground text-background hover:bg-foreground/90 disabled:bg-foreground/12 disabled:text-muted-foreground size-8 cursor-pointer rounded-full shadow-none disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-100"
+                className={cn(
+                  "size-8 cursor-pointer rounded-full shadow-none disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-100",
+                  MODE_SEND_CLASS[mode],
+                )}
                 disabled={!canSubmit}
                 size="icon-sm"
                 type="submit"

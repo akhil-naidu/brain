@@ -1283,6 +1283,7 @@ export function EphemeralAgentChat({
               </div>
             }
             isBusy={isBusy}
+            mode={chatMode}
             onAddFiles={handleAddFiles}
             onChange={onDraftChange}
             onCommandAction={handleCommandAction}
