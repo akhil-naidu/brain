@@ -1,0 +1,47 @@
+---
+title: Accounts and sign-in
+description: Operator bootstrap, email/password auth, invites, and password reset.
+---
+
+Brain uses **Better Auth** email/password sessions stored in your Postgres. Chats and MCP tokens belong to the signed-in user (and their active workspace).
+
+## First operator (bootstrap)
+
+On an empty database:
+
+1. Open **`/setup`**
+2. Create the operator account (name, email, password)
+3. Sign in and continue to `/chat`
+
+In **production**, set `BRAIN_BOOTSTRAP_TOKEN` and provide it at setup (or run `node scripts/bootstrap-operator.mjs`). Local/dev may allow bootstrap without a token when unset.
+
+Only one first user can win the bootstrap race — parallel attempts serialize so a single operator is created.
+
+## Sign in and sign up
+
+| Page | Purpose |
+| --- | --- |
+| `/sign-in` | Email + password |
+| `/sign-up` | Create an account when instance policy allows open signup |
+| `/forgot-password` | Request a reset link (when policy allows) |
+| `/reset-password` | Set a new password from the email link |
+| `/invite/[token]` | Accept a workspace invite (register or join) |
+
+Default signup mode is **invite-only**. Instance admins can change this under [Instance policies](/docs/enterprise/instance-policies) (subject to [license entitlements](/docs/enterprise/license)).
+
+## Password reset
+
+Self-serve forgot-password needs:
+
+- Instance policy allowing forgot password
+- SMTP configured (`BRAIN_EMAIL_FROM` + `BRAIN_SMTP_*`) — see [Environment variables](/docs/reference/environment)
+
+Instance admins can still reset passwords from **`/settings/instance`** without SMTP.
+
+## Sessions
+
+Open **`/settings/account`** (Sessions) to review and revoke sessions on other devices.
+
+## Theme
+
+Brain follows light / dark / system preference. The docs site and app share the same theme preference (`brain-theme` in local storage).

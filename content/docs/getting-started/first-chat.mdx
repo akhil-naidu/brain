@@ -1,46 +1,20 @@
 ---
 title: First chat
-description: Create the operator, sign in, connect apps, and send your first message.
+description: Sign in, pick a model, and send your first message in Brain.
 ---
 
-After [local quickstart](/docs/getting-started/quickstart) (or a production deploy), walk through your first session.
+After [local quickstart](/docs/getting-started/quickstart) or a deploy:
 
-## 1. Create the operator
+1. Open **`/setup`** (empty database) or **`/sign-in`**  
+2. Go to **`/chat`**  
+3. Confirm a model is selected (or add one under **`/models`**)  
+4. Leave mode on **Agent** (or switch to **Ask** for plain chat)  
+5. Send a short message  
 
-On a fresh database, open **`/setup`**.
+## Next steps
 
-- **Local:** bootstrap may work without an extra token when unset
-- **Production:** set `BRAIN_BOOTSTRAP_TOKEN` and provide it at setup (or use `node scripts/bootstrap-operator.mjs`)
-
-You become the first operator account on this Brain host.
-
-## 2. Sign in and open chat
-
-1. Sign in at `/sign-in`
-2. Open **`/chat`**
-3. Pick a model in the model picker (Command Code or other configured providers)
-4. Send a message
-
-Healthy chat needs the eve process reachable through Next’s `/eve/v1/*` proxy. In production, `scripts/start-production.mjs` starts eve on `:4274` before Next on `:3000`.
-
-## 3. Connect an app (optional)
-
-Use the connections menu in chat to connect MCP apps (Slack, GitHub, Notion, and others). Tokens from Menu Connect are stored under **`.eve/`** on the host filesystem — persist that directory across deploys.
-
-Browse loaded tools on **`/tools`**.
-
-## 4. Explore workspaces and schedules
-
-- **Workspaces** — personal and team spaces, invites, roles
-- **Playbooks** — saved multi-step workflows
-- **Schedules** — morning brief and playbook schedules (needs production eve + `BRAIN_INTERNAL_TOKEN`)
-
-## Troubleshooting
-
-| Symptom | Check |
-| --- | --- |
-| Redirected to sign-in | Session cookies; `BETTER_AUTH_URL` / `BRAIN_PUBLIC_URL` match the browser origin |
-| Chat fails / connection refused | eve listening on `:4274`; `/eve/v1/health` |
-| OAuth callback to localhost in prod | Set `BRAIN_PUBLIC_URL` and `BETTER_AUTH_URL` to the public HTTPS origin |
-
-See also [Self-hosting](/docs/self-hosting) and [Environment variables](/docs/reference/environment).
+- [Accounts and sign-in](/docs/getting-started/accounts-and-sign-in)  
+- [Ask vs Agent](/docs/chat/modes)  
+- [Connect tools](/docs/connections)  
+- [Invite teammates](/docs/workspaces/members-and-invites)  
+- [Playbooks](/docs/playbooks-and-schedules/playbooks)
