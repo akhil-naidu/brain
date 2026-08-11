@@ -1,0 +1,44 @@
+---
+title: Connections overview
+description: Connect MCP apps so Agent mode can use Slack, GitHub, Notion, and more.
+---
+
+Connections are **MCP apps** Brain can call during a chat turn. Manage them on **`/tools`** or from the composer **Integrations** menu.
+
+Credentials and grants are **per signed-in user × active workspace**. Enabling a tool for one chat does not share another user’s tokens.
+
+## Auth modes
+
+| Mode | Apps | What you do |
+| --- | --- | --- |
+| **Dynamic client registration (DCR)** | ClickUp, Notion, Linear, Atlassian, Zernio, Sentry, dFlow | Click **Connect** — no client id/secret required |
+| **Static OAuth app** | Slack, Asana, Gmail, GitHub | Workspace/instance admin **Set up** client id/secret, then each user **Connect** |
+| **PAT** | Snowflake | Admin **Set up** MCP URL + programmatic access token |
+| **HTTP MCP URL** | MongoDB, MCP Toolbox | Admin **Set up** Streamable HTTP URL (+ optional bearer) |
+
+Members without configure rights see a message that a workspace admin must set the app up first.
+
+## Typical flow
+
+1. Open **`/tools`** (or composer Integrations → Manage tools)  
+2. For static OAuth / PAT / HTTP apps: **Set up** (workspace or host credentials)  
+3. **Connect** when the app needs your sign-in  
+4. Toggle the app **on** for the current chat  
+5. Use **Agent** mode and ask the agent to use that app  
+
+Write tools may prompt for **approval** mid-turn before executing.
+
+## Mid-turn authorization
+
+If a turn needs OAuth and you are not signed in, Brain surfaces an authorize URL in the stream. Complete sign-in in the browser, then continue the chat.
+
+## Persist tokens on the host
+
+Menu Connect stores tokens under **`.eve/`** on the host. Persist that directory across deploys so users are not forced to reconnect after every restart.
+
+## Per-app guides
+
+- [ClickUp](/docs/connections/clickup) · [Notion](/docs/connections/notion) · [Linear](/docs/connections/linear) · [Atlassian](/docs/connections/atlassian)  
+- [Zernio](/docs/connections/zernio) · [Sentry](/docs/connections/sentry) · [dFlow](/docs/connections/dflow)  
+- [Slack](/docs/connections/slack) · [Asana](/docs/connections/asana) · [Gmail](/docs/connections/gmail) · [GitHub](/docs/connections/github)  
+- [Snowflake](/docs/connections/snowflake) · [MongoDB](/docs/connections/mongodb) · [MCP Toolbox](/docs/connections/toolbox)

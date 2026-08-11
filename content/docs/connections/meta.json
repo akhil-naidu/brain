@@ -1,0 +1,20 @@
+{
+  "title": "Connections",
+  "pages": [
+    "index",
+    "clickup",
+    "notion",
+    "linear",
+    "atlassian",
+    "zernio",
+    "sentry",
+    "dflow",
+    "slack",
+    "asana",
+    "gmail",
+    "github",
+    "snowflake",
+    "mongodb",
+    "toolbox"
+  ]
+}

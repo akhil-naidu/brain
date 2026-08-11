@@ -1,0 +1,27 @@
+---
+title: Sentry
+description: Connect Sentry via official MCP with dynamic client registration.
+---
+
+**Auth:** OAuth + dynamic client registration — no client id/secret env vars required.
+
+**MCP:** `https://mcp.sentry.dev/mcp`
+
+## Connect
+
+1. Open **`/tools`** → **Sentry**  
+2. Click **Connect** and complete the provider sign-in  
+3. Enable the app for your chat (Agent mode)  
+4. **Disconnect** when you want to revoke the grant in Brain  
+
+## Callback URL
+
+Register (or allow) Menu Connect callback:
+
+```text
+{BRAIN_PUBLIC_URL}/api/connections/sentry/callback
+```
+
+Use your real origin (not `localhost`) in production. Mid-turn auth may print an exact redirect URI under `.eve/`.
+
+Docs: [Sentry MCP](https://mcp.sentry.dev/).

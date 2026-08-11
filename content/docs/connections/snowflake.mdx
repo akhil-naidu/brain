@@ -1,0 +1,26 @@
+---
+title: Snowflake
+description: Connect Snowflake-managed MCP with a server URL and PAT.
+---
+
+**Auth:** Programmatic Access Token (PAT) + MCP server URL — **no** OAuth app.
+
+## Admin: Set up
+
+1. In Snowflake, create a managed MCP server and a PAT (Snowsight → Settings → Authentication → Programmatic Access Tokens)  
+2. In Brain open **`/tools`** → **Snowflake** → **Set up**  
+3. Paste the MCP URL and PAT  
+4. Save (workspace or host scope)
+
+Optional host env fallback:
+
+| Variable | Purpose |
+| --- | --- |
+| `SNOWFLAKE_MCP_SERVER_URL` | Full MCP server URL |
+| `SNOWFLAKE_PAT_TOKEN` | PAT |
+
+There is no **Connect** button — once Set up succeeds, enable the app for Agent chats. Clear credentials from App settings (not Disconnect).
+
+## Docs
+
+- [Snowflake Cortex Agents MCP](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-mcp)

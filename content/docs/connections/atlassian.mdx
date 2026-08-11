@@ -1,0 +1,29 @@
+---
+title: Atlassian
+description: Connect Atlassian via official MCP with dynamic client registration.
+---
+
+**Auth:** OAuth + dynamic client registration — no client id/secret env vars required.
+
+**MCP:** `https://mcp.atlassian.com/v1/mcp/authv2`
+
+## Connect
+
+1. Open **`/tools`** → **Atlassian**  
+2. Click **Connect** and complete the provider sign-in  
+3. Enable the app for your chat (Agent mode)  
+4. **Disconnect** when you want to revoke the grant in Brain  
+
+## Callback URL
+
+Register (or allow) Menu Connect callback:
+
+```text
+{BRAIN_PUBLIC_URL}/api/connections/atlassian/callback
+```
+
+Use your real origin (not `localhost`) in production. Mid-turn auth may print an exact redirect URI under `.eve/`.
+
+Atlassian Rovo MCP for Jira / Confluence style workflows.
+
+Docs: [Atlassian remote MCP](https://support.atlassian.com/atlassian-rovo-mcp-server/docs/getting-started-with-the-atlassian-remote-mcp-server/).

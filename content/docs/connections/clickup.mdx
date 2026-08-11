@@ -1,0 +1,27 @@
+---
+title: ClickUp
+description: Connect ClickUp via official MCP with dynamic client registration.
+---
+
+**Auth:** OAuth + dynamic client registration — no client id/secret env vars required.
+
+**MCP:** `https://mcp.clickup.com/mcp`
+
+## Connect
+
+1. Open **`/tools`** → **ClickUp**  
+2. Click **Connect** and complete the provider sign-in  
+3. Enable the app for your chat (Agent mode)  
+4. **Disconnect** when you want to revoke the grant in Brain  
+
+## Callback URL
+
+Register (or allow) Menu Connect callback:
+
+```text
+{BRAIN_PUBLIC_URL}/api/connections/clickup/callback
+```
+
+Use your real origin (not `localhost`) in production. Mid-turn auth may print an exact redirect URI under `.eve/`.
+
+Use for tasks, docs, chat channels, comments, time tracking, and workspace search.

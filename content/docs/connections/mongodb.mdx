@@ -1,0 +1,25 @@
+---
+title: MongoDB
+description: Point Brain at a Streamable HTTP MongoDB MCP server.
+---
+
+**Auth:** HTTP MCP URL + optional bearer token.
+
+Eve cannot spawn Cursor-style stdio MCP processes. Expose MongoDB MCP over Streamable HTTP, then register that URL in Brain.
+
+## Example (HTTP MCP)
+
+```bash
+MDB_MCP_CONNECTION_STRING='mongodb://…' \
+  npx -y mongodb-mcp-server@latest --transport http --readOnly
+```
+
+## Admin: Set up
+
+1. **`/tools`** → **MongoDB** → **Set up**  
+2. Enter MCP URL (and optional bearer)  
+3. Enable for Agent chats  
+
+Env fallback: `MONGODB_MCP_URL`, `MONGODB_MCP_TOKEN`.
+
+Docs: [MongoDB MCP standalone service](https://www.mongodb.com/docs/mcp-server/configuration/standalone-service/).
