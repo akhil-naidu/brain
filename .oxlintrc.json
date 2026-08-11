@@ -93,6 +93,12 @@
       "rules": {
         "no-console": "off"
       }
+    },
+    {
+      "files": ["agent/tools/**/*.ts"],
+      "rules": {
+        "unicorn/filename-case": "off"
+      }
     }
   ],
   "ignorePatterns": [
