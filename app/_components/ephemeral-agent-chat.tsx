@@ -21,6 +21,7 @@ import { IntegrationsMenu } from "@/components/chat/integrations-menu";
 import { AgentMessage, type AgentInputResponse } from "@/components/chat/message";
 import { BetaBadge } from "@/components/brand/beta-badge";
 import { BrainMark } from "@/components/brain-mark";
+import { ChatModePicker } from "@/components/chat/chat-mode-picker";
 import { ModelPicker } from "@/components/chat/model-picker";
 import { PlaybooksMenu } from "@/components/chat/playbooks-menu";
 import { PlaybooksPanel } from "@/components/chat/playbooks-panel";
@@ -159,8 +160,10 @@ export function EphemeralAgentChat({
   const router = useRouter();
   const {
     catalogModels,
+    chatMode,
     enabledConnections,
     selectedModelId,
+    setChatMode,
     setConnectionEnabled,
     setSelectedModelId,
     workspaceId,
@@ -698,10 +701,11 @@ export function EphemeralAgentChat({
     () =>
       createTurnClientContext({
         enabledConnections,
+        mode: chatMode,
         modelId: selectedModelId,
         workspaceId,
       }),
-    [enabledConnections, selectedModelId, workspaceId],
+    [chatMode, enabledConnections, selectedModelId, workspaceId],
   );
 
   const handleInputResponses = useCallback(
@@ -1260,6 +1264,11 @@ export function EphemeralAgentChat({
                     open={schedulesOpen}
                   />
                 ) : null}
+                <ChatModePicker
+                  disabled={isBusy || missingApiKey}
+                  mode={chatMode}
+                  onModeChange={setChatMode}
+                />
                 <ModelPicker
                   disabled={isBusy || missingApiKey}
                   models={catalogModels}

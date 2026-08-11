@@ -86,11 +86,17 @@ vi.mock("@/app/_components/chat-shell-context", () => ({
       zernio: true,
     },
     refreshModelCatalog: vi.fn(),
+    chatMode: "agent",
     selectedModelId: "deepseek/deepseek-v4-pro",
+    setChatMode: vi.fn(),
     setConnectionEnabled: vi.fn(),
     setSelectedModelId: vi.fn(),
     workspaceId: "ws-1",
   }),
+}));
+
+vi.mock("@/components/chat/chat-mode-picker", () => ({
+  ChatModePicker: () => null,
 }));
 
 vi.mock("@/components/chat/model-picker", () => ({

@@ -14,6 +14,12 @@ import {
   DEFAULT_BRAIN_CHAT_MODEL_ID,
   resolveBrainChatModelId,
 } from "@/agent/lib/models";
+import {
+  BRAIN_CHAT_MODE_STORAGE_KEY,
+  DEFAULT_BRAIN_CHAT_MODE,
+  resolveBrainChatMode,
+  type BrainChatMode,
+} from "@/lib/chat/chat-mode";
 import { fetchModelCatalog, type CatalogModelDto } from "@/lib/chat/custom-models-api";
 import { defaultCatalogModelId } from "@/lib/chat/custom-models/catalog-shared";
 
@@ -37,11 +43,13 @@ export type EnabledConnections = {
 type ChatShellValue = {
   readonly enabledConnections: EnabledConnections;
   readonly selectedModelId: string;
+  readonly chatMode: BrainChatMode;
   readonly catalogModels: readonly CatalogModelDto[];
   readonly workspaceId: string | null;
   readonly catalogReady: boolean;
   readonly setConnectionEnabled: (key: keyof EnabledConnections, enabled: boolean) => void;
   readonly setSelectedModelId: (modelId: string) => void;
+  readonly setChatMode: (mode: BrainChatMode) => void;
   readonly refreshModelCatalog: () => void;
 };
 
@@ -67,6 +75,25 @@ function persistModelId(modelId: string): void {
   }
 }
 
+function readStoredChatMode(): BrainChatMode {
+  if (typeof window === "undefined") {
+    return DEFAULT_BRAIN_CHAT_MODE;
+  }
+  try {
+    return resolveBrainChatMode(window.localStorage.getItem(BRAIN_CHAT_MODE_STORAGE_KEY));
+  } catch {
+    return DEFAULT_BRAIN_CHAT_MODE;
+  }
+}
+
+function persistChatMode(mode: BrainChatMode): void {
+  try {
+    window.localStorage.setItem(BRAIN_CHAT_MODE_STORAGE_KEY, mode);
+  } catch {
+    // Ignore quota / private mode failures; in-memory selection still works.
+  }
+}
+
 export function ChatShellProvider({ children }: { readonly children: ReactNode }) {
   const [enabledConnections, setEnabledConnections] = useState<EnabledConnections>({
     clickup: false,
@@ -85,6 +112,7 @@ export function ChatShellProvider({ children }: { readonly children: ReactNode }
     toolbox: false,
   });
   const [selectedModelId, setSelectedModelIdState] = useState(DEFAULT_BRAIN_CHAT_MODEL_ID);
+  const [chatMode, setChatModeState] = useState<BrainChatMode>(DEFAULT_BRAIN_CHAT_MODE);
   const [preferenceReady, setPreferenceReady] = useState(false);
   const [catalogModels, setCatalogModels] = useState<readonly CatalogModelDto[]>([]);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
@@ -93,6 +121,7 @@ export function ChatShellProvider({ children }: { readonly children: ReactNode }
 
   useEffect(() => {
     setSelectedModelIdState(readStoredModelId());
+    setChatModeState(readStoredChatMode());
     setPreferenceReady(true);
   }, []);
 
@@ -149,6 +178,12 @@ export function ChatShellProvider({ children }: { readonly children: ReactNode }
     [catalogModels],
   );
 
+  const setChatMode = useCallback((mode: BrainChatMode) => {
+    const next = resolveBrainChatMode(mode);
+    setChatModeState(next);
+    persistChatMode(next);
+  }, []);
+
   const refreshModelCatalog = useCallback(() => {
     setCatalogTick((value) => value + 1);
   }, []);
@@ -157,22 +192,26 @@ export function ChatShellProvider({ children }: { readonly children: ReactNode }
     () => ({
       enabledConnections,
       selectedModelId: preferenceReady ? selectedModelId : DEFAULT_BRAIN_CHAT_MODEL_ID,
+      chatMode: preferenceReady ? chatMode : DEFAULT_BRAIN_CHAT_MODE,
       catalogModels,
       workspaceId,
       catalogReady,
       setConnectionEnabled,
       setSelectedModelId,
+      setChatMode,
       refreshModelCatalog,
     }),
     [
       enabledConnections,
       preferenceReady,
       selectedModelId,
+      chatMode,
       catalogModels,
       workspaceId,
       catalogReady,
       setConnectionEnabled,
       setSelectedModelId,
+      setChatMode,
       refreshModelCatalog,
     ],
   );
