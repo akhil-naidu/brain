@@ -1,0 +1,12 @@
+{
+  "title": "Brain",
+  "pages": [
+    "index",
+    "---Getting started---",
+    "...getting-started",
+    "---Self-hosting---",
+    "...self-hosting",
+    "---Reference---",
+    "...reference"
+  ]
+}

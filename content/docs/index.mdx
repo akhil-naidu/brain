@@ -1,0 +1,31 @@
+---
+title: Introduction
+description: Customer documentation for Brain — self-hosted work assistant for your team.
+---
+
+# Introduction
+
+**Brain** is a self-hosted work assistant: browser chat, MCP connections, workspaces, playbooks, and schedules — running on **your** host with **your** Postgres.
+
+This documentation is for:
+
+- **End users** — chat, connections, playbooks, and day-to-day workflows
+- **Self-host operators** — install, configure, upgrade, and keep Brain healthy
+- **Enterprise admins** — workspaces, SSO/SCIM, and policies (expanding over time)
+
+## Start here
+
+| Audience | Go to |
+| --- | --- |
+| Trying Brain locally | [Local quickstart](/docs/getting-started/quickstart) |
+| First signed-in session | [First chat](/docs/getting-started/first-chat) |
+| Deploying to production | [Self-hosting overview](/docs/self-hosting) |
+| Env vars and secrets | [Environment variables](/docs/reference/environment) |
+
+## What Brain is not
+
+Brain stays **self-hostable**. Core paths do not require Vercel AI Gateway, Neon, Vercel Connect, or Vercel Sandbox. You bring Postgres, a model API key, and a host (Docker, Dokku, dflow, or similar).
+
+## Docs vs engineering notes
+
+This `/docs` site is the customer manual. OpenSpec specs and `docs/superpowers/` plans in the repository are for contributors implementing Brain — they are not part of this site.

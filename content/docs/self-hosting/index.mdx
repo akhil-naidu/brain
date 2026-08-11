@@ -1,0 +1,67 @@
+---
+title: Self-hosting overview
+description: Deploy Brain with Docker, Dokku, or dflow on your own Postgres.
+---
+
+# Self-hosting overview
+
+Brain is designed for self-hosting. You provide Postgres and a host; Brain applies schema on boot.
+
+## Architecture (runtime)
+
+```
+Browser → Next (:3000)
+            ├─ Better Auth + Brain APIs → Postgres
+            └─ /eve/v1/* (withEve proxy) → eve Nitro (:4274)
+```
+
+`scripts/start-production.mjs` starts eve from `.output/server/index.mjs`, waits for the port, then boots Next. If eve never binds `:4274`, chat fails with `ECONNREFUSED 127.0.0.1:4274`.
+
+## Prerequisites
+
+1. **Postgres 16+** (managed or self-hosted — not Neon-required)
+2. A database role with create/table privileges
+3. Runtime env set **before** first healthy boot (see [Environment variables](/docs/reference/environment))
+4. Persist **`.eve/`** if you use Menu Connect (MCP tokens are file-based)
+
+There is **no SQLite fallback** and no SQLite→Postgres migration — provision an empty database.
+
+## Docker image
+
+Prefer the repo **Dockerfile** (builds eve + Next; `CMD` runs `scripts/start-production.mjs`). Avoid herokuish builders that download Node at build time when possible.
+
+## Dokku / dflow (summary)
+
+```bash
+# Use Dockerfile builder
+dokku builder:set brain selected dockerfile
+
+# HTTP → container port 3000
+dokku ports:set brain http:80:3000
+
+dokku config:set brain \
+  COMMAND_CODE_API_KEY="..." \
+  BETTER_AUTH_SECRET="$(openssl rand -base64 32)" \
+  BRAIN_DATABASE_URL="postgres://USER:PASS@HOST:5432/brain" \
+  BRAIN_PUBLIC_URL="https://<your-host>" \
+  BETTER_AUTH_URL="https://<your-host>" \
+  BRAIN_BOOTSTRAP_TOKEN="$(openssl rand -base64 32)" \
+  NODE_ENV=production
+```
+
+Optional for schedules:
+
+```bash
+dokku config:set brain \
+  BRAIN_INTERNAL_TOKEN="$(openssl rand -base64 32)" \
+  BRAIN_INTERNAL_URL="http://127.0.0.1:3000"
+```
+
+Extended Dokku notes (herokuish workarounds, TLS, smoke checks) live in the repo at [`docs/deploy-dokku.md`](https://github.com/akhil-naidu/brain/blob/main/docs/deploy-dokku.md).
+
+## After deploy
+
+1. Confirm logs show eve up, then Next
+2. `curl -sS https://<your-host>/eve/v1/health`
+3. Open `/setup` with `BRAIN_BOOTSTRAP_TOKEN`
+4. Sign in and send a chat — see [First chat](/docs/getting-started/first-chat)

@@ -1,0 +1,44 @@
+---
+title: Environment variables
+description: Required and optional environment variables for Brain.
+---
+
+# Environment variables
+
+See [`.env.example`](https://github.com/akhil-naidu/brain/blob/main/.env.example) in the repository for the full commented list. Essentials:
+
+## Required
+
+| Variable | Purpose |
+| --- | --- |
+| `BRAIN_DATABASE_URL` | Postgres URL (`DATABASE_URL` also accepted) |
+| `BETTER_AUTH_SECRET` | Session signing (`openssl rand -base64 32`) |
+| `COMMAND_CODE_API_KEY` | Model provider (Command Code — not Vercel AI Gateway) |
+
+## Production / public origin
+
+| Variable | Purpose |
+| --- | --- |
+| `BRAIN_PUBLIC_URL` | Public origin (cookies, OAuth redirects, SEO) |
+| `BETTER_AUTH_URL` | Usually the same as `BRAIN_PUBLIC_URL` |
+| `BRAIN_BOOTSTRAP_TOKEN` | Required to create the first operator in production |
+
+## Schedules
+
+| Variable | Purpose |
+| --- | --- |
+| `BRAIN_INTERNAL_TOKEN` | Bearer between eve ↔ Next for scheduled runs |
+| `BRAIN_INTERNAL_URL` | Next origin for due-sweep (default `http://127.0.0.1:3000`) |
+
+## Optional
+
+- **Email:** `BRAIN_SMTP_*` / `BRAIN_SMTP_URL` for workspace invite delivery
+- **License:** `BRAIN_LICENSE_SECRET` (falls back to `BETTER_AUTH_SECRET`)
+- **MCP client credentials:** `SLACK_MCP_*`, `GITHUB_MCP_*`, `ASANA_MCP_*`, `GOOGLE_MCP_*`, … — optional when using Menu Connect; remain a deploy-time fallback
+
+## Security notes
+
+- Treat the host as trusted: MCP tokens and some credentials live under `.eve/`
+- Set strong secrets for `BETTER_AUTH_SECRET`, `BRAIN_BOOTSTRAP_TOKEN`, and `BRAIN_INTERNAL_TOKEN` in production
+- Prefer private network + SSL for Postgres (`?sslmode=require` when required)
+- Keep `BRAIN_PUBLIC_URL` accurate behind reverse proxies so OAuth callbacks stay correct

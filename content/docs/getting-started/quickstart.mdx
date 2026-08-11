@@ -1,0 +1,66 @@
+---
+title: Local quickstart
+description: Install Brain locally with Node 24, pnpm, and Docker Postgres.
+---
+
+# Local quickstart
+
+Run Brain on your machine for development or evaluation.
+
+## Requirements
+
+- Node.js **24.x** (`nvm use` — see `.nvmrc`)
+- [pnpm](https://pnpm.io/) 11+ (`corepack enable`)
+- Docker (for local Postgres via Compose)
+- A model API key (`COMMAND_CODE_API_KEY`)
+
+## Steps
+
+```bash
+# 1. Install
+git clone https://github.com/akhil-naidu/brain.git
+cd brain
+nvm use          # Node 24
+corepack enable
+pnpm install
+
+# 2. Postgres
+docker compose up -d db
+
+# 3. Env
+cp .env.example .env
+# Required at minimum:
+#   COMMAND_CODE_API_KEY=...
+#   BETTER_AUTH_SECRET=$(openssl rand -base64 32)
+#   BRAIN_DATABASE_URL=postgres://brain:brain@127.0.0.1:5432/brain
+#   BRAIN_PUBLIC_URL=http://localhost:3000
+#   BETTER_AUTH_URL=http://localhost:3000
+
+# 4. Dev server (Next + eve)
+pnpm dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+## Next
+
+1. Empty database → open **`/setup`** and create the operator account
+2. Sign in → **`/chat`**
+3. Continue with [First chat](/docs/getting-started/first-chat)
+
+## Tips
+
+- Vitest uses a separate database `brain_test` so `pnpm test` / `pnpm verify` do not wipe your local operator account on `brain`.
+- If `brain_test` is missing on an older volume:
+
+```bash
+docker compose exec db psql -U brain -d brain -c 'CREATE DATABASE brain_test;'
+```
+
+- To reset local auth data entirely:
+
+```bash
+docker compose down -v && docker compose up -d db
+```
+
+Then open `/setup` again.
