@@ -1,0 +1,26 @@
+---
+title: Members and invites
+description: Invite teammates, change roles, and manage people in a team workspace.
+---
+
+## Invite someone
+
+1. Open **`/workspaces/settings?tab=invites`**  
+2. Create an invite (optional email)  
+3. Share the link — or rely on SMTP if configured  
+
+Invite roles are **admin** or **member** only (not owner).
+
+Recipients open **`/invite/[token]`**, then sign in or register. Instance signup policy may be invite-only — invite registration still works for valid tokens.
+
+Without SMTP, copy the invite link manually. With SMTP (`BRAIN_EMAIL_FROM` + `BRAIN_SMTP_*`), Brain can email the link.
+
+## People
+
+**`/workspaces/settings?tab=people`:**
+
+- Change roles (with admin constraints)  
+- Remove members  
+- Transfer ownership (owner only)  
+
+Admins cannot demote or remove other admins, and cannot change the owner’s role.
