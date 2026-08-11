@@ -68,13 +68,11 @@ import {
 import { fetchSetupStatus } from "@/lib/chat/setup-api";
 import type { ChatProject, ChatRecord, ChatSummary, ChatVisibility } from "@/lib/chat/store/types";
 import { useSubagentChildFailures } from "@/lib/chat/subagent-child-failures";
-import { buildCreateClickUpDocPrompt } from "@/lib/chat/create-clickup-doc";
 import { createFallbackTitle } from "@/lib/chat/title";
 import {
   copyTextToClipboard,
   downloadTextFile,
   markdownDownloadFilename,
-  messageToMarkdown,
   messagesToMarkdown,
 } from "@/lib/chat/export-markdown";
 import { takePendingPlaybookRun } from "@/lib/chat/pending-playbook-run";
@@ -111,9 +109,7 @@ export type DisposeEphemeralChat = () => Promise<boolean>;
 
 export type ChatThreadActions = {
   readonly canCopy: boolean;
-  readonly canCreateClickUpDoc: boolean;
   readonly copyAsMarkdown: (title?: string | null) => Promise<void>;
-  readonly createClickUpDoc: (title?: string | null) => Promise<void>;
   readonly downloadAsMarkdown: (title?: string | null) => void;
 };
 
@@ -943,8 +939,6 @@ export function EphemeralAgentChat({
     retryableText,
   });
 
-  const canCreateClickUpDoc = canCopyThread && !isBusy && !missingApiKey;
-
   useEffect(() => {
     if (!onThreadActionsReady) {
       return undefined;
@@ -954,7 +948,6 @@ export function EphemeralAgentChat({
     // was looping setThreadActions in ChatWorkspace.
     onThreadActionsReady({
       canCopy: canCopyThread,
-      canCreateClickUpDoc,
       copyAsMarkdown: async (title) => {
         const markdown = messagesToMarkdown(messagesRef.current, title);
         if (!markdown) {
@@ -969,53 +962,12 @@ export function EphemeralAgentChat({
         }
         downloadTextFile(markdownDownloadFilename(title), markdown);
       },
-      createClickUpDoc: async (title) => {
-        const markdown = messagesToMarkdown(messagesRef.current, title);
-        if (!markdown) {
-          throw new Error("Nothing to export yet.");
-        }
-        setConnectionEnabled("clickup", true);
-        await handleSubmit(
-          buildCreateClickUpDocPrompt({
-            markdown,
-            scope: "thread",
-            title,
-          }),
-        );
-      },
     });
 
     return () => {
       onThreadActionsReady(null);
     };
-  }, [
-    canCopyThread,
-    canCreateClickUpDoc,
-    handleSubmit,
-    onThreadActionsReady,
-    setConnectionEnabled,
-  ]);
-
-  const createClickUpDocForMessage = useCallback(
-    (messageId: string) => {
-      const message = messagesRef.current.find((entry) => entry.id === messageId);
-      if (!message) {
-        return;
-      }
-      const markdown = messageToMarkdown(message);
-      if (!markdown) {
-        return;
-      }
-      setConnectionEnabled("clickup", true);
-      void handleSubmit(
-        buildCreateClickUpDocPrompt({
-          markdown,
-          scope: "message",
-        }),
-      );
-    },
-    [handleSubmit, setConnectionEnabled],
-  );
+  }, [canCopyThread, onThreadActionsReady]);
 
   const handleRetry = useCallback(() => {
     if (!showRetry || retryableText === null) {
@@ -1235,9 +1187,6 @@ export function EphemeralAgentChat({
                 : null;
             return (
               <AgentMessage
-                canCreateClickUpDoc={
-                  message.role === "assistant" && canCreateClickUpDoc && !isStreaming
-                }
                 canEdit={message.id === editableUserMessageId}
                 canRespond={isLast ? lastMessageCanRespond : false}
                 childFailuresByCallId={isLast ? childFailuresByCallId : undefined}
@@ -1246,13 +1195,6 @@ export function EphemeralAgentChat({
                 isStreaming={isStreamingAssistant}
                 key={message.id}
                 message={message}
-                onCreateClickUpDoc={
-                  message.role === "assistant"
-                    ? () => {
-                        createClickUpDocForMessage(message.id);
-                      }
-                    : undefined
-                }
                 onEditResend={message.id === editableUserMessageId ? onEditResend : undefined}
                 onInputResponses={onInputResponses}
                 onRegenerate={message.id === regeneratableAssistantId ? onRegenerate : undefined}

@@ -170,13 +170,6 @@ export function ChatWorkspace() {
     }
   }, [active.title, threadActions]);
 
-  const handleCreateClickUpDoc = useCallback(() => {
-    if (!threadActions?.canCreateClickUpDoc) {
-      return;
-    }
-    void threadActions.createClickUpDoc(active.title);
-  }, [active.title, threadActions]);
-
   const runWithDisposal = useCallback(async (action: () => void | Promise<void>) => {
     if (navigationPendingRef.current) {
       return;
@@ -343,7 +336,6 @@ export function ChatWorkspace() {
       threadActions,
       copyState,
       onCopyChat: handleCopyChat,
-      onCreateClickUpDoc: handleCreateClickUpDoc,
       onDownloadChat: handleDownloadChat,
       onDeleteChat: handleDeleteChat,
       onNewChat: handleNewChat,
@@ -361,7 +353,6 @@ export function ChatWorkspace() {
     active.title,
     copyState,
     handleCopyChat,
-    handleCreateClickUpDoc,
     handleDownloadChat,
     handleDeleteChat,
     handleNewChat,

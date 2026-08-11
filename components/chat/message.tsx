@@ -5,7 +5,6 @@ import {
   CheckIcon,
   CopyIcon,
   DownloadIcon,
-  FileTextIcon,
   MoreHorizontalIcon,
   PencilIcon,
   RefreshCwIcon,
@@ -50,7 +49,6 @@ const actionButtonClass =
   "bg-background text-muted-foreground hover:text-foreground border-border/60 size-7 border shadow-sm";
 
 type AgentMessageProps = {
-  readonly canCreateClickUpDoc?: boolean;
   readonly canEdit?: boolean;
   readonly canRespond: boolean;
   readonly childFailuresByCallId?: ReadonlyMap<string, readonly SubagentChildFailure[]>;
@@ -58,7 +56,6 @@ type AgentMessageProps = {
   readonly emptyOutcome?: AssistantEmptyOutcome | null;
   readonly isStreaming: boolean;
   readonly message: EveMessage;
-  readonly onCreateClickUpDoc?: () => void | Promise<void>;
   readonly onEditResend?: (text: string) => void | Promise<void>;
   readonly onInputResponses: (responses: readonly AgentInputResponse[]) => void | Promise<void>;
   readonly onRegenerate?: () => void | Promise<void>;
@@ -72,7 +69,6 @@ function userTextFromMessage(message: EveMessage): string {
 }
 
 function AgentMessageView({
-  canCreateClickUpDoc = false,
   canEdit = false,
   canRespond,
   childFailuresByCallId,
@@ -80,7 +76,6 @@ function AgentMessageView({
   emptyOutcome = null,
   isStreaming,
   message,
-  onCreateClickUpDoc,
   onEditResend,
   onInputResponses,
   onRegenerate,
@@ -183,9 +178,6 @@ function AgentMessageView({
     downloadTextFile(markdownDownloadFilename(null, "brain-message"), copyMarkdown);
   };
 
-  const showCreateClickUpDoc =
-    !isUser && canCreateClickUpDoc && Boolean(onCreateClickUpDoc) && canCopy;
-
   const stopSpeech = () => {
     speechStopRef.current?.();
     speechStopRef.current = null;
@@ -223,7 +215,7 @@ function AgentMessageView({
     () => (completedAt ? formatMessageTimestamp(completedAt) : null),
     [completedAt],
   );
-  const showMoreMenu = !isUser && (canCopy || Boolean(timestampLabel) || showCreateClickUpDoc);
+  const showMoreMenu = !isUser && (canCopy || Boolean(timestampLabel));
 
   // Wait until the assistant turn finishes so actions aren't offered mid-stream.
   const showActions =
@@ -445,17 +437,6 @@ function AgentMessageView({
                       Download as Markdown
                     </DropdownMenuItem>
                   ) : null}
-                  {showCreateClickUpDoc ? (
-                    <DropdownMenuItem
-                      className="cursor-pointer gap-2"
-                      onSelect={() => {
-                        void onCreateClickUpDoc?.();
-                      }}
-                    >
-                      <FileTextIcon className="size-3.5" />
-                      Create ClickUp Doc
-                    </DropdownMenuItem>
-                  ) : null}
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : null}
@@ -518,9 +499,6 @@ export function areAgentMessagePropsEqual(
     return false;
   }
   if (previous.onRegenerate !== next.onRegenerate) {
-    return false;
-  }
-  if (previous.canCreateClickUpDoc !== next.canCreateClickUpDoc) {
     return false;
   }
   if (previous.completedAt !== next.completedAt) {

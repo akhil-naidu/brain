@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckIcon, CopyIcon, DownloadIcon, FileTextIcon } from "lucide-react";
+import { CheckIcon, CopyIcon, DownloadIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
@@ -555,20 +555,6 @@ function BrainAppShellInner({ children }: { readonly children: ReactNode }) {
                 </Button>
               </IconTooltip>
             </>
-          ) : null}
-          {handlers?.threadActions?.canCreateClickUpDoc ? (
-            <IconTooltip label="Create ClickUp Doc from chat" side="bottom">
-              <Button
-                aria-label="Create ClickUp Doc from chat"
-                className="text-muted-foreground hover:text-foreground size-8"
-                onClick={handlers.onCreateClickUpDoc}
-                size="icon-sm"
-                type="button"
-                variant="ghost"
-              >
-                <FileTextIcon className="size-4" />
-              </Button>
-            </IconTooltip>
           ) : null}
           {activeChat ? (
             <ChatRowMenu

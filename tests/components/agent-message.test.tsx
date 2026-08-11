@@ -199,19 +199,16 @@ describe("AgentMessage more menu", () => {
     });
   });
 
-  it("downloads markdown and creates a ClickUp Doc from the overflow menu", async () => {
-    const onCreateClickUpDoc = vi.fn();
+  it("downloads markdown from the overflow menu", async () => {
     const downloadTextFile = vi
       .spyOn(exportMarkdown, "downloadTextFile")
       .mockImplementation(() => undefined);
 
     render(
       <AgentMessage
-        canCreateClickUpDoc
         canRespond={false}
         isStreaming={false}
         message={assistantMessage}
-        onCreateClickUpDoc={onCreateClickUpDoc}
         onInputResponses={vi.fn()}
       />,
     );
@@ -222,31 +219,6 @@ describe("AgentMessage more menu", () => {
     });
     fireEvent.click(screen.getByRole("menuitem", { name: "Download as Markdown" }));
     expect(downloadTextFile).toHaveBeenCalledWith("brain-message.md", "Hello from Brain");
-
-    fireEvent.pointerDown(screen.getByRole("button", { name: "More message actions" }));
-    await waitFor(() => {
-      expect(screen.getByRole("menuitem", { name: "Create ClickUp Doc" })).toBeDefined();
-    });
-    fireEvent.click(screen.getByRole("menuitem", { name: "Create ClickUp Doc" }));
-    expect(onCreateClickUpDoc).toHaveBeenCalledOnce();
-  });
-
-  it("hides Create ClickUp Doc when gated off", async () => {
-    render(
-      <AgentMessage
-        canCreateClickUpDoc={false}
-        canRespond={false}
-        isStreaming={false}
-        message={assistantMessage}
-        onCreateClickUpDoc={vi.fn()}
-        onInputResponses={vi.fn()}
-      />,
-    );
-
-    fireEvent.pointerDown(screen.getByRole("button", { name: "More message actions" }));
-    await waitFor(() => {
-      expect(screen.getByRole("menuitem", { name: "Download as Markdown" })).toBeDefined();
-    });
     expect(screen.queryByRole("menuitem", { name: "Create ClickUp Doc" })).toBeNull();
   });
 });
