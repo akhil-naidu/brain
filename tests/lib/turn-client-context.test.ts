@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createTurnClientContext } from "@/lib/chat/turn-client-context";
 
 describe("createTurnClientContext", () => {
-  it("includes modelId and connection guidance", () => {
+  it("includes modelId, agent mode, and connection guidance", () => {
     const context = createTurnClientContext({
       modelId: "deepseek/deepseek-v4-flash",
       enabledConnections: {
@@ -24,9 +24,37 @@ describe("createTurnClientContext", () => {
     });
 
     expect(context.modelId).toBe("deepseek/deepseek-v4-flash");
+    expect(context.mode).toBe("agent");
     expect(context.connections).toContain("asana");
     expect(context.connections).toContain("clickup");
     expect(context.connections).toMatch(/disabled/i);
+  });
+
+  it("uses ask-mode connection guidance when mode is ask", () => {
+    const context = createTurnClientContext({
+      modelId: "deepseek/deepseek-v4-pro",
+      mode: "ask",
+      enabledConnections: {
+        asana: true,
+        atlassian: true,
+        clickup: true,
+        dflow: true,
+        github: true,
+        gmail: true,
+        linear: true,
+        mongodb: true,
+        notion: true,
+        sentry: true,
+        slack: true,
+        snowflake: true,
+        toolbox: true,
+        zernio: true,
+      },
+    });
+
+    expect(context.mode).toBe("ask");
+    expect(context.connections).toMatch(/ask mode/i);
+    expect(context.connections).not.toContain("asana");
   });
 
   it("normalizes unknown model ids to the default", () => {

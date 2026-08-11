@@ -1,4 +1,9 @@
 import type { ModelMessage } from "ai";
+import {
+  DEFAULT_BRAIN_CHAT_MODE,
+  resolveBrainChatMode,
+  type BrainChatMode,
+} from "@/lib/chat/chat-mode";
 import { resolveBrainChatModelId } from "./models";
 
 const CLIENT_CONTEXT_PREFIX = "Client context:\n";
@@ -99,4 +104,19 @@ export function extractWorkspaceIdFromMessages(messages: readonly ModelMessage[]
     return workspaceId.trim();
   }
   return null;
+}
+
+/** Reads Ask vs Agent mode from the newest turn client context. */
+export function extractChatModeFromMessages(messages: readonly ModelMessage[]): BrainChatMode {
+  const context = newestClientContext(messages);
+  if (!context) {
+    return DEFAULT_BRAIN_CHAT_MODE;
+  }
+  const mode = context["mode"];
+  return typeof mode === "string" ? resolveBrainChatMode(mode) : DEFAULT_BRAIN_CHAT_MODE;
+}
+
+/** True when the turn is Ask mode (plain chat, no tools). */
+export function isAskModeTurn(messages: readonly ModelMessage[] | undefined): boolean {
+  return extractChatModeFromMessages(messages ?? []) === "ask";
 }
