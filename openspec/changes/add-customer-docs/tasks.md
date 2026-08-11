@@ -28,3 +28,5 @@
 - [x] 5.3 Document all MCP connections (DCR, static OAuth, PAT, HTTP)
 - [x] 5.4 Document workspaces, playbooks/schedules/morning brief, models/tools, enterprise SSO/SCIM/license
 - [x] 5.5 Deepen self-hosting (Docker, Dokku, upgrades, troubleshooting) and reference (env, shortcuts, glossary)
+- [x] 5.6 Deepen enterprise (SSO DNS, SCIM, license entitlements, instance users)
+- [x] 5.7 Add BYOA scopes, security checklist, restore runbook, FAQ; deepen sandbox/account/shared-chat
