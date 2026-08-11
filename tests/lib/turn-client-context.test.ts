@@ -134,4 +134,54 @@ describe("createTurnClientContext", () => {
     expect(context.modelId).toBe(customId);
     expect(context.workspaceId).toBe("ws-team");
   });
+
+  it("includes attached repo when provided", () => {
+    const context = createTurnClientContext({
+      modelId: "deepseek/deepseek-v4-pro",
+      attachedRepo: { owner: "acme", name: "api", ref: "main" },
+      enabledConnections: {
+        asana: false,
+        atlassian: false,
+        clickup: false,
+        dflow: false,
+        github: true,
+        gmail: false,
+        linear: false,
+        mongodb: false,
+        notion: false,
+        sentry: false,
+        slack: false,
+        snowflake: false,
+        toolbox: false,
+        zernio: false,
+      },
+    });
+
+    expect(context.repo).toBe("acme/api@main");
+  });
+
+  it("omits repo when attachment is cleared", () => {
+    const context = createTurnClientContext({
+      modelId: "deepseek/deepseek-v4-pro",
+      attachedRepo: null,
+      enabledConnections: {
+        asana: false,
+        atlassian: false,
+        clickup: false,
+        dflow: false,
+        github: false,
+        gmail: false,
+        linear: false,
+        mongodb: false,
+        notion: false,
+        sentry: false,
+        slack: false,
+        snowflake: false,
+        toolbox: false,
+        zernio: false,
+      },
+    });
+
+    expect(context.repo).toBeUndefined();
+  });
 });

@@ -1,4 +1,5 @@
 import type { ModelMessage } from "ai";
+import { parseAttachedRepo, type AttachedRepo } from "@/lib/chat/attached-repo";
 import {
   DEFAULT_BRAIN_CHAT_MODE,
   resolveBrainChatMode,
@@ -114,6 +115,21 @@ export function extractChatModeFromMessages(messages: readonly ModelMessage[]): 
   }
   const mode = context["mode"];
   return typeof mode === "string" ? resolveBrainChatMode(mode) : DEFAULT_BRAIN_CHAT_MODE;
+}
+
+/** Reads an attached GitHub repo from the newest turn client context when present. */
+export function extractAttachedRepoFromMessages(
+  messages: readonly ModelMessage[],
+): AttachedRepo | null {
+  const context = newestClientContext(messages);
+  if (!context) {
+    return null;
+  }
+  const repo = context["repo"];
+  if (typeof repo !== "string") {
+    return null;
+  }
+  return parseAttachedRepo(repo);
 }
 
 /** True when the turn is Ask mode (plain chat, no tools). */

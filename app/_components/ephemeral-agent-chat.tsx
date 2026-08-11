@@ -21,6 +21,7 @@ import { IntegrationsMenu } from "@/components/chat/integrations-menu";
 import { AgentMessage, type AgentInputResponse } from "@/components/chat/message";
 import { BetaBadge } from "@/components/brand/beta-badge";
 import { BrainMark } from "@/components/brain-mark";
+import { AttachedRepoControl } from "@/components/chat/attached-repo-control";
 import { ChatModePicker } from "@/components/chat/chat-mode-picker";
 import { ModelPicker } from "@/components/chat/model-picker";
 import { PlaybooksMenu } from "@/components/chat/playbooks-menu";
@@ -30,6 +31,12 @@ import { SchedulesMenu } from "@/components/chat/schedules-menu";
 import { SchedulesPanel } from "@/components/chat/schedules-panel";
 import { ChatProjectBadge } from "@/components/chat/chat-project-badge";
 import { WelcomePrompts } from "@/components/chat/welcome-prompts";
+import {
+  attachedRepoStorageKey,
+  formatAttachedRepo,
+  parseAttachedRepo,
+  type AttachedRepo,
+} from "@/lib/chat/attached-repo";
 import {
   buildUserContentMessage,
   canSubmitChatTurn,
@@ -178,9 +185,36 @@ export function EphemeralAgentChat({
   const [schedulesRefreshKey, setSchedulesRefreshKey] = useState(0);
   const [composerFocused, setComposerFocused] = useState(false);
   const [attachments, setAttachments] = useState<readonly PendingAttachment[]>([]);
+  const [attachedRepo, setAttachedRepo] = useState<AttachedRepo | null>(null);
   const [projectName, setProjectName] = useState<string | null>(null);
   const [projects, setProjects] = useState<readonly ChatProject[]>([]);
   const [schedules, setSchedules] = useState<readonly ScheduledPlaybook[]>([]);
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(attachedRepoStorageKey(chatId));
+      setAttachedRepo(parseAttachedRepo(stored));
+    } catch {
+      setAttachedRepo(null);
+    }
+  }, [chatId]);
+
+  const handleAttachedRepoChange = useCallback(
+    (repo: AttachedRepo | null) => {
+      setAttachedRepo(repo);
+      try {
+        const key = attachedRepoStorageKey(chatId);
+        if (repo) {
+          window.localStorage.setItem(key, formatAttachedRepo(repo));
+        } else {
+          window.localStorage.removeItem(key);
+        }
+      } catch {
+        // Ignore storage failures (private mode / quota).
+      }
+    },
+    [chatId],
+  );
 
   const commandItems = useMemo(
     () =>
@@ -337,6 +371,17 @@ export function EphemeralAgentChat({
       chatIdRef.current = chat.id;
       revisionRef.current = chat.revision;
       visibilityRef.current = chat.visibility;
+      try {
+        const ephemeralKey = attachedRepoStorageKey(null);
+        const chatKey = attachedRepoStorageKey(chat.id);
+        const stored = window.localStorage.getItem(ephemeralKey);
+        if (stored) {
+          window.localStorage.setItem(chatKey, stored);
+          window.localStorage.removeItem(ephemeralKey);
+        }
+      } catch {
+        // Ignore storage failures.
+      }
       onChatCreated?.(chat);
       return chat.id;
     },
@@ -694,12 +739,13 @@ export function EphemeralAgentChat({
   const turnClientContext = useMemo(
     () =>
       createTurnClientContext({
+        attachedRepo,
         enabledConnections,
         mode: chatMode,
         modelId: selectedModelId,
         workspaceId,
       }),
-    [chatMode, enabledConnections, selectedModelId, workspaceId],
+    [attachedRepo, chatMode, enabledConnections, selectedModelId, workspaceId],
   );
 
   const handleInputResponses = useCallback(
@@ -781,6 +827,7 @@ export function EphemeralAgentChat({
       const clientContext =
         options?.mode !== undefined
           ? createTurnClientContext({
+              attachedRepo,
               enabledConnections,
               mode: options.mode,
               modelId: selectedModelId,
@@ -809,6 +856,7 @@ export function EphemeralAgentChat({
     },
     [
       acquireTurnLock,
+      attachedRepo,
       attachments,
       enabledConnections,
       ensureChat,
@@ -1287,6 +1335,11 @@ export function EphemeralAgentChat({
                   disabled={isBusy || missingApiKey}
                   mode={chatMode}
                   onModeChange={setChatMode}
+                />
+                <AttachedRepoControl
+                  disabled={isBusy || missingApiKey}
+                  onChange={handleAttachedRepoChange}
+                  repo={attachedRepo}
                 />
                 <ModelPicker
                   disabled={isBusy || missingApiKey}
