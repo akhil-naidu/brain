@@ -127,9 +127,27 @@ function AgentMessageView({
     if (!editing) {
       return;
     }
-    textareaRef.current?.focus();
-    textareaRef.current?.select();
+    const el = textareaRef.current;
+    if (!el) {
+      return;
+    }
+    el.focus();
+    el.select();
+    el.style.height = "auto";
+    el.style.height = `${Math.max(el.scrollHeight, 88)}px`;
   }, [editing]);
+
+  useEffect(() => {
+    if (!editing) {
+      return;
+    }
+    const el = textareaRef.current;
+    if (!el) {
+      return;
+    }
+    el.style.height = "auto";
+    el.style.height = `${Math.max(el.scrollHeight, 88)}px`;
+  }, [editValue, editing]);
 
   const beginEdit = () => {
     setEditValue(originalText);
@@ -234,14 +252,20 @@ function AgentMessageView({
       <div
         className={cn(
           "flex min-w-0 flex-col",
-          isUser ? "max-w-[85%] items-end" : "w-full max-w-none items-start",
+          isUser
+            ? editing
+              ? "w-full max-w-xl items-stretch sm:max-w-2xl"
+              : "max-w-[85%] items-end"
+            : "w-full max-w-none items-start",
         )}
       >
         <div
           className={cn(
             "min-w-0",
             isUser
-              ? "border-border/40 bg-muted/70 text-foreground w-full rounded-[18px] border px-3 py-1.5 text-[15px] leading-6 shadow-sm"
+              ? editing
+                ? "border-border/50 bg-muted/50 text-foreground w-full rounded-2xl border px-3 py-3 shadow-sm"
+                : "border-border/40 bg-muted/70 text-foreground w-full rounded-[18px] border px-3 py-1.5 text-[15px] leading-6 shadow-sm"
               : "text-foreground w-full text-sm leading-relaxed",
             sendFailed ? "border-destructive/40" : undefined,
           )}
@@ -250,10 +274,10 @@ function AgentMessageView({
             <p className="text-destructive mb-1 text-xs">Message failed to send</p>
           ) : null}
           {editing ? (
-            <div className="flex flex-col gap-2 py-1">
+            <div className="flex flex-col gap-3">
               <textarea
                 aria-label="Edit message"
-                className="border-border bg-background text-foreground focus-visible:ring-ring/50 min-h-20 w-full resize-y rounded-md border px-2 py-1.5 text-[15px] leading-6 outline-none focus-visible:ring-2"
+                className="bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-ring/40 max-h-72 min-h-[5.5rem] w-full resize-none rounded-xl border-0 px-3 py-2.5 text-[15px] leading-6 shadow-none outline-none focus-visible:ring-2"
                 onChange={(event) => setEditValue(event.target.value)}
                 onKeyDown={(event) => {
                   if (event.key === "Escape") {
@@ -265,20 +289,33 @@ function AgentMessageView({
                   }
                 }}
                 ref={textareaRef}
+                rows={3}
                 value={editValue}
               />
-              <div className="flex justify-end gap-1.5">
-                <Button onClick={cancelEdit} size="xs" type="button" variant="ghost">
-                  Cancel
-                </Button>
-                <Button
-                  disabled={editValue.trim().length === 0}
-                  onClick={submitEdit}
-                  size="xs"
-                  type="button"
-                >
-                  Send
-                </Button>
+              <div className="flex items-center justify-between gap-3 px-0.5">
+                <p className="text-muted-foreground text-xs tracking-wide">
+                  <kbd className="bg-background/80 text-muted-foreground rounded border px-1 py-0.5 font-sans text-[10px]">
+                    Esc
+                  </kbd>{" "}
+                  cancel ·{" "}
+                  <kbd className="bg-background/80 text-muted-foreground rounded border px-1 py-0.5 font-sans text-[10px]">
+                    ⌘↵
+                  </kbd>{" "}
+                  send
+                </p>
+                <div className="flex shrink-0 gap-2">
+                  <Button onClick={cancelEdit} size="sm" type="button" variant="ghost">
+                    Cancel
+                  </Button>
+                  <Button
+                    disabled={editValue.trim().length === 0}
+                    onClick={submitEdit}
+                    size="sm"
+                    type="button"
+                  >
+                    Send
+                  </Button>
+                </div>
               </div>
             </div>
           ) : (

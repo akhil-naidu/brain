@@ -6,7 +6,7 @@ import {
   type SessionState,
   isTurnFailureEvent,
 } from "eve/client";
-import { useEveAgent } from "eve/react";
+import { useEveAgent, type EveMessage } from "eve/react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useChatShell } from "@/app/_components/chat-shell-context";
@@ -78,7 +78,10 @@ import {
 import { takePendingPlaybookRun } from "@/lib/chat/pending-playbook-run";
 import {
   applyMessageSuppression,
+  applyRegenerateAnchorFilter,
+  canOmitTurnsWithoutEmptyingHistory,
   collectEditSuppression,
+  collectRegenerateSuppression,
   omitTurnEvents,
   turnIdFromMessage,
 } from "@/lib/chat/edit-branch";
@@ -300,6 +303,16 @@ export function EphemeralAgentChat({
     () => new Set(),
   );
   const suppressedTurnIdsRef = useRef<ReadonlySet<string>>(new Set());
+  // Keeps the original user prompt visible while a regenerate resend appends a duplicate.
+  const [regenerateAnchorUserId, setRegenerateAnchorUserId] = useState<string | null>(null);
+  /** Edit/regenerate in flight — turn omission is deferred until replacement history is safe. */
+  const pendingBranchRef = useRef<{
+    readonly anchorUserId: string;
+    readonly kind: "edit" | "regenerate";
+    readonly messageIds: readonly string[];
+    readonly turnIds: readonly string[];
+  } | null>(null);
+  const agentMessagesRef = useRef<readonly EveMessage[]>([]);
 
   const clearDisposalTimeout = useCallback(() => {
     if (disposalTimeoutRef.current !== null) {
@@ -561,12 +574,87 @@ export function EphemeralAgentChat({
       readonly events: readonly HandleMessageStreamEvent[];
       readonly session: SessionState;
     }) => {
-      const droppedTurnIds = suppressedTurnIdsRef.current;
-      const events =
-        droppedTurnIds.size > 0 ? omitTurnEvents(snapshot.events, droppedTurnIds) : snapshot.events;
+      const pending = pendingBranchRef.current;
+      const committedTurnIds = new Set(suppressedTurnIdsRef.current);
+      let eventsToPersist = snapshot.events;
+
+      if (pending) {
+        const proposedDrop = new Set(committedTurnIds);
+        for (const turnId of pending.turnIds) {
+          proposedDrop.add(turnId);
+        }
+
+        if (canOmitTurnsWithoutEmptyingHistory(snapshot.events, proposedDrop)) {
+          // Replacement turn produced its own user message — safe to drop the old turn.
+          suppressedTurnIdsRef.current = proposedDrop;
+          eventsToPersist = omitTurnEvents(snapshot.events, proposedDrop);
+          pendingBranchRef.current = null;
+          if (pending.kind === "regenerate") {
+            setRegenerateAnchorUserId(null);
+          }
+        } else {
+          // Failed edit/regenerate: keep the original turn on disk and restore it in the UI.
+          pendingBranchRef.current = null;
+          setRegenerateAnchorUserId(null);
+          setSuppressedMessageIds((previous) => {
+            const next = new Set(previous);
+            const restoredIds = new Set(pending.messageIds);
+            for (const id of pending.messageIds) {
+              next.delete(id);
+            }
+            const anchorIndex = agentMessagesRef.current.findIndex(
+              (message) => message.id === pending.anchorUserId,
+            );
+            if (anchorIndex >= 0) {
+              for (const message of agentMessagesRef.current.slice(anchorIndex + 1)) {
+                // Hide only the failed replacement turn — not the restored original reply.
+                if (!restoredIds.has(message.id)) {
+                  next.add(message.id);
+                }
+              }
+            }
+            return next;
+          });
+
+          const failedReplacementTurnIds = new Set<string>();
+          const restoredIds = new Set(pending.messageIds);
+          const pendingTurnIds = new Set(pending.turnIds);
+          const anchorIndex = agentMessagesRef.current.findIndex(
+            (message) => message.id === pending.anchorUserId,
+          );
+          if (anchorIndex >= 0) {
+            for (const message of agentMessagesRef.current.slice(anchorIndex + 1)) {
+              if (restoredIds.has(message.id)) {
+                continue;
+              }
+              const turnId = turnIdFromMessage(message);
+              if (turnId && !pendingTurnIds.has(turnId)) {
+                failedReplacementTurnIds.add(turnId);
+              }
+            }
+          }
+          const dropFailedReplacement = new Set(committedTurnIds);
+          for (const turnId of failedReplacementTurnIds) {
+            dropFailedReplacement.add(turnId);
+          }
+          eventsToPersist =
+            failedReplacementTurnIds.size > 0
+              ? omitTurnEvents(snapshot.events, dropFailedReplacement)
+              : committedTurnIds.size > 0
+                ? canOmitTurnsWithoutEmptyingHistory(snapshot.events, committedTurnIds)
+                  ? omitTurnEvents(snapshot.events, committedTurnIds)
+                  : snapshot.events
+                : snapshot.events;
+        }
+      } else if (committedTurnIds.size > 0) {
+        eventsToPersist = canOmitTurnsWithoutEmptyingHistory(snapshot.events, committedTurnIds)
+          ? omitTurnEvents(snapshot.events, committedTurnIds)
+          : snapshot.events;
+      }
+
       void persistChatUpdate({
         eveSession: snapshot.session,
-        events,
+        events: eventsToPersist,
       });
 
       if (!disposalBoundaryRef.current) {
@@ -590,15 +678,55 @@ export function EphemeralAgentChat({
     session,
   });
   agentStopRef.current = agent.stop;
+  agentMessagesRef.current = agent.data.messages;
   const childFailuresByCallId = useSubagentChildFailures(agent.events);
   const send = agent.send;
 
   const messages = useMemo(
-    () => applyMessageSuppression(agent.data.messages, suppressedMessageIds),
-    [agent.data.messages, suppressedMessageIds],
+    () =>
+      applyRegenerateAnchorFilter(
+        applyMessageSuppression(agent.data.messages, suppressedMessageIds),
+        regenerateAnchorUserId,
+      ),
+    [agent.data.messages, regenerateAnchorUserId, suppressedMessageIds],
   );
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
+
+  useEffect(() => {
+    if (!regenerateAnchorUserId) {
+      return;
+    }
+
+    const anchorIndex = agent.data.messages.findIndex(
+      (message) => message.id === regenerateAnchorUserId,
+    );
+    if (anchorIndex < 0) {
+      setRegenerateAnchorUserId(null);
+      return;
+    }
+
+    const duplicateUserIds = agent.data.messages
+      .slice(anchorIndex + 1)
+      .filter((message) => message.role === "user")
+      .map((message) => message.id);
+    if (duplicateUserIds.length === 0) {
+      return;
+    }
+
+    setSuppressedMessageIds((previous) => {
+      const next = new Set(previous);
+      let changed = false;
+      for (const id of duplicateUserIds) {
+        if (!next.has(id)) {
+          next.add(id);
+          changed = true;
+        }
+      }
+      return changed ? next : previous;
+    });
+    setRegenerateAnchorUserId(null);
+  }, [agent.data.messages, regenerateAnchorUserId]);
 
   const canCopyThread = useMemo(
     () =>
@@ -796,20 +924,20 @@ export function EphemeralAgentChat({
   );
 
   const handleSubmit = useCallback(
-    async (text: string, options?: { readonly mode?: BrainChatMode }) => {
+    async (text: string, options?: { readonly mode?: BrainChatMode }): Promise<boolean> => {
       if (missingApiKey) {
         showClientError(MISSING_COMMAND_CODE_API_KEY_MESSAGE);
-        return;
+        return false;
       }
 
       if (!canSubmitChatTurn(text, attachments)) {
-        return;
+        return false;
       }
 
       const lengthError = getChatMessageLengthError(text);
       if (lengthError) {
         showClientError(lengthError);
-        return;
+        return false;
       }
 
       const previousDraft = text;
@@ -842,12 +970,14 @@ export function EphemeralAgentChat({
         } finally {
           await releaseTurnLock();
         }
+        return true;
       } catch (error) {
         onDraftChange(previousDraft);
         setAttachments(previousAttachments);
         if (!isChatApiConflictError(error)) {
           showClientError(toErrorMessage(error, "Failed to send message."));
         }
+        return false;
       }
     },
     [
@@ -978,7 +1108,13 @@ export function EphemeralAgentChat({
 
   const pendingPlaybookRunTriedRef = useRef(false);
   useEffect(() => {
-    if (pendingPlaybookRunTriedRef.current || missingApiKey || isBusy || messages.length > 0) {
+    if (
+      pendingPlaybookRunTriedRef.current ||
+      missingApiKey ||
+      isBusy ||
+      messages.length > 0 ||
+      suppressedMessageIds.size > 0
+    ) {
       return;
     }
     const prompt = takePendingPlaybookRun();
@@ -987,7 +1123,7 @@ export function EphemeralAgentChat({
       return;
     }
     void handleSubmit(prompt);
-  }, [handleSubmit, isBusy, messages.length, missingApiKey]);
+  }, [handleSubmit, isBusy, messages.length, missingApiKey, suppressedMessageIds.size]);
 
   const lastUserMessage = useMemo(() => getLastUserMessage(messages), [messages]);
   const editableUserMessageId =
@@ -995,9 +1131,11 @@ export function EphemeralAgentChat({
   const regeneratableAssistantId =
     !isBusy && !missingApiKey && lastMessage?.role === "assistant" ? lastMessage.id : null;
 
-  const suppressFromMessage = useCallback(
-    (fromMessageId: string) => {
-      const suppression = collectEditSuppression(agent.data.messages, fromMessageId);
+  const applySuppression = useCallback(
+    (suppression: {
+      readonly messageIds: readonly string[];
+      readonly turnIds: readonly string[];
+    }) => {
       if (suppression.messageIds.length > 0) {
         setSuppressedMessageIds((previous) => {
           const next = new Set(previous);
@@ -1015,7 +1153,32 @@ export function EphemeralAgentChat({
         suppressedTurnIdsRef.current = next;
       }
     },
-    [agent.data.messages],
+    [],
+  );
+
+  const undoSuppression = useCallback(
+    (suppression: {
+      readonly messageIds: readonly string[];
+      readonly turnIds: readonly string[];
+    }) => {
+      if (suppression.messageIds.length > 0) {
+        setSuppressedMessageIds((previous) => {
+          const next = new Set(previous);
+          for (const id of suppression.messageIds) {
+            next.delete(id);
+          }
+          return next;
+        });
+      }
+      if (suppression.turnIds.length > 0) {
+        const next = new Set(suppressedTurnIdsRef.current);
+        for (const id of suppression.turnIds) {
+          next.delete(id);
+        }
+        suppressedTurnIdsRef.current = next;
+      }
+    },
+    [],
   );
 
   const handleEditResend = useCallback(
@@ -1024,11 +1187,27 @@ export function EphemeralAgentChat({
         return;
       }
 
-      // Hide the edited user bubble and anything after it, then send as a replacement turn.
-      suppressFromMessage(editableUserMessageId);
-      void handleSubmit(text);
+      // Edit replaces the prompt — hide the edited user bubble and anything after it.
+      // Defer turn omission until a replacement user message is safely persisted.
+      setRegenerateAnchorUserId(null);
+      const suppression = collectEditSuppression(agent.data.messages, editableUserMessageId);
+      applySuppression({ messageIds: suppression.messageIds, turnIds: [] });
+      pendingBranchRef.current = {
+        anchorUserId: editableUserMessageId,
+        kind: "edit",
+        messageIds: suppression.messageIds,
+        turnIds: suppression.turnIds,
+      };
+
+      void (async () => {
+        const sent = await handleSubmit(text);
+        if (!sent) {
+          pendingBranchRef.current = null;
+          undoSuppression({ messageIds: suppression.messageIds, turnIds: [] });
+        }
+      })();
     },
-    [editableUserMessageId, handleSubmit, suppressFromMessage],
+    [agent.data.messages, applySuppression, editableUserMessageId, handleSubmit, undoSuppression],
   );
   const handleEditResendRef = useRef(handleEditResend);
   handleEditResendRef.current = handleEditResend;
@@ -1045,10 +1224,36 @@ export function EphemeralAgentChat({
       return;
     }
 
-    // Replace the latest user+assistant turn with a fresh reply for the same prompt.
-    suppressFromMessage(lastUserMessage.id);
-    void handleSubmit(prompt);
-  }, [handleSubmit, lastUserMessage, messages, regeneratableAssistantId, suppressFromMessage]);
+    const userMessageId = lastUserMessage.id;
+    // Keep the user prompt on screen; only replace the assistant reply (and anything after).
+    // Do not drop the shared turn from persistence until a replacement user message exists.
+    const suppression = collectRegenerateSuppression(agent.data.messages, userMessageId);
+    applySuppression({ messageIds: suppression.messageIds, turnIds: [] });
+    pendingBranchRef.current = {
+      anchorUserId: userMessageId,
+      kind: "regenerate",
+      messageIds: suppression.messageIds,
+      turnIds: suppression.turnIds,
+    };
+    setRegenerateAnchorUserId(userMessageId);
+
+    void (async () => {
+      const sent = await handleSubmit(prompt);
+      if (!sent) {
+        pendingBranchRef.current = null;
+        undoSuppression({ messageIds: suppression.messageIds, turnIds: [] });
+        setRegenerateAnchorUserId(null);
+      }
+    })();
+  }, [
+    agent.data.messages,
+    applySuppression,
+    handleSubmit,
+    lastUserMessage,
+    messages,
+    regeneratableAssistantId,
+    undoSuppression,
+  ]);
   const handleRegenerateRef = useRef(handleRegenerate);
   handleRegenerateRef.current = handleRegenerate;
   const onRegenerate = useCallback(() => {
@@ -1084,7 +1289,9 @@ export function EphemeralAgentChat({
     }
   }, [visibleError]);
 
-  const isEmptyThread = messages.length === 0;
+  // Suppressed turns (edit/regenerate) can briefly empty the visible list — keep
+  // the conversation chrome, not the new-chat welcome, while replacement is in flight.
+  const isEmptyThread = messages.length === 0 && suppressedMessageIds.size === 0;
   const dimEmptyChrome = isEmptyThread && composerFocused && !missingApiKey;
 
   return (
@@ -1304,7 +1511,9 @@ export function EphemeralAgentChat({
               setAttachments((previous) => previous.filter((item) => item.id !== id));
             }}
             onStop={requestCancellation}
-            onSubmit={handleSubmit}
+            onSubmit={(text) => {
+              void handleSubmit(text);
+            }}
             placeholder="Ask Brain anything…  (/ commands, @ mention)"
             value={draft}
           />

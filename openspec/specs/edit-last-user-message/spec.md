@@ -25,3 +25,8 @@ Activating Edit MUST let the user change the prompt text and send it again throu
 #### Scenario: Cancel keeps original text
 - **WHEN** the user starts editing and cancels
 - **THEN** no send occurs and the original message text remains displayed
+
+#### Scenario: Failed edit restore keeps history
+- **WHEN** the user confirms an edited send and the replacement turn fails before producing a new user message event
+- **THEN** the original user prompt and its prior assistant output are shown again
+- **AND** persisted chat history MUST still include that original user prompt after the turn settles

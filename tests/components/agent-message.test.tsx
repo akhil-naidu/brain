@@ -66,6 +66,29 @@ describe("AgentMessage edit", () => {
     expect(onEditResend).not.toHaveBeenCalled();
     expect(screen.getByText("Original prompt")).toBeDefined();
   });
+
+  it("expands the editor and supports Escape to cancel", () => {
+    const onEditResend = vi.fn();
+
+    render(
+      <AgentMessage
+        canEdit
+        canRespond={false}
+        isStreaming={false}
+        message={userMessage}
+        onEditResend={onEditResend}
+        onInputResponses={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit message" }));
+    const textarea = screen.getByRole("textbox", { name: "Edit message" });
+    expect(screen.getByText(/cancel/)).toBeDefined();
+    fireEvent.keyDown(textarea, { key: "Escape" });
+
+    expect(onEditResend).not.toHaveBeenCalled();
+    expect(screen.getByText("Original prompt")).toBeDefined();
+  });
 });
 
 const assistantMessage = {

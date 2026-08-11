@@ -239,7 +239,40 @@ vi.mock("@/components/chat/integrations-menu", () => ({
 }));
 
 vi.mock("@/components/chat/message", () => ({
-  AgentMessage: () => null,
+  AgentMessage: ({
+    emptyOutcome,
+    message,
+    onEditResend,
+    onRegenerate,
+  }: {
+    readonly emptyOutcome?: "failed" | "stopped" | null;
+    readonly message: {
+      readonly id: string;
+      readonly parts: ReadonlyArray<{ readonly text?: string; readonly type: string }>;
+      readonly role: string;
+    };
+    readonly onEditResend?: (text: string) => void;
+    readonly onRegenerate?: () => void;
+  }) => {
+    const text = message.parts.find((part) => part.type === "text")?.text ?? "";
+    return (
+      <article data-testid={`message-${message.id}`}>
+        {text ? <p>{text}</p> : null}
+        {emptyOutcome === "failed" ? <p>Couldn't generate a response</p> : null}
+        {emptyOutcome === "stopped" ? <p>Response stopped</p> : null}
+        {onRegenerate ? (
+          <button onClick={() => onRegenerate()} type="button">
+            Regenerate response
+          </button>
+        ) : null}
+        {onEditResend ? (
+          <button onClick={() => onEditResend(`${text} (edited)`)} type="button">
+            Edit send
+          </button>
+        ) : null}
+      </article>
+    );
+  },
 }));
 
 vi.mock("@/lib/chat/subagent-child-failures", () => ({
@@ -248,11 +281,13 @@ vi.mock("@/lib/chat/subagent-child-failures", () => ({
 
 import { EphemeralAgentChat } from "@/app/_components/ephemeral-agent-chat";
 import { listChatProjects } from "@/lib/chat/chat-projects-api";
+import { updateChat } from "@/lib/chat/chats-api";
 
 afterEach(() => {
   cleanup();
   agent.data = { messages: [] };
   agent.error = undefined;
+  agent.events = [];
   agent.status = "ready";
   agent.send.mockReset();
   agent.send.mockResolvedValue(undefined);
@@ -291,6 +326,22 @@ function renderChat(draft = "", projectId: string | null = null) {
       return dispose();
     },
   };
+}
+
+function updateChatPersistHasUserMessage(input: unknown): boolean {
+  if (input === null || typeof input !== "object" || !("events" in input)) {
+    return false;
+  }
+  const events = Reflect.get(input, "events");
+  if (!Array.isArray(events)) {
+    return false;
+  }
+  return events.some((event) => {
+    if (event === null || typeof event !== "object" || !("type" in event)) {
+      return false;
+    }
+    return Reflect.get(event, "type") === "message.received";
+  });
 }
 
 describe("EphemeralAgentChat", () => {
@@ -382,6 +433,456 @@ describe("EphemeralAgentChat", () => {
         }),
       );
     });
+  });
+
+  it("regenerates without flashing the empty new-chat welcome", async () => {
+    agent.status = "ready";
+    agent.data = {
+      messages: [
+        {
+          id: "t1:user",
+          metadata: { status: "complete", turnId: "t1" },
+          parts: [{ type: "text", text: "Summarize ClickUp", state: "done" }],
+          role: "user",
+        },
+        {
+          id: "t1:assistant",
+          metadata: { status: "complete", turnId: "t1" },
+          parts: [{ type: "text", text: "Here is a summary.", state: "done" }],
+          role: "assistant",
+        },
+      ],
+    };
+
+    renderChat();
+
+    expect(screen.getByText("Here is a summary.")).toBeDefined();
+    expect(
+      screen.queryByText(/Ask across your connected work apps — tasks, mail, Slack/),
+    ).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Regenerate response" }));
+
+    expect(screen.getByText("Summarize ClickUp")).toBeDefined();
+    expect(screen.queryByText("Here is a summary.")).toBeNull();
+    expect(
+      screen.queryByText(/Ask across your connected work apps — tasks, mail, Slack/),
+    ).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Brain" })).toBeNull();
+
+    await waitFor(() => {
+      expect(agent.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: "Summarize ClickUp",
+        }),
+      );
+    });
+  });
+
+  it("keeps the user prompt when regenerating an empty failed assistant reply", async () => {
+    agent.status = "ready";
+    agent.events = [
+      {
+        data: { code: "provider_error", message: "boom", sequence: 1, turnId: "t1" },
+        type: "turn.failed",
+      },
+    ];
+    agent.data = {
+      messages: [
+        {
+          id: "t1:user",
+          metadata: { status: "complete", turnId: "t1" },
+          parts: [{ type: "text", text: "Draft a brief", state: "done" }],
+          role: "user",
+        },
+        {
+          id: "t1:assistant",
+          metadata: { status: "complete", turnId: "t1" },
+          parts: [],
+          role: "assistant",
+        },
+      ],
+    };
+
+    renderChat();
+
+    expect(screen.getByText("Couldn't generate a response")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Regenerate response" }));
+
+    expect(screen.getByText("Draft a brief")).toBeDefined();
+    expect(screen.queryByText("Couldn't generate a response")).toBeNull();
+    await waitFor(() => {
+      expect(agent.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: "Draft a brief",
+        }),
+      );
+    });
+  });
+
+  it("keeps earlier turns when regenerating the latest reply", async () => {
+    agent.status = "ready";
+    agent.data = {
+      messages: [
+        {
+          id: "t1:user",
+          metadata: { status: "complete", turnId: "t1" },
+          parts: [{ type: "text", text: "First prompt", state: "done" }],
+          role: "user",
+        },
+        {
+          id: "t1:assistant",
+          metadata: { status: "complete", turnId: "t1" },
+          parts: [{ type: "text", text: "First reply", state: "done" }],
+          role: "assistant",
+        },
+        {
+          id: "t2:user",
+          metadata: { status: "complete", turnId: "t2" },
+          parts: [{ type: "text", text: "Second prompt", state: "done" }],
+          role: "user",
+        },
+        {
+          id: "t2:assistant",
+          metadata: { status: "complete", turnId: "t2" },
+          parts: [{ type: "text", text: "Second reply", state: "done" }],
+          role: "assistant",
+        },
+      ],
+    };
+
+    renderChat();
+
+    fireEvent.click(screen.getByRole("button", { name: "Regenerate response" }));
+
+    expect(screen.getByText("First prompt")).toBeDefined();
+    expect(screen.getByText("First reply")).toBeDefined();
+    expect(screen.getByText("Second prompt")).toBeDefined();
+    expect(screen.queryByText("Second reply")).toBeNull();
+    await waitFor(() => {
+      expect(agent.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: "Second prompt",
+        }),
+      );
+    });
+  });
+
+  it("restores the prior assistant reply when regenerate send fails", async () => {
+    agent.status = "ready";
+    agent.send.mockRejectedValueOnce(new Error("Provider unavailable"));
+    agent.data = {
+      messages: [
+        {
+          id: "t1:user",
+          metadata: { status: "complete", turnId: "t1" },
+          parts: [{ type: "text", text: "Summarize ClickUp", state: "done" }],
+          role: "user",
+        },
+        {
+          id: "t1:assistant",
+          metadata: { status: "complete", turnId: "t1" },
+          parts: [{ type: "text", text: "Here is a summary.", state: "done" }],
+          role: "assistant",
+        },
+      ],
+    };
+
+    renderChat();
+
+    fireEvent.click(screen.getByRole("button", { name: "Regenerate response" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Here is a summary.")).toBeDefined();
+    });
+    expect(screen.getByText("Summarize ClickUp")).toBeDefined();
+    expect(screen.getByText("Provider unavailable")).toBeDefined();
+  });
+
+  it("restores the failed placeholder and keeps history when regenerate turn fails", async () => {
+    vi.mocked(updateChat).mockClear();
+    agent.status = "ready";
+    agent.events = [
+      {
+        data: { code: "provider_error", message: "boom", sequence: 1, turnId: "t1" },
+        type: "turn.failed",
+      },
+    ];
+    agent.data = {
+      messages: [
+        {
+          id: "t1:user",
+          metadata: { status: "complete", turnId: "t1" },
+          parts: [{ type: "text", text: "hi", state: "done" }],
+          role: "user",
+        },
+        {
+          id: "t1:assistant",
+          metadata: { status: "complete", turnId: "t1" },
+          parts: [],
+          role: "assistant",
+        },
+      ],
+    };
+
+    render(
+      <EphemeralAgentChat chatId="chat-1" draft="" onDraftChange={vi.fn()} projectId={null} />,
+    );
+
+    expect(screen.getByText("Couldn't generate a response")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Regenerate response" }));
+    expect(screen.queryByText("Couldn't generate a response")).toBeNull();
+    expect(screen.getByText("hi")).toBeDefined();
+
+    await waitFor(() => {
+      expect(agent.send).toHaveBeenCalled();
+    });
+
+    const snapshotEvents: HandleMessageStreamEvent[] = [
+      {
+        data: { sequence: 1, turnId: "t1" },
+        type: "turn.started",
+      },
+      {
+        data: { message: "hi", sequence: 2, turnId: "t1" },
+        type: "message.received",
+      },
+      {
+        data: { code: "provider_error", message: "first fail", sequence: 3, turnId: "t1" },
+        type: "turn.failed",
+      },
+      {
+        data: { sequence: 4, turnId: "t2" },
+        type: "turn.started",
+      },
+      {
+        data: { code: "provider_error", message: "second fail", sequence: 5, turnId: "t2" },
+        type: "turn.failed",
+      },
+    ];
+
+    act(() => {
+      agent.status = "error";
+      agent.error = { message: "second fail" };
+      callbacks.onFinish?.({
+        data: { messages: [] },
+        error: undefined,
+        events: snapshotEvents,
+        session: { sessionId: "sess-1", streamIndex: 5 },
+        status: "error",
+      });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Couldn't generate a response")).toBeDefined();
+    });
+    expect(screen.getByText("hi")).toBeDefined();
+
+    await waitFor(() => {
+      expect(updateChat).toHaveBeenCalled();
+    });
+    const persistCalls = vi.mocked(updateChat).mock.calls.filter((call) => {
+      const input = call[1];
+      return (
+        input !== null &&
+        typeof input === "object" &&
+        "events" in input &&
+        Array.isArray(Reflect.get(input, "events"))
+      );
+    });
+    expect(persistCalls.length).toBeGreaterThan(0);
+    for (const call of persistCalls) {
+      expect(updateChatPersistHasUserMessage(call[1])).toBe(true);
+    }
+  });
+
+  it("restores the original prompt when edit send fails", async () => {
+    agent.status = "ready";
+    agent.send.mockRejectedValueOnce(new Error("Provider unavailable"));
+    agent.data = {
+      messages: [
+        {
+          id: "t1:user",
+          metadata: { status: "complete", turnId: "t1" },
+          parts: [{ type: "text", text: "Original prompt", state: "done" }],
+          role: "user",
+        },
+        {
+          id: "t1:assistant",
+          metadata: { status: "complete", turnId: "t1" },
+          parts: [{ type: "text", text: "Original reply", state: "done" }],
+          role: "assistant",
+        },
+      ],
+    };
+
+    renderChat();
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit send" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Original prompt")).toBeDefined();
+    });
+    expect(screen.getByText("Original reply")).toBeDefined();
+    expect(screen.getByText("Provider unavailable")).toBeDefined();
+  });
+
+  it("restores the original turn and keeps history when edit replacement fails", async () => {
+    vi.mocked(updateChat).mockClear();
+    agent.status = "ready";
+    agent.data = {
+      messages: [
+        {
+          id: "t1:user",
+          metadata: { status: "complete", turnId: "t1" },
+          parts: [{ type: "text", text: "Original prompt", state: "done" }],
+          role: "user",
+        },
+        {
+          id: "t1:assistant",
+          metadata: { status: "complete", turnId: "t1" },
+          parts: [{ type: "text", text: "Original reply", state: "done" }],
+          role: "assistant",
+        },
+      ],
+    };
+
+    render(
+      <EphemeralAgentChat chatId="chat-1" draft="" onDraftChange={vi.fn()} projectId={null} />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit send" }));
+    expect(screen.queryByText("Original prompt")).toBeNull();
+
+    await waitFor(() => {
+      expect(agent.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: "Original prompt (edited)",
+        }),
+      );
+    });
+
+    const snapshotEvents: HandleMessageStreamEvent[] = [
+      {
+        data: { sequence: 1, turnId: "t1" },
+        type: "turn.started",
+      },
+      {
+        data: { message: "Original prompt", sequence: 2, turnId: "t1" },
+        type: "message.received",
+      },
+      {
+        data: { sequence: 3, turnId: "t2" },
+        type: "turn.started",
+      },
+      {
+        data: { code: "provider_error", message: "edit fail", sequence: 4, turnId: "t2" },
+        type: "turn.failed",
+      },
+    ];
+
+    act(() => {
+      agent.status = "error";
+      agent.error = { message: "edit fail" };
+      callbacks.onFinish?.({
+        data: { messages: [] },
+        error: undefined,
+        events: snapshotEvents,
+        session: { sessionId: "sess-1", streamIndex: 4 },
+        status: "error",
+      });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Original prompt")).toBeDefined();
+    });
+    expect(screen.getByText("Original reply")).toBeDefined();
+
+    await waitFor(() => {
+      expect(updateChat).toHaveBeenCalled();
+    });
+    const persistCalls = vi.mocked(updateChat).mock.calls.filter((call) => {
+      const input = call[1];
+      return (
+        input !== null &&
+        typeof input === "object" &&
+        "events" in input &&
+        Array.isArray(Reflect.get(input, "events"))
+      );
+    });
+    expect(persistCalls.length).toBeGreaterThan(0);
+    for (const call of persistCalls) {
+      expect(updateChatPersistHasUserMessage(call[1])).toBe(true);
+    }
+  });
+
+  it("hides the resent duplicate user bubble after regenerate", async () => {
+    agent.status = "ready";
+    agent.data = {
+      messages: [
+        {
+          id: "t1:user",
+          metadata: { status: "complete", turnId: "t1" },
+          parts: [{ type: "text", text: "Summarize ClickUp", state: "done" }],
+          role: "user",
+        },
+        {
+          id: "t1:assistant",
+          metadata: { status: "complete", turnId: "t1" },
+          parts: [{ type: "text", text: "Old summary", state: "done" }],
+          role: "assistant",
+        },
+      ],
+    };
+
+    const { rerender } = render(
+      <EphemeralAgentChat chatId={null} draft="" onDraftChange={vi.fn()} projectId={null} />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Regenerate response" }));
+
+    await waitFor(() => {
+      expect(agent.send).toHaveBeenCalled();
+    });
+
+    agent.data = {
+      messages: [
+        {
+          id: "t1:user",
+          metadata: { status: "complete", turnId: "t1" },
+          parts: [{ type: "text", text: "Summarize ClickUp", state: "done" }],
+          role: "user",
+        },
+        {
+          id: "t1:assistant",
+          metadata: { status: "complete", turnId: "t1" },
+          parts: [{ type: "text", text: "Old summary", state: "done" }],
+          role: "assistant",
+        },
+        {
+          id: "t2:user",
+          metadata: { status: "complete", turnId: "t2" },
+          parts: [{ type: "text", text: "Summarize ClickUp", state: "done" }],
+          role: "user",
+        },
+        {
+          id: "t2:assistant",
+          metadata: { status: "complete", turnId: "t2" },
+          parts: [{ type: "text", text: "New summary", state: "done" }],
+          role: "assistant",
+        },
+      ],
+    };
+
+    rerender(
+      <EphemeralAgentChat chatId={null} draft="" onDraftChange={vi.fn()} projectId={null} />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("New summary")).toBeDefined();
+    });
+    expect(screen.getAllByText("Summarize ClickUp")).toHaveLength(1);
+    expect(screen.queryByText("Old summary")).toBeNull();
   });
 
   it("keeps Stop pending without detaching the stream early", async () => {
