@@ -1,0 +1,34 @@
+---
+title: Morning brief
+description: Daily scheduled summary across your work connections.
+---
+
+Morning brief is a scheduled Agent turn that summarizes what needs attention across apps you have connected and enabled — not an IDE digest.
+
+## Configure
+
+On **`/schedules`**:
+
+1. Enable **Morning brief**  
+2. Set time and timezone  
+3. Optionally limit to weekdays  
+4. Optionally deliver a copy to Slack (Slack must be connected)  
+5. Use **Run now** to test, then open the last brief chat  
+
+## What the agent does
+
+- Uses only connections that are **enabled and authorized** for the run  
+- Skips apps that need setup or sign-in (and mentions that briefly)  
+- Pulls high-signal items (due/blocked work, important messages, urgent tickets)  
+- Writes a short brief with concrete next actions — no fabricated tasks  
+
+Write/send actions still ask for confirmation when tools require approval.
+
+## Host requirements
+
+Automatic due-sweeps need:
+
+- `BRAIN_INTERNAL_TOKEN`  
+- `BRAIN_INTERNAL_URL` (default `http://127.0.0.1:3000`)  
+
+Runs authenticate as the schedule owner. See [Environment variables](/docs/reference/environment).
