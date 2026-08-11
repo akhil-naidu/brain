@@ -43,8 +43,8 @@ Chat MUST be treated as unavailable for sending only when neither Command Code n
 - **THEN** the composer allows sending turns that use an available custom model
 
 ### Requirement: Friendly provider auth errors
-When a turn fails with an error that indicates missing or invalid API credentials for the selected provider path, the UI MUST show end-user unavailable or credential-failure guidance instead of only the raw provider text or operator env instructions. Guidance MUST NOT name env vars or `.env` paths.
+When a turn fails with an error that indicates missing or invalid API credentials for the selected provider path, the UI MUST show credential-failure guidance for that model (not the host-wide “chat isn’t available” empty-state copy) instead of only the raw provider text or operator env instructions. Guidance MUST NOT name env vars or `.env` paths.
 
 #### Scenario: Auth-like failure is rewritten
 - **WHEN** the agent reports an error mentioning an API key or unauthorized credential failure
-- **THEN** the UI shows end-user guidance rather than env-file instructions
+- **THEN** the UI shows end-user model credential guidance rather than env-file instructions or host-wide unavailable copy

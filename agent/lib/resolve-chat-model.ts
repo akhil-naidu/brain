@@ -19,6 +19,13 @@ export type ResolvedChatModel = {
 
 const COMMAND_CODE_BASE_URL = "https://api.commandcode.ai/provider/v1";
 
+/**
+ * Local OpenAI-compatible servers (Ollama, LM Studio) often need no real key.
+ * `@ai-sdk/openai` still requires a non-empty apiKey or the turn fails as
+ * “provider API key missing” before the request reaches the host.
+ */
+const OPENAI_COMPAT_PLACEHOLDER_API_KEY = "ollama";
+
 function commandCodeClient(env: Record<string, string | undefined>) {
   return createOpenAI({
     apiKey: env.COMMAND_CODE_API_KEY,
@@ -32,8 +39,9 @@ function openAiCompatibleClient(input: {
   readonly apiKey: string | undefined;
   readonly name: string;
 }) {
+  const apiKey = input.apiKey?.trim() || OPENAI_COMPAT_PLACEHOLDER_API_KEY;
   return createOpenAI({
-    apiKey: input.apiKey,
+    apiKey,
     baseURL: input.baseUrl,
     name: input.name,
   });

@@ -52,7 +52,7 @@ import { listScheduledPlaybooks, type ScheduledPlaybook } from "@/lib/chat/sched
 import { WELCOME_PROMPTS } from "@/lib/chat/welcome-prompts";
 import { getChatMessageLengthError } from "@/lib/chat/limits";
 import {
-  formatProviderErrorMessage,
+  formatProviderError,
   MISSING_COMMAND_CODE_API_KEY_COMPOSER_REASON,
   MISSING_COMMAND_CODE_API_KEY_MESSAGE,
   MISSING_COMMAND_CODE_API_KEY_TITLE,
@@ -90,6 +90,7 @@ type Cancellation = {
 
 type ErrorNotice = {
   readonly id: string;
+  readonly title: string;
   readonly message: string;
 };
 
@@ -296,9 +297,11 @@ export function EphemeralAgentChat({
 
   const showClientError = useCallback((message: string) => {
     errorSequenceRef.current += 1;
+    const formatted = formatProviderError(message);
     setClientError({
       id: `client:${errorSequenceRef.current}`,
-      message: formatProviderErrorMessage(message),
+      title: formatted.title,
+      message: formatted.message,
     });
     setDismissedError(null);
   }, []);
@@ -474,9 +477,11 @@ export function EphemeralAgentChat({
       const failureId = failureEventId(event);
       if (failureId && isTurnFailureEvent(event) && !seenFailureIdsRef.current.has(failureId)) {
         seenFailureIdsRef.current.add(failureId);
+        const formatted = formatProviderError(event.data.message);
         setClientError({
           id: failureId,
-          message: formatProviderErrorMessage(event.data.message),
+          title: formatted.title,
+          message: formatted.message,
         });
         setDismissedError(null);
       }
@@ -573,10 +578,14 @@ export function EphemeralAgentChat({
   const isStreaming = agent.status === "submitted" || agent.status === "streaming";
   const isBusy = isStreaming || waitingForAuthorization;
   const agentError = agent.error?.message
-    ? {
-        id: `agent:${agent.error.message}`,
-        message: formatProviderErrorMessage(agent.error.message),
-      }
+    ? (() => {
+        const formatted = formatProviderError(agent.error.message);
+        return {
+          id: `agent:${agent.error.message}`,
+          title: formatted.title,
+          message: formatted.message,
+        };
+      })()
     : null;
   const displayError = clientError ?? agentError;
   const visibleError = displayError && displayError.id !== dismissedError ? displayError : null;
@@ -1074,6 +1083,7 @@ export function EphemeralAgentChat({
           message={visibleError.message}
           onDismiss={dismissError}
           onRetry={showRetry ? handleRetry : undefined}
+          title={visibleError.title}
         />
       ) : null}
       <ChatConversation className="min-h-0 flex-1">

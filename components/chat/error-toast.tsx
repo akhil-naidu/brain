@@ -4,10 +4,12 @@ import { AlertCircleIcon, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function ErrorToast({
+  title = "Request failed",
   message,
   onDismiss,
   onRetry,
 }: {
+  readonly title?: string;
   readonly message: string;
   readonly onDismiss: () => void;
   readonly onRetry?: () => void;
@@ -20,7 +22,7 @@ export function ErrorToast({
     >
       <AlertCircleIcon className="text-destructive mt-0.5 size-4 shrink-0" />
       <div className="min-w-0 flex-1">
-        <p className="font-medium">Request failed</p>
+        <p className="font-medium">{title}</p>
         <p className="text-muted-foreground mt-0.5">{message}</p>
         {onRetry ? (
           <div className="mt-2">

@@ -2,6 +2,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const getSecretById = vi.fn();
 const listVisibleModels = vi.fn();
+const createOpenAI = vi.fn((options: { apiKey?: string; baseURL?: string; name?: string }) => ({
+  chat: (modelId: string) => ({ modelId, providerOptions: options }),
+}));
+
+vi.mock("@ai-sdk/openai", () => ({
+  createOpenAI: (options: { apiKey?: string; baseURL?: string; name?: string }) =>
+    createOpenAI(options),
+}));
 
 vi.mock("@/lib/chat/custom-models/store", () => ({
   getCustomModelStore: () => ({
@@ -17,6 +25,7 @@ describe("resolveChatModelSelection", () => {
   afterEach(() => {
     getSecretById.mockReset();
     listVisibleModels.mockReset();
+    createOpenAI.mockClear();
   });
 
   it("resolves curated models when Command Code is configured", async () => {
@@ -83,5 +92,37 @@ describe("resolveChatModelSelection", () => {
     });
 
     expect(resolved.selectableId).toBe("deepseek/deepseek-v4-pro");
+  });
+
+  it("uses a placeholder API key when the custom model has none", async () => {
+    const rowId = "44444444-4444-4444-8444-444444444444";
+    getSecretById.mockResolvedValue({
+      id: rowId,
+      scope: "workspace",
+      workspaceId: "ws-1",
+      label: "Ollama",
+      description: "",
+      baseUrl: "http://127.0.0.1:11434/v1",
+      providerModelId: "llama3.2",
+      contextWindowTokens: 8192,
+      hasApiKey: false,
+      apiKeyCiphertext: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    const resolved = await resolveChatModelSelection({
+      modelId: `custom:${rowId}`,
+      workspaceId: "ws-1",
+      env: { BETTER_AUTH_SECRET: "test-only-better-auth-secret-32chars!!" },
+    });
+
+    expect(resolved.selectableId).toBe(`custom:${rowId}`);
+    expect(createOpenAI).toHaveBeenCalledWith(
+      expect.objectContaining({
+        apiKey: "ollama",
+        baseURL: "http://127.0.0.1:11434/v1",
+      }),
+    );
   });
 });
