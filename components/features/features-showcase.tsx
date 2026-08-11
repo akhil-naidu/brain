@@ -87,6 +87,12 @@ export function FeaturesShowcase() {
               How it works
             </a>
             <Link
+              className="text-muted-foreground hover:text-foreground hidden rounded-full px-3 py-1.5 text-sm transition sm:inline-flex"
+              href="/docs"
+            >
+              Docs
+            </Link>
+            <Link
               className="text-muted-foreground hover:text-foreground rounded-full px-3 py-1.5 text-sm transition"
               href="/sign-in"
             >

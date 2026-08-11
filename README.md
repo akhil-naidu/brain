@@ -4,6 +4,8 @@
 
 Browser chat, MCP connections (Slack, Asana, Gmail, Notion, Linear, Atlassian, Zernio, Sentry, GitHub, ClickUp, dFlow, Snowflake, MongoDB, MCP Toolbox), workspaces, playbooks, and schedules — running on **your** host with **your** Postgres. No Vercel AI Gateway, Neon, or Vercel Connect required.
 
+**Customer docs (in-app):** after `pnpm dev`, open [`/docs`](http://localhost:3000/docs) — quickstart, self-hosting, and environment reference.
+
 Built with [Next.js](https://nextjs.org/) + [`eve`](https://eve.dev/) (`withEve()`).
 
 | | |
@@ -140,7 +142,8 @@ agent/           eve agent, connections (MCP), schedules
 app/             Next.js App Router (chat UI, auth, APIs)
 components/      Shared UI
 lib/             Auth, Postgres, chat stores, SEO
-docs/            Deploy notes + design/plans
+content/docs/    Customer docs (Fumadocs → /docs)
+docs/            Deploy notes + design/plans (engineering)
 openspec/        Behavior specs and change proposals
 scripts/         Production start, bootstrap helpers
 docker-compose.yml   Local Postgres 16
