@@ -2,6 +2,7 @@
   "title": "Connections",
   "pages": [
     "index",
+    "byoa-credentials",
     "clickup",
     "notion",
     "linear",

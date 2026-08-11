@@ -32,6 +32,10 @@ Write tools may prompt for **approval** mid-turn before executing.
 
 If a turn needs OAuth and you are not signed in, Brain surfaces an authorize URL in the stream. Complete sign-in in the browser, then continue the chat.
 
+## Credential scopes
+
+Static OAuth / PAT / HTTP apps can store secrets at **workspace**, **host**, or **env** scope. See [BYOA credentials](/docs/connections/byoa-credentials).
+
 ## Persist tokens on the host
 
 Menu Connect stores tokens under **`.eve/`** on the host. Persist that directory across deploys so users are not forced to reconnect after every restart.
