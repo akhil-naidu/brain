@@ -10,9 +10,8 @@ Brain already sends `mode` in turn client context (`ask` | `agent`), gates all h
 - Plan = research tools + plan instructions; Debug = full tools + debug instructions
 
 **Non-Goals:**
-- Editable plan document artifact / Build CTA (user switches to Agent)
+- Editable virtual plan document artifact (markdown in chat is enough)
 - Custom user-defined modes or per-mode model defaults
-- Hard-blocking MCP connection tools in Plan (rely on instructions + harness gates for v1)
 
 ## Decisions
 
@@ -27,21 +26,27 @@ Brain already sends `mode` in turn client context (`ask` | `agent`), gates all h
 | agent | allow | allow |
 | debug | allow | allow |
 
-Implement via `shouldOmitHarnessTool(messages, kind: "all" | "mutating")` used by `gateHarnessTool` / `gateMutatingHarnessTool`.
+Implement via `shouldOmitHarnessTool(messages, kind: "all" | "mutating")` used by `gateHarnessTool`.
 
 ### Accents via CSS variables
 Define `--brain-mode-ask|agent|plan|debug-*` in `globals.css` (green / neutral / amber / red). Mode picker and composer read `data-chat-mode` and apply classes. Prefer theme tokens over hard-coded Tailwind hex so light/dark both work.
 
-### Plan does not ship a Build button
-Plan ends with markdown plan + “switch to Agent”. A Build flow can be a follow-up.
+### Shift+Tab cycles modes
+Composer input handles Shift+Tab (when command menu closed) via `cycleBrainChatMode` → `onModeChange`. Order: Ask → Agent → Plan → Debug → Ask.
+
+### Plan Build CTA
+Show a Build button on the latest settled Plan-mode assistant message. On click: `setChatMode("agent")` and send an implement follow-up with `clientContext.mode: "agent"` (override), because mode state alone races with the closed-over turn context.
 
 ### Connection context string
 Ask keeps the no-tools connections string. Plan/Debug/Agent use normal enabled-connection guidance; Plan/Debug instructions constrain behavior.
 
+### Mode-aware MCP approval
+`approvalForTool` denies all connection tools in Ask, and denies non-`safeReadOnlyTools` in Plan. Mode is synced into `defineState` (`brain.turnChatMode`) from a step.started instructions dynamic so connection approval (which has no messages) can read it.
+
 ## Risks / Trade-offs
 
-- [MCP tools still callable in Plan] → Mitigation: Plan instructions forbid mutating connection actions; harden later if needed.
-- [Model ignores Plan instructions and claims it wrote files] → Mitigation: omit write/bash tools so it cannot.
+- [Snowflake/Toolbox empty allowlists deny all tools in Plan] → Acceptable fail-closed until allowlists are filled.
+- [Model ignores Plan instructions and claims it wrote files] → Mitigation: omit write/bash tools so it cannot; MCP mutators denied at approval.
 - [Accent contrast in dark mode] → Mitigation: use oklch with checked foreground on tinted chips.
 
 ## Migration Plan

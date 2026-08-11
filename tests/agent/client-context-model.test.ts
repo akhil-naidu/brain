@@ -3,8 +3,6 @@ import type { ModelMessage } from "ai";
 import {
   extractChatModeFromMessages,
   isAskModeTurn,
-  isDebugModeTurn,
-  isPlanModeTurn,
   shouldOmitHarnessTool,
 } from "@/agent/lib/client-context-model";
 
@@ -20,8 +18,6 @@ describe("chat mode from client context", () => {
     const messages = [userContext({ modelId: "deepseek/deepseek-v4-pro" })];
     expect(extractChatModeFromMessages(messages)).toBe("agent");
     expect(isAskModeTurn(messages)).toBe(false);
-    expect(isPlanModeTurn(messages)).toBe(false);
-    expect(isDebugModeTurn(messages)).toBe(false);
   });
 
   it("reads ask mode from the newest client context", () => {
@@ -33,30 +29,15 @@ describe("chat mode from client context", () => {
     expect(isAskModeTurn(messages)).toBe(true);
   });
 
-  it("reads plan and debug modes", () => {
-    expect(extractChatModeFromMessages([userContext({ mode: "plan" })])).toBe("plan");
-    expect(isPlanModeTurn([userContext({ mode: "plan" })])).toBe(true);
-    expect(extractChatModeFromMessages([userContext({ mode: "debug" })])).toBe("debug");
-    expect(isDebugModeTurn([userContext({ mode: "debug" })])).toBe(true);
-  });
-
   it("normalizes unknown mode values to agent", () => {
     const messages = [userContext({ mode: "wizard" })];
     expect(extractChatModeFromMessages(messages)).toBe("agent");
+    expect(extractChatModeFromMessages([userContext({ mode: "plan" })])).toBe("agent");
+    expect(extractChatModeFromMessages([userContext({ mode: "debug" })])).toBe("agent");
   });
 
-  it("omits all harness tools in ask and mutating tools in plan", () => {
-    const ask = [userContext({ mode: "ask" })];
-    const plan = [userContext({ mode: "plan" })];
-    const agent = [userContext({ mode: "agent" })];
-    const debug = [userContext({ mode: "debug" })];
-
-    expect(shouldOmitHarnessTool(ask, "all")).toBe(true);
-    expect(shouldOmitHarnessTool(ask, "mutating")).toBe(true);
-    expect(shouldOmitHarnessTool(plan, "all")).toBe(false);
-    expect(shouldOmitHarnessTool(plan, "mutating")).toBe(true);
-    expect(shouldOmitHarnessTool(agent, "all")).toBe(false);
-    expect(shouldOmitHarnessTool(agent, "mutating")).toBe(false);
-    expect(shouldOmitHarnessTool(debug, "mutating")).toBe(false);
+  it("omits harness tools only in ask mode", () => {
+    expect(shouldOmitHarnessTool([userContext({ mode: "ask" })])).toBe(true);
+    expect(shouldOmitHarnessTool([userContext({ mode: "agent" })])).toBe(false);
   });
 });

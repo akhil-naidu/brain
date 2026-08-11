@@ -2,6 +2,7 @@ import { ConnectionAuthorizationRequiredError, defineMcpClientConnection } from 
 import { workspaceIdFromIssuer } from "@/lib/auth/principal";
 import { internalBrainOrigin } from "@/lib/chat/internal-brain-origin";
 import { approvalForTool } from "../lib/define-mcp-oauth-connection";
+import { turnChatMode } from "../lib/turn-chat-mode-state";
 import { getHttpMcpCredentialSetupError } from "../lib/http-mcp-credentials";
 import { mintHttpMcpProxyToken } from "../lib/http-mcp-proxy-token";
 import { getHttpMcpUrlConnection } from "../lib/http-mcp-url";
@@ -55,5 +56,5 @@ export default defineMcpClientConnection({
     },
   },
   approval: ({ toolName }) =>
-    approvalForTool(TOOLBOX_CONNECTION_NAME, meta.safeReadOnlyTools, toolName),
+    approvalForTool(TOOLBOX_CONNECTION_NAME, meta.safeReadOnlyTools, toolName, turnChatMode.get()),
 });

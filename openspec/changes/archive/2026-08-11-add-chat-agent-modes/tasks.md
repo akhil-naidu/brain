@@ -21,3 +21,9 @@
 - [x] 4.1 Update/add unit tests for mode resolve, turn context, and gating helpers
 - [x] 4.2 Add/adjust component coverage for mode accents or picker options
 - [x] 4.3 Run `pnpm run verify` and fix failures
+
+## 5. Follow-ups
+
+- [x] 5.1 Plan Build CTA: switch to Agent and send implement turn with agent client context
+- [x] 5.2 Hard-block mutating MCP / connection tools in Plan mode
+- [x] 5.3 Shift+Tab cycles chat modes in the composer

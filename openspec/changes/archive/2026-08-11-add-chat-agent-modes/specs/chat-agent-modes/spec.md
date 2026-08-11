@@ -26,6 +26,13 @@ While a mode is selected, the chat composer MUST visually distinguish that mode 
 - **WHEN** the user selects Plan or Debug
 - **THEN** the composer chrome uses the Plan amber or Debug red/orange accent respectively
 
+### Requirement: Shift+Tab cycles chat modes
+When the composer message input is focused and the command menu is closed, Shift+Tab MUST cycle the chat mode through Ask → Agent → Plan → Debug → Ask and update the persisted preference.
+
+#### Scenario: Cycle mode with Shift+Tab
+- **WHEN** the user presses Shift+Tab in the composer while Agent is selected and no command menu is open
+- **THEN** the chat mode becomes Plan
+
 ### Requirement: Ask mode is plain chat
 When the turn mode is Ask, the agent MUST answer in natural language only and MUST NOT receive harness tools for that turn. Turn client context MUST instruct the model not to call tools, shell, or connections.
 
@@ -41,11 +48,29 @@ When the turn mode is Agent, the agent MUST keep harness tools available (subjec
 - **THEN** harness tools remain available subject to existing connection and auth rules
 
 ### Requirement: Plan mode researches then plans
-When the turn mode is Plan, the agent MUST produce a structured plan and MUST NOT implement changes in that turn. Read/research harness tools MUST remain available; mutating harness tools (write file and bash) MUST be omitted. Turn guidance MUST tell the user to switch to Agent to implement.
+When the turn mode is Plan, the agent MUST produce a structured plan and MUST NOT implement changes in that turn. Read/research harness tools MUST remain available; mutating harness tools (write file and bash) MUST be omitted. Mutating MCP connection tools MUST be denied; safe read-only connection tools MUST remain eligible to run. Turn guidance MUST tell the user to use Build or switch to Agent to implement.
 
 #### Scenario: Plan turn blocks writes
 - **WHEN** a turn starts with `mode: "plan"`
 - **THEN** write-file and bash harness tools are omitted, research tools remain available, and Plan-mode instructions apply
+
+#### Scenario: Plan turn denies mutating connection tools
+- **WHEN** a turn is in Plan mode and the agent requests a connection tool that is not on the safe read-only allowlist
+- **THEN** the connection approval decision is denied without executing the tool
+
+### Requirement: Ask mode denies connection tools
+When the turn mode is Ask, connection/MCP tools MUST be denied even if discovered.
+
+#### Scenario: Ask turn denies a read connection tool
+- **WHEN** a turn is in Ask mode and a connection tool is requested
+- **THEN** the connection approval decision is denied
+
+### Requirement: Plan Build switches to Agent and implements
+When the user is in Plan mode and the latest settled assistant message has visible content, the UI MUST offer a Build action. Activating Build MUST switch the chat mode to Agent and MUST start a new turn that asks the agent to implement the plan, with turn client context `mode: "agent"` (not Plan).
+
+#### Scenario: Build after a plan reply
+- **WHEN** the user is in Plan mode and clicks Build on the latest assistant plan
+- **THEN** the selected mode becomes Agent and a follow-up implement turn is sent with agent mode client context
 
 ### Requirement: Debug mode is evidence-first
 When the turn mode is Debug, harness tools MUST remain available. The agent MUST prioritize hypotheses, gathering runtime or log evidence, and targeted fixes over speculative large changes, per Debug-mode instructions.

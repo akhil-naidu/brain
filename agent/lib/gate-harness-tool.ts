@@ -1,17 +1,15 @@
 import { defineDynamic, defineTool, type ToolDefinition } from "eve/tools";
-import { shouldOmitHarnessTool, type HarnessToolGate } from "@/agent/lib/client-context-model";
+import { shouldOmitHarnessTool } from "@/agent/lib/client-context-model";
 
 /**
- * Replaces a built-in harness tool with mode-aware availability:
- * - Ask: omit all harness tools
- * - Plan: omit when `gate` is `"mutating"` (write_file / bash)
- * - Agent / Debug: keep the default tool
+ * Replaces a built-in harness tool: omit it in Ask mode (plain chat),
+ * keep the default in Agent mode.
  */
-export function gateHarnessTool(defaultTool: ToolDefinition, gate: HarnessToolGate = "all") {
+export function gateHarnessTool(defaultTool: ToolDefinition) {
   return defineDynamic({
     events: {
       "step.started": (_event, ctx) => {
-        if (shouldOmitHarnessTool(ctx.messages, gate)) {
+        if (shouldOmitHarnessTool(ctx.messages)) {
           return null;
         }
         return defineTool({

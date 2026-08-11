@@ -14,17 +14,10 @@ describe("ChatModePicker", () => {
     expect(trigger.className).toContain("brain-mode-ask");
   });
 
-  it("renders Plan accent on the trigger", () => {
-    render(<ChatModePicker mode="plan" onModeChange={() => undefined} />);
+  it("renders Agent without ask accent classes", () => {
+    render(<ChatModePicker mode="agent" onModeChange={() => undefined} />);
     const trigger = screen.getByRole("combobox", { name: "Chat mode" });
-    expect(trigger.getAttribute("data-chat-mode")).toBe("plan");
-    expect(trigger.className).toContain("brain-mode-plan");
-  });
-
-  it("renders Debug accent on the trigger", () => {
-    render(<ChatModePicker mode="debug" onModeChange={() => undefined} />);
-    const trigger = screen.getByRole("combobox", { name: "Chat mode" });
-    expect(trigger.getAttribute("data-chat-mode")).toBe("debug");
-    expect(trigger.className).toContain("brain-mode-debug");
+    expect(trigger.getAttribute("data-chat-mode")).toBe("agent");
+    expect(trigger.className).not.toContain("brain-mode-ask");
   });
 });

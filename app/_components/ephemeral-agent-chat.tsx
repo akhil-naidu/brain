@@ -84,6 +84,7 @@ import {
 } from "@/lib/chat/assistant-empty-outcome";
 import { canOfferRetry, getLastUserMessage, getRetryableUserPrompt } from "@/lib/chat/retry-prompt";
 import { createTurnClientContext } from "@/lib/chat/turn-client-context";
+import type { BrainChatMode } from "@/lib/chat/chat-mode";
 import { cn } from "@/lib/utils";
 type CancellationState = "idle" | "requested" | "cancelling";
 
@@ -753,7 +754,7 @@ export function EphemeralAgentChat({
   );
 
   const handleSubmit = useCallback(
-    async (text: string) => {
+    async (text: string, options?: { readonly mode?: BrainChatMode }) => {
       if (missingApiKey) {
         showClientError(MISSING_COMMAND_CODE_API_KEY_MESSAGE);
         return;
@@ -777,13 +778,23 @@ export function EphemeralAgentChat({
       onUserMessage?.(text.trim() || titleSource);
       prepareTurn();
 
+      const clientContext =
+        options?.mode !== undefined
+          ? createTurnClientContext({
+              enabledConnections,
+              mode: options.mode,
+              modelId: selectedModelId,
+              workspaceId,
+            })
+          : turnClientContext;
+
       try {
         await ensureChat(titleSource);
         await acquireTurnLock();
         try {
           await send({
             message: buildUserContentMessage(text, previousAttachments),
-            clientContext: turnClientContext,
+            clientContext,
           });
         } finally {
           await releaseTurnLock();
@@ -799,15 +810,18 @@ export function EphemeralAgentChat({
     [
       acquireTurnLock,
       attachments,
+      enabledConnections,
       ensureChat,
       missingApiKey,
       onDraftChange,
       onUserMessage,
       prepareTurn,
       releaseTurnLock,
+      selectedModelId,
       send,
       showClientError,
       turnClientContext,
+      workspaceId,
     ],
   );
 
@@ -1290,6 +1304,7 @@ export function EphemeralAgentChat({
             onFocusChange={(focused) => {
               setComposerFocused(isEmptyThread ? focused : false);
             }}
+            onModeChange={setChatMode}
             onRemoveAttachment={(id) => {
               setAttachments((previous) => previous.filter((item) => item.id !== id));
             }}

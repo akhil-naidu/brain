@@ -56,4 +56,17 @@ describe("task and issue write approval", () => {
       approvalForTool("clickup", clickupProvider.safeReadOnlyTools, "clickup__totally_new_write"),
     ).toBe("user-approval");
   });
+
+  it("denies all connection tools in Ask mode", () => {
+    const decision = approvalForTool(
+      "clickup",
+      clickupProvider.safeReadOnlyTools,
+      "clickup__clickup_get_task",
+      "ask",
+    );
+    expect(decision).toMatchObject({ type: "denied" });
+    if (typeof decision === "object" && decision.type === "denied") {
+      expect(decision.reason).toMatch(/ask mode/i);
+    }
+  });
 });

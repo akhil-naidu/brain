@@ -53,7 +53,11 @@ import {
   setComposerEditorPlainText,
 } from "@/lib/chat/composer-rich-editor";
 import { findComposerTrigger, type ComposerTrigger } from "@/lib/chat/composer-trigger";
-import { type BrainChatMode, DEFAULT_BRAIN_CHAT_MODE } from "@/lib/chat/chat-mode";
+import {
+  type BrainChatMode,
+  cycleBrainChatMode,
+  DEFAULT_BRAIN_CHAT_MODE,
+} from "@/lib/chat/chat-mode";
 import { getChatMessageLength, MAX_CHAT_MESSAGE_CHARS } from "@/lib/chat/limits";
 import { cn } from "@/lib/utils";
 
@@ -63,18 +67,12 @@ const LENGTH_WARN_RATIO = 0.85;
 const MODE_COMPOSER_CLASS: Record<BrainChatMode, string> = {
   ask: "border-[var(--brain-mode-ask-border)] bg-[var(--brain-mode-ask-muted)] has-[[data-chat-composer-input]:focus]:border-[var(--brain-mode-ask)] has-[[data-chat-composer-input]:focus]:bg-[var(--brain-mode-ask-muted)]",
   agent: "",
-  plan: "border-[var(--brain-mode-plan-border)] bg-[var(--brain-mode-plan-muted)] has-[[data-chat-composer-input]:focus]:border-[var(--brain-mode-plan)] has-[[data-chat-composer-input]:focus]:bg-[var(--brain-mode-plan-muted)]",
-  debug:
-    "border-[var(--brain-mode-debug-border)] bg-[var(--brain-mode-debug-muted)] has-[[data-chat-composer-input]:focus]:border-[var(--brain-mode-debug)] has-[[data-chat-composer-input]:focus]:bg-[var(--brain-mode-debug-muted)]",
 };
 
 const MODE_SEND_CLASS: Record<BrainChatMode, string> = {
   ask: "bg-[var(--brain-mode-ask)] text-white hover:bg-[var(--brain-mode-ask)]/90 disabled:bg-[var(--brain-mode-ask-muted)] disabled:text-[var(--brain-mode-ask-foreground)]",
   agent:
     "bg-foreground text-background hover:bg-foreground/90 disabled:bg-foreground/12 disabled:text-muted-foreground",
-  plan: "bg-[var(--brain-mode-plan)] text-[oklch(0.25_0.05_75)] hover:bg-[var(--brain-mode-plan)]/90 disabled:bg-[var(--brain-mode-plan-muted)] disabled:text-[var(--brain-mode-plan-foreground)]",
-  debug:
-    "bg-[var(--brain-mode-debug)] text-white hover:bg-[var(--brain-mode-debug)]/90 disabled:bg-[var(--brain-mode-debug-muted)] disabled:text-[var(--brain-mode-debug-foreground)]",
 };
 
 function formatAttachmentSize(size: number): string {
@@ -127,6 +125,7 @@ export function ChatComposer({
   onChange,
   onCommandAction,
   onFocusChange,
+  onModeChange,
   onRemoveAttachment,
   onStop,
   onSubmit,
@@ -152,6 +151,7 @@ export function ChatComposer({
   ) => void | Promise<void>;
   /** Fires when the message textarea gains or loses focus (not toolbar menus). */
   readonly onFocusChange?: (focused: boolean) => void;
+  readonly onModeChange?: (mode: BrainChatMode) => void;
   readonly onRemoveAttachment?: (id: string) => void;
   readonly onStop: () => void;
   readonly onSubmit: (value: string) => void | Promise<void>;
@@ -331,6 +331,13 @@ export function ChatComposer({
         return;
       }
 
+      // Cursor-like mode cycle: Shift+Tab when the command menu is closed.
+      if (event.key === "Tab" && event.shiftKey && onModeChange && !menuOpen && !disabled) {
+        event.preventDefault();
+        onModeChange(cycleBrainChatMode(mode, "next"));
+        return;
+      }
+
       if (menuOpen) {
         if (event.key === "Escape") {
           event.preventDefault();
@@ -387,7 +394,10 @@ export function ChatComposer({
     [
       activeCommandGroup,
       activeCommandIndex,
+      disabled,
       menuOpen,
+      mode,
+      onModeChange,
       selectCommand,
       submitValue,
       trigger,

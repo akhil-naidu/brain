@@ -14,7 +14,7 @@ This turn is Ask mode: plain chat only.
 
 - Answer in natural language. Do not call tools, shell, file tools, web fetch/search, todos, skills, or connections.
 - Do not use ask_question or connection_search. If you need clarification, ask in the reply text.
-- If the user needs tools, planning, or debugging workflows, tell them to switch to Agent, Plan, or Debug mode.`,
+- If the user needs tools, tell them to switch to Agent mode.`,
       });
     },
   },

@@ -5,6 +5,8 @@ import {
   defineMcpClientConnection,
 } from "eve/connections";
 import { workspaceIdFromIssuer } from "@/lib/auth/principal";
+import type { BrainChatMode } from "@/lib/chat/chat-mode";
+import { turnChatMode } from "@/agent/lib/turn-chat-mode-state";
 import {
   authorizeUrlPath,
   buildAuthorizeUrl,
@@ -26,15 +28,33 @@ export type McpOAuthResume = {
   state: string;
 };
 
+export type ConnectionToolApproval =
+  "not-applicable" | "user-approval" | { readonly type: "denied"; readonly reason: string };
+
 export function approvalForTool(
   providerName: string,
   safeReadOnlyTools: readonly string[],
   qualifiedToolName: string,
-): "not-applicable" | "user-approval" {
+  mode: BrainChatMode = "agent",
+): ConnectionToolApproval {
   const prefix = `${providerName}__`;
-  if (!qualifiedToolName.startsWith(prefix)) return "user-approval";
-  const remoteToolName = qualifiedToolName.slice(prefix.length);
-  return safeReadOnlyTools.includes(remoteToolName) ? "not-applicable" : "user-approval";
+  const remoteToolName = qualifiedToolName.startsWith(prefix)
+    ? qualifiedToolName.slice(prefix.length)
+    : qualifiedToolName;
+  const isSafeRead = safeReadOnlyTools.includes(remoteToolName);
+
+  if (mode === "ask") {
+    return {
+      type: "denied",
+      reason: "Ask mode blocks connection tools. Switch to Agent mode.",
+    };
+  }
+
+  if (!qualifiedToolName.startsWith(prefix)) {
+    return "user-approval";
+  }
+
+  return isSafeRead ? "not-applicable" : "user-approval";
 }
 
 export function defineMcpOAuthConnection(opts: {
@@ -144,6 +164,6 @@ export function defineMcpOAuthConnection(opts: {
       },
     }),
     approval: ({ toolName }) =>
-      approvalForTool(provider.name, provider.safeReadOnlyTools, toolName),
+      approvalForTool(provider.name, provider.safeReadOnlyTools, toolName, turnChatMode.get()),
   });
 }

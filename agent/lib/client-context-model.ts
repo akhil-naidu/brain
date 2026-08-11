@@ -106,7 +106,7 @@ export function extractWorkspaceIdFromMessages(messages: readonly ModelMessage[]
   return null;
 }
 
-/** Reads chat mode from the newest turn client context. */
+/** Reads Ask vs Agent mode from the newest turn client context. */
 export function extractChatModeFromMessages(messages: readonly ModelMessage[]): BrainChatMode {
   const context = newestClientContext(messages);
   if (!context) {
@@ -121,34 +121,10 @@ export function isAskModeTurn(messages: readonly ModelMessage[] | undefined): bo
   return extractChatModeFromMessages(messages ?? []) === "ask";
 }
 
-/** True when the turn is Plan mode (research/plan, no mutating harness tools). */
-export function isPlanModeTurn(messages: readonly ModelMessage[] | undefined): boolean {
-  return extractChatModeFromMessages(messages ?? []) === "plan";
-}
-
-/** True when the turn is Debug mode (evidence-first, full tools). */
-export function isDebugModeTurn(messages: readonly ModelMessage[] | undefined): boolean {
-  return extractChatModeFromMessages(messages ?? []) === "debug";
-}
-
-export type HarnessToolGate = "all" | "mutating";
-
 /**
  * Whether a harness tool should be omitted for the current turn.
- * - Ask: omit every harness tool
- * - Plan: omit mutating tools only (write_file, bash)
- * - Agent / Debug: keep tools
+ * Ask omits every harness tool; Agent keeps tools.
  */
-export function shouldOmitHarnessTool(
-  messages: readonly ModelMessage[] | undefined,
-  gate: HarnessToolGate = "all",
-): boolean {
-  const mode = extractChatModeFromMessages(messages ?? []);
-  if (mode === "ask") {
-    return true;
-  }
-  if (gate === "mutating" && mode === "plan") {
-    return true;
-  }
-  return false;
+export function shouldOmitHarnessTool(messages: readonly ModelMessage[] | undefined): boolean {
+  return isAskModeTurn(messages);
 }

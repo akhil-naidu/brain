@@ -20,16 +20,11 @@ const MODE_TRIGGER_CLASS: Record<BrainChatMode, string> = {
   ask: "text-[var(--brain-mode-ask-foreground)] hover:bg-[var(--brain-mode-ask-muted)] data-[state=open]:bg-[var(--brain-mode-ask-muted)]",
   agent:
     "text-muted-foreground hover:text-foreground hover:bg-background/45 data-[state=open]:bg-background/45",
-  plan: "text-[var(--brain-mode-plan-foreground)] hover:bg-[var(--brain-mode-plan-muted)] data-[state=open]:bg-[var(--brain-mode-plan-muted)]",
-  debug:
-    "text-[var(--brain-mode-debug-foreground)] hover:bg-[var(--brain-mode-debug-muted)] data-[state=open]:bg-[var(--brain-mode-debug-muted)]",
 };
 
 const MODE_DOT_CLASS: Record<BrainChatMode, string> = {
   ask: "bg-[var(--brain-mode-ask)]",
   agent: "bg-muted-foreground/50",
-  plan: "bg-[var(--brain-mode-plan)]",
-  debug: "bg-[var(--brain-mode-debug)]",
 };
 
 export function ChatModePicker({

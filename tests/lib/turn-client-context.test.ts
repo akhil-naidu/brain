@@ -57,7 +57,7 @@ describe("createTurnClientContext", () => {
     expect(context.connections).not.toContain("asana");
   });
 
-  it("uses plan-mode guidance and still lists connections", () => {
+  it("falls back unknown modes like plan/debug to agent", () => {
     const context = createTurnClientContext({
       modelId: "deepseek/deepseek-v4-pro",
       mode: "plan",
@@ -79,35 +79,8 @@ describe("createTurnClientContext", () => {
       },
     });
 
-    expect(context.mode).toBe("plan");
-    expect(context.connections).toMatch(/plan mode/i);
+    expect(context.mode).toBe("agent");
     expect(context.connections).toContain("asana");
-  });
-
-  it("accepts debug mode with normal connection guidance", () => {
-    const context = createTurnClientContext({
-      modelId: "deepseek/deepseek-v4-pro",
-      mode: "debug",
-      enabledConnections: {
-        asana: false,
-        atlassian: false,
-        clickup: false,
-        dflow: false,
-        github: false,
-        gmail: false,
-        linear: false,
-        mongodb: false,
-        notion: false,
-        sentry: true,
-        slack: false,
-        snowflake: false,
-        toolbox: false,
-        zernio: false,
-      },
-    });
-
-    expect(context.mode).toBe("debug");
-    expect(context.connections).toContain("sentry");
     expect(context.connections).not.toMatch(/ask mode/i);
   });
 

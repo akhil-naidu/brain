@@ -12,6 +12,7 @@ import {
   SNOWFLAKE_PLACEHOLDER_MCP_URL,
 } from "../lib/snowflake-mcp-url";
 import { mintSnowflakeProxyToken } from "../lib/snowflake-proxy-token";
+import { turnChatMode } from "../lib/turn-chat-mode-state";
 
 /**
  * Snowflake-managed MCP server (Cortex Agents / SQL / Search / custom tools).
@@ -62,5 +63,10 @@ export default defineMcpClientConnection({
     },
   },
   approval: ({ toolName }) =>
-    approvalForTool(SNOWFLAKE_CONNECTION_NAME, SNOWFLAKE_SAFE_READ_ONLY_TOOLS, toolName),
+    approvalForTool(
+      SNOWFLAKE_CONNECTION_NAME,
+      SNOWFLAKE_SAFE_READ_ONLY_TOOLS,
+      toolName,
+      turnChatMode.get(),
+    ),
 });

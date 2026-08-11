@@ -1,6 +1,6 @@
 export const BRAIN_CHAT_MODE_STORAGE_KEY = "brain.chatMode";
 
-export const BRAIN_CHAT_MODES = ["ask", "agent", "plan", "debug"] as const;
+export const BRAIN_CHAT_MODES = ["ask", "agent"] as const;
 
 export type BrainChatMode = (typeof BRAIN_CHAT_MODES)[number];
 
@@ -23,20 +23,10 @@ export const BRAIN_CHAT_MODE_OPTIONS: readonly BrainChatModeMeta[] = [
     label: "Agent",
     description: "Chat + tools when needed",
   },
-  {
-    id: "plan",
-    label: "Plan",
-    description: "Research and plan — no edits",
-  },
-  {
-    id: "debug",
-    label: "Debug",
-    description: "Evidence-first diagnosis and fixes",
-  },
 ];
 
 export function isBrainChatMode(value: string | null | undefined): value is BrainChatMode {
-  return value === "ask" || value === "agent" || value === "plan" || value === "debug";
+  return value === "ask" || value === "agent";
 }
 
 export function resolveBrainChatMode(value: string | null | undefined): BrainChatMode {
@@ -54,4 +44,16 @@ export function getBrainChatModeMeta(mode: BrainChatMode): BrainChatModeMeta {
     label: "Agent",
     description: "Chat + tools when needed",
   };
+}
+
+/** Cycle Ask ↔ Agent (Shift+Tab). */
+export function cycleBrainChatMode(
+  mode: BrainChatMode,
+  direction: "next" | "previous" = "next",
+): BrainChatMode {
+  const current = resolveBrainChatMode(mode);
+  const index = BRAIN_CHAT_MODES.indexOf(current);
+  const offset = direction === "next" ? 1 : -1;
+  const nextIndex = (index + offset + BRAIN_CHAT_MODES.length) % BRAIN_CHAT_MODES.length;
+  return BRAIN_CHAT_MODES[nextIndex] ?? DEFAULT_BRAIN_CHAT_MODE;
 }
