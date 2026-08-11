@@ -83,11 +83,43 @@ describe("AgentMessage edit", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Edit message" }));
     const textarea = screen.getByRole("textbox", { name: "Edit message" });
-    expect(screen.getByText(/cancel/)).toBeDefined();
+    expect(screen.getByRole("button", { name: "Send" })).toHaveProperty("disabled", true);
     fireEvent.keyDown(textarea, { key: "Escape" });
 
     expect(onEditResend).not.toHaveBeenCalled();
     expect(screen.getByText("Original prompt")).toBeDefined();
+  });
+
+  it("keeps Send disabled until the prompt actually changes", () => {
+    const onEditResend = vi.fn();
+
+    render(
+      <AgentMessage
+        canEdit
+        canRespond={false}
+        isStreaming={false}
+        message={userMessage}
+        onEditResend={onEditResend}
+        onInputResponses={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit message" }));
+    const send = screen.getByRole("button", { name: "Send" });
+    expect(send).toHaveProperty("disabled", true);
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Edit message" }), {
+      target: { value: "Original prompt" },
+    });
+    expect(send).toHaveProperty("disabled", true);
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Edit message" }), {
+      target: { value: "Changed prompt" },
+    });
+    expect(send).toHaveProperty("disabled", false);
+
+    fireEvent.click(send);
+    expect(onEditResend).toHaveBeenCalledWith("Changed prompt");
   });
 });
 

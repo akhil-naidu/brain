@@ -96,8 +96,11 @@ function AgentMessageView({
   const copyResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const speechStopRef = useRef<(() => void) | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editSubmittingRef = useRef(false);
   const speechSupported = !isUser && canUseSpeechSynthesis();
   const spokenText = originalText.trim();
+  const trimmedEditValue = editValue.trim();
+  const isEditDirty = trimmedEditValue.length > 0 && trimmedEditValue !== originalText.trim();
 
   useEffect(() => {
     return () => {
@@ -150,22 +153,27 @@ function AgentMessageView({
   }, [editValue, editing]);
 
   const beginEdit = () => {
+    editSubmittingRef.current = false;
     setEditValue(originalText);
     setEditing(true);
   };
 
   const cancelEdit = () => {
+    editSubmittingRef.current = false;
     setEditing(false);
     setEditValue(originalText);
   };
 
   const submitEdit = () => {
     const next = editValue.trim();
-    if (!next || !onEditResend) {
+    if (!next || !onEditResend || !isEditDirty || editSubmittingRef.current) {
       return;
     }
+    editSubmittingRef.current = true;
     setEditing(false);
-    void onEditResend(next);
+    void Promise.resolve(onEditResend(next)).finally(() => {
+      editSubmittingRef.current = false;
+    });
   };
 
   const handleCopy = () => {
@@ -254,7 +262,7 @@ function AgentMessageView({
           "flex min-w-0 flex-col",
           isUser
             ? editing
-              ? "w-full max-w-xl items-stretch sm:max-w-2xl"
+              ? "w-full max-w-none items-stretch"
               : "max-w-[85%] items-end"
             : "w-full max-w-none items-start",
         )}
@@ -264,7 +272,7 @@ function AgentMessageView({
             "min-w-0",
             isUser
               ? editing
-                ? "border-border/50 bg-muted/50 text-foreground w-full rounded-2xl border px-3 py-3 shadow-sm"
+                ? "border-border/50 bg-muted/40 text-foreground w-full rounded-2xl border px-3 py-3 shadow-sm"
                 : "border-border/40 bg-muted/70 text-foreground w-full rounded-[18px] border px-3 py-1.5 text-[15px] leading-6 shadow-sm"
               : "text-foreground w-full text-sm leading-relaxed",
             sendFailed ? "border-destructive/40" : undefined,
@@ -292,8 +300,8 @@ function AgentMessageView({
                 rows={3}
                 value={editValue}
               />
-              <div className="flex items-center justify-between gap-3 px-0.5">
-                <p className="text-muted-foreground text-xs tracking-wide">
+              <div className="flex items-center justify-end gap-2 sm:justify-between">
+                <p className="text-muted-foreground hidden text-xs tracking-wide sm:block">
                   <kbd className="bg-background/80 text-muted-foreground rounded border px-1 py-0.5 font-sans text-[10px]">
                     Esc
                   </kbd>{" "}
@@ -307,12 +315,7 @@ function AgentMessageView({
                   <Button onClick={cancelEdit} size="sm" type="button" variant="ghost">
                     Cancel
                   </Button>
-                  <Button
-                    disabled={editValue.trim().length === 0}
-                    onClick={submitEdit}
-                    size="sm"
-                    type="button"
-                  >
+                  <Button disabled={!isEditDirty} onClick={submitEdit} size="sm" type="button">
                     Send
                   </Button>
                 </div>
