@@ -20,3 +20,11 @@
 
 - [x] 4.1 Link to `/docs` from home/marketing surface and README
 - [x] 4.2 Run `pnpm verify` and smoke that docs routes typecheck/build with eve config composition intact
+
+## 5. Full pin-to-pin coverage
+
+- [x] 5.1 Expand IA: Chat, Connections, Workspaces, Playbooks & schedules, Models, Enterprise, Reference
+- [x] 5.2 Document chat surfaces (modes, composer, attachments, approvals, history/projects, attached repo)
+- [x] 5.3 Document all MCP connections (DCR, static OAuth, PAT, HTTP)
+- [x] 5.4 Document workspaces, playbooks/schedules/morning brief, models/tools, enterprise SSO/SCIM/license
+- [x] 5.5 Deepen self-hosting (Docker, Dokku, upgrades, troubleshooting) and reference (env, shortcuts, glossary)
