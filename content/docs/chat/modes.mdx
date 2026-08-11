@@ -1,0 +1,25 @@
+---
+title: Ask vs Agent modes
+description: Choose plain chat (Ask) or tool-enabled coding assistant (Agent).
+---
+
+The composer **mode picker** switches between:
+
+| Mode | Behavior |
+| --- | --- |
+| **Ask** | Plain conversation — no MCP tools, no sandbox coding tools |
+| **Agent** | Tools enabled (connections you turn on) + attached-repo coding when a repo is bound |
+
+Cycle modes with **Shift+Tab**. Preference is persisted as `brain.chatMode` (default **Agent**).
+
+## When to use Ask
+
+- Summaries, drafting, Q&A without touching external apps  
+- Avoid accidental tool calls or write approvals  
+
+## When to use Agent
+
+- Slack / GitHub / Notion / … via [connections](/docs/connections)  
+- Code changes against an [attached repo](/docs/chat/attached-repo)  
+
+Write tools (create/update issues, messages, etc.) may ask for **human approval** in the stream before executing.

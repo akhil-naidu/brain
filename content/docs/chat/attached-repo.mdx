@@ -1,0 +1,44 @@
+---
+title: Attached repo and coding
+description: Bind a GitHub repository so Agent mode can clone and edit code in a sandbox.
+---
+
+Brain is not a full IDE (no LSP or inline apply). In **Agent** mode you can attach a GitHub repo so the agent clones it into a sandbox and works on files there.
+
+## Attach a repo
+
+1. Switch composer mode to **Agent**  
+2. Open the **Attached repo** control in the composer  
+3. Paste `owner/name` or a GitHub URL (optional git ref)  
+4. Clear the attachment when finished  
+
+For **private** repositories, connect [GitHub](/docs/connections/github) first so clone credentials work.
+
+## What the agent does
+
+- Clones into the sandbox workspace  
+- Explores and edits with coding tools  
+- Can follow the **open PR** skill: create a branch, commit, push, and open a pull request  
+
+**Ask** mode ignores coding tools even if a repo is attached.
+
+### Opening a pull request
+
+Ask in Agent mode to open a PR after the change is ready. Typical flow:
+
+1. Branch from the attached ref  
+2. Commit sandbox changes  
+3. Push to GitHub  
+4. Open the PR via GitHub MCP (needs [GitHub](/docs/connections/github) connected)  
+
+Brain is not a full IDE — no LSP, no inline apply. Review the PR on GitHub like any other change.
+
+
+## Dual path
+
+| Situation | Path |
+| --- | --- |
+| No repo attached | Chat + MCP apps you enabled |
+| Repo attached (Agent) | Sandbox coding + MCP as needed |
+
+Prefer the sandbox harness for local file edits; use GitHub MCP for remote GitHub API operations (PRs, issues).

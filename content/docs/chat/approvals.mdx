@@ -1,0 +1,24 @@
+---
+title: Approvals and authorizations
+description: Human-in-the-loop tool approval and mid-turn OAuth challenges.
+---
+
+Agent mode can pause a turn for two reasons:
+
+## Tool approval (HITL)
+
+Write tools (create issues, send messages, update records, …) may show an **approval** prompt in the conversation before Brain executes them.
+
+- **Approve** — run the tool with the shown arguments  
+- **Reject / deny** — skip that call; the agent continues without it  
+
+Read-only tools for many apps are allowlisted and may run without a prompt. Ask mode never invokes these tools.
+
+## Connection authorization
+
+If an MCP app needs sign-in, Brain shows an **authorize** challenge with a URL.
+
+1. Open the link and complete the provider OAuth flow  
+2. Return to the chat and continue  
+
+Prefer connecting ahead of time on **`/tools`** so turns are not interrupted. See [Connections overview](/docs/connections).

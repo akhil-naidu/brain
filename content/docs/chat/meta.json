@@ -1,0 +1,14 @@
+{
+  "title": "Chat",
+  "pages": [
+    "overview",
+    "modes",
+    "composer",
+    "attachments",
+    "approvals",
+    "message-actions",
+    "shortcuts",
+    "history-and-projects",
+    "attached-repo"
+  ]
+}
