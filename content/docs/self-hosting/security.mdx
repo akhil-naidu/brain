@@ -1,0 +1,25 @@
+---
+title: Security
+description: Hardening checklist for production Brain hosts.
+---
+
+Treat the Brain host as a **trusted** runtime: MCP tokens and BYOA secrets live on disk under `.eve/`.
+
+## Checklist
+
+1. **Secrets** — Strong unique values for `BETTER_AUTH_SECRET`, `BRAIN_BOOTSTRAP_TOKEN`, and `BRAIN_INTERNAL_TOKEN`  
+2. **Bootstrap** — Require `BRAIN_BOOTSTRAP_TOKEN` in production; retire it from chat logs after first operator  
+3. **Public origin** — Keep `BRAIN_PUBLIC_URL` / `BETTER_AUTH_URL` exact (scheme + host) so cookies and OAuth callbacks stay correct  
+4. **TLS** — Terminate HTTPS at the reverse proxy; prefer `?sslmode=require` for Postgres when off-box  
+5. **Ports** — Expose Next (`:3000`) only; keep eve (`:4274`) on loopback  
+6. **`.eve/`** — Restrict filesystem permissions; include in backups; exclude from public artifacts  
+7. **Signup mode** — Prefer invite-only or SSO-only on shared hosts ([Instance policies](/docs/enterprise/instance-policies))  
+8. **SMTP** — Configure only if you need invite / forgot-password email; otherwise copy invite links  
+9. **License secret** — If using `BRAIN_LICENSE_SECRET`, store it with other host secrets  
+10. **Sessions** — Users can revoke devices under `/settings/account`; admins can reset passwords (signs out all sessions)  
+
+## Related
+
+- [Environment variables](/docs/reference/environment)  
+- [Troubleshooting](/docs/self-hosting/troubleshooting)  
+- [BYOA credentials](/docs/connections/byoa-credentials)

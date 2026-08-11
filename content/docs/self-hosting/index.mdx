@@ -10,17 +10,24 @@ Brain is designed for self-hosting. You provide Postgres and a host; Brain appli
 ```
 Browser → Next (:3000)
             ├─ Better Auth + Brain APIs → Postgres
-            └─ /eve/v1/* (withEve proxy) → eve Nitro (:4274)
+            └─ /eve/v1/* (withEve proxy) → eve Nitro (:4274 loopback)
 ```
 
-`scripts/start-production.mjs` starts eve from `.output/server/index.mjs`, waits for the port, then boots Next. If eve never binds `:4274`, chat fails with `ECONNREFUSED 127.0.0.1:4274`.
+`scripts/start-production.mjs` (`pnpm start` / Docker `CMD`):
+
+1. Starts eve on **`127.0.0.1:${EVE_NEXT_PRODUCTION_PORT}`** (default **4274**)  
+2. Waits until the port accepts connections  
+3. Starts Next on **`0.0.0.0:${PORT}`** (default **3000**)  
+
+**Expose only 3000** publicly (or your reverse-proxy target). Keep **4274** on loopback — browsers reach eve through Next’s `/eve/v1/*` proxy. If eve never binds, chat fails with `ECONNREFUSED 127.0.0.1:4274`.
 
 ## Prerequisites
 
-1. **Postgres 16+** (managed or self-hosted — not Neon-required)
-2. A database role with create/table privileges
-3. Runtime env set **before** first healthy boot (see [Environment variables](/docs/reference/environment))
-4. Persist **`.eve/`** if you use Menu Connect (MCP tokens are file-based)
+1. **Postgres 16+** (managed or self-hosted — not Neon-required)  
+2. A database role with create/table privileges  
+3. Runtime env set **before** first healthy boot (see [Environment variables](/docs/reference/environment))  
+4. Persist **`.eve/`** if you use Menu Connect or BYOA (tokens/credentials are file-based)  
+5. For Agent **attached-repo** coding: a host that can run **microsandbox** (Linux + KVM, or macOS Apple Silicon) — see [Attached repo](/docs/chat/attached-repo)
 
 There is **no SQLite fallback** and no SQLite→Postgres migration — provision an empty database.
 
@@ -59,15 +66,15 @@ Extended Dokku notes (herokuish workarounds, TLS, smoke checks) live in the repo
 
 ## After deploy
 
-1. Confirm logs show eve up, then Next
-2. `curl -sS https://<your-host>/eve/v1/health`
-3. Open `/setup` with `BRAIN_BOOTSTRAP_TOKEN`
+1. Confirm logs show eve up, then Next  
+2. `curl -sS https://<your-host>/eve/v1/health`  
+3. Open `/setup` with `BRAIN_BOOTSTRAP_TOKEN`  
 4. Sign in and send a chat — see [First chat](/docs/getting-started/first-chat)
 
 ## Guides in this section
 
 - [Docker](/docs/self-hosting/docker) — Compose Postgres and the production image  
 - [Dokku and dflow](/docs/self-hosting/dokku) — builder, ports, config  
-- [Upgrades and backups](/docs/self-hosting/upgrades-and-backups) — releases and Postgres  
-- [Troubleshooting](/docs/self-hosting/troubleshooting) — common failures  
-
+- [Upgrades and backups](/docs/self-hosting/upgrades-and-backups) — releases, restore, migrate  
+- [Security](/docs/self-hosting/security) — hardening checklist  
+- [Troubleshooting](/docs/self-hosting/troubleshooting) — common failures

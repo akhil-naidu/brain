@@ -1,21 +1,43 @@
 ---
 title: Upgrades and backups
-description: Keep Brain healthy across deploys and protect Postgres data.
+description: Upgrade safely, back up Postgres and .eve/, and restore a host.
 ---
 
 ## Upgrades
 
-1. Back up Postgres  
+1. Back up Postgres and `.eve/`  
 2. Deploy the new image / git revision  
 3. Boot with the same `BRAIN_DATABASE_URL` — Brain applies schema on startup  
 4. Confirm `/eve/v1/health` and a test chat  
 
-Preserve **`.eve/`** so MCP tokens survive the upgrade.
+Preserve **`.eve/`** so MCP tokens and BYOA credentials survive the upgrade.
 
-## Backups
+## What to back up
 
-- Snapshot Postgres regularly (provider snapshots or `pg_dump`)  
-- Treat `.eve/` as sensitive (OAuth tokens) — include in backup with restricted access  
-- Store `BETTER_AUTH_SECRET` / license secrets outside the database dump in a secrets manager  
+| Asset | Why |
+| --- | --- |
+| **Postgres** | Users, workspaces, chats, playbooks, schedules, licenses |
+| **`.eve/`** | OAuth tokens, BYOA credential files (treat as secrets) |
+| **Secrets store** | `BETTER_AUTH_SECRET`, `BRAIN_LICENSE_SECRET` (if set), `BRAIN_INTERNAL_TOKEN`, `BRAIN_BOOTSTRAP_TOKEN`, model keys |
 
-There is no SQLite fallback — Postgres is the source of truth for users, chats, playbooks, and schedules.
+There is no SQLite fallback — Postgres is the source of truth.
+
+## Restore / migrate runbook
+
+1. Provision Postgres and restore from snapshot or `pg_restore` / `psql` dump  
+2. Point `BRAIN_DATABASE_URL` at the restored database  
+3. Restore the **same** `BETTER_AUTH_SECRET` (sessions / signing) and `BRAIN_LICENSE_SECRET` if you used one  
+4. Remount or copy `.eve/` onto the new host with restricted permissions  
+5. Set `BRAIN_PUBLIC_URL` / `BETTER_AUTH_URL` to the new public origin (update IdP callback URLs if the host changed)  
+6. Start Brain; smoke `/eve/v1/health`, `/sign-in`, a chat turn, and one MCP Connect  
+
+### Host rename checklist
+
+- Update OAuth app callback URLs for Slack / GitHub / …  
+- Re-verify SSO DNS if the public domain changed  
+- Rotate `BRAIN_INTERNAL_TOKEN` only if you intentionally invalidate schedule callers  
+
+### What does not migrate automatically
+
+- Ephemeral sandbox workspaces (attached-repo clones)  
+- Local browser theme preference (`brain-theme`)

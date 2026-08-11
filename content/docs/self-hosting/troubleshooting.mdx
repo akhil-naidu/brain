@@ -12,6 +12,9 @@ description: Common self-host failures and how to fix them.
 | “Chat unavailable” | No models | Set `COMMAND_CODE_API_KEY` or add [custom models](/docs/models/custom-models) |
 | Users re-auth every deploy | `.eve/` not persisted | Mount / restore `.eve/` across releases |
 | Invite email never arrives | SMTP unset | Configure `BRAIN_SMTP_*` or copy the invite link |
+| Attached-repo / coding tools fail | Sandbox runtime unavailable | Host needs **microsandbox** (Linux+KVM or Apple Silicon). Install platform tools / set `MSB_PATH` if required; coding is Agent-only |
+| Company SSO blocked | Domain unverified | Publish DNS TXT and **Verify DNS** — see [SSO](/docs/enterprise/sso) |
+| Workspace BYOA save rejected | License | Need **BYOA** entitlement — or save on **Entire host** / env |
 
 Health check:
 
