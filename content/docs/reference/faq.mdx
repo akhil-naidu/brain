@@ -1,0 +1,51 @@
+---
+title: FAQ
+description: Common questions about Brain chat, hosting, SSO, and tools.
+---
+
+## General
+
+**Is Brain tied to Vercel?**  
+No. Core paths use your Postgres, Better Auth, and Command Code (or custom models) — not Vercel AI Gateway, Connect, or Sandbox.
+
+**Where are the docs?**  
+Public at **`/docs`** (no sign-in required).
+
+## Chat and tools
+
+**Ask vs Agent?**  
+Ask is plain chat. Agent enables MCP tools and attached-repo coding. See [modes](/docs/chat/modes).
+
+**Why did a tool ask for approval?**  
+Write tools use human-in-the-loop approval. See [Approvals](/docs/chat/approvals).
+
+**Chat search finds nothing I typed in a message**  
+Sidebar search matches **chat titles** only (active workspace), not full message text.
+
+**Attached repo / coding fails on my server**  
+Coding needs the **microsandbox** runtime (Linux + KVM or macOS Apple Silicon). See [Attached repo](/docs/chat/attached-repo).
+
+## Auth and workspaces
+
+**How do I invite teammates?**  
+Team workspace → `/workspaces/settings?tab=invites`. See [Members and invites](/docs/workspaces/members-and-invites).
+
+**SSO says domain unverified**  
+Publish the DNS TXT token and click **Verify DNS**. Login stays blocked until verified — [SSO](/docs/enterprise/sso).
+
+**Forgot password does nothing**  
+Needs instance policy + SMTP. Admins can still reset under [Instance users](/docs/enterprise/instance-users).
+
+## Self-hosting
+
+**Chat errors with `ECONNREFUSED …4274`**  
+eve did not start. Production starts eve on loopback 4274, then Next on 3000 — [Self-hosting](/docs/self-hosting).
+
+**Users must reconnect MCP after every deploy**  
+Persist the **`.eve/`** directory.
+
+**Do schedules need extra env?**  
+Yes: `BRAIN_INTERNAL_TOKEN` (and usually `BRAIN_INTERNAL_URL`). See [Environment](/docs/reference/environment).
+
+**How do I restore a host?**  
+Postgres + `.eve/` + the same signing secrets — [Upgrades and backups](/docs/self-hosting/upgrades-and-backups).

@@ -20,6 +20,8 @@ See [`.env.example`](https://github.com/akhil-naidu/brain/blob/main/.env.example
 | `BRAIN_PUBLIC_URL` | Public origin (cookies, OAuth redirects, SEO) |
 | `BETTER_AUTH_URL` | Usually the same as `BRAIN_PUBLIC_URL` |
 | `BRAIN_BOOTSTRAP_TOKEN` | Required to create the first operator in production |
+| `PORT` | Next listen port (default `3000`) |
+| `EVE_NEXT_PRODUCTION_PORT` | eve loopback port in production start (default `4274`) |
 
 ## Schedules
 
@@ -43,6 +45,10 @@ See [`.env.example`](https://github.com/akhil-naidu/brain/blob/main/.env.example
 | Variable | Purpose |
 | --- | --- |
 | `BRAIN_LICENSE_SECRET` | Signs/verifies BRAIN1 keys (falls back to `BETTER_AUTH_SECRET`) |
+
+## Sandbox (attached repo)
+
+Brain pins **microsandbox** for Agent coding. There is no Brain-specific sandbox API key in `.env.example`. Hosts may need the microsandbox platform install or **`MSB_PATH`** pointing at the binary — see [Attached repo](/docs/chat/attached-repo).
 
 ## MCP fallbacks (optional)
 
