@@ -1,0 +1,28 @@
+---
+title: Dokku and dflow
+description: Deploy Brain on Dokku or dflow with the Dockerfile builder.
+---
+
+```bash
+dokku builder:set brain selected dockerfile
+dokku ports:set brain http:80:3000
+
+dokku config:set brain \
+  COMMAND_CODE_API_KEY="..." \
+  BETTER_AUTH_SECRET="$(openssl rand -base64 32)" \
+  BRAIN_DATABASE_URL="postgres://USER:PASS@HOST:5432/brain" \
+  BRAIN_PUBLIC_URL="https://<your-host>" \
+  BETTER_AUTH_URL="https://<your-host>" \
+  BRAIN_BOOTSTRAP_TOKEN="$(openssl rand -base64 32)" \
+  NODE_ENV=production
+```
+
+For schedules:
+
+```bash
+dokku config:set brain \
+  BRAIN_INTERNAL_TOKEN="$(openssl rand -base64 32)" \
+  BRAIN_INTERNAL_URL="http://127.0.0.1:3000"
+```
+
+Extended notes (TLS, herokuish workarounds, smoke checks): [`docs/deploy-dokku.md`](https://github.com/akhil-naidu/brain/blob/main/docs/deploy-dokku.md) in the repository.

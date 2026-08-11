@@ -1,0 +1,22 @@
+---
+title: Docker
+description: Run Brain with the production Dockerfile and Compose Postgres.
+---
+
+## Local database only
+
+`docker-compose.yml` starts Postgres 16 for development (`brain` and `brain_test`):
+
+```bash
+docker compose up -d db
+```
+
+URL: `postgres://brain:brain@127.0.0.1:5432/brain`
+
+## Production image
+
+Build and run the repo **Dockerfile**. The image builds eve + Next; `CMD` runs `scripts/start-production.mjs` (eve on `:4274`, then Next on `:3000`).
+
+Pass runtime env (`BRAIN_DATABASE_URL`, `BETTER_AUTH_SECRET`, `COMMAND_CODE_API_KEY`, public URLs, …). Persist `.eve/` as a volume if you use Menu Connect.
+
+See also [Self-hosting overview](/docs/self-hosting).

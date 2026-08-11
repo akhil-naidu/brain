@@ -1,4 +1,4 @@
 {
   "title": "Self-hosting",
-  "pages": ["index"]
+  "pages": ["index", "docker", "dokku", "upgrades-and-backups", "troubleshooting"]
 }

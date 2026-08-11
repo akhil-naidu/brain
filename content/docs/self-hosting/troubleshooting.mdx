@@ -1,0 +1,20 @@
+---
+title: Troubleshooting
+description: Common self-host failures and how to fix them.
+---
+
+| Symptom | Likely cause | Fix |
+| --- | --- | --- |
+| Chat fails with `ECONNREFUSED 127.0.0.1:4274` | eve did not start | Check production start logs; ensure `scripts/start-production.mjs` ran and port 4274 is free |
+| `/setup` blocked in production | Missing bootstrap token | Set `BRAIN_BOOTSTRAP_TOKEN` and enter it on `/setup` |
+| OAuth callback mismatch | Wrong public origin | Align `BRAIN_PUBLIC_URL` / `BETTER_AUTH_URL` with the browser URL |
+| Schedules never fire | Missing internal token | Set `BRAIN_INTERNAL_TOKEN` (+ `BRAIN_INTERNAL_URL`) |
+| “Chat unavailable” | No models | Set `COMMAND_CODE_API_KEY` or add [custom models](/docs/models/custom-models) |
+| Users re-auth every deploy | `.eve/` not persisted | Mount / restore `.eve/` across releases |
+| Invite email never arrives | SMTP unset | Configure `BRAIN_SMTP_*` or copy the invite link |
+
+Health check:
+
+```bash
+curl -sS https://<your-host>/eve/v1/health
+```

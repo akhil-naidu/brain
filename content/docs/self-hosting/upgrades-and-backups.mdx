@@ -1,0 +1,21 @@
+---
+title: Upgrades and backups
+description: Keep Brain healthy across deploys and protect Postgres data.
+---
+
+## Upgrades
+
+1. Back up Postgres  
+2. Deploy the new image / git revision  
+3. Boot with the same `BRAIN_DATABASE_URL` — Brain applies schema on startup  
+4. Confirm `/eve/v1/health` and a test chat  
+
+Preserve **`.eve/`** so MCP tokens survive the upgrade.
+
+## Backups
+
+- Snapshot Postgres regularly (provider snapshots or `pg_dump`)  
+- Treat `.eve/` as sensitive (OAuth tokens) — include in backup with restricted access  
+- Store `BETTER_AUTH_SECRET` / license secrets outside the database dump in a secrets manager  
+
+There is no SQLite fallback — Postgres is the source of truth for users, chats, playbooks, and schedules.
