@@ -1,0 +1,56 @@
+---
+title: Architecture
+description: How Brain is structured — private client, Postgres, models, and live MCP tools.
+---
+
+Brain is a **private work assistant on your host**, not a public AI website and not a RAG chatbot that copies Slack or Snowflake into a vector index.
+
+## Three planes
+
+![Brain logical architecture](/images/brain-architecture-diagram.png)
+
+| Plane | What lives there | What does not |
+| --- | --- | --- |
+| **Product data** (Postgres) | Accounts, transcripts, playbooks, schedules | Copies of Slack, ClickUp, or warehouse tables |
+| **Models** | Command Code (default) or a custom OpenAI-compatible endpoint (Azure AI Foundry, Ollama, a company proxy, …) | The Brain UI itself |
+| **Live tools** (MCP) | Current tasks, mail, deploys, SQL at request time | A stale search index inside Brain |
+
+The browser talks only to Brain. Brain stores *its own* product data, calls the model endpoint you choose, and reads or writes work systems through MCP (with [approval](/docs/chat/approvals) on writes).
+
+## Runtime (production)
+
+```
+Browser → Next (:3000)
+            ├─ Better Auth + Brain APIs → Postgres
+            └─ /eve/v1/* (withEve proxy) → eve Nitro (:4274 loopback)
+```
+
+Expose **3000** (or your reverse-proxy target). Keep **4274** on loopback. Details: [Self-hosting overview](/docs/self-hosting).
+
+## Models
+
+- **Built-in** — set `COMMAND_CODE_API_KEY` for the curated Command Code catalog (OpenAI-compatible chat completions).
+- **Custom** — instance or workspace admins register any OpenAI-compatible base URL on `/models`, including **Azure AI Foundry**. Chat works without Command Code if a usable custom model exists for the workspace.
+- Brain **does not train models**. Fine-tuning and content filters belong at the model host (Foundry or equivalent). Native Anthropic Messages / Claude-as-provider is not wired.
+
+See [Models overview](/docs/models) and [Custom models](/docs/models/custom-models).
+
+## Live tools, not RAG
+
+Connections call the app **now**. If a tool is disconnected, Brain cannot answer from an old copy. Tokens are per signed-in user × workspace. See [Connections](/docs/connections).
+
+## Guardrails
+
+- Sign-in required; history in your Postgres
+- Workspaces isolate chats and MCP grants
+- Roles: instance admin; workspace owner / admin / member
+- Mutating MCP tools wait for in-chat approval; **Ask** mode cannot call tools
+- Model keys and warehouse tokens stay on the host (`.eve/`), not in the browser
+
+See [Security](/docs/self-hosting/security) and [Approvals](/docs/chat/approvals).
+
+## Deploy
+
+Run the Docker image on Dokku / **dFlow Enterprise** (or any host that can run the Dockerfile). Operator Postgres is required — no SQLite fallback.
+
+See [Dokku and dflow](/docs/self-hosting/dokku).
