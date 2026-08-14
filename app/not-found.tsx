@@ -14,7 +14,7 @@ export default function NotFound() {
     <StatusPage
       actions={[
         { href: "/", label: "Go home" },
-        { href: "/chat", label: "Open chat", variant: "outline" },
+        { href: "/docs", label: "Open docs", variant: "outline" },
       ]}
       code="404"
       description="That page isn’t on this host. Check the URL, or head back to Brain."

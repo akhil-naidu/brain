@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { SITE_NAME, SITE_STAGE, SITE_TAGLINE } from "@/lib/seo/site";
 
 export const runtime = "nodejs";
-export const alt = `${SITE_NAME} ${SITE_STAGE} — self-hosted work assistant`;
+export const alt = `${SITE_NAME} ${SITE_STAGE} — private client, live tools, your models`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -67,13 +67,15 @@ export default function OpenGraphImage() {
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 18, maxWidth: 900 }}>
         <div style={{ fontSize: 54, fontWeight: 650, letterSpacing: "-0.045em", lineHeight: 1.1 }}>
-          Your team’s work assistant, on your host.
+          Private client. Live tools. Your models.
         </div>
         <div style={{ fontSize: 28, color: "rgba(244,247,250,0.72)", lineHeight: 1.35 }}>
           {SITE_TAGLINE}
         </div>
       </div>
-      <div style={{ fontSize: 22, color: "rgba(244,247,250,0.5)" }}>Runs on your machine.</div>
+      <div style={{ fontSize: 22, color: "rgba(244,247,250,0.5)" }}>
+        History stays on your Postgres.
+      </div>
     </div>,
     { ...size },
   );

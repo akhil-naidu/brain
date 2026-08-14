@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { FormEventHandler, ReactNode } from "react";
 import { Space_Grotesk } from "next/font/google";
 import { BrainMark } from "@/components/brain-mark";
+import { SITE_COPYRIGHT_HOLDER, SITE_COPYRIGHT_YEAR, SITE_LICENSE_NAME } from "@/lib/seo/site";
 import { cn } from "@/lib/utils";
 
 const display = Space_Grotesk({
@@ -72,10 +73,10 @@ export function AuthStage({ children }: { readonly children: ReactNode }) {
           <div className="brain-auth-grid" />
         </div>
         <div className="relative z-10">
-          <BrandLockup subtitle="Self-hosted work assistant for your team — chats, tools, and connections on your host." />
+          <BrandLockup subtitle="Private client for your team — live MCP tools, models you choose, history on your Postgres." />
         </div>
         <p className="text-muted-foreground relative z-10 text-xs tracking-wide">
-          Runs on your machine.
+          © {SITE_COPYRIGHT_YEAR} {SITE_COPYRIGHT_HOLDER} · {SITE_LICENSE_NAME}
         </p>
       </aside>
 

@@ -3,7 +3,14 @@ import type { ReactNode } from "react";
 import Script from "next/script";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { getSiteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_STAGE, SITE_TAGLINE } from "@/lib/seo/site";
+import {
+  getSiteUrl,
+  SITE_COPYRIGHT_HOLDER,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_STAGE,
+  SITE_TAGLINE,
+} from "@/lib/seo/site";
 import { THEME_BOOTSTRAP_SCRIPT } from "@/lib/theme/bootstrap";
 import "./globals.css";
 
@@ -20,14 +27,16 @@ export const metadata: Metadata = {
   keywords: [
     "Brain",
     "self-hosted",
-    "AI assistant",
+    "private AI",
     "MCP",
+    "Azure AI Foundry",
+    "Postgres",
     "team chat",
     "work assistant",
     "open source",
   ],
-  authors: [{ name: SITE_NAME }],
-  creator: SITE_NAME,
+  authors: [{ name: SITE_COPYRIGHT_HOLDER }],
+  creator: SITE_COPYRIGHT_HOLDER,
   publisher: SITE_NAME,
   category: "productivity",
   alternates: {

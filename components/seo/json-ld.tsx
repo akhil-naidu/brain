@@ -1,4 +1,11 @@
-import { absoluteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_VERSION } from "@/lib/seo/site";
+import {
+  absoluteUrl,
+  SITE_COPYRIGHT_HOLDER,
+  SITE_DESCRIPTION,
+  SITE_LICENSE_HREF,
+  SITE_NAME,
+  SITE_VERSION,
+} from "@/lib/seo/site";
 
 export function HomeJsonLd() {
   const data = {
@@ -10,6 +17,11 @@ export function HomeJsonLd() {
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web",
     softwareVersion: SITE_VERSION,
+    license: SITE_LICENSE_HREF,
+    author: {
+      "@type": "Person",
+      name: SITE_COPYRIGHT_HOLDER,
+    },
     offers: {
       "@type": "Offer",
       price: "0",

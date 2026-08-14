@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { absoluteUrl, getSiteUrl } from "@/lib/seo/site";
 
 /**
- * Public marketing home may be crawled. Auth, app chrome, and APIs stay private —
+ * Public marketing home and customer docs may be crawled. Auth, app chrome, and APIs stay private —
  * important for self-hosted Brain instances that should not leak host structure.
  */
 export default function robots(): MetadataRoute.Robots {
@@ -10,7 +10,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: ["/"],
+        allow: ["/", "/docs", "/docs/"],
         disallow: [
           "/api/",
           "/chat",
