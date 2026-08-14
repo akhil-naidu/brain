@@ -28,7 +28,7 @@ export const HOME_TOUR_SCENES: readonly HomeTourScene[] = [
     id: "connections",
     title: "Connect the apps you already use",
     summary:
-      "ClickUp, Slack, Asana, Gmail, Notion, Linear, Atlassian, Zernio, Sentry, dFlow, GitHub, and Snowflake — set up once, sign in from the menu, then turn tools on when you need them.",
+      "ClickUp, Slack, Asana, Gmail, Notion, Linear, Atlassian, Zernio, Sentry, dFlow, GitHub, Snowflake, MongoDB, and MCP Toolbox — set up once, sign in from the menu, then turn tools on when you need them.",
     points: [
       "See Connected, Connect, or Set up needed at a glance",
       "Connect, Disconnect, or App settings without leaving chat",
@@ -39,11 +39,11 @@ export const HOME_TOUR_SCENES: readonly HomeTourScene[] = [
     id: "models",
     title: "Pick the model for the moment",
     summary:
-      "Switch among curated chat models from the composer. Brain remembers your choice on this device.",
+      "Switch among curated chat models or custom OpenAI-compatible endpoints (including Azure AI Foundry). Brain remembers your choice on this device.",
     points: [
       "Faster or stronger — choose per turn",
+      "Add Foundry, Ollama, or a company proxy on /models",
       "Preference saved locally",
-      "No redeploy to try another model",
     ],
   },
   {
