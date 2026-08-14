@@ -3,6 +3,7 @@ import { SITE_LICENSE_HREF } from "@/lib/seo/site";
 import {
   HOME_ARCHITECTURE_PLANES,
   HOME_CAPABILITIES,
+  HOME_CHAT_DEMO_TURNS,
   HOME_CONNECTION_APPS,
   HOME_FOOTER_GROUPS,
   HOME_TOUR_SCENES,
@@ -61,6 +62,25 @@ describe("HOME_TOUR_SCENES", () => {
   });
 });
 
+describe("HOME_CHAT_DEMO_TURNS", () => {
+  it("covers a multi-turn chat with live tools and approval", () => {
+    expect(HOME_CHAT_DEMO_TURNS.length).toBeGreaterThanOrEqual(3);
+    expect(HOME_CHAT_DEMO_TURNS.map((turn) => turn.tool.app)).toEqual([
+      "ClickUp",
+      "Slack",
+      "Gmail",
+    ]);
+    expect(
+      HOME_CHAT_DEMO_TURNS.some((turn) => turn.assistant.toLowerCase().includes("approval")),
+    ).toBe(true);
+    for (const turn of HOME_CHAT_DEMO_TURNS) {
+      expect(turn.user.trim().length).toBeGreaterThan(8);
+      expect(turn.assistant.trim().length).toBeGreaterThan(12);
+      expect(turn.tool.action.trim().length).toBeGreaterThan(3);
+    }
+  });
+});
+
 describe("HOME_CAPABILITIES", () => {
   it("lists host surfaces beyond chat", () => {
     expect(HOME_CAPABILITIES.map((item) => item.id)).toEqual([
@@ -81,6 +101,8 @@ describe("HOME_FOOTER_GROUPS", () => {
   it("covers product, docs, and host columns", () => {
     expect(HOME_FOOTER_GROUPS.map((group) => group.id)).toEqual(["product", "docs", "host"]);
     const hrefs = HOME_FOOTER_GROUPS.flatMap((group) => group.links.map((link) => link.href));
+    expect(hrefs).toContain("#how");
+    expect(hrefs).not.toContain("#demo");
     expect(hrefs).toContain("/docs/self-hosting/architecture");
     expect(hrefs).toContain("https://github.com/akhil-naidu/brain");
     expect(hrefs).toContain(SITE_LICENSE_HREF);

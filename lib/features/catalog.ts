@@ -138,6 +138,36 @@ export const HOME_CAPABILITIES: readonly HomeCapability[] = [
   },
 ];
 
+export type HomeChatDemoToolApp = "ClickUp" | "Slack" | "Gmail";
+
+export type HomeChatDemoTurn = {
+  readonly user: string;
+  readonly tool: {
+    readonly app: HomeChatDemoToolApp;
+    readonly action: string;
+  };
+  readonly assistant: string;
+};
+
+/** Multi-turn home hero chat — product-accurate tools and approvals. */
+export const HOME_CHAT_DEMO_TURNS: readonly HomeChatDemoTurn[] = [
+  {
+    user: "What’s blocked on the sprint?",
+    tool: { app: "ClickUp", action: "list tasks" },
+    assistant: "Three tasks are waiting on design.",
+  },
+  {
+    user: "Nudge design on Slack.",
+    tool: { app: "Slack", action: "draft message" },
+    assistant: "Draft’s ready. Sending it would wait for your approval.",
+  },
+  {
+    user: "Anything urgent in mail?",
+    tool: { app: "Gmail", action: "list unread" },
+    assistant: "Two unread: a deploy window, and a vendor invoice.",
+  },
+];
+
 export type HomeFooterLink = {
   readonly href: string;
   readonly label: string;

@@ -18,6 +18,7 @@ import {
   ToolboxIcon,
   ZernioIcon,
 } from "@/components/icons";
+import { HomeChatDemo } from "@/components/features/home-chat-demo";
 import {
   ChatTourMock,
   ConnectionsTourMock,
@@ -47,6 +48,8 @@ const display = Space_Grotesk({
   subsets: ["latin"],
   variable: "--font-features-display",
 });
+
+const HOME_PAGE_WIDTH = "mx-auto w-full max-w-6xl px-5 sm:px-8";
 
 const CONNECTION_ICONS: Record<
   (typeof HOME_CONNECTION_APPS)[number]["id"],
@@ -90,7 +93,7 @@ export function FeaturesShowcase() {
       </div>
 
       <header className="border-border/40 bg-background/70 supports-[backdrop-filter]:bg-background/55 relative z-20 border-b backdrop-blur-md">
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-5 py-4 sm:px-8">
+        <div className={cn(HOME_PAGE_WIDTH, "flex items-center justify-between py-4")}>
           <Link
             className="flex items-center gap-2.5 font-[family-name:var(--font-features-display)] text-lg font-semibold tracking-tight"
             href="/"
@@ -145,47 +148,61 @@ export function FeaturesShowcase() {
       </header>
 
       <main className="relative z-10">
-        <section className="relative mx-auto flex min-h-[calc(100dvh-4.25rem)] w-full max-w-5xl flex-col justify-center px-5 pt-10 pb-16 sm:px-8 sm:pt-14 sm:pb-20">
-          <div className="features-hero-mark mb-7 sm:mb-9">
-            <Image
-              alt=""
-              aria-hidden="true"
-              className="features-hero-glow size-24 object-contain sm:size-32"
-              height={256}
-              loading="eager"
-              priority
-              src={BRAIN_MARK_SRC}
-              unoptimized
-              width={256}
-            />
-          </div>
-          <h1 className="features-fade-up font-[family-name:var(--font-features-display)] text-5xl font-semibold tracking-[-0.04em] text-balance sm:text-7xl sm:leading-[0.95]">
-            Brain
-            <span className="ml-3 inline-flex align-middle sm:ml-4">
-              <BetaBadge className="translate-y-0.5 sm:translate-y-1" size="md" />
-            </span>
-          </h1>
-          <p className="features-fade-up features-delay-1 text-foreground/90 mt-5 max-w-2xl font-[family-name:var(--font-features-display)] text-xl font-medium tracking-tight text-balance sm:text-2xl">
-            Your self-hosted work assistant in the browser.
-          </p>
-          <p className="features-fade-up features-delay-2 text-muted-foreground mt-4 max-w-xl text-base leading-relaxed sm:text-lg">
-            A private client for your team: chat on your host, call live work apps through MCP, and
-            pick Command Code or your own model — including Azure AI Foundry. Not a public AI
-            website, and not a RAG copy of Slack.
-          </p>
-          <div className="features-fade-up features-delay-3 mt-9 flex flex-wrap items-center gap-3">
-            <Link
-              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-5 py-2.5 text-sm font-semibold transition"
-              href="/chat"
-            >
-              Open chat
-            </Link>
-            <a
-              className="border-border/80 bg-background/50 text-foreground/85 hover:border-foreground/25 hover:text-foreground rounded-full border px-5 py-2.5 text-sm backdrop-blur transition"
-              href="#how"
-            >
-              See how it works
-            </a>
+        <section className="relative">
+          <div
+            className={cn(
+              HOME_PAGE_WIDTH,
+              "flex flex-col justify-center py-16 sm:py-20 lg:min-h-[calc(100dvh-4.25rem)]",
+            )}
+          >
+            <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,26rem)] lg:gap-14 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,28rem)]">
+              <div className="min-w-0">
+                <div className="features-hero-mark mb-7 sm:mb-9">
+                  <Image
+                    alt=""
+                    aria-hidden="true"
+                    className="features-hero-glow size-20 object-contain sm:size-24 lg:size-20"
+                    height={256}
+                    loading="eager"
+                    priority
+                    src={BRAIN_MARK_SRC}
+                    unoptimized
+                    width={256}
+                  />
+                </div>
+                <h1 className="features-fade-up font-[family-name:var(--font-features-display)] text-5xl font-semibold tracking-[-0.04em] text-balance sm:text-6xl sm:leading-[0.95] lg:text-5xl xl:text-6xl">
+                  Brain
+                  <span className="ml-3 inline-flex align-middle sm:ml-4">
+                    <BetaBadge className="translate-y-0.5 sm:translate-y-1" size="md" />
+                  </span>
+                </h1>
+                <p className="features-fade-up features-delay-1 text-foreground/90 mt-5 max-w-xl font-[family-name:var(--font-features-display)] text-xl font-medium tracking-tight text-balance sm:text-2xl">
+                  Your self-hosted work assistant in the browser.
+                </p>
+                <p className="features-fade-up features-delay-2 text-muted-foreground mt-4 max-w-xl text-base leading-relaxed sm:text-lg">
+                  A private client for your team: chat on your host, call live work apps through
+                  MCP, and pick Command Code or your own model — including Azure AI Foundry. Not a
+                  public AI website, and not a RAG copy of Slack.
+                </p>
+                <div className="features-fade-up features-delay-3 mt-9 flex flex-wrap items-center gap-3">
+                  <Link
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-5 py-2.5 text-sm font-semibold transition"
+                    href="/chat"
+                  >
+                    Open chat
+                  </Link>
+                  <a
+                    className="border-border/80 bg-background/50 text-foreground/85 hover:border-foreground/25 hover:text-foreground rounded-full border px-5 py-2.5 text-sm backdrop-blur transition"
+                    href="#how"
+                  >
+                    See how it works
+                  </a>
+                </div>
+              </div>
+              <div className="features-fade-up features-delay-2 min-w-0">
+                <HomeChatDemo />
+              </div>
+            </div>
           </div>
         </section>
 
@@ -194,7 +211,7 @@ export function FeaturesShowcase() {
           className="border-border/60 bg-background/40 relative border-y py-12 backdrop-blur-sm"
           id="apps"
         >
-          <div className="mx-auto flex w-full max-w-5xl flex-col gap-7 px-5 sm:px-8">
+          <div className={cn(HOME_PAGE_WIDTH, "flex flex-col gap-7")}>
             <div className="max-w-2xl">
               <p className="text-muted-foreground text-xs font-medium tracking-[0.18em] uppercase">
                 Works with
@@ -222,7 +239,7 @@ export function FeaturesShowcase() {
 
         <section
           aria-labelledby="home-architecture-heading"
-          className="relative mx-auto w-full max-w-5xl px-5 py-16 sm:px-8 sm:py-20"
+          className={cn(HOME_PAGE_WIDTH, "relative py-16 sm:py-20")}
           id="architecture"
         >
           <div className="max-w-2xl">
@@ -265,7 +282,7 @@ export function FeaturesShowcase() {
           </p>
         </section>
 
-        <div className="relative mx-auto w-full max-w-5xl px-5 py-12 sm:px-8 sm:py-20" id="how">
+        <div className={cn(HOME_PAGE_WIDTH, "relative py-12 sm:py-20")} id="how">
           <div className="mb-12 max-w-2xl sm:mb-16">
             <p className="text-muted-foreground text-xs font-medium tracking-[0.18em] uppercase">
               How it works
@@ -331,7 +348,7 @@ export function FeaturesShowcase() {
           className="border-border/60 bg-muted/30 relative border-y py-16 backdrop-blur-sm"
           id="also"
         >
-          <div className="mx-auto w-full max-w-5xl px-5 sm:px-8">
+          <div className={HOME_PAGE_WIDTH}>
             <div className="max-w-2xl">
               <p className="text-muted-foreground text-xs font-medium tracking-[0.18em] uppercase">
                 On this host
@@ -365,7 +382,12 @@ export function FeaturesShowcase() {
 
         <section className="relative px-5 py-20 sm:px-8">
           <div aria-hidden className="brain-ambient-shade opacity-80" />
-          <div className="relative mx-auto flex w-full max-w-5xl flex-col items-start gap-6 sm:flex-row sm:items-end sm:justify-between">
+          <div
+            className={cn(
+              HOME_PAGE_WIDTH,
+              "relative flex flex-col items-start gap-6 sm:flex-row sm:items-end sm:justify-between",
+            )}
+          >
             <div className="max-w-xl">
               <h2 className="font-[family-name:var(--font-features-display)] text-3xl font-semibold tracking-tight sm:text-4xl">
                 Ready when you are.
@@ -394,7 +416,7 @@ export function FeaturesShowcase() {
       </main>
 
       <footer className="border-border/50 text-muted-foreground relative z-10 border-t">
-        <div className="mx-auto w-full max-w-5xl px-5 py-12 sm:px-8 sm:py-14">
+        <div className={cn(HOME_PAGE_WIDTH, "py-12 sm:py-14")}>
           <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
             <div className="max-w-xs">
               <Link
