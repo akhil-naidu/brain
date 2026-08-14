@@ -24,6 +24,7 @@ import {
   ModelsTourMock,
   RuntimeTourMock,
 } from "@/components/features/tour-mocks";
+import { ArchitectureDiagramFrame } from "@/components/architecture-diagram";
 import { BetaBadge } from "@/components/brand/beta-badge";
 import { BRAIN_MARK_SRC } from "@/components/brain-mark";
 import {
@@ -240,16 +241,7 @@ export function FeaturesShowcase() {
               writes.
             </p>
           </div>
-          <figure className="features-section border-border/70 bg-card mt-10 overflow-hidden rounded-2xl border shadow-sm">
-            <Image
-              alt="Brain logical architecture: people, Brain on your host, Postgres, models, and live MCP tools"
-              className="h-auto w-full"
-              height={720}
-              src="/images/brain-architecture-diagram.png"
-              unoptimized
-              width={1100}
-            />
-          </figure>
+          <ArchitectureDiagramFrame className="features-section mt-10" />
           <ul className="mt-10 grid gap-8 sm:grid-cols-3">
             {HOME_ARCHITECTURE_PLANES.map((plane, index) => (
               <li className="features-section" key={plane.id}>

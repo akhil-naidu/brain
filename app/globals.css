@@ -844,3 +844,68 @@ html[data-eve-chat-sidebar="closed"] [data-desktop-sidebar] {
   border-color: color-mix(in oklab, var(--primary) 35%, var(--border));
   background: color-mix(in oklab, var(--primary) 6%, var(--card));
 }
+
+.brain-architecture-diagram {
+  display: block;
+  font-family: var(--font-sans);
+}
+
+.brain-architecture-diagram .title {
+  font-size: 13px;
+  font-weight: 700;
+  fill: var(--foreground);
+}
+
+.brain-architecture-diagram .sub {
+  font-size: 12px;
+  fill: var(--muted-foreground);
+}
+
+.brain-architecture-diagram .caption {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  fill: var(--muted-foreground);
+}
+
+.brain-architecture-diagram .box {
+  fill: var(--background);
+  stroke: var(--border);
+  stroke-width: 1.5;
+}
+
+.brain-architecture-diagram .host {
+  fill: color-mix(in oklab, var(--muted) 65%, var(--card));
+  stroke: var(--border);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+}
+
+.brain-architecture-diagram .people,
+.brain-architecture-diagram .data {
+  fill: color-mix(in oklab, var(--primary) 12%, var(--card));
+  stroke: color-mix(in oklab, var(--primary) 38%, var(--border));
+  stroke-width: 1.5;
+}
+
+.brain-architecture-diagram .model {
+  fill: color-mix(in oklab, var(--primary) 7%, var(--muted));
+  stroke: color-mix(in oklab, var(--primary) 28%, var(--border));
+  stroke-width: 1.5;
+}
+
+.brain-architecture-diagram .mcp {
+  fill: color-mix(in oklab, var(--accent) 70%, var(--card));
+  stroke: color-mix(in oklab, var(--primary) 26%, var(--border));
+  stroke-width: 1.5;
+}
+
+.brain-architecture-diagram .edge {
+  fill: var(--muted-foreground);
+  stroke: var(--muted-foreground);
+  stroke-width: 1.75;
+}
+
+.brain-architecture-diagram line.edge {
+  fill: none;
+}
