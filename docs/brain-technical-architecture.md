@@ -406,6 +406,7 @@ Brain sits in the middle of three planes. The browser talks only to Brain. Brain
 
 ## Related operator material
 
-- In-app customer docs: `/docs` on a running host (quickstart, self-hosting, environment reference).
+- In-app customer docs: `/docs` on a running host (including `/docs/self-hosting/architecture`).
+- README architecture section and diagram: `docs/brain-architecture-diagram.png`.
 - Deploy runbook: `docs/deploy-dokku.md`.
 - Auth and tenancy design: `docs/superpowers/specs/2026-08-06-brain-auth-tenancy-design.md`.

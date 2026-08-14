@@ -165,4 +165,4 @@ That completes the picture: a **private client**, a **model environment the orga
 
 ---
 
-*For implementation detail, connectors, and environment setup, see the companion technical architecture document.*
+*For implementation detail, connectors, and environment setup, see the companion technical architecture document. Operators can also open `/docs` on a running host (including `/docs/self-hosting/architecture`).*

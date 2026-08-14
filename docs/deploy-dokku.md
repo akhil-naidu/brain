@@ -4,6 +4,9 @@ Brain is a Next.js + `withEve()` app. Prefer the **Dockerfile** builder so the
 server never has to download Node from `nodejs.org` during build (herokuish
 often fails with SSL timeouts on constrained hosts).
 
+Logical architecture (private client, Postgres, models, live MCP):
+`docs/brain-technical-architecture.md` and in-app `/docs/self-hosting/architecture`.
+
 ## How chat works in production
 
 `withEve()` proxies `/eve/v1/*` to a local eve Nitro server on `:4274`.

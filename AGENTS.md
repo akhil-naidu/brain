@@ -51,6 +51,17 @@ runs the same chain plus `pnpm run build`.
 - First host: open `/setup` (or `node scripts/bootstrap-operator.mjs`) to create the operator account; set `BETTER_AUTH_SECRET`
 - Template reference mirror: `/Users/dev/github/tmp/eve-chat-template` (see `.cursor/rules/eve-chat-template-reference.mdc`)
 
+## Architecture overviews
+
+Product-accurate stakeholder docs (keep in sync with the running product):
+
+- `docs/brain-executive-overview.md`
+- `docs/brain-technical-architecture.md`
+- Diagram: `docs/brain-architecture-diagram.png` (and `.svg` / `.mmd`)
+- In-app customer page: `/docs/self-hosting/architecture` (`content/docs/self-hosting/architecture.mdx`)
+
+Do not claim SQLite chat storage, a BetterDB/Redis memory layer, or that Brain trains models. Foundry is a custom OpenAI-compatible model endpoint, not a second UI.
+
 ## OpenSpec
 
 This repo uses [OpenSpec](https://github.com/Fission-AI/OpenSpec) for behavior specs and change proposals.
