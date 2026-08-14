@@ -8,8 +8,17 @@ description: Common questions about Brain chat, hosting, SSO, and tools.
 **Is Brain tied to Vercel?**  
 No. Core paths use your Postgres, Better Auth, and Command Code (or custom models) — not Vercel AI Gateway, Connect, or Sandbox.
 
+**Why not just use Claude or ChatGPT?**  
+Those are public products. Company threads would live on someone else’s site, and they do not log into your Slack or Snowflake as *your* staff. Brain is the private client on your host. The default model path is also OpenAI-compatible chat completions — native Anthropic Messages is not wired. See [Architecture](/docs/self-hosting/architecture).
+
+**Does Brain train on our data or use RAG?**  
+No. Chat history stays in your Postgres. Work data is read live through MCP. Brain does not copy apps into a vector index and does not train models; fine-tuning belongs at the model host (for example Azure AI Foundry).
+
+**Can we use Azure AI Foundry?**  
+Yes. Register the OpenAI-compatible endpoint on `/models`. Chat can run without `COMMAND_CODE_API_KEY` when a usable custom model exists. See [Custom models](/docs/models/custom-models).
+
 **Where are the docs?**  
-Public at **`/docs`** (no sign-in required).
+Public at **`/docs`** (no sign-in required). Stakeholder architecture write-ups also live in the repository (`docs/brain-executive-overview.md`, `docs/brain-technical-architecture.md`).
 
 ## Chat and tools
 

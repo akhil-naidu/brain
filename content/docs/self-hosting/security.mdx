@@ -5,6 +5,8 @@ description: Hardening checklist for production Brain hosts.
 
 Treat the Brain host as a **trusted** runtime: MCP tokens and BYOA secrets live on disk under `.eve/`.
 
+Product-level guardrails (workspaces, HITL approvals, Ask mode) are described in [Architecture](/docs/self-hosting/architecture).
+
 ## Checklist
 
 1. **Secrets** — Strong unique values for `BETTER_AUTH_SECRET`, `BRAIN_BOOTSTRAP_TOKEN`, and `BRAIN_INTERNAL_TOKEN`  
@@ -20,6 +22,7 @@ Treat the Brain host as a **trusted** runtime: MCP tokens and BYOA secrets live 
 
 ## Related
 
+- [Architecture](/docs/self-hosting/architecture)  
 - [Environment variables](/docs/reference/environment)  
 - [Troubleshooting](/docs/self-hosting/troubleshooting)  
 - [BYOA credentials](/docs/connections/byoa-credentials)

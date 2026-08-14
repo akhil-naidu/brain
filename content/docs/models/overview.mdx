@@ -1,15 +1,23 @@
 ---
 title: Models overview
-description: Command Code built-ins and how the composer picks a model.
+description: Command Code built-ins, custom OpenAI-compatible endpoints, and the composer picker.
 ---
 
 Open **`/models`** to see what is available in chat.
+
+Brain consumes **OpenAI-compatible chat completions**. It does not train models; fine-tuning and content filters belong at the model host (for example Azure AI Foundry). See [Architecture](/docs/self-hosting/architecture).
 
 ## Built-in (Command Code)
 
 When `COMMAND_CODE_API_KEY` is set on the host, curated models appear as **Built-in** under Available in chat. They are not edited on this page.
 
 If no Command Code key and no custom models exist, chat shows an unavailable empty state until you configure one path.
+
+Native Anthropic Messages (Claude-as-provider) is **not** in the curated picker — that API shape is different. Claude.ai / ChatGPT as the *product* staff open is also out of scope: Brain is the private client.
+
+## Custom (including Azure AI Foundry)
+
+Instance or workspace admins can register any OpenAI-compatible base URL — Foundry, a company proxy, Ollama, LM Studio. Chat can run **without** `COMMAND_CODE_API_KEY` when a usable custom model exists for the workspace. See [Custom models](/docs/models/custom-models).
 
 ## Composer picker
 

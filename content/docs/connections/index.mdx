@@ -5,7 +5,7 @@ description: Connect MCP apps so Agent mode can use Slack, GitHub, Notion, and m
 
 Connections are **MCP apps** Brain can call during a chat turn. Manage them on **`/tools`** or from the composer **Integrations** menu.
 
-Credentials and grants are **per signed-in user × active workspace**. Enabling a tool for one chat does not share another user’s tokens.
+Credentials and grants are **per signed-in user × active workspace**. Enabling a tool for one chat does not share another user’s tokens. Brain calls the live API at request time — it does **not** copy Slack, ClickUp, or warehouse tables into a local search index. See [Architecture](/docs/self-hosting/architecture).
 
 ## Auth modes
 

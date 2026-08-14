@@ -19,4 +19,10 @@ Presets (Ollama, LM Studio, …) and **Fetch models** discovery help fill fields
 | This workspace | Workspace admin | This workspace |
 | Entire instance | Instance admin | All workspaces |
 
-Custom models merge with Command Code entries in the composer catalog.
+Custom models merge with Command Code entries in the composer catalog. Chat works without `COMMAND_CODE_API_KEY` when a usable custom model exists for the workspace.
+
+## Azure AI Foundry and other private hosts
+
+Foundry (and similar private model platforms) is the **model plane**, not a second chat app. Register the OpenAI-compatible chat-completions URL, the provider model id, and an optional API key. Brain does not train or fine-tune inside the app — that stays in Foundry.
+
+The same path works for a company proxy, Ollama, or LM Studio. See [Architecture](/docs/self-hosting/architecture).

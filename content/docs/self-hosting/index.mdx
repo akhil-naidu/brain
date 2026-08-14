@@ -5,7 +5,9 @@ description: Deploy Brain with Docker, Dokku, or dflow on your own Postgres.
 
 Brain is designed for self-hosting. You provide Postgres and a host; Brain applies schema on boot.
 
-## Architecture (runtime)
+How the product is structured (private client, models, live MCP — not RAG): [Architecture](/docs/self-hosting/architecture).
+
+## Runtime
 
 ```
 Browser → Next (:3000)
@@ -73,6 +75,7 @@ Extended Dokku notes (herokuish workarounds, TLS, smoke checks) live in the repo
 
 ## Guides in this section
 
+- [Architecture](/docs/self-hosting/architecture) — planes, models, MCP vs RAG, guardrails  
 - [Docker](/docs/self-hosting/docker) — Compose Postgres and the production image  
 - [Dokku and dflow](/docs/self-hosting/dokku) — builder, ports, config  
 - [Upgrades and backups](/docs/self-hosting/upgrades-and-backups) — releases, restore, migrate  

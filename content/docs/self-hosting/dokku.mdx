@@ -1,7 +1,9 @@
 ---
 title: Dokku and dflow
-description: Deploy Brain on Dokku or dflow with the Dockerfile builder.
+description: Deploy Brain on Dokku or dFlow Enterprise with the Dockerfile builder.
 ---
+
+Prefer the **Dockerfile** builder on Dokku / **dFlow Enterprise** so the server never has to download Node during build.
 
 ```bash
 dokku builder:set brain selected dockerfile
@@ -26,3 +28,5 @@ dokku config:set brain \
 ```
 
 Extended notes (TLS, herokuish workarounds, smoke checks): [`docs/deploy-dokku.md`](https://github.com/akhil-naidu/brain/blob/main/docs/deploy-dokku.md) in the repository.
+
+Logical architecture (Postgres, models, live MCP): [Architecture](/docs/self-hosting/architecture).
