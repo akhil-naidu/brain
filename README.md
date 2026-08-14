@@ -4,7 +4,9 @@
 
 Browser chat, MCP connections (Slack, Asana, Gmail, Notion, Linear, Atlassian, Zernio, Sentry, GitHub, ClickUp, dFlow, Snowflake, MongoDB, MCP Toolbox), workspaces, playbooks, and schedules — running on **your** host with **your** Postgres. No Vercel AI Gateway, Neon, or Vercel Connect required.
 
-**Customer docs (in-app):** after `pnpm dev`, open [`/docs`](http://localhost:3000/docs) — quickstart, self-hosting, and environment reference.
+**Customer docs (in-app):** after `pnpm dev`, open [`/docs`](http://localhost:3000/docs) — quickstart, architecture, self-hosting, and environment reference.
+
+**Architecture:** [diagram](./docs/brain-architecture-diagram.png) · [executive overview](./docs/brain-executive-overview.md) · [technical](./docs/brain-technical-architecture.md)
 
 Built with [Next.js](https://nextjs.org/) + [`eve`](https://eve.dev/) (`withEve()`).
 
@@ -24,8 +26,8 @@ Built with [Next.js](https://nextjs.org/) + [`eve`](https://eve.dev/) (`withEve(
 - **MCP connections** — Connect from the chat menu (OAuth / DCR); browse loaded tools on `/tools`; env credentials as deploy fallback
 - **Durable history** — chats, playbooks, and schedules in operator Postgres
 - **Schedules** — morning brief + playbook schedules (needs production eve process)
-- **Model picker** — Command Code (or other direct providers), not Vercel AI Gateway
-- **Self-hostable** — Dockerfile / Dokku / dflow; single Postgres URL
+- **Model picker** — Command Code built-ins, or custom OpenAI-compatible endpoints (Azure AI Foundry, Ollama, company proxies)
+- **Self-hostable** — Dockerfile / Dokku / dFlow Enterprise; operator Postgres (no SQLite fallback)
 
 ---
 
@@ -34,7 +36,7 @@ Built with [Next.js](https://nextjs.org/) + [`eve`](https://eve.dev/) (`withEve(
 - Node.js **24.x** (`nvm use`)
 - [pnpm](https://pnpm.io/) 11+ (`corepack enable`)
 - Docker (for local Postgres via Compose)
-- A model API key (`COMMAND_CODE_API_KEY`)
+- A model path: `COMMAND_CODE_API_KEY` for built-ins, **or** a custom OpenAI-compatible endpoint after first sign-in
 
 ---
 
@@ -85,7 +87,7 @@ See [`.env.example`](./.env.example) for the full list. Essentials:
 | --- | --- | --- |
 | `BRAIN_DATABASE_URL` | **Yes** | Postgres URL (`DATABASE_URL` also accepted) |
 | `BETTER_AUTH_SECRET` | **Yes** | Session signing (`openssl rand -base64 32`) |
-| `COMMAND_CODE_API_KEY` | **Yes** | Model provider |
+| `COMMAND_CODE_API_KEY` | Built-ins | Curated Command Code models (omit only if you rely solely on custom models) |
 | `BRAIN_PUBLIC_URL` | Prod | Public origin (cookies, OAuth redirects, SEO) |
 | `BETTER_AUTH_URL` | Prod | Usually same as `BRAIN_PUBLIC_URL` |
 | `BRAIN_BOOTSTRAP_TOKEN` | Prod | Required to create the first operator |
@@ -109,9 +111,25 @@ MCP client IDs/secrets (`SLACK_MCP_*`, `GITHUB_MCP_*`, …) are optional when us
 
 ---
 
+## Architecture
+
+Brain is a **private client** on your host: Postgres for product data, a model endpoint you choose, and **live MCP tools** — not a RAG copy of Slack or Snowflake, and not a public Claude/ChatGPT workspace.
+
+![Brain logical architecture](./docs/brain-architecture-diagram.png)
+
+| Plane | What lives there |
+| --- | --- |
+| Product data | Accounts, transcripts, playbooks, schedules in operator Postgres |
+| Models | Command Code (default) or a custom OpenAI-compatible endpoint (including Azure AI Foundry) |
+| Live tools | Current tasks, mail, deploys, SQL via MCP at request time |
+
+Stakeholder write-ups: [executive overview](./docs/brain-executive-overview.md) · [technical architecture](./docs/brain-technical-architecture.md). In-app: [`/docs/self-hosting/architecture`](http://localhost:3000/docs/self-hosting/architecture).
+
+---
+
 ## Production deploy
 
-Brain is designed for self-hosting (Dokku, dflow, Docker, etc.).
+Brain is designed for self-hosting (Dokku, **dFlow Enterprise**, Docker, etc.).
 
 1. Provision **Postgres 16+** (any operator Postgres — not Neon-required)
 2. Set runtime env **before** first healthy boot (`BRAIN_DATABASE_URL`, secrets, public URL)
@@ -121,7 +139,7 @@ Brain is designed for self-hosting (Dokku, dflow, Docker, etc.).
 
 **Full Dokku / dflow guide:** [`docs/deploy-dokku.md`](./docs/deploy-dokku.md)
 
-### Architecture (runtime)
+### Runtime
 
 ```
 Browser → Next (:3000)
@@ -143,7 +161,7 @@ app/             Next.js App Router (chat UI, auth, APIs)
 components/      Shared UI
 lib/             Auth, Postgres, chat stores, SEO
 content/docs/    Customer docs (Fumadocs → /docs)
-docs/            Deploy notes + design/plans (engineering)
+docs/            Architecture overviews, deploy notes, design/plans (engineering)
 openspec/        Behavior specs and change proposals
 scripts/         Production start, bootstrap helpers
 docker-compose.yml   Local Postgres 16
@@ -156,6 +174,7 @@ Dockerfile           Production image
 
 - **No Vercel platform lock-in** for core paths — see `AGENTS.md` and `.cursor/rules/no-vercel-infra.mdc`
 - Lint is **oxlint** (not ESLint); zero warnings (`--deny-warnings`)
+- Architecture overviews: [`docs/brain-executive-overview.md`](./docs/brain-executive-overview.md), [`docs/brain-technical-architecture.md`](./docs/brain-technical-architecture.md)
 - Design docs: `docs/superpowers/specs/`
 - Implementation plans: `docs/superpowers/plans/`
 - Agent-oriented guidance: [`AGENTS.md`](./AGENTS.md)
