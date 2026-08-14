@@ -10,12 +10,18 @@ export const SITE_STAGE = "Beta";
 export const SITE_VERSION = packageJson.version;
 
 export const SITE_DESCRIPTION =
-  "Self-hosted work assistant with browser chat, MCP connections, and local history on your host.";
+  "Self-hosted private work assistant: browser chat, live MCP tools, models you choose (including Azure AI Foundry), and history on your Postgres.";
 
 export const SITE_TAGLINE =
-  "Self-hosted work assistant: browser chat, MCP connections, model picker, and local history.";
+  "Private client, live tools, your models — self-hosted browser chat that is not a RAG copy of your apps.";
 
-/** Public paths that may be indexed. Everything else should stay out of sitemaps. */
+/** Matches LICENSE / README copyright line. */
+export const SITE_COPYRIGHT_YEAR = 2026;
+export const SITE_COPYRIGHT_HOLDER = "Akhil Naidu";
+export const SITE_LICENSE_NAME = "MIT";
+export const SITE_LICENSE_HREF = "https://github.com/akhil-naidu/brain/blob/main/LICENSE";
+
+/** Public paths that may be indexed besides generated /docs pages. */
 export const PUBLIC_INDEXABLE_PATHS = ["/"] as const;
 
 /**

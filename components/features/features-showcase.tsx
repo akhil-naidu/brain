@@ -1,15 +1,22 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
 import { Space_Grotesk } from "next/font/google";
 import {
   AsanaIcon,
+  AtlassianIcon,
   ClickUpIcon,
   DflowIcon,
   GitHubIcon,
   GmailIcon,
+  LinearIcon,
+  MongoDbIcon,
+  NotionIcon,
+  SentryIcon,
   SlackIcon,
   SnowflakeIcon,
+  ToolboxIcon,
+  ZernioIcon,
 } from "@/components/icons";
 import {
   ChatTourMock,
@@ -19,8 +26,20 @@ import {
 } from "@/components/features/tour-mocks";
 import { BetaBadge } from "@/components/brand/beta-badge";
 import { BRAIN_MARK_SRC } from "@/components/brain-mark";
-import { HOME_CAPABILITIES, HOME_TOUR_SCENES } from "@/lib/features/catalog";
-import { SITE_VERSION } from "@/lib/seo/site";
+import {
+  HOME_ARCHITECTURE_PLANES,
+  HOME_CAPABILITIES,
+  HOME_CONNECTION_APPS,
+  HOME_FOOTER_GROUPS,
+  HOME_TOUR_SCENES,
+} from "@/lib/features/catalog";
+import {
+  SITE_COPYRIGHT_HOLDER,
+  SITE_COPYRIGHT_YEAR,
+  SITE_LICENSE_HREF,
+  SITE_LICENSE_NAME,
+  SITE_VERSION,
+} from "@/lib/seo/site";
 import { cn } from "@/lib/utils";
 
 const display = Space_Grotesk({
@@ -28,15 +47,25 @@ const display = Space_Grotesk({
   variable: "--font-features-display",
 });
 
-const CONNECTION_MARKS = [
-  { id: "clickup", label: "ClickUp", Icon: ClickUpIcon },
-  { id: "slack", label: "Slack", Icon: SlackIcon },
-  { id: "asana", label: "Asana", Icon: AsanaIcon },
-  { id: "gmail", label: "Gmail", Icon: GmailIcon },
-  { id: "dflow", label: "dFlow", Icon: DflowIcon },
-  { id: "github", label: "GitHub", Icon: GitHubIcon },
-  { id: "snowflake", label: "Snowflake", Icon: SnowflakeIcon },
-] as const;
+const CONNECTION_ICONS: Record<
+  (typeof HOME_CONNECTION_APPS)[number]["id"],
+  ComponentType<{ readonly className?: string }>
+> = {
+  clickup: ClickUpIcon,
+  slack: SlackIcon,
+  asana: AsanaIcon,
+  gmail: GmailIcon,
+  notion: NotionIcon,
+  linear: LinearIcon,
+  atlassian: AtlassianIcon,
+  zernio: ZernioIcon,
+  sentry: SentryIcon,
+  dflow: DflowIcon,
+  github: GitHubIcon,
+  snowflake: SnowflakeIcon,
+  mongodb: MongoDbIcon,
+  toolbox: ToolboxIcon,
+};
 
 const SCENE_MOCKS: Record<(typeof HOME_TOUR_SCENES)[number]["id"], ReactNode> = {
   chat: <ChatTourMock />,
@@ -86,6 +115,12 @@ export function FeaturesShowcase() {
             >
               How it works
             </a>
+            <a
+              className="text-muted-foreground hover:text-foreground hidden rounded-full px-3 py-1.5 text-sm transition sm:inline-flex"
+              href="#architecture"
+            >
+              Architecture
+            </a>
             <Link
               className="text-muted-foreground hover:text-foreground hidden rounded-full px-3 py-1.5 text-sm transition sm:inline-flex"
               href="/docs"
@@ -116,6 +151,7 @@ export function FeaturesShowcase() {
               aria-hidden="true"
               className="features-hero-glow size-24 object-contain sm:size-32"
               height={256}
+              loading="eager"
               priority
               src={BRAIN_MARK_SRC}
               unoptimized
@@ -132,8 +168,9 @@ export function FeaturesShowcase() {
             Your self-hosted work assistant in the browser.
           </p>
           <p className="features-fade-up features-delay-2 text-muted-foreground mt-4 max-w-xl text-base leading-relaxed sm:text-lg">
-            Chat with models you control, connect MCP apps, and keep history on your host — not
-            locked to someone else’s cloud.
+            A private client for your team: chat on your host, call live work apps through MCP, and
+            pick Command Code or your own model — including Azure AI Foundry. Not a public AI
+            website, and not a RAG copy of Slack.
           </p>
           <div className="features-fade-up features-delay-3 mt-9 flex flex-wrap items-center gap-3">
             <Link
@@ -162,20 +199,78 @@ export function FeaturesShowcase() {
                 Works with
               </p>
               <p className="text-foreground/90 mt-2 font-[family-name:var(--font-features-display)] text-lg font-medium tracking-tight">
-                Official MCP connections — set up once, then Connect from chat or Tools.
+                Official MCP connections — live tools, not a copied index. Set up once, then Connect
+                from chat or Tools.
               </p>
             </div>
             <ul className="flex flex-wrap items-center gap-x-8 gap-y-4">
-              {CONNECTION_MARKS.map(({ Icon, id, label }) => (
-                <li className="text-foreground/85 flex items-center gap-2.5 text-sm" key={id}>
-                  <span className="border-border/70 bg-background/70 flex size-10 items-center justify-center rounded-xl border backdrop-blur-sm">
-                    <Icon className="size-5" />
-                  </span>
-                  {label}
-                </li>
-              ))}
+              {HOME_CONNECTION_APPS.map(({ id, label }) => {
+                const Icon = CONNECTION_ICONS[id];
+                return (
+                  <li className="text-foreground/85 flex items-center gap-2.5 text-sm" key={id}>
+                    <span className="border-border/70 bg-background/70 flex size-10 items-center justify-center rounded-xl border backdrop-blur-sm">
+                      <Icon className="size-5" />
+                    </span>
+                    {label}
+                  </li>
+                );
+              })}
             </ul>
           </div>
+        </section>
+
+        <section
+          aria-labelledby="home-architecture-heading"
+          className="relative mx-auto w-full max-w-5xl px-5 py-16 sm:px-8 sm:py-20"
+          id="architecture"
+        >
+          <div className="max-w-2xl">
+            <p className="text-muted-foreground text-xs font-medium tracking-[0.18em] uppercase">
+              Architecture
+            </p>
+            <h2
+              className="mt-3 font-[family-name:var(--font-features-display)] text-3xl font-semibold tracking-tight text-balance sm:text-4xl"
+              id="home-architecture-heading"
+            >
+              Private client. Live tools. Your models.
+            </h2>
+            <p className="text-muted-foreground mt-3 text-base leading-relaxed sm:text-lg">
+              The browser talks only to Brain. Brain stores its own product data, calls the model
+              endpoint you choose, and reads or writes work systems through MCP — with approval on
+              writes.
+            </p>
+          </div>
+          <figure className="features-section border-border/70 bg-card mt-10 overflow-hidden rounded-2xl border shadow-sm">
+            <Image
+              alt="Brain logical architecture: people, Brain on your host, Postgres, models, and live MCP tools"
+              className="h-auto w-full"
+              height={720}
+              src="/images/brain-architecture-diagram.png"
+              unoptimized
+              width={1100}
+            />
+          </figure>
+          <ul className="mt-10 grid gap-8 sm:grid-cols-3">
+            {HOME_ARCHITECTURE_PLANES.map((plane, index) => (
+              <li className="features-section" key={plane.id}>
+                <p className="text-muted-foreground text-[11px] font-medium tracking-[0.16em] uppercase">
+                  {String(index + 1).padStart(2, "0")}
+                </p>
+                <h3 className="text-foreground mt-2 font-[family-name:var(--font-features-display)] text-lg font-semibold tracking-tight">
+                  {plane.title}
+                </h3>
+                <p className="text-muted-foreground mt-2 text-sm leading-relaxed">{plane.body}</p>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-8">
+            <Link
+              className="text-foreground/85 hover:text-foreground text-sm font-medium underline-offset-4 hover:underline"
+              href="/docs/self-hosting/architecture"
+            >
+              Read the architecture →
+            </Link>
+          </p>
         </section>
 
         <div className="relative mx-auto w-full max-w-5xl px-5 py-12 sm:px-8 sm:py-20" id="how">
@@ -188,7 +283,8 @@ export function FeaturesShowcase() {
             </h2>
             <p className="text-muted-foreground mt-3 text-base leading-relaxed sm:text-lg">
               Sign in, connect the apps you use, pick a model, and ask about the work in front of
-              you — with approvals when something risky would run.
+              you. Brain reads live systems — it does not copy them into a search index — and asks
+              for approval when something risky would run.
             </p>
           </div>
 
@@ -256,7 +352,7 @@ export function FeaturesShowcase() {
               </h2>
               <p className="text-muted-foreground mt-3 text-base leading-relaxed">
                 Brain also covers the everyday surfaces of a team assistant — spaces, tools,
-                routines, and host policy.
+                routines, approvals, and host policy.
               </p>
             </div>
             <ul className="mt-10 grid gap-x-10 gap-y-8 sm:grid-cols-2">
@@ -284,7 +380,7 @@ export function FeaturesShowcase() {
               </h2>
               <p className="text-muted-foreground mt-3 text-base leading-relaxed">
                 Create the operator account on first boot, sign in, connect an app, and ask Brain
-                about your work.
+                about your work. Docs cover architecture, self-hosting, and environment setup.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -296,9 +392,9 @@ export function FeaturesShowcase() {
               </Link>
               <Link
                 className="border-border/80 bg-background/60 text-foreground/85 hover:text-foreground rounded-full border px-5 py-2.5 text-sm backdrop-blur transition"
-                href="/sign-in"
+                href="/docs"
               >
-                Sign in
+                Open docs
               </Link>
             </div>
           </div>
@@ -306,9 +402,80 @@ export function FeaturesShowcase() {
       </main>
 
       <footer className="border-border/50 text-muted-foreground relative z-10 border-t">
-        <div className="mx-auto flex w-full max-w-5xl flex-col gap-3 px-5 py-8 text-xs sm:flex-row sm:items-center sm:justify-between sm:px-8">
-          <p>Brain · Beta · v{SITE_VERSION} · self-hosted work assistant</p>
-          <p className="sm:text-right">Chats, MCP tools, and policy stay on your host.</p>
+        <div className="mx-auto w-full max-w-5xl px-5 py-12 sm:px-8 sm:py-14">
+          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="max-w-xs">
+              <Link
+                className="text-foreground inline-flex items-center gap-2.5 font-[family-name:var(--font-features-display)] text-sm font-semibold tracking-tight"
+                href="/"
+              >
+                <Image
+                  alt=""
+                  aria-hidden="true"
+                  className="size-7 object-contain"
+                  height={64}
+                  src={BRAIN_MARK_SRC}
+                  unoptimized
+                  width={64}
+                />
+                <span className="inline-flex items-center gap-2">
+                  Brain
+                  <BetaBadge />
+                </span>
+              </Link>
+              <p className="mt-3 text-sm leading-relaxed">
+                Private client. Live tools. Models you choose — including Azure AI Foundry.
+              </p>
+            </div>
+            {HOME_FOOTER_GROUPS.map((group) => (
+              <div key={group.id}>
+                <p className="text-foreground/80 text-[11px] font-medium tracking-[0.16em] uppercase">
+                  {group.title}
+                </p>
+                <ul className="mt-3 space-y-2">
+                  {group.links.map((item) => (
+                    <li key={`${group.id}:${item.href}`}>
+                      {item.external ? (
+                        <a
+                          className="hover:text-foreground text-sm transition"
+                          href={item.href}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          {item.label}
+                        </a>
+                      ) : item.href.startsWith("#") ? (
+                        <a className="hover:text-foreground text-sm transition" href={item.href}>
+                          {item.label}
+                        </a>
+                      ) : (
+                        <Link className="hover:text-foreground text-sm transition" href={item.href}>
+                          {item.label}
+                        </Link>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <div className="border-border/50 mt-10 flex flex-col gap-2 border-t pt-6 text-xs sm:flex-row sm:items-center sm:justify-between">
+            <p>
+              © {SITE_COPYRIGHT_YEAR} {SITE_COPYRIGHT_HOLDER}
+              {" · "}
+              <a
+                className="hover:text-foreground underline-offset-2 transition hover:underline"
+                href={SITE_LICENSE_HREF}
+                rel="noreferrer"
+                target="_blank"
+              >
+                {SITE_LICENSE_NAME}
+              </a>
+              {" · Beta · v"}
+              {SITE_VERSION}
+            </p>
+            <p>History, MCP tokens, and policy stay on your Postgres.</p>
+          </div>
         </div>
       </footer>
     </div>

@@ -180,8 +180,8 @@ export function ModelsTourMock() {
           <ul className="border-border/60 mt-3 space-y-1.5 border-t pt-3">
             {[
               { name: "DeepSeek V4 Pro", note: "Strong · current" },
+              { name: "Azure AI Foundry", note: "Custom endpoint" },
               { name: "Faster chat", note: "Quick replies" },
-              { name: "Balanced", note: "Everyday work" },
             ].map((model, index) => (
               <li
                 className={cn(
@@ -225,7 +225,7 @@ export function RuntimeTourMock() {
             </li>
             <li className="flex gap-2">
               <span className="bg-primary mt-1 size-1.5 shrink-0 rounded-full" />
-              App sign-in saved on this host
+              Live MCP — not a RAG copy of your apps
             </li>
             <li className="flex gap-2">
               <span className="bg-primary mt-1 size-1.5 shrink-0 rounded-full" />
@@ -236,11 +236,11 @@ export function RuntimeTourMock() {
         <div className="flex flex-col justify-center gap-2 p-4">
           <div className="border-border/80 bg-muted/40 rounded-lg border px-3 py-2">
             <p className="text-muted-foreground text-[10px]">Models</p>
-            <p className="text-foreground/90 text-[12px]">Direct provider</p>
+            <p className="text-foreground/90 text-[12px]">Command Code or Foundry</p>
           </div>
           <div className="border-border/80 bg-muted/40 rounded-lg border px-3 py-2">
-            <p className="text-muted-foreground text-[10px]">Connections</p>
-            <p className="text-foreground/90 text-[12px]">Self-hosted sign-in</p>
+            <p className="text-muted-foreground text-[10px]">Data</p>
+            <p className="text-foreground/90 text-[12px]">Postgres on this host</p>
           </div>
           <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-3 py-2">
             <p className="text-[10px] text-emerald-700 dark:text-emerald-300/80">Access</p>

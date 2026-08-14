@@ -17,6 +17,12 @@ export function docsBaseOptions(): BaseLayoutProps {
         on: "nav",
       },
       {
+        text: "Architecture",
+        url: "/docs/self-hosting/architecture",
+        active: "none",
+        on: "nav",
+      },
+      {
         text: "Home",
         url: "/",
         active: "none",
