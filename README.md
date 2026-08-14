@@ -42,11 +42,11 @@ Built with [Next.js](https://nextjs.org/) + [`eve`](https://eve.dev/) (`withEve(
 
 ## Quick start (local)
 
-**Local setup** (nvm, Git, Docker, `.env`, operator, Ollama, first chat): after `pnpm dev`, open [`/docs/getting-started/local-setup`](http://localhost:3000/docs/getting-started/local-setup). Source: [`content/docs/getting-started/local-setup.mdx`](./content/docs/getting-started/local-setup.mdx).
+**Local setup** (tools, fork, `.env`, operator, Ollama, first chat): after `pnpm dev`, open [`/docs/getting-started/local-setup`](http://localhost:3000/docs/getting-started/local-setup). Source: [`content/docs/getting-started/local-setup.mdx`](./content/docs/getting-started/local-setup.mdx).
 
 ```bash
-# 1. Install
-git clone https://github.com/akhil-naidu/brain.git
+# 1. Install (fork https://github.com/akhil-naidu/brain first, then clone YOUR fork)
+git clone https://github.com/YOUR_GITHUB_USERNAME/brain.git
 cd brain
 nvm use          # Node 24
 corepack enable

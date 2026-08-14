@@ -1,23 +1,37 @@
 ---
 title: Local setup
-description: Install Brain locally with Git, Node 24, pnpm, Docker, and a model.
+description: Install Brain locally with Node 24, pnpm, Postgres, and a model.
 ---
 
-Install the tools, clone the repo, start Postgres, create an operator account, and send a chat. After each command, run the **Check**. Skip a step if that check already passes.
+Install the tools, fork and clone the repo, then keep going in this terminal or in VS Code. After each command, run the **Check**. Skip a step if that check already passes.
 
-Pick **macOS**, **Windows**, or **Linux** in the tabs. The choice sticks for the rest of this page.
+Pick **macOS**, **Windows**, or **Linux** in the OS tabs. After you clone, pick **This terminal** or **VS Code**. Both choices stick for the rest of this page.
 
 No Vercel account, Neon, or Vercel AI Gateway.
 
-## 0. What Brain needs
+## What Brain needs
 
-| Piece | What it is |
-| --- | --- |
-| **Git** | Clone the Brain source |
-| **Node 24** | Runtime. This guide installs it with nvm |
-| **pnpm** | Package manager. Do **not** use npm or yarn |
-| **Docker** | Runs Postgres |
-| **A model** | Ollama or `COMMAND_CODE_API_KEY` |
+Brain runs with these four.
+
+<Cards>
+  <Card title="Node 24">Runtime. This guide installs it with nvm.</Card>
+  <Card title="pnpm">Package manager. Do **not** use npm or yarn.</Card>
+  <Card title="Postgres">Database. This guide runs it with Docker.</Card>
+  <Card title="A model">Ollama or `COMMAND_CODE_API_KEY`.</Card>
+</Cards>
+
+## To follow this guide
+
+These are for installing and cloning. They are not part of Brain.
+
+<Cards>
+  <Card title="Terminal">Where you paste commands (step 1)</Card>
+  <Card title="Git">Fork and clone the source (step 2 and 8)</Card>
+  <Card title="GitHub account">So you can fork the repo</Card>
+  <Card title="Homebrew">macOS package manager (step 2). Used for Git, nvm, and pnpm</Card>
+  <Card title="openssl">Generate login secrets (step 7)</Card>
+  <Card title="Editor">Optional. VS Code, Cursor, or Antigravity (step 9)</Card>
+</Cards>
 
 ## 1. Open a terminal
 
@@ -28,9 +42,7 @@ No Vercel account, Neon, or Vercel AI Gateway.
 2. Type `Terminal`
 3. Press **Enter**
 
-A window with a prompt (`%` or `$`) appears. All later commands go there.
-
-Keep this window. Later you will open **more** Terminal windows (one for Brain, one for the Ollama tunnel).
+A window with a prompt (`%` or `$`) appears. Paste commands here. After you clone (step 8), you can stay in this terminal or open VS Code (step 9).
 
 </Tab>
 <Tab value="Windows">
@@ -45,18 +57,14 @@ wsl --install
 
 Reboot when Windows asks. Open **Ubuntu** from the Start menu and create a UNIX username and password.
 
-Paste every later command in **Ubuntu**.
-
-Keep the Ubuntu window. Later you will open more Ubuntu windows (one for Brain, one for the Ollama tunnel).
+Paste commands in **Ubuntu**. After you clone (step 8), you can stay in this terminal or open VS Code (step 9).
 
 </Tab>
 <Tab value="Linux">
 
 Open a terminal: **Ctrl+Alt+T**, or search “Terminal” in your app menu.
 
-A prompt (`$`) appears. All later commands go there.
-
-Keep this window. Later you will open **more** terminals (one for Brain, one for the Ollama tunnel).
+A prompt (`$`) appears. Paste commands here. After you clone (step 8), you can stay in this terminal or open VS Code (step 9).
 
 </Tab>
 </Tabs>
@@ -66,7 +74,7 @@ Keep this window. Later you will open **more** terminals (one for Brain, one for
 <Tabs groupId="os" items={['macOS', 'Windows', 'Linux']} persist>
 <Tab value="macOS">
 
-Apple’s Command Line Tools include a compiler. Git often comes with them.
+Apple’s Command Line Tools include a compiler. Homebrew needs them.
 
 ```bash
 xcode-select --install
@@ -82,7 +90,7 @@ xcode-select -p
 
 Typical output: `/Library/Developer/CommandLineTools` or a path under `/Applications/Xcode.app`.
 
-Homebrew is a package manager. Use it if Git is missing.
+Install **Homebrew**. On macOS this guide uses `brew` for Git, nvm, and pnpm.
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -110,21 +118,17 @@ brew --version
 
 You should see `Homebrew 4.x` (or similar), not `command not found`.
 
+```bash
+brew install git
+```
+
 **Check Git**
 
 ```bash
 git --version
 ```
 
-If you see `git version 2.x`, skip the next command. If you see `command not found`:
-
-```bash
-brew install git
-```
-
-```bash
-git --version
-```
+You should see `git version 2.x`.
 
 </Tab>
 <Tab value="Windows">
@@ -211,12 +215,24 @@ Those two lines should print the name and email you just set.
 
 **nvm** installs a specific Node.js version. Brain **requires Node 24**. Other versions (18, 20, 22) will fail.
 
-```bash
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
-```
-
 <Tabs groupId="os" items={['macOS', 'Windows', 'Linux']} persist>
 <Tab value="macOS">
+
+```bash
+brew install nvm
+```
+
+```bash
+mkdir -p ~/.nvm
+```
+
+```bash
+echo 'export NVM_DIR="$HOME/.nvm"' >> ~/.zshrc
+```
+
+```bash
+echo '[ -s "$(brew --prefix)/opt/nvm/nvm.sh" ] && . "$(brew --prefix)/opt/nvm/nvm.sh"' >> ~/.zshrc
+```
 
 **Close Terminal completely** (Command+W). Open Terminal again. nvm only loads in new windows.
 
@@ -237,6 +253,10 @@ Then run `command -v nvm` again. If it still fails, close Terminal and reopen.
 </Tab>
 <Tab value="Windows">
 
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+```
+
 Close the Ubuntu window and open **Ubuntu** again. nvm only loads in a new shell.
 
 **Check that nvm exists**
@@ -255,6 +275,10 @@ Then run `command -v nvm` again.
 
 </Tab>
 <Tab value="Linux">
+
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+```
 
 Close the terminal and open a new one. nvm only loads in a new shell.
 
@@ -307,15 +331,19 @@ node -v
 
 Must start with `v24.` — for example `v24.19.0`. If you see `v18`, `v20`, or `v22`, run `nvm use 24` again.
 
-**Check npm came with Node** (we will not use npm to install Brain, but it should exist):
-
-```bash
-npm -v
-```
-
 ## 5. pnpm
 
 **pnpm** installs the project’s JavaScript dependencies. Brain **blocks npm and yarn** — if you run `npm install` it will error on purpose.
+
+<Tabs groupId="os" items={['macOS', 'Windows', 'Linux']} persist>
+<Tab value="macOS">
+
+```bash
+brew install pnpm
+```
+
+</Tab>
+<Tab value="Windows">
 
 ```bash
 corepack enable
@@ -325,13 +353,27 @@ corepack enable
 corepack prepare pnpm@11.13.1 --activate
 ```
 
+</Tab>
+<Tab value="Linux">
+
+```bash
+corepack enable
+```
+
+```bash
+corepack prepare pnpm@11.13.1 --activate
+```
+
+</Tab>
+</Tabs>
+
 **Check**
 
 ```bash
 pnpm --version
 ```
 
-You need **11** or higher (11.13.1 is what the repo pins).
+You need **11** or higher. On macOS, if brew gave an older pnpm: `brew upgrade pnpm`.
 
 ## 6. Docker
 
@@ -447,54 +489,54 @@ openssl version
 </Tab>
 </Tabs>
 
-## 8. Clone the Brain repo
+## 8. Fork, then clone
 
-You need permission to read `https://github.com/akhil-naidu/brain`. If GitHub asks you to sign in, use your GitHub login, a personal access token, or an SSH key.
+Do **not** clone `akhil-naidu/brain` directly. Fork it to your GitHub account, then clone **your** fork.
 
-<Tabs groupId="os" items={['macOS', 'Windows', 'Linux']} persist>
-<Tab value="macOS">
+### Fork on GitHub
 
-Create a folder for code, then clone. Stay in Terminal.
+1. Open [https://github.com/akhil-naidu/brain](https://github.com/akhil-naidu/brain) in a browser
+2. Sign in to GitHub if asked
+3. Click **Fork** (top right)
+4. Keep yourself as the owner and click **Create fork**
+5. Wait until the URL looks like `https://github.com/YOUR_GITHUB_USERNAME/brain`
 
-</Tab>
-<Tab value="Windows">
+### Clone your fork
 
-Stay in **Ubuntu**. Do **not** clone into `/mnt/c` or `C:\`.
-
-</Tab>
-<Tab value="Linux">
-
-Create a folder for code, then clone.
-
-</Tab>
-</Tabs>
+On **Windows**, stay in Ubuntu. Do **not** clone into `/mnt/c` or `C:\`.
 
 ```bash
 mkdir -p ~/dev
 ```
 
-Go into it:
-
 ```bash
 cd ~/dev
 ```
 
-**HTTPS clone** (works for most people):
+Replace `YOUR_GITHUB_USERNAME` with the GitHub username from the fork URL. You can also copy the URL from the green **Code** button on your fork.
+
+**HTTPS** (works for most people):
 
 ```bash
-git clone https://github.com/akhil-naidu/brain.git
+git clone https://github.com/YOUR_GITHUB_USERNAME/brain.git
 ```
 
 **Or SSH** (only if you already use GitHub SSH keys) — skip this if you used HTTPS:
 
 ```bash
-git clone git@github.com:akhil-naidu/brain.git
+git clone git@github.com:YOUR_GITHUB_USERNAME/brain.git
 ```
 
-Enter the project:
+If GitHub asks you to sign in, use your GitHub login, a personal access token, or an SSH key.
 
 ```bash
 cd brain
+```
+
+Point `upstream` at the original repo so you can pull updates later:
+
+```bash
+git remote add upstream https://github.com/akhil-naidu/brain.git
 ```
 
 **Check**
@@ -506,6 +548,12 @@ pwd
 The path should end with `/brain`.
 
 ```bash
+git remote -v
+```
+
+`origin` should be **your** fork. `upstream` should be `akhil-naidu/brain`.
+
+```bash
 cat .nvmrc
 ```
 
@@ -515,25 +563,120 @@ Must print `24`.
 git status
 ```
 
-Should mention `On branch` and a clean or normal working tree.
+Should mention `On branch main`.
 
-If your team uses the `dev` branch (not `main`):
+## 9. Continue here, or open VS Code
+
+The next commands (`pnpm install`, Docker, `.env`, `pnpm dev`) run in a terminal **inside the `brain` folder**. You can stay in this terminal, or open the folder in an editor for a better view of the files.
+
+[Cursor](https://cursor.com/), [Antigravity](https://antigravity.google/), Windsurf, Zed, and similar editors work like VS Code: open the folder, then use the built-in terminal.
+
+### Stay in this terminal
+
+You should already be in the repo from step 8. If the prompt is somewhere else:
 
 ```bash
-git fetch origin
+cd ~/dev/brain
 ```
+
+**Check**
 
 ```bash
-git checkout dev
+pwd
 ```
+
+The path should end with `/brain`. Skip to **step 10**.
+
+### Install VS Code
+
+Skip this if `code --version` already works.
+
+<Tabs groupId="os" items={['macOS', 'Windows', 'Linux']} persist>
+<Tab value="macOS">
 
 ```bash
-git pull --ff-only
+brew install --cask visual-studio-code
 ```
 
-## 9. Install JavaScript packages
+Open **Visual Studio Code** from Applications once so macOS allows it.
 
-You must be **inside** the `brain` folder. Turn on Node 24 for this window:
+**Check**
+
+```bash
+code --version
+```
+
+If you see `command not found`: in VS Code press **Command+Shift+P**, run **Shell Command: Install 'code' command in PATH**, then open a new terminal.
+
+</Tab>
+<Tab value="Windows">
+
+Install VS Code on **Windows** (not inside Ubuntu): [Download Visual Studio Code](https://code.visualstudio.com/download). Run the installer. Leave **Add to PATH** checked.
+
+Open VS Code once. Install the **WSL** extension if it asks (so the editor uses Ubuntu, not `C:\`).
+
+From **Ubuntu**:
+
+```bash
+code --version
+```
+
+The first run may install the VS Code server in WSL — wait until it finishes.
+
+</Tab>
+<Tab value="Linux">
+
+```bash
+sudo snap install --classic code
+```
+
+If you do not use snap, download the `.deb` or `.rpm` from [code.visualstudio.com/download](https://code.visualstudio.com/download).
+
+**Check**
+
+```bash
+code --version
+```
+
+</Tab>
+</Tabs>
+
+### Open in VS Code
+
+From inside `~/dev/brain`:
+
+```bash
+code .
+```
+
+That opens this repo in VS Code.
+
+Then open VS Code’s terminal:
+
+1. Click the **terminal** icon in the top-right (panel layout), **or** click **Terminal** in the bottom panel
+2. Or press **Control+`** (Control and the backtick key, under Escape)
+3. Or menu **Terminal → New Terminal**
+
+A prompt appears at the bottom. It should already be in `brain`.
+
+**Check**
+
+```bash
+pwd
+```
+
+The path should end with `/brain`. Then go to **step 10** and paste the rest of the commands **in this VS Code terminal**.
+
+For a second long-running command (the Ollama SSH tunnel later), use **Terminal → New Terminal** again.
+
+If `code .` fails, use **File → Open Folder** and pick `~/dev/brain`.
+
+## 10. Install JavaScript packages
+
+Use the **same terminal** you chose in step 9. Pick **This terminal** or **VS Code** in the tabs — the choice sticks. `pwd` must end with `/brain`.
+
+<Tabs groupId="shell" items={['This terminal', 'VS Code']} persist>
+<Tab value="This terminal">
 
 ```bash
 cd ~/dev/brain
@@ -547,7 +690,35 @@ nvm use
 node -v
 ```
 
+</Tab>
+<Tab value="VS Code">
+
+You are already in the folder. Do **not** `cd`.
+
+```bash
+nvm use
+```
+
+```bash
+node -v
+```
+
+</Tab>
+</Tabs>
+
 Must still be `v24.x`. Then:
+
+<Tabs groupId="os" items={['macOS', 'Windows', 'Linux']} persist>
+<Tab value="macOS">
+
+Skip `corepack` — pnpm already came from Homebrew.
+
+```bash
+pnpm install
+```
+
+</Tab>
+<Tab value="Windows">
 
 ```bash
 corepack enable
@@ -556,6 +727,20 @@ corepack enable
 ```bash
 pnpm install
 ```
+
+</Tab>
+<Tab value="Linux">
+
+```bash
+corepack enable
+```
+
+```bash
+pnpm install
+```
+
+</Tab>
+</Tabs>
 
 This can take several minutes. Lines about Fumadocs / `postinstall` are normal.
 
@@ -567,9 +752,9 @@ ls node_modules
 
 If you see `Use pnpm to install`, you used `npm install`. Stop. Use `pnpm install` only.
 
-## 10. Start Postgres
+## 11. Start Postgres
 
-Docker must be running. From the `brain` folder:
+Docker must be running. Same terminal as step 10 (`pwd` still ends with `/brain`). Do **not** `cd` again if you are already there.
 
 ```bash
 docker compose up -d db
@@ -596,11 +781,11 @@ This creates:
 
 If port **5432** is already used by another Postgres: stop that other Postgres, or change the host port in `docker-compose.yml` and use the new port in `BRAIN_DATABASE_URL`.
 
-## 11. Create `.env`
+## 12. Create `.env`
 
 This file holds secrets. It is **not** committed to Git.
 
-From the `brain` folder:
+Same folder as step 10:
 
 ```bash
 cp .env.example .env
@@ -618,41 +803,28 @@ Generate a **bootstrap** secret. Run this **again** so you get a **different** s
 openssl rand -base64 32
 ```
 
-Open `.env` in an editor. These next boxes are **lines to paste into that file**, not commands for the shell. Paste your two openssl outputs. Do not reuse one string for both secrets.
+Pick **This terminal** (edit with nano) or **VS Code** (click `.env` in the sidebar). Same tab as step 9.
 
-<Tabs groupId="os" items={['macOS', 'Windows', 'Linux']} persist>
-<Tab value="macOS">
+<Tabs groupId="shell" items={['This terminal', 'VS Code']} persist>
+<Tab value="This terminal">
 
-Cursor, VS Code, TextEdit, or:
+Open `.env` with:
 
 ```bash
 nano .env
 ```
+
+In nano: save with **Ctrl+O**, **Enter**, then **Ctrl+X**.
 
 </Tab>
-<Tab value="Windows">
+<Tab value="VS Code">
 
-In Ubuntu, use Cursor/VS Code with WSL, or:
-
-```bash
-nano .env
-```
-
-Save in nano with **Ctrl+O**, **Enter**, then **Ctrl+X**.
-
-</Tab>
-<Tab value="Linux">
-
-Cursor, VS Code, or:
-
-```bash
-nano .env
-```
-
-Save in nano with **Ctrl+O**, **Enter**, then **Ctrl+X**.
+In the left **Explorer**, click `.env`. Edit it there. Save with **Command+S** (macOS) or **Control+S** (Windows/Linux).
 
 </Tab>
 </Tabs>
+
+These next boxes are **lines to put in that file**, not commands for the shell. If a key is already there with a `#` in front, delete the `#` and set the value. Paste your two openssl outputs. Do not reuse one string for both secrets.
 
 ```ini
 BETTER_AUTH_SECRET=paste-first-openssl-output
@@ -683,12 +855,16 @@ BETTER_AUTH_URL=http://localhost:3000
 
 Leave `COMMAND_CODE_API_KEY=` empty if you will use Ollama only.
 
-Do **not** Slack or email these values.
+Do **not** send these values in Slack or email.
 
 **Check** — all five lines should print with values after `=`:
 
 ```bash
-grep -E '^(BETTER_AUTH_SECRET|BRAIN_BOOTSTRAP_TOKEN|BRAIN_DATABASE_URL|BRAIN_PUBLIC_URL|BETTER_AUTH_URL)=' .env
+grep -E '^(BETTER_AUTH_SECRET|BRAIN_BOOTSTRAP_TOKEN)=' .env
+```
+
+```bash
+grep -E '^(BRAIN_DATABASE_URL|BRAIN_PUBLIC_URL|BETTER_AUTH_URL)=' .env
 ```
 
 ### Optional later (not needed for first chat)
@@ -700,9 +876,9 @@ grep -E '^(BETTER_AUTH_SECRET|BRAIN_BOOTSTRAP_TOKEN|BRAIN_DATABASE_URL|BRAIN_PUB
 | `BRAIN_INTERNAL_URL` | **Schedules only** — already defaults to `http://127.0.0.1:3000` |
 | MCP client ids | Only if you skip in-app Connect. [Environment](/docs/reference/environment) |
 
-## 12. Run Brain
+## 13. Run Brain
 
-Still in the `brain` folder:
+Same terminal as step 10. Do **not** `cd` if `pwd` already ends with `/brain`.
 
 ```bash
 nvm use
@@ -723,7 +899,7 @@ Open a browser:
 
 If the page errors, read the `pnpm dev` window: Docker not running, empty `BETTER_AUTH_SECRET`, or wrong `BRAIN_DATABASE_URL` are the usual causes.
 
-## 13. Create the operator account
+## 14. Create the operator account
 
 1. Open [http://localhost:3000/setup](http://localhost:3000/setup)
 2. Title should be **Create operator**
@@ -750,18 +926,18 @@ docker compose up -d db
 
 Then open `/setup` again.
 
-## 14. Ollama on a VPS (the model)
+## 15. Ollama on a VPS (the model)
 
 Brain sends chat to an **OpenAI-compatible** URL. Ollama provides that at `http://HOST:11434/v1`.
 
 Your **laptop** must reach Ollama (discovery waits only **4 seconds**).
 
 <Callout title="Keep Ollama private" type="info">
-  On the VPS, leave Ollama on localhost. From the laptop, use an SSH tunnel. Do
-  not open port 11434 to the whole internet for a first test.
+  On the VPS, leave Ollama on localhost. From the laptop, use an SSH tunnel. Do not open port 11434
+  to the whole internet for a first test.
 </Callout>
 
-### 14.1 On the VPS
+### 15.1 On the VPS
 
 From your laptop, log into the server (replace user and host):
 
@@ -795,27 +971,11 @@ curl -sS http://127.0.0.1:11434/api/tags
 
 You should see the model name in the JSON. Stay logged in or keep Ollama running as a service, then you can leave this SSH session.
 
-### 14.2 On the laptop — SSH tunnel
+### 15.2 On the laptop — SSH tunnel
 
 This makes the VPS look like `127.0.0.1:11434` on your machine.
 
-<Tabs groupId="os" items={['macOS', 'Windows', 'Linux']} persist>
-<Tab value="macOS">
-
-Open a **new** Terminal (**do not** stop `pnpm dev`).
-
-</Tab>
-<Tab value="Windows">
-
-Open a **new** Ubuntu window (**do not** stop `pnpm dev`).
-
-</Tab>
-<Tab value="Linux">
-
-Open a **new** terminal (**do not** stop `pnpm dev`).
-
-</Tab>
-</Tabs>
+Open a **new** terminal (Ubuntu on Windows). Do **not** stop `pnpm dev`.
 
 Paste (same user and host as above):
 
@@ -843,40 +1003,40 @@ ssh -N -L 11435:127.0.0.1:11434 YOUR_USER@YOUR_VPS_HOST
 
 Then in Brain use base URL `http://127.0.0.1:11435/v1`.
 
-### 14.3 Alternative: public URL
+### 15.3 Alternative: public URL
 
 Only if you cannot use a tunnel: bind Ollama to `0.0.0.0:11434` (`OLLAMA_HOST`), firewall **only your laptop IP**, and use `http://VPS_PUBLIC_IP:11434/v1` (or HTTPS). Prefer HTTPS + an allowlist.
 
-## 15. Add Ollama in Brain
+## 16. Add Ollama in Brain
 
 Stay signed in as the operator.
 
 1. In the left sidebar click **Models**, or open [http://localhost:3000/models](http://localhost:3000/models)
-2. Under **Start with a model**, click the **Ollama** card (or **Add model** if you already have models)
-3. Fill the dialog:
+2. Under **Start with a model**, click the **Ollama** card (subtitle **Running locally** — that is correct with the tunnel). If you already have models, the header button is **Add model**.
+3. The **Add model** dialog opens with Ollama defaults already filled. Adjust if needed:
 
 | Field | What to enter |
 | --- | --- |
-| Who can use this? | **Entire instance** (all workspaces) or **This workspace** |
-| Display name | `Ollama VPS` |
-| Base URL | `http://127.0.0.1:11434/v1` (the `/v1` at the end matters) |
-| API key | leave empty |
-| Context window | `128000` |
+| Who can use this? | Defaults to **This workspace**. Choose **Entire instance** if every workspace should see it |
+| Display name | Defaults to `Ollama`. Change to `Ollama VPS` if you want that label in the picker |
+| Base URL | Already `http://127.0.0.1:11434/v1` (keep the `/v1`) |
+| API key (optional) | leave empty |
+| Context window | Already `128000` |
 
 4. Click **Fetch models** (next to Base URL)
 5. Click the id you pulled (for example `llama3.2`) so **Model id** fills in
 6. Click **Save**
 
-The card should show **All workspaces** or **This workspace**, and **No key**. It should also appear under **Available in chat**.
+The model appears under **Your models** with **All workspaces** or **This workspace**, and **No key**. It should also appear under **Available in chat**.
 
 If **Fetch models** fails: is the tunnel window still open? Did laptop `curl` to `/api/tags` work? Does the URL end with `/v1`? You can type **Model id** by hand from `ollama list` and still Save.
 
 More: [Custom models](/docs/models/custom-models).
 
-## 16. Send a test chat
+## 17. Send a test chat
 
 1. Sidebar **New chat**, or [http://localhost:3000/chat](http://localhost:3000/chat)
-2. In the composer, open the **model** menu and pick **Ollama VPS**
+2. In the composer, open the **model** menu and pick the display name you saved (for example **Ollama VPS**)
 3. Set mode to **Ask** (plain reply, no tools) or leave **Agent**. **Shift+Tab** switches modes — [Ask vs Agent](/docs/chat/modes)
 4. Paste this into the box:
 
@@ -888,11 +1048,11 @@ Reply with exactly: Brain is running.
 
 A streamed reply means install worked. Next: [First chat](/docs/getting-started/first-chat).
 
-**Chat isn't available** means no custom model and no `COMMAND_CODE_API_KEY`. Finish section 15, or add a Command Code key and restart `pnpm dev`.
+**Chat isn't available** means no custom model and no `COMMAND_CODE_API_KEY`. Finish section 16, or add a Command Code key and restart `pnpm dev`.
 
 Turn errors usually mean the tunnel dropped, the model id is wrong, the VPS is out of memory, or the base URL is missing `/v1`.
 
-## 17. Quick tour of the rest of the app
+## 18. Quick tour of the rest of the app
 
 You do not need to configure these on day one. Click each once so you know where it lives:
 
@@ -900,11 +1060,11 @@ You do not need to configure these on day one. Click each once so you know where
 | --- | --- |
 | `/chat` | Main chat. Search chats with **⌘K** / **Ctrl+K** |
 | Composer **Ask** / **Agent** | Ask = talk only. Agent = tools |
-| Composer **Integrations** | Which connected apps this chat may use |
+| Composer **Tools** (hammer icon) | Which connected apps this chat may use |
 | `/models` | Built-in and custom models |
 | `/tools` | MCP apps — [Connections](/docs/connections) |
 | `/workspaces` | Switch or create workspaces |
-| `/playbooks` | Saved prompts. **Run** drops them into chat |
+| `/playbooks` | Saved prompts. Click a playbook name to drop it into chat |
 | `/schedules` | Timers — automatic runs need optional `BRAIN_INTERNAL_TOKEN` |
 | `/projects` | Folders for chats |
 | `/chats` | Full list |
@@ -914,33 +1074,40 @@ You do not need to configure these on day one. Click each once so you know where
 
 When you connect tools later: `/tools` → **Connect** (Notion, ClickUp, …) or admin **Set up** then **Connect** (GitHub, Slack). Turn the app **on** for the chat. Use **Agent**. Writes may ask for [approval](/docs/chat/approvals). Local OAuth callback origin is `http://localhost:3000`.
 
-Optional playbook test: `/playbooks` → prompt `Say hello from a playbook.` → **Run**.
+Optional playbook test: `/playbooks` → add a prompt `Say hello from a playbook.` → click that playbook’s name.
 
-Local `pnpm dev` does not run the minute cron. Use **Run now** on `/schedules`. Production unattended runs need `BRAIN_INTERNAL_TOKEN` — [Schedules](/docs/playbooks-and-schedules/schedules).
+Local `pnpm dev` does not run the minute cron. Use **Run now** (playbook schedules) or **Run once** (morning brief) on `/schedules`. Production unattended runs need `BRAIN_INTERNAL_TOKEN` — [Schedules](/docs/playbooks-and-schedules/schedules).
 
-## 18. Next time you open the laptop
+## 19. Next time you open the laptop
 
-<Tabs groupId="os" items={['macOS', 'Windows', 'Linux']} persist>
-<Tab value="macOS">
+Start Docker (Docker Desktop on macOS/Windows) and wait until the engine is running.
 
-Start **Docker Desktop** and wait for the engine. Open Terminal.
+Pick **This terminal** or **VS Code**, same as before.
 
-</Tab>
-<Tab value="Windows">
-
-Start **Docker Desktop** and wait for the engine. Open **Ubuntu**.
-
-</Tab>
-<Tab value="Linux">
-
-Make sure Docker is running. Open a terminal.
-
-</Tab>
-</Tabs>
+<Tabs groupId="shell" items={['This terminal', 'VS Code']} persist>
+<Tab value="This terminal">
 
 ```bash
 cd ~/dev/brain
 ```
+
+</Tab>
+<Tab value="VS Code">
+
+```bash
+cd ~/dev/brain
+```
+
+```bash
+code .
+```
+
+Then **Control+`** (or the terminal icon). You are already in `brain` — do not `cd` again.
+
+</Tab>
+</Tabs>
+
+Then:
 
 ```bash
 nvm use
@@ -956,7 +1123,7 @@ pnpm dev
 
 Sign in at [http://localhost:3000/sign-in](http://localhost:3000/sign-in).
 
-If you use VPS Ollama, in a **second** Terminal, **before** chatting:
+If you use VPS Ollama, in a **second** terminal (**Terminal → New Terminal** in VS Code), **before** chatting:
 
 ```bash
 ssh -N -L 11434:127.0.0.1:11434 YOUR_USER@YOUR_VPS_HOST
@@ -964,13 +1131,14 @@ ssh -N -L 11434:127.0.0.1:11434 YOUR_USER@YOUR_VPS_HOST
 
 Stop Brain with **Ctrl+C** in the `pnpm dev` window. Postgres can stay running.
 
-## 19. Troubleshooting
+## 20. Troubleshooting
 
 | Symptom | What to do |
 | --- | --- |
-| `nvm: command not found` | Close the terminal and reopen. macOS: `source ~/.zshrc`. Windows/Linux: `source ~/.bashrc` |
+| `code: command not found` | macOS: Command+Shift+P → **Shell Command: Install 'code' command in PATH**. Windows: reinstall VS Code with **Add to PATH**, then use Ubuntu |
+| `nvm: command not found` | Close the terminal and reopen. macOS: `source ~/.zshrc` (Homebrew nvm needs `NVM_DIR` in that file). Windows/Linux: `source ~/.bashrc` |
 | Wrong Node version | `cd` into `brain`, then `nvm use`, then `node -v` must be v24 |
-| `Use pnpm to install` | Do not use npm. Run `corepack enable`, then `pnpm install` |
+| `Use pnpm to install` | Do not use npm. macOS: `brew install pnpm`. Windows/Linux: `corepack enable`, then `pnpm install` |
 | Docker daemon error | Start Docker (Desktop on macOS/Windows, Engine on Linux) and wait |
 | Database URL errors | `docker compose up -d db` and check `.env` |
 | `/setup` says Setup closed | Operator exists → `/sign-in`. To reset: `docker compose down -v`, then `docker compose up -d db` |
@@ -998,7 +1166,7 @@ pnpm run verify
 
 More: [Self-hosting troubleshooting](/docs/self-hosting/troubleshooting).
 
-## 20. Optional: Command Code built-in models
+## 21. Optional: Command Code built-in models
 
 If you have a Command Code API key, add this line to `.env` (not in Terminal):
 
@@ -1024,7 +1192,8 @@ You can use Command Code **and** Ollama. Chat does not require Command Code when
 - [ ] `node -v` is `v24.x`
 - [ ] `pnpm --version` is 11+
 - [ ] Docker running; `docker compose version` works
-- [ ] Repo cloned; `pwd` ends with `/brain`
+- [ ] Repo forked; cloned **your** fork; `pwd` ends with `/brain`
+- [ ] Still in this terminal **or** repo open in VS Code with `pwd` ending `/brain`
 - [ ] `pnpm install` finished
 - [ ] `docker compose up -d db` healthy
 - [ ] `.env` has the five required values
