@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="720" viewBox="0 0 1100 720" role="img" aria-labelledby="title desc">
+  <title id="title">Brain logical architecture</title>
+  <desc id="desc">Signed-in browser talks to Brain on dFlow Enterprise. Brain stores product data in Postgres, calls Command Code or Azure AI Foundry for models, and fetches live work data through stateless MCP.</desc>
+  <rect width="1100" height="720" fill="#FAFBFC"/>
+  <style>
+    .label { font-family: Helvetica, Arial, sans-serif; }
+    .title { font-size: 13px; font-weight: 700; fill: #111827; }
+    .sub { font-size: 12px; fill: #4B5563; }
+    .caption { font-size: 11px; font-weight: 600; fill: #6B7280; letter-spacing: 0.04em; }
+    .box { fill: #FFFFFF; stroke: #D1D5DB; stroke-width: 1.5; }
+    .host { fill: #F8FAFC; stroke: #94A3B8; stroke-width: 1.5; stroke-dasharray: 6 4; }
+    .accent { fill: #EEF4FF; stroke: #93C5FD; }
+    .data { fill: #F0FDF4; stroke: #86EFAC; }
+    .model { fill: #FFF7ED; stroke: #FDBA74; }
+    .mcp { fill: #F5F3FF; stroke: #C4B5FD; }
+  </style>
+
+  <text x="550" y="28" text-anchor="middle" class="label caption">PEOPLE</text>
+  <rect x="375" y="40" width="350" height="56" rx="8" class="box accent"/>
+  <text x="550" y="64" text-anchor="middle" class="label title">Signed-in staff</text>
+  <text x="550" y="82" text-anchor="middle" class="label sub">Browser / Chat / Tools / Models / Schedules</text>
+
+  <line x1="550" y1="96" x2="550" y2="132" stroke="#64748B" stroke-width="1.75"/>
+  <polygon points="550,136 545,126 555,126" fill="#64748B"/>
+  <text x="568" y="120" class="label caption">HTTPS</text>
+
+  <rect x="70" y="148" width="960" height="168" rx="10" class="host"/>
+  <text x="90" y="172" class="label caption">APPLICATION - BRAIN ON DFLOW ENTERPRISE</text>
+
+  <rect x="100" y="196" width="280" height="88" rx="8" class="box"/>
+  <text x="240" y="232" text-anchor="middle" class="label title">Next.js</text>
+  <text x="240" y="252" text-anchor="middle" class="label sub">UI on :3000</text>
+
+  <rect x="410" y="196" width="280" height="88" rx="8" class="box"/>
+  <text x="550" y="232" text-anchor="middle" class="label title">eve agent runtime</text>
+  <text x="550" y="252" text-anchor="middle" class="label sub">Sessions, streaming, MCP, approvals</text>
+
+  <rect x="720" y="196" width="280" height="88" rx="8" class="box"/>
+  <text x="860" y="232" text-anchor="middle" class="label title">Better Auth</text>
+  <text x="860" y="252" text-anchor="middle" class="label sub">Workspaces, roles, HITL</text>
+
+  <line x1="380" y1="240" x2="410" y2="240" stroke="#64748B" stroke-width="1.75"/>
+  <line x1="690" y1="240" x2="720" y2="240" stroke="#64748B" stroke-width="1.75"/>
+
+  <line x1="240" y1="316" x2="240" y2="368" stroke="#64748B" stroke-width="1.75"/>
+  <polygon points="240,372 235,362 245,362" fill="#64748B"/>
+  <text x="252" y="350" class="label caption">PRODUCT DATA</text>
+
+  <line x1="550" y1="316" x2="550" y2="368" stroke="#64748B" stroke-width="1.75"/>
+  <polygon points="550,372 545,362 555,362" fill="#64748B"/>
+  <text x="562" y="350" class="label caption">INFERENCE</text>
+
+  <line x1="860" y1="316" x2="860" y2="368" stroke="#64748B" stroke-width="1.75"/>
+  <polygon points="860,372 855,362 865,362" fill="#64748B"/>
+  <text x="872" y="350" class="label caption">LIVE TOOLS</text>
+
+  <rect x="70" y="384" width="340" height="196" rx="10" class="box data"/>
+  <text x="240" y="412" text-anchor="middle" class="label caption">PRODUCT DATABASE</text>
+  <text x="240" y="448" text-anchor="middle" class="label title">Operator Postgres</text>
+  <text x="240" y="472" text-anchor="middle" class="label sub">Accounts, chats, playbooks,</text>
+  <text x="240" y="490" text-anchor="middle" class="label sub">schedules - not a copy of Slack</text>
+  <text x="240" y="508" text-anchor="middle" class="label sub">or Snowflake</text>
+
+  <rect x="430" y="384" width="240" height="196" rx="10" class="box model"/>
+  <text x="550" y="412" text-anchor="middle" class="label caption">MODEL PLANE</text>
+  <rect x="450" y="432" width="200" height="56" rx="6" class="box"/>
+  <text x="550" y="454" text-anchor="middle" class="label title">Command Code</text>
+  <text x="550" y="472" text-anchor="middle" class="label sub">Default BYOK</text>
+  <rect x="450" y="500" width="200" height="56" rx="6" class="box"/>
+  <text x="550" y="522" text-anchor="middle" class="label title">Azure AI Foundry</text>
+  <text x="550" y="540" text-anchor="middle" class="label sub">Custom / private BYOA</text>
+
+  <rect x="690" y="384" width="340" height="196" rx="10" class="box mcp"/>
+  <text x="860" y="412" text-anchor="middle" class="label caption">STATELESS MCP</text>
+  <text x="860" y="444" text-anchor="middle" class="label title">Live fetch at request time</text>
+  <text x="860" y="470" text-anchor="middle" class="label sub">ClickUp, Slack, Asana</text>
+  <text x="860" y="488" text-anchor="middle" class="label sub">Gmail, GitHub</text>
+  <text x="860" y="514" text-anchor="middle" class="label sub">Snowflake, MongoDB</text>
+  <text x="860" y="532" text-anchor="middle" class="label sub">MCP Toolbox, dFlow</text>
+  <text x="860" y="556" text-anchor="middle" class="label sub">Writes require in-chat approval</text>
+
+  <text x="550" y="616" text-anchor="middle" class="label sub">Brain owns accounts and transcripts. Work data stays in the source systems. Models are called at an endpoint the organization chooses.</text>
+  <text x="550" y="640" text-anchor="middle" class="label caption">BRAIN LOGICAL ARCHITECTURE - DFLOW ENTERPRISE - AUGUST 2026</text>
+</svg>

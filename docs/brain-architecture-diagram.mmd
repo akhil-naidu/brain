@@ -1,0 +1,28 @@
+flowchart TB
+  User["Signed-in staff"]
+  UI["Browser chat<br/>Tools · Models · Schedules"]
+
+  subgraph Host["Brain on dFlow Enterprise"]
+    direction LR
+    Next["Next.js"]
+    Eve["eve agent runtime"]
+    Guard["Better Auth · workspaces · HITL"]
+    Next --- Eve --- Guard
+  end
+
+  PG["Operator Postgres<br/>accounts · chats · playbooks"]
+  CC["Command Code<br/>default BYOK"]
+  AF["Azure AI Foundry<br/>custom model BYOA"]
+
+  subgraph MCP["Stateless MCP — live fetch, not a RAG index"]
+    direction LR
+    Apps["ClickUp · Slack · Asana<br/>Gmail · GitHub"]
+    Data["Snowflake · MongoDB<br/>MCP Toolbox · dFlow"]
+  end
+
+  User --> UI
+  UI -->|"HTTPS"| Next
+  Eve -->|"product data"| PG
+  Eve -->|"inference"| CC
+  Eve -->|"inference"| AF
+  Eve -->|"tools + approval on writes"| MCP
