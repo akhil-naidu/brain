@@ -24,3 +24,6 @@ coverage
 
 # OS
 .DS_Store
+
+# Local-only notes (video recording scripts, unpublished drafts — not for the public repo)
+docs/internal/

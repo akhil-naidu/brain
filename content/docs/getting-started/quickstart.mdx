@@ -5,6 +5,8 @@ description: Install Brain locally with Node 24, pnpm, and Docker Postgres.
 
 Run Brain on your machine for development or evaluation.
 
+For a **pin-to-pin laptop walkthrough** (nvm, Git, Docker, `.env`, first operator, Ollama on a VPS, test chat) see `docs/onboarding/local-setup-guide.md` in the repo. This page is the short version.
+
 ## Requirements
 
 - Node.js **24.x** (`nvm use` — see `.nvmrc`)
@@ -28,11 +30,15 @@ docker compose up -d db
 # 3. Env
 cp .env.example .env
 # Required at minimum:
-#   COMMAND_CODE_API_KEY=...
+#   COMMAND_CODE_API_KEY=...          # omit if you only use custom models
 #   BETTER_AUTH_SECRET=$(openssl rand -base64 32)
+#   BRAIN_BOOTSTRAP_TOKEN=$(openssl rand -base64 32)   # paste on /setup
 #   BRAIN_DATABASE_URL=postgres://brain:brain@127.0.0.1:5432/brain
 #   BRAIN_PUBLIC_URL=http://localhost:3000
 #   BETTER_AUTH_URL=http://localhost:3000
+# Optional (schedules only):
+#   BRAIN_INTERNAL_TOKEN=$(openssl rand -base64 32)
+#   BRAIN_INTERNAL_URL=http://127.0.0.1:3000          # default; set if Next is not on :3000
 
 # 4. Dev server (Next + eve)
 pnpm dev
@@ -42,7 +48,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Next
 
-1. Empty database → open **`/setup`** and create the operator account
+1. Empty database → open **`/setup`** and create the operator account (paste `BRAIN_BOOTSTRAP_TOKEN` when the field appears)
 2. Sign in → **`/chat`**
 3. Continue with [First chat](/docs/getting-started/first-chat)
 

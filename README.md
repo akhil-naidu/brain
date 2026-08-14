@@ -42,6 +42,8 @@ Built with [Next.js](https://nextjs.org/) + [`eve`](https://eve.dev/) (`withEve(
 
 ## Quick start (local)
 
+**Full laptop walkthrough** (nvm, Git, Docker, `.env`, operator setup, Ollama on a VPS, first chat): [`docs/onboarding/local-setup-guide.md`](./docs/onboarding/local-setup-guide.md)
+
 ```bash
 # 1. Install
 git clone https://github.com/akhil-naidu/brain.git
@@ -56,11 +58,15 @@ docker compose up -d db
 # 3. Env
 cp .env.example .env
 # Required at minimum:
-#   COMMAND_CODE_API_KEY=...
+#   COMMAND_CODE_API_KEY=...          # omit if you only use custom models
 #   BETTER_AUTH_SECRET=$(openssl rand -base64 32)
+#   BRAIN_BOOTSTRAP_TOKEN=$(openssl rand -base64 32)   # paste on /setup
 #   BRAIN_DATABASE_URL=postgres://brain:brain@127.0.0.1:5432/brain
 #   BRAIN_PUBLIC_URL=http://localhost:3000
 #   BETTER_AUTH_URL=http://localhost:3000
+# Optional (schedules only):
+#   BRAIN_INTERNAL_TOKEN=$(openssl rand -base64 32)
+#   BRAIN_INTERNAL_URL=http://127.0.0.1:3000          # default; set if Next is not on :3000
 
 # 4. Dev server (Next + eve)
 pnpm dev
