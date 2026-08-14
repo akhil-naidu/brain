@@ -42,7 +42,7 @@ Built with [Next.js](https://nextjs.org/) + [`eve`](https://eve.dev/) (`withEve(
 
 ## Quick start (local)
 
-**Full laptop walkthrough** (nvm, Git, Docker, `.env`, operator setup, Ollama on a VPS, first chat): [`docs/onboarding/local-setup-guide.md`](./docs/onboarding/local-setup-guide.md)
+**Local setup** (nvm, Git, Docker, `.env`, operator, Ollama, first chat): after `pnpm dev`, open [`/docs/getting-started/local-setup`](http://localhost:3000/docs/getting-started/local-setup). Source: [`content/docs/getting-started/local-setup.mdx`](./content/docs/getting-started/local-setup.mdx).
 
 ```bash
 # 1. Install

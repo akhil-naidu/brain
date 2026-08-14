@@ -849,6 +849,88 @@ html[data-eve-chat-sidebar="closed"] [data-desktop-sidebar] {
   font-weight: 600;
 }
 
+/*
+ * Docs <Tabs>: one panel + pill switcher.
+ * Target Fumadocs' own chrome (bg-fd-secondary + tablist) so this still
+ * applies if the MDX wrapper class is not on the node. Code-block tabs use
+ * bg-fd-card and are left alone.
+ */
+#nd-page .brain-os-tabs,
+#nd-page [data-brain-os-tabs],
+#nd-page .bg-fd-secondary:has(> [role="tablist"]) {
+  margin-block: 1rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  background: color-mix(in oklab, var(--muted) 28%, var(--card));
+}
+
+#nd-page .brain-os-tabs > [role="tablist"],
+#nd-page [data-brain-os-tabs] > [role="tablist"],
+#nd-page .bg-fd-secondary:has(> [role="tablist"]) > [role="tablist"] {
+  display: flex;
+  width: fit-content;
+  max-width: calc(100% - 1.5rem);
+  flex-wrap: wrap;
+  gap: 0.125rem;
+  overflow: visible;
+  margin: 0.7rem 0.7rem 0;
+  padding: 0.22rem;
+  border: 1px solid var(--border);
+  border-radius: 0.7rem;
+  background: var(--muted);
+}
+
+#nd-page .brain-os-tabs [role="tab"],
+#nd-page [data-brain-os-tabs] [role="tab"],
+#nd-page .bg-fd-secondary:has(> [role="tablist"]) > [role="tablist"] > [role="tab"] {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  border: 0 !important;
+  border-bottom-width: 0 !important;
+  border-bottom-color: transparent !important;
+  border-radius: 0.5rem;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--muted-foreground) !important;
+  background: transparent;
+  box-shadow: none;
+}
+
+#nd-page .brain-os-tabs [role="tab"]:hover,
+#nd-page [data-brain-os-tabs] [role="tab"]:hover,
+#nd-page .bg-fd-secondary:has(> [role="tablist"]) > [role="tablist"] > [role="tab"]:hover {
+  color: var(--foreground) !important;
+  background: color-mix(in oklab, var(--background) 55%, transparent);
+}
+
+#nd-page .brain-os-tabs [role="tab"][data-state="active"],
+#nd-page [data-brain-os-tabs] [role="tab"][data-state="active"],
+#nd-page
+  .bg-fd-secondary:has(> [role="tablist"])
+  > [role="tablist"]
+  > [role="tab"][data-state="active"] {
+  border: 0 !important;
+  color: var(--foreground) !important;
+  background: var(--background) !important;
+  box-shadow:
+    0 0 0 1px var(--border),
+    0 1px 2px color-mix(in oklab, var(--foreground) 14%, transparent);
+}
+
+#nd-page .brain-os-tabs .brain-os-tab,
+#nd-page .brain-os-tabs [role="tabpanel"],
+#nd-page [data-brain-os-tabs] [role="tabpanel"],
+#nd-page .bg-fd-secondary:has(> [role="tablist"]) > [role="tabpanel"] {
+  margin: 0;
+  padding: 1rem;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none;
+}
+
 /* TOC active bar uses brand primary (already fd-primary via shadcn) */
 #nd-toc [data-active="true"] {
   color: var(--foreground);
