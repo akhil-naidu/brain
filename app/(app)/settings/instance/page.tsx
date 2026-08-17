@@ -386,6 +386,35 @@ export default function InstanceSettingsPage() {
             </Field>
           </div>
 
+          <div className="space-y-3 p-5">
+            <Field className="max-w-md">
+              <FieldLabel htmlFor="agent-safety-posture">Agent safety posture</FieldLabel>
+              <FieldSelect
+                disabled={!canManage || pending}
+                id="agent-safety-posture"
+                onValueChange={(value) => {
+                  if (value === "strict" || value === "auto" || value === "dangerous") {
+                    setSaved(false);
+                    setPolicies({ ...policies, agentSafetyPosture: value });
+                  }
+                }}
+                options={[
+                  { value: "strict", label: "Strict — approve almost every tool" },
+                  { value: "auto", label: "Auto — approve writes (default)" },
+                  { value: "dangerous", label: "Dangerous — skip tool approval" },
+                ]}
+                value={policies.agentSafetyPosture}
+              />
+              <FieldDescription>
+                Auto matches today’s in-chat write approvals. Strict pauses reads and sandbox
+                bash/write too. Dangerous skips those pauses. A host command policy still blocks
+                high-risk shell and SQL in every posture, including Dangerous. Ask and Plan mode
+                limits still apply. Scheduled briefs keep Auto approvals so they do not wait for a
+                person.
+              </FieldDescription>
+            </Field>
+          </div>
+
           <div className="flex items-center justify-between gap-6 p-5">
             <div className="space-y-1">
               <p className="text-sm font-medium">Allow creating workspaces</p>
