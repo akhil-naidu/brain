@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { showToast } from "@/lib/ui/toast-store";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,8 @@ type SlackInboundStatus = {
   readonly hasSigningSecret: boolean;
   readonly source: SlackInboundSource | null;
   readonly eventUrl: string | null;
+  readonly allowedChannelIds: readonly string[];
+  readonly allowedChannelIdsSource: "stored" | "env" | null;
 };
 
 function sourceLabel(source: SlackInboundSource | null): string | null {
@@ -66,6 +69,8 @@ function parseSlackInboundStatus(data: unknown): SlackInboundStatus | null {
       hasSigningSecret: false,
       source: null,
       eventUrl: null,
+      allowedChannelIds: [],
+      allowedChannelIdsSource: null,
     };
   }
   const source =
@@ -73,12 +78,27 @@ function parseSlackInboundStatus(data: unknown): SlackInboundStatus | null {
     (data.source === "stored" || data.source === "env" || data.source === "mixed")
       ? data.source
       : null;
+  const allowedChannelIds =
+    "allowedChannelIds" in data && Array.isArray(data.allowedChannelIds)
+      ? data.allowedChannelIds.filter(
+          (id): id is string => typeof id === "string" && id.trim().length > 0,
+        )
+      : [];
+  const allowedChannelIdsSource =
+    "allowedChannelIdsSource" in data &&
+    (data.allowedChannelIdsSource === "stored" ||
+      data.allowedChannelIdsSource === "env" ||
+      data.allowedChannelIdsSource === null)
+      ? data.allowedChannelIdsSource
+      : null;
   return {
     canManage: true,
     hasBotToken: "hasBotToken" in data && data.hasBotToken === true,
     hasSigningSecret: "hasSigningSecret" in data && data.hasSigningSecret === true,
     source,
     eventUrl: "eventUrl" in data && typeof data.eventUrl === "string" ? data.eventUrl : null,
+    allowedChannelIds,
+    allowedChannelIdsSource,
   };
 }
 
@@ -89,6 +109,7 @@ export function SlackInboundSettings({ autoOpen = false }: { readonly autoOpen?:
   const [open, setOpen] = useState(false);
   const [botToken, setBotToken] = useState("");
   const [signingSecret, setSigningSecret] = useState("");
+  const [allowedChannelsText, setAllowedChannelsText] = useState("");
   const [saving, setSaving] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -134,8 +155,10 @@ export function SlackInboundSettings({ autoOpen = false }: { readonly autoOpen?:
       setSigningSecret("");
       setFormError(null);
       setCopied(false);
+      return;
     }
-  }, [open]);
+    setAllowedChannelsText((status?.allowedChannelIds ?? []).join("\n"));
+  }, [open, status?.allowedChannelIds]);
 
   if (loading && !status) {
     return null;
@@ -179,7 +202,10 @@ export function SlackInboundSettings({ autoOpen = false }: { readonly autoOpen?:
   const ready = status.hasBotToken && status.hasSigningSecret;
   const statusCopy = inboundStatusCopy(status);
   const hasStored = status.source === "stored" || status.source === "mixed";
-  const canSave = Boolean(botToken.trim() || signingSecret.trim()) && !saving && !clearing;
+  const savedChannelsText = status.allowedChannelIds.join("\n");
+  const channelsChanged = allowedChannelsText !== savedChannelsText;
+  const canSave =
+    Boolean(botToken.trim() || signingSecret.trim() || channelsChanged) && !saving && !clearing;
 
   const save = () => {
     if (!canSave) {
@@ -195,6 +221,7 @@ export function SlackInboundSettings({ autoOpen = false }: { readonly autoOpen?:
           body: JSON.stringify({
             ...(botToken.trim() ? { botToken: botToken.trim() } : {}),
             ...(signingSecret.trim() ? { signingSecret: signingSecret.trim() } : {}),
+            allowedChannelsText,
           }),
         });
         const data: unknown = await response.json().catch(() => null);
@@ -214,7 +241,10 @@ export function SlackInboundSettings({ autoOpen = false }: { readonly autoOpen?:
         setOpen(false);
         showToast({
           title: "Saved",
-          message: "Slack can now deliver DMs and mentions to Brain.",
+          message:
+            botToken.trim() || signingSecret.trim()
+              ? "Slack can now deliver DMs and mentions to Brain."
+              : "Allowed Slack channels were saved.",
           variant: "success",
         });
       } catch (error) {
@@ -286,6 +316,11 @@ export function SlackInboundSettings({ autoOpen = false }: { readonly autoOpen?:
           </div>
           <p className="text-muted-foreground text-xs leading-relaxed">
             Let people talk to Brain in Slack. Uses a bot token, not Slack Connect.
+            {status.allowedChannelIds.length > 0
+              ? ` Limited to ${status.allowedChannelIds.length} ${
+                  status.allowedChannelIds.length === 1 ? "channel" : "channels"
+                }.`
+              : ""}
           </p>
         </div>
         <Button
@@ -305,13 +340,14 @@ export function SlackInboundSettings({ autoOpen = false }: { readonly autoOpen?:
           <DialogHeader>
             <DialogTitle>Slack inbound</DialogTitle>
             <DialogDescription>
-              Bot token and signing secret for DMs, @mentions, and approval buttons. This is
-              separate from Slack Connect, which is for tools.
+              Bot token and signing secret for DMs, @mentions, and approval buttons. Optionally
+              limit mentions to specific channels. This is separate from Slack Connect, which is for
+              tools.
             </DialogDescription>
           </DialogHeader>
 
           {loading ? (
-            <FormFieldsSkeleton fields={2} />
+            <FormFieldsSkeleton fields={3} />
           ) : (
             <div className="flex flex-col gap-3">
               {status.eventUrl ? (
@@ -371,6 +407,27 @@ export function SlackInboundSettings({ autoOpen = false }: { readonly autoOpen?:
                   type="password"
                   value={signingSecret}
                 />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="slack-inbound-allowed-channels">Allowed channels</FieldLabel>
+                <Textarea
+                  id="slack-inbound-allowed-channels"
+                  onChange={(event) => {
+                    setAllowedChannelsText(event.target.value);
+                  }}
+                  placeholder={
+                    "Leave blank for every channel the bot can see.\nC0123ABCDE\n#engineering"
+                  }
+                  spellCheck={false}
+                  value={allowedChannelsText}
+                />
+                <p className="text-muted-foreground text-xs leading-relaxed">
+                  One C… / G… id or #name per line. DMs always work. Mentions outside this list are
+                  ignored. Saving an empty box means every channel, even if env is set.
+                  {status.allowedChannelIdsSource === "env"
+                    ? " These ids currently come from SLACK_INBOUND_CHANNEL_IDS."
+                    : ""}
+                </p>
               </Field>
               {sourceLabel(status.source) ? (
                 <p className="text-muted-foreground text-xs">{sourceLabel(status.source)}.</p>
