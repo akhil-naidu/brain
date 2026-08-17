@@ -30,7 +30,8 @@ if (!url) {
         SET signup_mode = 'invite-only',
             auto_personal_workspace = TRUE,
             allow_create_workspace = TRUE,
-            allow_forgot_password = TRUE
+            allow_forgot_password = TRUE,
+            agent_safety_posture = 'auto'
         WHERE id = 1
       `);
     });
@@ -115,6 +116,13 @@ if (!url) {
       expect((await store.getPolicies()).allowForgotPassword).toBe(true);
       await store.updatePolicies({ allowForgotPassword: false });
       expect((await store.getPolicies()).allowForgotPassword).toBe(false);
+    });
+
+    it("defaults agent safety posture to auto and persists updates", async () => {
+      const store = openStore();
+      expect((await store.getPolicies()).agentSafetyPosture).toBe("auto");
+      await store.updatePolicies({ agentSafetyPosture: "strict" });
+      expect((await store.getPolicies()).agentSafetyPosture).toBe("strict");
     });
 
     it("lists members and updates roles with guards", async () => {

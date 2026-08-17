@@ -1,4 +1,8 @@
-import type { InstancePolicies, SignupMode } from "@/lib/auth/workspaces/types";
+import {
+  parseAgentSafetyPosture,
+  type InstancePolicies,
+  type SignupMode,
+} from "@/lib/auth/workspaces/types";
 
 function parseSignupMode(value: unknown): SignupMode {
   if (value === "open" || value === "invite-only" || value === "sso-only") {
@@ -18,5 +22,8 @@ export function parseInstancePolicies(value: unknown): InstancePolicies | null {
     allowCreateWorkspace:
       "allowCreateWorkspace" in value ? Boolean(value.allowCreateWorkspace) : false,
     allowForgotPassword: "allowForgotPassword" in value ? Boolean(value.allowForgotPassword) : true,
+    agentSafetyPosture: parseAgentSafetyPosture(
+      "agentSafetyPosture" in value ? value.agentSafetyPosture : undefined,
+    ),
   };
 }

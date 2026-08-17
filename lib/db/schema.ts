@@ -4,7 +4,7 @@ import type { Pool } from "pg";
  * Bump when Brain DDL changes so long-lived dev processes re-apply
  * idempotent ALTERs without a full restart.
  */
-export const BRAIN_SCHEMA_REVISION = 3;
+export const BRAIN_SCHEMA_REVISION = 4;
 
 const globalForSchema = globalThis as typeof globalThis & {
   brainSchemaRevision?: number;
@@ -39,8 +39,12 @@ export async function ensureBrainSchema(pool: Pool): Promise<void> {
       signup_mode TEXT NOT NULL,
       auto_personal_workspace BOOLEAN NOT NULL,
       allow_create_workspace BOOLEAN NOT NULL,
-      allow_forgot_password BOOLEAN NOT NULL DEFAULT TRUE
+      allow_forgot_password BOOLEAN NOT NULL DEFAULT TRUE,
+      agent_safety_posture TEXT NOT NULL DEFAULT 'auto'
     );
+
+    ALTER TABLE brain_instance_policy
+      ADD COLUMN IF NOT EXISTS agent_safety_posture TEXT NOT NULL DEFAULT 'auto';
 
     CREATE TABLE IF NOT EXISTS brain_instance_admin (
       user_id TEXT PRIMARY KEY NOT NULL
@@ -201,8 +205,9 @@ export async function ensureBrainSchema(pool: Pool): Promise<void> {
       ON brain_custom_model (scope, workspace_id);
 
     INSERT INTO brain_instance_policy (
-      id, signup_mode, auto_personal_workspace, allow_create_workspace, allow_forgot_password
-    ) VALUES (1, 'invite-only', TRUE, TRUE, TRUE)
+      id, signup_mode, auto_personal_workspace, allow_create_workspace, allow_forgot_password,
+      agent_safety_posture
+    ) VALUES (1, 'invite-only', TRUE, TRUE, TRUE, 'auto')
     ON CONFLICT (id) DO NOTHING;
   `);
   globalForSchema.brainSchemaRevision = BRAIN_SCHEMA_REVISION;

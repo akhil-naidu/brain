@@ -7,6 +7,7 @@ const basePolicies: InstancePolicies = {
   autoPersonalWorkspace: true,
   allowCreateWorkspace: true,
   allowForgotPassword: true,
+  agentSafetyPosture: "auto",
 };
 
 describe("resolveForgotPasswordAvailability", () => {

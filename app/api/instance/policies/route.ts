@@ -13,6 +13,7 @@ const patchSchema = z
     autoPersonalWorkspace: z.boolean().optional(),
     allowCreateWorkspace: z.boolean().optional(),
     allowForgotPassword: z.boolean().optional(),
+    agentSafetyPosture: z.enum(["strict", "auto", "dangerous"]).optional(),
   })
   .strict();
 

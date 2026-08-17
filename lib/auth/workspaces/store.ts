@@ -4,6 +4,7 @@ import { ensureBrainSchema } from "@/lib/db/schema";
 import { countFromDbRow } from "@/lib/db/rows";
 import {
   isWorkspaceAdminRole,
+  parseAgentSafetyPosture,
   type InstancePolicies,
   type SignupMode,
   type Workspace,
@@ -20,6 +21,7 @@ const DEFAULT_POLICIES: InstancePolicies = {
   autoPersonalWorkspace: true,
   allowCreateWorkspace: true,
   allowForgotPassword: true,
+  agentSafetyPosture: "auto",
 };
 
 function nowIso(): string {
@@ -91,6 +93,7 @@ export function createWorkspaceStore(pool: Pool) {
       autoPersonalWorkspace: asBool(row["auto_personal_workspace"]),
       allowCreateWorkspace: asBool(row["allow_create_workspace"]),
       allowForgotPassword: asBool(row["allow_forgot_password"]),
+      agentSafetyPosture: parseAgentSafetyPosture(row["agent_safety_posture"]),
     };
   }
 
@@ -101,23 +104,27 @@ export function createWorkspaceStore(pool: Pool) {
       autoPersonalWorkspace: patch.autoPersonalWorkspace ?? current.autoPersonalWorkspace,
       allowCreateWorkspace: patch.allowCreateWorkspace ?? current.allowCreateWorkspace,
       allowForgotPassword: patch.allowForgotPassword ?? current.allowForgotPassword,
+      agentSafetyPosture: patch.agentSafetyPosture ?? current.agentSafetyPosture,
     };
     // Upsert: a bare UPDATE no-ops when the seed row is missing (e.g. after TRUNCATE
     // while the process has already run ensureBrainSchema once).
     await pool.query(
       `INSERT INTO brain_instance_policy (
-         id, signup_mode, auto_personal_workspace, allow_create_workspace, allow_forgot_password
-       ) VALUES (1, $1, $2, $3, $4)
+         id, signup_mode, auto_personal_workspace, allow_create_workspace, allow_forgot_password,
+         agent_safety_posture
+       ) VALUES (1, $1, $2, $3, $4, $5)
        ON CONFLICT (id) DO UPDATE SET
          signup_mode = EXCLUDED.signup_mode,
          auto_personal_workspace = EXCLUDED.auto_personal_workspace,
          allow_create_workspace = EXCLUDED.allow_create_workspace,
-         allow_forgot_password = EXCLUDED.allow_forgot_password`,
+         allow_forgot_password = EXCLUDED.allow_forgot_password,
+         agent_safety_posture = EXCLUDED.agent_safety_posture`,
       [
         next.signupMode,
         next.autoPersonalWorkspace,
         next.allowCreateWorkspace,
         next.allowForgotPassword,
+        next.agentSafetyPosture,
       ],
     );
     return next;
