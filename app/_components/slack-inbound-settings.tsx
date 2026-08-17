@@ -13,7 +13,13 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  extraSlackInboundChannelIds,
+  type SlackInboundListedChannel,
+  slackInboundAllowlistSaveText,
+} from "@/lib/chat/slack-inbound/channel-picker";
 import { showToast } from "@/lib/ui/toast-store";
 import { cn } from "@/lib/utils";
 
@@ -102,6 +108,36 @@ function parseSlackInboundStatus(data: unknown): SlackInboundStatus | null {
   };
 }
 
+function parseListedChannels(data: unknown): SlackInboundListedChannel[] | null {
+  if (typeof data !== "object" || data === null || Array.isArray(data)) {
+    return null;
+  }
+  if (!("channels" in data) || !Array.isArray(data.channels)) {
+    return null;
+  }
+  const rawChannels: readonly unknown[] = data.channels;
+  const channels: SlackInboundListedChannel[] = [];
+  for (const item of rawChannels) {
+    if (typeof item !== "object" || item === null || Array.isArray(item)) {
+      return null;
+    }
+    if (!("id" in item) || typeof item.id !== "string" || item.id.trim().length === 0) {
+      return null;
+    }
+    if (!("name" in item) || typeof item.name !== "string" || item.name.trim().length === 0) {
+      return null;
+    }
+    const id = item.id;
+    const name = item.name;
+    channels.push({
+      id,
+      name,
+      selected: "selected" in item && item.selected === true,
+    });
+  }
+  return channels;
+}
+
 export function SlackInboundSettings({ autoOpen = false }: { readonly autoOpen?: boolean }) {
   const [status, setStatus] = useState<SlackInboundStatus | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -110,6 +146,11 @@ export function SlackInboundSettings({ autoOpen = false }: { readonly autoOpen?:
   const [botToken, setBotToken] = useState("");
   const [signingSecret, setSigningSecret] = useState("");
   const [allowedChannelsText, setAllowedChannelsText] = useState("");
+  const [limitMentions, setLimitMentions] = useState(false);
+  const [listedChannels, setListedChannels] = useState<SlackInboundListedChannel[]>([]);
+  const [channelQuery, setChannelQuery] = useState("");
+  const [channelsLoading, setChannelsLoading] = useState(false);
+  const [channelsError, setChannelsError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -155,10 +196,74 @@ export function SlackInboundSettings({ autoOpen = false }: { readonly autoOpen?:
       setSigningSecret("");
       setFormError(null);
       setCopied(false);
-      return;
+      setChannelQuery("");
+      setChannelsError(null);
+      setListedChannels([]);
+      setChannelsLoading(false);
+      return undefined;
     }
-    setAllowedChannelsText((status?.allowedChannelIds ?? []).join("\n"));
-  }, [open, status?.allowedChannelIds]);
+    const effectiveIds = status?.allowedChannelIds ?? [];
+    setLimitMentions(effectiveIds.length > 0);
+    setAllowedChannelsText(effectiveIds.join("\n"));
+    if (!status?.hasBotToken) {
+      setChannelsLoading(false);
+      setListedChannels([]);
+      return undefined;
+    }
+    const controller = new AbortController();
+    setChannelsLoading(true);
+    void (async () => {
+      try {
+        const response = await fetch("/api/slack-inbound/channels", {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const data: unknown = await response.json().catch(() => null);
+        if (controller.signal.aborted) {
+          return;
+        }
+        if (!response.ok) {
+          const error =
+            typeof data === "object" &&
+            data !== null &&
+            "error" in data &&
+            typeof data.error === "string"
+              ? data.error
+              : "Could not list Slack channels.";
+          throw new Error(error);
+        }
+        const channels = parseListedChannels(data);
+        if (!channels) {
+          throw new Error("Could not list Slack channels.");
+        }
+        setListedChannels(channels);
+        setAllowedChannelsText(
+          extraSlackInboundChannelIds(
+            effectiveIds,
+            channels.map((channel) => channel.id),
+          ).join("\n"),
+        );
+        setChannelsError(null);
+      } catch (error) {
+        if (
+          controller.signal.aborted ||
+          (error instanceof DOMException && error.name === "AbortError")
+        ) {
+          return;
+        }
+        setListedChannels([]);
+        setAllowedChannelsText(effectiveIds.join("\n"));
+        setChannelsError(error instanceof Error ? error.message : "Could not list Slack channels.");
+      } finally {
+        if (!controller.signal.aborted) {
+          setChannelsLoading(false);
+        }
+      }
+    })();
+    return () => {
+      controller.abort();
+    };
+  }, [open, status?.allowedChannelIds, status?.hasBotToken]);
 
   if (loading && !status) {
     return null;
@@ -202,10 +307,38 @@ export function SlackInboundSettings({ autoOpen = false }: { readonly autoOpen?:
   const ready = status.hasBotToken && status.hasSigningSecret;
   const statusCopy = inboundStatusCopy(status);
   const hasStored = status.source === "stored" || status.source === "mixed";
-  const savedChannelsText = status.allowedChannelIds.join("\n");
-  const channelsChanged = allowedChannelsText !== savedChannelsText;
+  const selectedIds = listedChannels
+    .filter((channel) => channel.selected)
+    .map((channel) => channel.id);
+  const selectedSaved = listedChannels
+    .filter((channel) =>
+      status.allowedChannelIds.some(
+        (id) => id.trim().toUpperCase() === channel.id.trim().toUpperCase(),
+      ),
+    )
+    .map((channel) => channel.id.trim().toUpperCase())
+    .toSorted()
+    .join("\n");
+  const selectedNow = selectedIds
+    .map((id) => id.trim().toUpperCase())
+    .toSorted()
+    .join("\n");
+  const extraSaved = extraSlackInboundChannelIds(
+    status.allowedChannelIds,
+    listedChannels.map((channel) => channel.id),
+  ).join("\n");
+  const limitMentionsChanged = limitMentions !== status.allowedChannelIds.length > 0;
+  const channelsChanged =
+    limitMentionsChanged || selectedNow !== selectedSaved || allowedChannelsText !== extraSaved;
   const canSave =
     Boolean(botToken.trim() || signingSecret.trim() || channelsChanged) && !saving && !clearing;
+  const visibleChannels = listedChannels.filter((channel) => {
+    const query = channelQuery.trim().toLowerCase();
+    if (!query) {
+      return true;
+    }
+    return channel.name.toLowerCase().includes(query) || channel.id.toLowerCase().includes(query);
+  });
 
   const save = () => {
     if (!canSave) {
@@ -215,13 +348,22 @@ export function SlackInboundSettings({ autoOpen = false }: { readonly autoOpen?:
     setFormError(null);
     void (async () => {
       try {
+        const allowlist = slackInboundAllowlistSaveText({
+          limitMentions,
+          selectedIds,
+          extraText: allowedChannelsText,
+        });
+        if (!allowlist.ok) {
+          throw new Error(allowlist.error);
+        }
         const response = await fetch("/api/slack-inbound", {
           method: "PUT",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             ...(botToken.trim() ? { botToken: botToken.trim() } : {}),
             ...(signingSecret.trim() ? { signingSecret: signingSecret.trim() } : {}),
-            allowedChannelsText,
+            allowedChannelsText: allowlist.allowedChannelsText,
+            limitMentions,
           }),
         });
         const data: unknown = await response.json().catch(() => null);
@@ -336,13 +478,13 @@ export function SlackInboundSettings({ autoOpen = false }: { readonly autoOpen?:
       </div>
 
       <Dialog onOpenChange={setOpen} open={open}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-h-[min(90vh,44rem)] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Slack inbound</DialogTitle>
             <DialogDescription>
               Bot token and signing secret for DMs, @mentions, and approval buttons. Optionally
-              limit mentions to specific channels. This is separate from Slack Connect, which is for
-              tools.
+              limit mentions to channels the bot can see. This is separate from Slack Connect, which
+              is for tools.
             </DialogDescription>
           </DialogHeader>
 
@@ -408,27 +550,118 @@ export function SlackInboundSettings({ autoOpen = false }: { readonly autoOpen?:
                   value={signingSecret}
                 />
               </Field>
-              <Field>
-                <FieldLabel htmlFor="slack-inbound-allowed-channels">Allowed channels</FieldLabel>
-                <Textarea
-                  id="slack-inbound-allowed-channels"
-                  onChange={(event) => {
-                    setAllowedChannelsText(event.target.value);
-                  }}
-                  placeholder={
-                    "Leave blank for every channel the bot can see.\nC0123ABCDE\n#engineering"
-                  }
-                  spellCheck={false}
-                  value={allowedChannelsText}
+              <div className="border-border/70 flex items-center justify-between gap-4 rounded-xl border px-3 py-2.5">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Limit @mentions to selected channels</p>
+                  <p className="text-muted-foreground text-xs leading-relaxed">
+                    Off means every channel the bot can see, even if env is set. DMs always work.
+                  </p>
+                </div>
+                <Switch
+                  aria-label="Limit @mentions to selected channels"
+                  checked={limitMentions}
+                  onCheckedChange={setLimitMentions}
                 />
-                <p className="text-muted-foreground text-xs leading-relaxed">
-                  One C… / G… id or #name per line. DMs always work. Mentions outside this list are
-                  ignored. Saving an empty box means every channel, even if env is set.
-                  {status.allowedChannelIdsSource === "env"
-                    ? " These ids currently come from SLACK_INBOUND_CHANNEL_IDS."
-                    : ""}
-                </p>
-              </Field>
+              </div>
+              {limitMentions ? (
+                <div className="flex flex-col gap-3">
+                  {!status.hasBotToken ? (
+                    <p className="text-muted-foreground text-xs">
+                      Save a bot token to load Slack channels. You can still paste C… / G… ids.
+                    </p>
+                  ) : null}
+                  {channelsError ? (
+                    <p className="text-destructive text-xs" role="alert">
+                      {channelsError}
+                    </p>
+                  ) : null}
+                  {status.hasBotToken && !channelsError ? (
+                    <>
+                      <Field>
+                        <FieldLabel htmlFor="slack-inbound-channel-search">
+                          Filter channels
+                        </FieldLabel>
+                        <Input
+                          id="slack-inbound-channel-search"
+                          onChange={(event) => {
+                            setChannelQuery(event.target.value);
+                          }}
+                          placeholder="Search by name or id"
+                          value={channelQuery}
+                        />
+                      </Field>
+                      <div className="border-border/70 max-h-48 overflow-y-auto rounded-lg border px-2 py-1">
+                        {channelsLoading ? (
+                          <p className="text-muted-foreground px-1 py-2 text-xs">
+                            Loading channels…
+                          </p>
+                        ) : listedChannels.length === 0 ? (
+                          <p className="text-muted-foreground px-1 py-2 text-xs">
+                            No channels listed. Invite the bot or paste a channel id below.
+                          </p>
+                        ) : visibleChannels.length === 0 ? (
+                          <p className="text-muted-foreground px-1 py-2 text-xs">
+                            No matching channels.
+                          </p>
+                        ) : (
+                          visibleChannels.map((channel) => (
+                            <label
+                              aria-label={`#${channel.name} ${channel.id}`}
+                              className="hover:bg-muted/40 flex cursor-pointer items-start gap-2 rounded-md px-1 py-1.5"
+                              htmlFor={`slack-inbound-channel-${channel.id}`}
+                              key={channel.id}
+                            >
+                              <input
+                                checked={channel.selected}
+                                className="mt-1"
+                                id={`slack-inbound-channel-${channel.id}`}
+                                onChange={(event) => {
+                                  const checked = event.target.checked;
+                                  setListedChannels((current) =>
+                                    current.map((entry) =>
+                                      entry.id === channel.id
+                                        ? { ...entry, selected: checked }
+                                        : entry,
+                                    ),
+                                  );
+                                }}
+                                type="checkbox"
+                              />
+                              <span className="min-w-0">
+                                <span className="block text-sm">#{channel.name}</span>
+                                <span className="text-muted-foreground block font-mono text-[11px]">
+                                  {channel.id}
+                                </span>
+                              </span>
+                            </label>
+                          ))
+                        )}
+                      </div>
+                    </>
+                  ) : null}
+                  <Field>
+                    <FieldLabel htmlFor="slack-inbound-allowed-channels">
+                      {status.hasBotToken && !channelsError ? "Extra channel ids" : "Channel ids"}
+                    </FieldLabel>
+                    <Textarea
+                      id="slack-inbound-allowed-channels"
+                      onChange={(event) => {
+                        setAllowedChannelsText(event.target.value);
+                      }}
+                      placeholder={"Ids Slack did not list\nC0123ABCDE"}
+                      spellCheck={false}
+                      value={allowedChannelsText}
+                    />
+                    <p className="text-muted-foreground text-xs leading-relaxed">
+                      Optional C… / G… ids or #names for channels the list missed. Invite the bot or
+                      paste the id.
+                      {status.allowedChannelIdsSource === "env"
+                        ? " These ids currently come from SLACK_INBOUND_CHANNEL_IDS."
+                        : ""}
+                    </p>
+                  </Field>
+                </div>
+              ) : null}
               {sourceLabel(status.source) ? (
                 <p className="text-muted-foreground text-xs">{sourceLabel(status.source)}.</p>
               ) : null}
