@@ -1,8 +1,7 @@
 import { ConnectionAuthorizationRequiredError, defineMcpClientConnection } from "eve/connections";
 import { workspaceIdFromIssuer } from "@/lib/auth/principal";
 import { internalBrainOrigin } from "@/lib/chat/internal-brain-origin";
-import { approvalForTool } from "../lib/define-mcp-oauth-connection";
-import { turnChatMode } from "../lib/turn-chat-mode-state";
+import { resolveConnectionToolApproval } from "../lib/define-mcp-oauth-connection";
 import { getHttpMcpCredentialSetupError } from "../lib/http-mcp-credentials";
 import { mintHttpMcpProxyToken } from "../lib/http-mcp-proxy-token";
 import { getHttpMcpUrlConnection } from "../lib/http-mcp-url";
@@ -55,6 +54,11 @@ export default defineMcpClientConnection({
       return { token };
     },
   },
-  approval: ({ toolName }) =>
-    approvalForTool(MONGODB_CONNECTION_NAME, meta.safeReadOnlyTools, toolName, turnChatMode.get()),
+  approval: ({ toolName, toolInput }) =>
+    resolveConnectionToolApproval({
+      providerName: MONGODB_CONNECTION_NAME,
+      safeReadOnlyTools: meta.safeReadOnlyTools,
+      toolName,
+      args: toolInput,
+    }),
 });

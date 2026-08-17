@@ -1,7 +1,7 @@
 import { ConnectionAuthorizationRequiredError, defineMcpClientConnection } from "eve/connections";
 import { workspaceIdFromIssuer } from "@/lib/auth/principal";
 import { internalBrainOrigin } from "@/lib/chat/internal-brain-origin";
-import { approvalForTool } from "../lib/define-mcp-oauth-connection";
+import { resolveConnectionToolApproval } from "../lib/define-mcp-oauth-connection";
 import {
   getSnowflakeCredentialSetupError,
   resolveSnowflakeCredentials,
@@ -12,7 +12,6 @@ import {
   SNOWFLAKE_PLACEHOLDER_MCP_URL,
 } from "../lib/snowflake-mcp-url";
 import { mintSnowflakeProxyToken } from "../lib/snowflake-proxy-token";
-import { turnChatMode } from "../lib/turn-chat-mode-state";
 
 /**
  * Snowflake-managed MCP server (Cortex Agents / SQL / Search / custom tools).
@@ -62,11 +61,11 @@ export default defineMcpClientConnection({
       return { token };
     },
   },
-  approval: ({ toolName }) =>
-    approvalForTool(
-      SNOWFLAKE_CONNECTION_NAME,
-      SNOWFLAKE_SAFE_READ_ONLY_TOOLS,
+  approval: ({ toolName, toolInput }) =>
+    resolveConnectionToolApproval({
+      providerName: SNOWFLAKE_CONNECTION_NAME,
+      safeReadOnlyTools: SNOWFLAKE_SAFE_READ_ONLY_TOOLS,
       toolName,
-      turnChatMode.get(),
-    ),
+      args: toolInput,
+    }),
 });

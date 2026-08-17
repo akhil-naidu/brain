@@ -184,4 +184,29 @@ describe("createTurnClientContext", () => {
 
     expect(context.repo).toBeUndefined();
   });
+
+  it("marks scheduled turns as unattended", () => {
+    const context = createTurnClientContext({
+      modelId: "deepseek/deepseek-v4-pro",
+      unattended: true,
+      enabledConnections: {
+        asana: true,
+        atlassian: true,
+        clickup: true,
+        dflow: true,
+        github: true,
+        gmail: true,
+        linear: true,
+        mongodb: true,
+        notion: true,
+        sentry: true,
+        slack: true,
+        snowflake: true,
+        toolbox: true,
+        zernio: true,
+      },
+    });
+    expect(context.unattended).toBe(true);
+    expect(context.mode).toBe("agent");
+  });
 });

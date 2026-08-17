@@ -137,6 +137,12 @@ export function isAskModeTurn(messages: readonly ModelMessage[] | undefined): bo
   return extractChatModeFromMessages(messages ?? []) === "ask";
 }
 
+/** True when a scheduled / unattended run set `unattended: true` in client context. */
+export function extractUnattendedFromMessages(messages: readonly ModelMessage[]): boolean {
+  const context = newestClientContext(messages);
+  return context?.["unattended"] === true;
+}
+
 /**
  * Whether a harness tool should be omitted for the current turn.
  * Ask omits every harness tool; Agent keeps tools.

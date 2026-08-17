@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ModelMessage } from "ai";
 import {
   extractChatModeFromMessages,
+  extractUnattendedFromMessages,
   isAskModeTurn,
   shouldOmitHarnessTool,
 } from "@/agent/lib/client-context-model";
@@ -39,5 +40,10 @@ describe("chat mode from client context", () => {
   it("omits harness tools only in ask mode", () => {
     expect(shouldOmitHarnessTool([userContext({ mode: "ask" })])).toBe(true);
     expect(shouldOmitHarnessTool([userContext({ mode: "agent" })])).toBe(false);
+  });
+
+  it("reads unattended from client context", () => {
+    expect(extractUnattendedFromMessages([userContext({ unattended: true })])).toBe(true);
+    expect(extractUnattendedFromMessages([userContext({ mode: "agent" })])).toBe(false);
   });
 });

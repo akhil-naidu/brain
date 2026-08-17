@@ -11,6 +11,8 @@ export type TurnClientContext = {
   /** `owner/name` or `owner/name@ref` when a GitHub repo is attached. */
   readonly repo?: string;
   readonly connections: string;
+  /** Scheduled runs skip Strict HITL (command policy still applies). */
+  readonly unattended?: boolean;
 };
 
 const ASK_MODE_CONNECTIONS_GUIDANCE =
@@ -22,6 +24,7 @@ export function createTurnClientContext(input: {
   readonly mode?: string | null;
   readonly attachedRepo?: AttachedRepo | string | null;
   readonly workspaceId?: string | null;
+  readonly unattended?: boolean;
 }): TurnClientContext {
   const workspaceId = input.workspaceId?.trim();
   const mode = resolveBrainChatMode(input.mode);
@@ -34,6 +37,7 @@ export function createTurnClientContext(input: {
     mode,
     ...(workspaceId ? { workspaceId } : {}),
     ...(attached ? { repo: formatAttachedRepo(attached) } : {}),
+    ...(input.unattended === true ? { unattended: true } : {}),
     connections:
       mode === "ask"
         ? ASK_MODE_CONNECTIONS_GUIDANCE

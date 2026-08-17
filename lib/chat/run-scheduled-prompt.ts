@@ -1,7 +1,8 @@
 import { Client } from "eve/client";
 import { resolveInternalOperatorToken } from "@/lib/auth/operator";
 import { BRAIN_RUN_AS_USER_HEADER } from "@/lib/auth/run-as";
-import { createConnectionClientContext } from "@/lib/chat/connection-context";
+import { createTurnClientContext } from "@/lib/chat/turn-client-context";
+import { DEFAULT_BRAIN_CHAT_MODEL_ID } from "@/agent/lib/models";
 import { resolveEveHttpHost } from "@/lib/chat/eve-http-host";
 import { postMorningBriefToSlack } from "@/lib/chat/slack-brief-delivery";
 import { getChatStore } from "@/lib/chat/store";
@@ -106,7 +107,13 @@ export async function runScheduledPromptTurn(input: {
   const session = client.session();
   const response = await session.send({
     message: input.prompt,
-    clientContext: [createConnectionClientContext(SCHEDULED_CONNECTIONS)],
+    clientContext: createTurnClientContext({
+      enabledConnections: SCHEDULED_CONNECTIONS,
+      modelId: DEFAULT_BRAIN_CHAT_MODEL_ID,
+      mode: "agent",
+      workspaceId,
+      unattended: true,
+    }),
   });
 
   await store.updateChat(userId, workspaceId, chat.id, {

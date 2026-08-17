@@ -69,4 +69,36 @@ describe("task and issue write approval", () => {
       expect(decision.reason).toMatch(/ask mode/i);
     }
   });
+
+  it("Strict requires approval for reviewed reads", () => {
+    expect(
+      approvalForTool(
+        "clickup",
+        clickupProvider.safeReadOnlyTools,
+        "clickup__clickup_get_task",
+        "agent",
+        { posture: "strict" },
+      ),
+    ).toBe("user-approval");
+  });
+
+  it("Dangerous skips write approval when policy allows", () => {
+    expect(
+      approvalForTool(
+        "clickup",
+        clickupProvider.safeReadOnlyTools,
+        "clickup__clickup_create_task",
+        "agent",
+        { posture: "dangerous", args: { name: "Task" } },
+      ),
+    ).toBe("not-applicable");
+  });
+
+  it("denies DROP TABLE args even in Dangerous", () => {
+    const decision = approvalForTool("snowflake", [], "snowflake__sql", "agent", {
+      posture: "dangerous",
+      args: { statement: "DROP TABLE accounts" },
+    });
+    expect(decision).toMatchObject({ type: "denied" });
+  });
 });

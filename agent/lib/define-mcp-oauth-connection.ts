@@ -7,6 +7,10 @@ import {
 import { workspaceIdFromIssuer } from "@/lib/auth/principal";
 import type { BrainChatMode } from "@/lib/chat/chat-mode";
 import { turnChatMode } from "@/agent/lib/turn-chat-mode-state";
+import { turnUnattended } from "@/agent/lib/turn-unattended-state";
+import { decideToolAuthorization } from "@/agent/lib/decide-tool-authorization";
+import { resolveAgentSafetyPosture } from "@/agent/lib/resolve-agent-safety-posture";
+import type { AgentSafetyPosture } from "@/lib/auth/workspaces/types";
 import {
   authorizeUrlPath,
   buildAuthorizeUrl,
@@ -31,11 +35,18 @@ export type McpOAuthResume = {
 export type ConnectionToolApproval =
   "not-applicable" | "user-approval" | { readonly type: "denied"; readonly reason: string };
 
+export type ApprovalForToolOptions = {
+  readonly posture?: AgentSafetyPosture;
+  readonly unattended?: boolean;
+  readonly args?: unknown;
+};
+
 export function approvalForTool(
   providerName: string,
   safeReadOnlyTools: readonly string[],
   qualifiedToolName: string,
-  mode: BrainChatMode = "agent",
+  mode: BrainChatMode | "plan" | "debug" = "agent",
+  options: ApprovalForToolOptions = {},
 ): ConnectionToolApproval {
   const prefix = `${providerName}__`;
   const remoteToolName = qualifiedToolName.startsWith(prefix)
@@ -43,18 +54,34 @@ export function approvalForTool(
     : qualifiedToolName;
   const isSafeRead = safeReadOnlyTools.includes(remoteToolName);
 
-  if (mode === "ask") {
-    return {
-      type: "denied",
-      reason: "Ask mode blocks connection tools. Switch to Agent mode.",
-    };
-  }
+  return decideToolAuthorization({
+    mode,
+    posture: options.posture ?? "auto",
+    unattended: options.unattended === true,
+    toolKind: "connection",
+    toolName: qualifiedToolName,
+    isSafeRead,
+    args: options.args,
+  });
+}
 
-  if (!qualifiedToolName.startsWith(prefix)) {
-    return "user-approval";
-  }
-
-  return isSafeRead ? "not-applicable" : "user-approval";
+export async function resolveConnectionToolApproval(input: {
+  readonly providerName: string;
+  readonly safeReadOnlyTools: readonly string[];
+  readonly toolName: string;
+  readonly args?: unknown;
+}): Promise<ConnectionToolApproval> {
+  return approvalForTool(
+    input.providerName,
+    input.safeReadOnlyTools,
+    input.toolName,
+    turnChatMode.get(),
+    {
+      posture: await resolveAgentSafetyPosture(),
+      unattended: turnUnattended.get(),
+      args: input.args,
+    },
+  );
 }
 
 export function defineMcpOAuthConnection(opts: {
@@ -163,7 +190,12 @@ export function defineMcpOAuthConnection(opts: {
         }
       },
     }),
-    approval: ({ toolName }) =>
-      approvalForTool(provider.name, provider.safeReadOnlyTools, toolName, turnChatMode.get()),
+    approval: ({ toolName, toolInput }) =>
+      resolveConnectionToolApproval({
+        providerName: provider.name,
+        safeReadOnlyTools: provider.safeReadOnlyTools,
+        toolName,
+        args: toolInput,
+      }),
   });
 }
