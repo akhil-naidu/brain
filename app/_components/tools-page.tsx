@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Settings2Icon, UnplugIcon } from "lucide-react";
 import { useChatShell } from "@/app/_components/chat-shell-context";
 import type { EnabledConnections } from "@/app/_components/chat-shell-context";
+import { SlackInboundSettings } from "@/app/_components/slack-inbound-settings";
 import { ConnectionSetupDialog } from "@/components/chat/connection-setup-dialog";
 import { SettingsCardsSkeleton } from "@/components/loading/skeletons";
 import {
@@ -287,7 +288,10 @@ export function ToolsPage() {
                 <SettingsPanel
                   className={cn(
                     "p-4 transition-[box-shadow]",
-                    focusConnectionId === key ? "ring-foreground/20 ring-2" : null,
+                    focusConnectionId === key ||
+                      (key === "slack" && focusConnectionId === "slack-inbound")
+                      ? "ring-foreground/20 ring-2"
+                      : null,
                   )}
                   data-connection-id={key}
                   key={key}
@@ -439,6 +443,9 @@ export function ToolsPage() {
                         </p>
                       )}
                     </div>
+                  ) : null}
+                  {key === "slack" ? (
+                    <SlackInboundSettings autoOpen={focusConnectionId === "slack-inbound"} />
                   ) : null}
                 </SettingsPanel>
               );
