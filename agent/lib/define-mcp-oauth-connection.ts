@@ -5,6 +5,8 @@ import {
   defineMcpClientConnection,
 } from "eve/connections";
 import { workspaceIdFromIssuer } from "@/lib/auth/principal";
+import { recordSlackIdentityFromUserToken } from "@/lib/chat/slack-inbound/record-identity";
+import { resolveBrainConnectionPrincipal } from "@/lib/chat/slack-inbound/principal";
 import type { BrainChatMode } from "@/lib/chat/chat-mode";
 import { turnChatMode } from "@/agent/lib/turn-chat-mode-state";
 import { turnUnattended } from "@/agent/lib/turn-unattended-state";
@@ -96,7 +98,8 @@ export function defineMcpOAuthConnection(opts: {
     description,
     auth: defineInteractiveAuthorization<McpOAuthResume>({
       async getToken({ principal }) {
-        const cached = await getStoredAccessToken(provider, principal);
+        const resolved = await resolveBrainConnectionPrincipal(principal);
+        const cached = await getStoredAccessToken(provider, resolved);
         if (!cached) {
           throw new ConnectionAuthorizationRequiredError(provider.name);
         }
@@ -174,6 +177,9 @@ export function defineMcpOAuthConnection(opts: {
             clientSecret: resume.clientSecret,
           });
           await storeAccessToken(provider, principal, token);
+          if (provider.name === "slack" && principal.type === "user") {
+            void recordSlackIdentityFromUserToken(principal, token).catch(() => undefined);
+          }
           return {
             token: token.accessToken,
             expiresAt: token.expiresAt,

@@ -10,6 +10,7 @@ import {
   generateOAuthState,
   getStoredAccessToken,
   isTokenUsable,
+  listStoredUserTokens,
   OAuthRequestError,
   parseStandardTokenResponse,
   storeAccessToken,
@@ -164,6 +165,19 @@ describe("OAuth store", () => {
     const storeFile = path.join(storeDirectory, `mcp-oauth-${uniqueProvider.name}.json`);
     expect((await stat(storeDirectory)).mode & 0o777).toBe(0o700);
     expect((await stat(storeFile)).mode & 0o777).toBe(0o600);
+  });
+
+  it("lists stored user tokens for Slack identity backfill", async () => {
+    await useTemporaryWorkingDirectory();
+    const uniqueProvider = { ...provider, name: randomUUID() };
+    await storeAccessToken(uniqueProvider, alice, { accessToken: "alice-token" });
+    await storeAccessToken(uniqueProvider, bob, { accessToken: "bob-token" });
+    const listed = await listStoredUserTokens(uniqueProvider);
+    expect(listed).toHaveLength(2);
+    expect(listed.map((entry) => entry.token.accessToken).toSorted()).toEqual([
+      "alice-token",
+      "bob-token",
+    ]);
   });
 
   it("fails loudly when the store is corrupt", async () => {

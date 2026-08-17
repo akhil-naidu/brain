@@ -3,6 +3,10 @@ import path from "node:path";
 import type { ConnectionPrincipal } from "eve/connections";
 import { z } from "zod";
 import { BRAIN_AUTH_ISSUER, workspaceIdFromIssuer } from "@/lib/auth/principal";
+import {
+  forgetSlackIdentity,
+  recordSlackIdentityFromUserToken,
+} from "@/lib/chat/slack-inbound/record-identity";
 import { getProviderCredentialSetupError } from "./connection-credentials";
 import {
   authorizeUrlPath,
@@ -339,6 +343,9 @@ export async function completeMenuConnectionAuthorization(
       clientSecret: pending.clientSecret,
     });
     await storeAccessToken(provider, principal, token);
+    if (provider.name === "slack") {
+      void recordSlackIdentityFromUserToken(principal, token).catch(() => undefined);
+    }
     await clearThis();
     return { ok: true, displayName: provider.displayName };
   } catch {
@@ -358,5 +365,8 @@ export async function disconnectMenuConnection(
 ): Promise<{ readonly displayName: string }> {
   await deleteStoredToken(provider, principal);
   await clearPendingForUser(provider.name, principal.id, principal.issuer ?? BRAIN_AUTH_ISSUER);
+  if (provider.name === "slack") {
+    await forgetSlackIdentity(principal);
+  }
   return { displayName: provider.displayName };
 }

@@ -293,6 +293,38 @@ export async function storeAccessToken(
   });
 }
 
+function parseUserPrincipalKey(
+  key: string,
+): Extract<ConnectionPrincipal, { readonly type: "user" }> | null {
+  if (!key.startsWith("user:")) {
+    return null;
+  }
+  const rest = key.slice("user:".length);
+  const split = rest.lastIndexOf(":");
+  if (split <= 0 || split === rest.length - 1) {
+    return null;
+  }
+  return {
+    type: "user",
+    issuer: rest.slice(0, split),
+    id: rest.slice(split + 1),
+  };
+}
+
+/** User-principal tokens currently stored for a connection (for Slack identity backfill). */
+export async function listStoredUserTokens(provider: Pick<McpOAuthProvider, "name">): Promise<
+  readonly {
+    readonly principal: Extract<ConnectionPrincipal, { readonly type: "user" }>;
+    readonly token: StoredToken;
+  }[]
+> {
+  const store = await readStore(provider.name);
+  return Object.entries(store.tokens).flatMap(([key, token]) => {
+    const principal = parseUserPrincipalKey(key);
+    return principal ? [{ principal, token }] : [];
+  });
+}
+
 export async function deleteStoredToken(
   provider: McpOAuthProvider,
   principal: ConnectionPrincipal,
