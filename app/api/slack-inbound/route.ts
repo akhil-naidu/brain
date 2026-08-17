@@ -25,6 +25,7 @@ const putBodySchema = z
     botToken: z.string().optional(),
     signingSecret: z.string().optional(),
     allowedChannelsText: z.string().optional(),
+    limitMentions: z.boolean().optional(),
   })
   .strict();
 
@@ -104,6 +105,12 @@ export async function PUT(request: Request) {
         );
       } else {
         allowedChannelIds = await resolveSlackInboundChannelEntries(entries, async () => []);
+      }
+      if (parsed.data.limitMentions === true && allowedChannelIds.length === 0) {
+        return NextResponse.json(
+          { error: "Select at least one channel or paste a C… / G… id." },
+          { status: 400 },
+        );
       }
     } catch (error) {
       const message =
