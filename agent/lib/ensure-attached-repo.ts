@@ -4,6 +4,7 @@ import type { SandboxNetworkPolicy, SandboxSession } from "eve/sandbox";
 import { githubProvider } from "@/agent/connections/github";
 import { extractAttachedRepoFromMessages } from "@/agent/lib/client-context-model";
 import { getStoredAccessToken } from "@/agent/lib/mcp-oauth";
+import { brainPrincipalFromSessionAuth } from "@/lib/chat/slack-inbound/principal";
 import {
   attachedRepoCloneUrl,
   formatAttachedRepo,
@@ -151,16 +152,17 @@ export function principalForSandboxAuth(auth: {
     readonly principalId?: string | null;
     readonly principalType?: string | null;
     readonly issuer?: string | null;
+    readonly authenticator?: string | null;
   } | null;
   readonly initiator: {
     readonly principalId?: string | null;
     readonly principalType?: string | null;
     readonly issuer?: string | null;
+    readonly authenticator?: string | null;
   } | null;
 }): ConnectionPrincipal | null {
-  const source = auth.current ?? auth.initiator;
-  if (!source) {
-    return null;
-  }
-  return connectionPrincipalFromSessionAuth(source);
+  return (
+    brainPrincipalFromSessionAuth(auth) ??
+    connectionPrincipalFromSessionAuth(auth.current ?? auth.initiator ?? {})
+  );
 }
