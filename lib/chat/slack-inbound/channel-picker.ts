@@ -1,4 +1,4 @@
-import { parseSlackInboundChannelLines } from "@/lib/chat/slack-inbound/resolve-channel-names";
+import { parseSlackInboundChannelLines } from "@/lib/chat/slack-inbound/parse-channel-lines";
 
 export type SlackInboundListedChannel = {
   readonly id: string;

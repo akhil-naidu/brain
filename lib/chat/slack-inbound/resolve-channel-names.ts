@@ -1,5 +1,8 @@
 import { callSlackApi } from "eve/channels/slack";
 import { asStringKeyedRecord } from "@/lib/chat/slack-inbound/json-object";
+import { parseSlackInboundChannelLines } from "@/lib/chat/slack-inbound/parse-channel-lines";
+
+export { parseSlackInboundChannelLines };
 
 export class SlackChannelResolveError extends Error {
   constructor(message: string) {
@@ -9,13 +12,6 @@ export class SlackChannelResolveError extends Error {
 }
 
 const CHANNEL_ID = /^[CG][A-Z0-9]+$/i;
-
-export function parseSlackInboundChannelLines(raw: string): string[] {
-  return raw
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-}
 
 export async function resolveSlackInboundChannelEntries(
   entries: readonly string[],
