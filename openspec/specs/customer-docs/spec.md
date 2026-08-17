@@ -68,7 +68,7 @@ Customer documentation MUST describe how to enable Slack as an inbound channel: 
 
 #### Scenario: Operator reads Slack connection docs
 - **WHEN** a visitor opens the Slack connection documentation page
-- **THEN** the page documents inbound Event Subscriptions, `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, optional `SLACK_INBOUND_CHANNEL_IDS` / Tools allowed channels, and that Vercel Connect is not used
+- **THEN** the page documents inbound Event Subscriptions, `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, optional channel allowlist (Tools checklist / `SLACK_INBOUND_CHANNEL_IDS`), and that Vercel Connect is not used
 
 #### Scenario: User reads Slack inbound approvals docs
 - **WHEN** a visitor opens the approvals documentation page
