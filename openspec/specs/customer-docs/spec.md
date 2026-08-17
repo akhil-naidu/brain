@@ -64,11 +64,11 @@ Customer documentation MUST state that instance Auto and Strict screen tool *res
 - **THEN** the page distinguishes HITL (before execute), command-policy deny (no execute), and result screening (after execute, stub only)
 
 ### Requirement: Docs describe Slack inbound
-Customer documentation MUST describe how to enable Slack as an inbound channel: Event Subscriptions URL `{BRAIN_PUBLIC_URL}/eve/v1/slack`, bot token and signing secret (not Vercel Connect), that users must have a Brain account and Connect Slack (or a unique email match), that DMs and @mentions start Agent turns, that HITL appears as Slack buttons, and that unmapped users are refused.
+Customer documentation MUST describe how to enable Slack as an inbound channel: Event Subscriptions URL `{BRAIN_PUBLIC_URL}/eve/v1/slack`, bot token and signing secret (not Vercel Connect), optional channel allowlist (empty = every channel; DMs always on; mentions outside the list are ignored), that users must have a Brain account and Connect Slack (or a unique email match), that DMs and @mentions start Agent turns, that HITL appears as Slack buttons, and that unmapped users are refused.
 
 #### Scenario: Operator reads Slack connection docs
 - **WHEN** a visitor opens the Slack connection documentation page
-- **THEN** the page documents inbound Event Subscriptions, `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, and that Vercel Connect is not used
+- **THEN** the page documents inbound Event Subscriptions, `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, optional `SLACK_INBOUND_CHANNEL_IDS` / Tools allowed channels, and that Vercel Connect is not used
 
 #### Scenario: User reads Slack inbound approvals docs
 - **WHEN** a visitor opens the approvals documentation page

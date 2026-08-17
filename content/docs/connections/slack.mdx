@@ -43,6 +43,8 @@ In the Slack app:
 
 Without a bot token and signing secret, inbound Slack is off. MCP Connect still works.
 
+Optional: **Allowed channels** in the same inbound dialog (or env `SLACK_INBOUND_CHANNEL_IDS`). Leave the list empty to allow every channel the bot can see. One `C…` / `G…` id or `#name` per line. DMs always work. @mentions and thread follow-ups outside the list are ignored (no reply), including leftover active threads. Saving an empty box stores “unrestricted” and ignores env.
+
 ## Users: Connect
 
 1. Open **`/tools`** → **Slack** → **Connect**
@@ -56,6 +58,7 @@ Inbound mapping uses the Slack user id stored at Connect. If you have not Connec
 - DMs to the bot and `@mentions` start **Agent** turns as your Brain user
 - Replies in an active Brain thread continue without another mention
 - Unmentioned channel noise is ignored
+- Optional channel allowlist limits @mentions; DMs are not filtered
 - HITL approve/deny appears as Slack buttons and uses instance posture (not schedule unattended rules)
 - `/new` starts a fresh Slack session and is not sent to the model
 - Each Slack thread is stored as a **personal** Brain sidebar chat (a transcript). Continue the conversation in Slack; opening it in the browser does not resume the live Slack session

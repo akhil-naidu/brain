@@ -51,6 +51,29 @@ The system MUST start or continue an Agent turn for (1) a DM to the Brain bot fr
 - **WHEN** a channel message does not mention the bot and the thread has no active Brain session
 - **THEN** the system does not start a turn
 
+### Requirement: Optional channel allowlist for mentions
+When an allowlist of Slack channel ids is configured (instance-stored or `SLACK_INBOUND_CHANNEL_IDS`), the system MUST start Agent turns for @mentions and active-thread follow-ups only in those channels. Direct messages MUST still dispatch. When no allowlist is stored and the env var is unset, mentions MUST work in every channel the bot can see. A stored empty list MUST mean unrestricted and MUST override env. Denied channels MUST NOT start a turn and MUST NOT post a refusal.
+
+#### Scenario: Unrestricted default
+- **WHEN** no stored allowlist exists and `SLACK_INBOUND_CHANNEL_IDS` is unset
+- **THEN** a mapped user @mention in any channel the bot can see can start a turn
+
+#### Scenario: Stored empty list overrides env
+- **WHEN** the host has stored `allowedChannelIds` as an empty list and env names channel ids
+- **THEN** mentions are not restricted by that env list
+
+#### Scenario: Mention outside the allowlist is ignored
+- **WHEN** a non-empty allowlist is configured and a mapped user @mentions the bot in a channel that is not on the list
+- **THEN** the system does not start a turn and does not post a refusal
+
+#### Scenario: DM still works with an allowlist
+- **WHEN** a non-empty allowlist is configured and a mapped user DMs the bot
+- **THEN** Brain still runs an Agent turn as that user
+
+#### Scenario: Leftover thread outside the list is ignored
+- **WHEN** a Slack thread already has an active Brain session and the operator then restricts inbound to other channels
+- **THEN** follow-ups in the excluded channel do not start a turn
+
 ### Requirement: Slack actor maps to a Brain user or the turn is dropped
 The system MUST map the Slack user id (and Slack team id) to exactly one Brain user before starting a turn. Primary mapping MUST use Slack user/team ids stored when that user completed Slack MCP Connect. If no stored id matches, the system MAY map by the Slack profile email when it uniquely matches a Brain account email. If mapping fails or is ambiguous, the system MUST NOT run as anonymous, MUST NOT use another user's principal, MUST NOT start the turn, and MUST send a private reply telling the Slack user to sign in to Brain and Connect Slack.
 
