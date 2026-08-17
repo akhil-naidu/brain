@@ -44,11 +44,22 @@ When the turn mode is Ask, connection/MCP tools MUST be denied even if discovere
 - **THEN** the connection approval decision is denied
 
 ### Requirement: Agent mode allows full tools
-When the turn mode is Agent, the agent MUST keep harness tools available (subject to existing connection and auth rules). Agent is the default mode.
+When the turn mode is Agent, the agent MUST keep harness tools available (subject to existing connection and auth rules, instance agent safety posture, command policy, and tool-result screening). Agent is the default mode.
 
 #### Scenario: Agent turn keeps harness tools
 - **WHEN** a turn starts with `mode: "agent"` or with no mode
-- **THEN** harness tools remain available subject to existing connection and auth rules
+- **THEN** harness tools remain available subject to existing connection and auth rules, instance agent safety posture, command policy, and tool-result screening
+
+### Requirement: Safety posture does not override Ask or Plan tool constraints
+Ask mode MUST continue to omit harness tools and deny connection tools regardless of instance agent safety posture. Plan mode MUST continue to omit mutating harness tools and deny mutating connection tools regardless of posture, including `dangerous`. Command policy MUST still deny matching calls in Agent and Debug.
+
+#### Scenario: Ask ignores Dangerous
+- **WHEN** posture is `dangerous` and a turn starts with `mode: "ask"`
+- **THEN** harness tools remain omitted and connection tools remain denied
+
+#### Scenario: Plan ignores Dangerous
+- **WHEN** posture is `dangerous` and a turn starts with `mode: "plan"`
+- **THEN** write-file and bash remain omitted and mutating connection tools remain denied
 
 ### Requirement: Agent turns apply tool-result screening
 When the turn mode is Agent (or Debug), harness and connection tool results MUST be screened according to instance agent safety posture (Auto and Strict screen; Dangerous interactive turns skip). Ask mode MUST continue to omit harness tools and deny connection tools, so screening does not run on Ask.
