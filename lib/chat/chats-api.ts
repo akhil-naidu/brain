@@ -29,6 +29,30 @@ const chatRecordSchema = chatSummarySchema.extend({
   events: z.array(z.unknown()),
 });
 
+export type ChatSlackThread = {
+  readonly channelId: string;
+  readonly threadTs: string;
+};
+
+export type ChatWithSlackThread = ChatRecord & {
+  readonly slackThread: ChatSlackThread | null;
+};
+
+const slackThreadSchema = z
+  .object({
+    channelId: z.string().min(1),
+    threadTs: z.string().min(1),
+  })
+  .nullable();
+
+function parseSlackThread(value: unknown): ChatSlackThread | null {
+  const parsed = slackThreadSchema.safeParse(value);
+  if (!parsed.success) {
+    return null;
+  }
+  return parsed.data;
+}
+
 export class ChatApiConflictError extends Error {
   readonly code = "conflict" as const;
   readonly status = 409;
@@ -144,13 +168,33 @@ export async function createChat(input?: {
   return toChatRecord(parsed.chat);
 }
 
-export async function getChat(id: string): Promise<ChatRecord> {
+export async function getChat(id: string): Promise<ChatWithSlackThread> {
   const response = await fetch(`/api/chats/${encodeURIComponent(id)}`, {
     cache: "no-store",
   });
   const data = await readBody(response);
-  const parsed = z.object({ chat: z.unknown() }).parse(data);
-  return toChatRecord(parsed.chat);
+  const parsed = z
+    .object({
+      chat: z.unknown(),
+      slackThread: z.unknown().optional(),
+    })
+    .parse(data);
+  return {
+    ...toChatRecord(parsed.chat),
+    slackThread: parseSlackThread(parsed.slackThread ?? null),
+  };
+}
+
+export async function postSlackMirror(
+  chatId: string,
+  body: { readonly role: "user" | "assistant"; readonly text: string },
+): Promise<void> {
+  const response = await fetch(`/api/chats/${encodeURIComponent(chatId)}/slack-mirror`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  await readBody(response);
 }
 
 export async function deleteChat(id: string): Promise<void> {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireWorkspaceSession } from "@/lib/auth/require-workspace-session";
 import { isWorkspaceAdminRole } from "@/lib/auth/workspaces/types";
+import { getSlackInboundStore } from "@/lib/chat/slack-inbound/store";
 import { getChatStore, isChatConcurrencyError } from "@/lib/chat/store";
 import { parseSessionState, parseStreamEvent, updateChatBodySchema } from "@/lib/chat/store/parse";
 
@@ -24,7 +25,12 @@ export async function GET(_request: Request, context: RouteContext) {
   if (!chat) {
     return NextResponse.json({ error: "Chat not found" }, { status: 404 });
   }
-  return NextResponse.json({ chat });
+  const mapping = await getSlackInboundStore().getThreadChatByChatId(chat.id);
+  const slackThread =
+    mapping && mapping.userId === session.session.userId
+      ? { channelId: mapping.slackChannelId, threadTs: mapping.slackThreadTs }
+      : null;
+  return NextResponse.json({ chat, slackThread });
 }
 
 export async function PATCH(request: Request, context: RouteContext) {

@@ -50,7 +50,9 @@ import {
   createChat,
   getChat,
   isChatApiConflictError,
+  postSlackMirror,
   updateChat,
+  type ChatSlackThread,
 } from "@/lib/chat/chats-api";
 import { buildComposerCommandItems, type ComposerCommandItem } from "@/lib/chat/composer-commands";
 import type { ComposerTrigger } from "@/lib/chat/composer-trigger";
@@ -92,6 +94,7 @@ import {
 } from "@/lib/chat/assistant-empty-outcome";
 import { canOfferRetry, getLastUserMessage, getRetryableUserPrompt } from "@/lib/chat/retry-prompt";
 import { createTurnClientContext } from "@/lib/chat/turn-client-context";
+import { assistantTextForSlackMirror } from "@/lib/chat/slack-inbound/slack-mirror";
 import type { BrainChatMode } from "@/lib/chat/chat-mode";
 import { cn } from "@/lib/utils";
 type CancellationState = "idle" | "requested" | "cancelling";
@@ -152,6 +155,7 @@ export function EphemeralAgentChat({
   onThreadActionsReady,
   onUserMessage,
   projectId = null,
+  slackThread = null,
 }: {
   readonly chatId: string | null;
   readonly draft: string;
@@ -167,6 +171,7 @@ export function EphemeralAgentChat({
   readonly onThreadActionsReady?: (actions: ChatThreadActions | null) => void;
   readonly onUserMessage?: (text: string) => void;
   readonly projectId?: string | null;
+  readonly slackThread?: ChatSlackThread | null;
 }) {
   const router = useRouter();
   const {
@@ -255,6 +260,8 @@ export function EphemeralAgentChat({
   );
   const chatIdRef = useRef(chatId);
   chatIdRef.current = chatId;
+  const slackThreadRef = useRef(slackThread);
+  slackThreadRef.current = slackThread;
   const revisionRef = useRef(initialRevision);
   const visibilityRef = useRef<ChatVisibility>(initialVisibility);
   const turnLockHeldRef = useRef(false);
@@ -470,6 +477,21 @@ export function EphemeralAgentChat({
     [rememberChatMeta, showClientError],
   );
 
+  const mirrorSlackTurn = useCallback(
+    (role: "user" | "assistant", text: string) => {
+      const id = chatIdRef.current;
+      const mapped = slackThreadRef.current;
+      const trimmed = text.trim();
+      if (!id || !mapped || !trimmed) {
+        return;
+      }
+      void postSlackMirror(id, { role, text: trimmed }).catch((error: unknown) => {
+        showClientError(toErrorMessage(error, "Couldn't post this turn to Slack."));
+      });
+    },
+    [showClientError],
+  );
+
   const persistSession = useCallback(
     (nextSession: SessionState) => {
       void persistChatUpdate({ eveSession: nextSession });
@@ -657,6 +679,20 @@ export function EphemeralAgentChat({
         events: eventsToPersist,
       });
 
+      if (slackThreadRef.current) {
+        const messages = agentMessagesRef.current;
+        for (let index = messages.length - 1; index >= 0; index -= 1) {
+          const message = messages[index];
+          if (message?.role === "assistant") {
+            const text = assistantTextForSlackMirror(message.parts);
+            if (text) {
+              mirrorSlackTurn("assistant", text);
+            }
+            break;
+          }
+        }
+      }
+
       if (!disposalBoundaryRef.current) {
         return;
       }
@@ -667,7 +703,7 @@ export function EphemeralAgentChat({
         void finishDisposal(resolve);
       }
     },
-    [finishDisposal, persistChatUpdate],
+    [finishDisposal, mirrorSlackTurn, persistChatUpdate],
   );
 
   const agent = useEveAgent({
@@ -963,13 +999,25 @@ export function EphemeralAgentChat({
         await ensureChat(titleSource);
         await acquireTurnLock();
         try {
-          await send({
-            message: buildUserContentMessage(text, previousAttachments),
-            clientContext,
-          });
+          try {
+            await send({
+              message: buildUserContentMessage(text, previousAttachments),
+              clientContext,
+            });
+          } catch (error) {
+            if (!slackThreadRef.current) {
+              throw error;
+            }
+            await session.reset();
+            await send({
+              message: buildUserContentMessage(text, previousAttachments),
+              clientContext,
+            });
+          }
         } finally {
           await releaseTurnLock();
         }
+        mirrorSlackTurn("user", text);
         return true;
       } catch (error) {
         onDraftChange(previousDraft);
@@ -987,12 +1035,14 @@ export function EphemeralAgentChat({
       enabledConnections,
       ensureChat,
       missingApiKey,
+      mirrorSlackTurn,
       onDraftChange,
       onUserMessage,
       prepareTurn,
       releaseTurnLock,
       selectedModelId,
       send,
+      session,
       showClientError,
       turnClientContext,
       workspaceId,
@@ -1436,6 +1486,11 @@ export function EphemeralAgentChat({
               refreshKey={schedulesRefreshKey}
               variant="inline"
             />
+          ) : null}
+          {slackThread ? (
+            <p className="text-muted-foreground mb-2 text-xs">
+              Replies also go to this Slack thread.
+            </p>
           ) : null}
           <ChatComposer
             attachments={attachments}

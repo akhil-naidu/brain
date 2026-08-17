@@ -16,6 +16,7 @@ import {
   readChatIdFromLocation,
   replaceChatUrl,
   updateChat,
+  type ChatSlackThread,
 } from "@/lib/chat/chats-api";
 import { notifyChatsChanged } from "@/lib/chat/chat-list-events";
 import { stashPendingChatProjectId } from "@/lib/chat/pending-chat-project";
@@ -35,8 +36,22 @@ type ActiveChatState = {
   readonly initialRevision: number;
   readonly initialVisibility: ChatVisibility;
   readonly projectId: string | null;
+  readonly slackThread: ChatSlackThread | null;
   readonly remountKey: number;
 };
+
+function sessionForSlackMappedChat(
+  session: SessionState | null,
+  slackThread: ChatSlackThread | null,
+): SessionState | null {
+  if (!session || !slackThread) {
+    return session;
+  }
+  return {
+    sessionId: session.sessionId,
+    streamIndex: session.streamIndex,
+  };
+}
 
 function emptyActive(remountKey: number, visibility: ChatVisibility = "personal"): ActiveChatState {
   return {
@@ -47,6 +62,7 @@ function emptyActive(remountKey: number, visibility: ChatVisibility = "personal"
     initialRevision: 0,
     initialVisibility: visibility,
     projectId: null,
+    slackThread: null,
     remountKey,
   };
 }
@@ -84,11 +100,12 @@ export function ChatWorkspace() {
           setActive({
             id: chat.id,
             title: chat.title,
-            initialSession: chat.eveSession,
+            initialSession: sessionForSlackMappedChat(chat.eveSession, chat.slackThread),
             initialEvents: chat.events,
             initialRevision: chat.revision,
             initialVisibility: chat.visibility,
             projectId: chat.projectId,
+            slackThread: chat.slackThread,
             remountKey: 0,
           });
         } catch {
@@ -225,11 +242,12 @@ export function ChatWorkspace() {
         setActive((current) => ({
           id: chat.id,
           title: chat.title,
-          initialSession: chat.eveSession,
+          initialSession: sessionForSlackMappedChat(chat.eveSession, chat.slackThread),
           initialEvents: chat.events,
           initialRevision: chat.revision,
           initialVisibility: chat.visibility,
           projectId: chat.projectId,
+          slackThread: chat.slackThread,
           remountKey: current.remountKey + 1,
         }));
       });
@@ -302,6 +320,7 @@ export function ChatWorkspace() {
       initialRevision: chat.revision,
       initialVisibility: chat.visibility,
       projectId: chat.projectId,
+      slackThread: null,
     }));
     notifyChatsChanged();
   }, []);
@@ -398,6 +417,7 @@ export function ChatWorkspace() {
       onThreadActionsReady={handleThreadActionsReady}
       onUserMessage={handleUserMessage}
       projectId={active.projectId}
+      slackThread={active.slackThread}
     />
   );
 }
