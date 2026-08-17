@@ -7,9 +7,12 @@ const storedSchema = z
   .object({
     botToken: z.string().min(1).optional(),
     signingSecret: z.string().min(1).optional(),
+    allowedChannelIds: z.array(z.string()).optional(),
     updatedAt: z.number().finite(),
   })
   .strict();
+
+type StoredSlackInbound = z.infer<typeof storedSchema>;
 
 export type SlackInboundCredentials = {
   readonly botToken: string;
@@ -27,7 +30,7 @@ function credentialsPath(): string {
   return path.join(process.cwd(), ".eve", "slack-inbound-credentials.json");
 }
 
-async function readStored(): Promise<z.infer<typeof storedSchema> | null> {
+async function readStored(): Promise<StoredSlackInbound | null> {
   try {
     const raw = await readFile(credentialsPath(), "utf8");
     const parsed = storedSchema.safeParse(JSON.parse(raw) as unknown);
@@ -37,21 +40,7 @@ async function readStored(): Promise<z.infer<typeof storedSchema> | null> {
   }
 }
 
-export async function writeSlackInboundCredentials(input: {
-  readonly botToken?: string;
-  readonly signingSecret?: string;
-}): Promise<void> {
-  const existing = await readStored();
-  const botToken = input.botToken?.trim() || existing?.botToken;
-  const signingSecret = input.signingSecret?.trim() || existing?.signingSecret;
-  if (!botToken && !signingSecret) {
-    throw new Error("Bot token or signing secret is required.");
-  }
-  const value = {
-    ...(botToken ? { botToken } : {}),
-    ...(signingSecret ? { signingSecret } : {}),
-    updatedAt: Date.now(),
-  };
+async function persistStored(value: StoredSlackInbound): Promise<void> {
   const destination = credentialsPath();
   const directory = path.dirname(destination);
   await mkdir(directory, { recursive: true, mode: 0o700 });
@@ -76,8 +65,47 @@ export async function writeSlackInboundCredentials(input: {
   }
 }
 
+export async function readSlackInboundStoredAllowlist(): Promise<readonly string[] | undefined> {
+  const stored = await readStored();
+  if (!stored || stored.allowedChannelIds === undefined) {
+    return undefined;
+  }
+  return stored.allowedChannelIds;
+}
+
+export async function writeSlackInboundCredentials(input: {
+  readonly botToken?: string;
+  readonly signingSecret?: string;
+  readonly allowedChannelIds?: readonly string[];
+}): Promise<void> {
+  const existing = await readStored();
+  const botToken = input.botToken?.trim() || existing?.botToken;
+  const signingSecret = input.signingSecret?.trim() || existing?.signingSecret;
+  const allowedChannelIds =
+    input.allowedChannelIds !== undefined
+      ? [...input.allowedChannelIds]
+      : existing?.allowedChannelIds;
+  if (!botToken && !signingSecret && allowedChannelIds === undefined) {
+    throw new Error("Bot token or signing secret is required.");
+  }
+  await persistStored({
+    ...(botToken ? { botToken } : {}),
+    ...(signingSecret ? { signingSecret } : {}),
+    ...(allowedChannelIds !== undefined ? { allowedChannelIds } : {}),
+    updatedAt: Date.now(),
+  });
+}
+
 export async function deleteSlackInboundCredentials(): Promise<void> {
-  await rm(credentialsPath(), { force: true });
+  const existing = await readStored();
+  if (!existing || existing.allowedChannelIds === undefined) {
+    await rm(credentialsPath(), { force: true });
+    return;
+  }
+  await persistStored({
+    allowedChannelIds: existing.allowedChannelIds,
+    updatedAt: Date.now(),
+  });
 }
 
 export async function resolveSlackInboundCredentials(

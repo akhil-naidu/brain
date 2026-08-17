@@ -5,7 +5,15 @@ import { DEFAULT_BRAIN_CHAT_MODEL_ID } from "@/agent/lib/models";
 import { createTurnClientContext } from "@/lib/chat/turn-client-context";
 import { getPool } from "@/lib/db/pool";
 import { callSlackApi } from "eve/channels/slack";
-import { resolveSlackInboundCredentials } from "@/agent/lib/slack-inbound-credentials";
+import {
+  readSlackInboundStoredAllowlist,
+  resolveSlackInboundCredentials,
+} from "@/agent/lib/slack-inbound-credentials";
+import {
+  isSlackInboundChannelAllowed,
+  resolveSlackInboundChannelAllowlist,
+  type SlackInboundChannelAllowlist,
+} from "@/lib/chat/slack-inbound/channel-allowlist";
 import { asStringKeyedRecord } from "@/lib/chat/slack-inbound/json-object";
 import { slackInboundAuthAttributes } from "@/lib/chat/slack-inbound/principal";
 import { resolveSlackInboundUser, type SlackIdentity } from "@/lib/chat/slack-inbound/store";
@@ -124,6 +132,22 @@ async function mapInboundUser(input: {
   });
 }
 
+export type SlackInboundDispatchOptions = {
+  readonly allowlist?: SlackInboundChannelAllowlist;
+};
+
+async function effectiveAllowlist(
+  override: SlackInboundChannelAllowlist | undefined,
+): Promise<SlackInboundChannelAllowlist> {
+  if (override) {
+    return override;
+  }
+  return resolveSlackInboundChannelAllowlist({
+    storedChannelIds: await readSlackInboundStoredAllowlist(),
+    envChannelIds: process.env["SLACK_INBOUND_CHANNEL_IDS"],
+  });
+}
+
 function isDirectMessage(message: SlackInboundDispatchMessage, kind: SlackInboundKind): boolean {
   if (kind === "dm") {
     return true;
@@ -134,6 +158,7 @@ function isDirectMessage(message: SlackInboundDispatchMessage, kind: SlackInboun
 export async function handleSlackInboundMessage(
   ctx: SlackInboundDispatchContext,
   message: SlackInboundDispatchMessage,
+  options?: SlackInboundDispatchOptions,
 ): Promise<SlackInboundResult> {
   if (!message.author || message.author.isBot) {
     return null;
@@ -143,6 +168,18 @@ export async function handleSlackInboundMessage(
     if (!followUp) {
       return null;
     }
+  }
+
+  const isDm = isDirectMessage(message, ctx.kind);
+  const allowlist = await effectiveAllowlist(options?.allowlist);
+  if (
+    !isSlackInboundChannelAllowed({
+      isDirectMessage: isDm,
+      channelId: message.channelId,
+      allowedChannelIds: allowlist.channelIds,
+    })
+  ) {
+    return null;
   }
 
   const slackTeamId = message.teamId?.trim();
@@ -160,7 +197,6 @@ export async function handleSlackInboundMessage(
   }
 
   const threadTs = message.threadTs || message.ts;
-  const isDm = isDirectMessage(message, ctx.kind);
   const isReset = message.text.trim() === "/new";
 
   if (isReset) {

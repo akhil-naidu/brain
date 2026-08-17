@@ -3,6 +3,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  deleteSlackInboundCredentials,
+  readSlackInboundStoredAllowlist,
   resolveSlackInboundCredentials,
   slackInboundCredentialStatus,
   writeSlackInboundCredentials,
@@ -78,6 +80,26 @@ describe("Slack inbound credentials", () => {
 
   it("does not fall back to Vercel Connect when credentials are missing", async () => {
     await useTemporaryWorkingDirectory();
+    await expect(resolveSlackInboundCredentials({})).resolves.toBeNull();
+  });
+
+  it("writes an allowlist without requiring tokens", async () => {
+    await useTemporaryWorkingDirectory();
+    await writeSlackInboundCredentials({ allowedChannelIds: [] });
+    await expect(readSlackInboundStoredAllowlist()).resolves.toEqual([]);
+    await writeSlackInboundCredentials({ allowedChannelIds: ["C-ok"] });
+    await expect(readSlackInboundStoredAllowlist()).resolves.toEqual(["C-ok"]);
+  });
+
+  it("keeps the allowlist when stored tokens are removed", async () => {
+    await useTemporaryWorkingDirectory();
+    await writeSlackInboundCredentials({
+      botToken: "xoxb-stored",
+      signingSecret: "stored-secret",
+      allowedChannelIds: ["C-ok"],
+    });
+    await deleteSlackInboundCredentials();
+    await expect(readSlackInboundStoredAllowlist()).resolves.toEqual(["C-ok"]);
     await expect(resolveSlackInboundCredentials({})).resolves.toBeNull();
   });
 });

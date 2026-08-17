@@ -200,5 +200,78 @@ if (!url) {
       const chats = await getChatStore().listChats("slack-dispatch-user", personal.id);
       expect(chats).toHaveLength(2);
     });
+
+    it("ignores a mention outside the allowlist without a refusal", async () => {
+      const workspaces = createWorkspaceStore(pool);
+      const personal = await workspaces.ensurePersonalWorkspace("slack-dispatch-user");
+      await createSlackInboundStore(pool).upsertIdentity({
+        userId: "slack-dispatch-user",
+        workspaceId: personal.id,
+        slackTeamId: "T1",
+        slackUserId: "U1",
+      });
+      const ctx = { kind: "mention" as const, ...dispatchContext({ mentioned: true }) };
+      await expect(
+        handleSlackInboundMessage(
+          ctx,
+          {
+            text: "hello",
+            ts: "1.0",
+            threadTs: "1.0",
+            channelId: "C-other",
+            teamId: "T1",
+            author: { userId: "U1", isBot: false },
+          },
+          { allowlist: { channelIds: ["C-ok"], source: "stored" } },
+        ),
+      ).resolves.toBeNull();
+      expect(ctx.postPrivate).not.toHaveBeenCalled();
+      expect(ctx.postPublic).not.toHaveBeenCalled();
+      expect(ctx.reset).not.toHaveBeenCalled();
+    });
+
+    it("ignores a subscribed follow-up outside the allowlist", async () => {
+      const ctx = { kind: "message" as const, ...dispatchContext({ subscribed: true }) };
+      await expect(
+        handleSlackInboundMessage(
+          ctx,
+          {
+            text: "still going",
+            ts: "2.0",
+            threadTs: "1.0",
+            channelId: "C-other",
+            teamId: "T1",
+            author: { userId: "U1", isBot: false },
+          },
+          { allowlist: { channelIds: ["C-ok"], source: "stored" } },
+        ),
+      ).resolves.toBeNull();
+      expect(ctx.postPrivate).not.toHaveBeenCalled();
+    });
+
+    it("still dispatches a DM when the channel allowlist is set", async () => {
+      const workspaces = createWorkspaceStore(pool);
+      const personal = await workspaces.ensurePersonalWorkspace("slack-dispatch-user");
+      await createSlackInboundStore(pool).upsertIdentity({
+        userId: "slack-dispatch-user",
+        workspaceId: personal.id,
+        slackTeamId: "T1",
+        slackUserId: "U1",
+      });
+      const ctx = { kind: "dm" as const, ...dispatchContext() };
+      const result = await handleSlackInboundMessage(
+        ctx,
+        {
+          text: "hello from slack",
+          ts: "1.0",
+          threadTs: "1.0",
+          channelId: "D1",
+          teamId: "T1",
+          author: { userId: "U1", isBot: false },
+        },
+        { allowlist: { channelIds: ["C-ok"], source: "stored" } },
+      );
+      expect(result?.auth?.principalId).toBe("slack-dispatch-user");
+    });
   });
 }
