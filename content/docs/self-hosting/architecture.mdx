@@ -44,7 +44,7 @@ Connections call the app **now**. If a tool is disconnected, Brain cannot answer
 - Sign-in required; history in your Postgres
 - Workspaces isolate chats and MCP grants
 - Roles: instance admin; workspace owner / admin / member
-- Mutating MCP tools wait for in-chat approval in the default **Auto** posture; instance admins can choose Strict or Dangerous on [Instance policies](/docs/enterprise/instance-policies). **Ask** mode cannot call tools. A command policy still blocks high-risk shell and SQL.
+- Mutating MCP tools wait for in-chat approval in the default **Auto** posture; instance admins can choose Strict or Dangerous on [Instance policies](/docs/enterprise/instance-policies). **Ask** mode cannot call tools. A command policy still blocks high-risk shell and SQL. Auto and Strict also screen tool results before the model sees them.
 - Model keys and warehouse tokens stay on the host (`.eve/`), not in the browser
 
 See [Security](/docs/self-hosting/security) and [Approvals](/docs/chat/approvals).

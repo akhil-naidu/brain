@@ -3,18 +3,24 @@ title: Approvals and authorizations
 description: Human-in-the-loop tool approval and mid-turn OAuth challenges.
 ---
 
-Agent mode can pause a turn for two reasons:
+Agent mode can pause or block tools in three different ways:
 
 ## Tool approval (HITL)
 
-Write tools (create issues, send messages, update records, …) may show an **approval** prompt in the conversation before Brain executes them. How often that happens depends on the host **agent safety posture** on [`/settings/instance`](/docs/enterprise/instance-policies) (default **Auto**).
+Write tools (create issues, send messages, update records, …) may show an **approval** prompt in the conversation **before** Brain executes them. How often that happens depends on the host **agent safety posture** on [`/settings/instance`](/docs/enterprise/instance-policies) (default **Auto**).
 
 - **Approve** — run the tool with the shown arguments  
 - **Reject / deny** — skip that call; the agent continues without it  
 
 In Auto, read-only tools for many apps are allowlisted and may run without a prompt. Strict also pauses those reads (and sandbox bash/write). Dangerous skips Auto’s write pauses.
 
-A host **command policy** can **deny** a call outright (recursive deletes, destructive SQL). Those denials never become an approve prompt.
+## Command policy (no execute)
+
+A host **command policy** can **deny** a call outright **before** it runs (recursive deletes, destructive SQL). Those denials never become an approve prompt.
+
+## Result screening (after execute)
+
+In **Auto** and **Strict**, Brain also checks the **output** after a tool runs. If it looks like prompt injection (“ignore previous instructions”) or a secret-like token, the model gets a short blocked stub instead of the raw text. That stub is not an approve prompt. The tool may already have run (a ClickUp read cannot be undone). **Dangerous** live chats skip this check. Scheduled jobs still screen.
 
 Ask mode never invokes connection or sandbox tools, regardless of posture.
 

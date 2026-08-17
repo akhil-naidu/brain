@@ -8,24 +8,26 @@ On **`/settings/instance`**, instance admins set host-wide policies. Licensed ho
 | Policy | UI label | Meaning |
 | --- | --- | --- |
 | Signup mode | Invite only / Open signup / SSO only | Who can create accounts |
-| Agent safety posture | Strict / Auto / Dangerous | How tool calls pause for in-chat approval |
+| Agent safety posture | Strict / Auto / Dangerous | How tool calls pause for approval, and whether Auto screens tool results |
 | Allow create workspace | Allow creating workspaces | Users may create additional workspaces |
 | Auto personal workspace | Auto personal workspace | Provision a personal workspace for new users |
 | Allow forgot password | Allow forgot password | Self-serve reset (needs SMTP for email) |
 
 ### Agent safety posture
 
-Default is **Auto** (today’s behavior). This control applies to interactive Agent turns.
+Default is **Auto**. This control applies to interactive Agent turns.
 
-| Posture | HITL |
-| --- | --- |
-| **Strict** | Almost every tool waits for in-chat approval, including reviewed reads and sandbox bash/write |
-| **Auto** | Allowlisted reads run; writes and unknown tools wait |
-| **Dangerous** | Skips those approval pauses |
+| Posture | HITL | Result screening |
+| --- | --- | --- |
+| **Strict** | Almost every tool waits for in-chat approval, including reviewed reads and sandbox bash/write | After a tool runs, output is checked before the model sees it |
+| **Auto** | Allowlisted reads run; writes and unknown tools wait | Same result screening as Strict |
+| **Dangerous** | Skips those approval pauses | Skips result screening in live chat |
 
 A **command policy** still blocks high-risk shell (recursive `rm`, `mkfs`, `dd` to `/dev/`, fork bombs) and destructive SQL (`DROP TABLE`, `TRUNCATE`, Mongo drop tools) in **every** posture, including Dangerous. Denied calls never become an approve prompt.
 
-Ask mode still blocks tools. Plan-style mutating-tool limits still apply if that mode is used. Scheduled morning briefs and playbooks keep Auto HITL so they do not hang waiting for a person; command policy still applies.
+**Auto and Strict** also screen tool *results* for prompt-injection phrases and secret-like tokens (private keys, GitHub PATs, Slack tokens). A match is replaced with a short blocked stub. That is not an approve prompt, and it cannot undo a tool that already ran. **Dangerous** live chats skip that screening. Scheduled morning briefs and playbooks still screen (and keep Auto HITL) so they are not left unprotected.
+
+Ask mode still blocks tools. Plan-style mutating-tool limits still apply if that mode is used.
 
 See [Approvals](/docs/chat/approvals).
 
