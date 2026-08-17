@@ -150,6 +150,19 @@ export function createSlackInboundStore(pool: Pool) {
     return row ? toThreadChat(row) : null;
   }
 
+  async function getThreadChatByChatId(chatId: string): Promise<SlackThreadChat | null> {
+    await ensureBrainSchema(pool);
+    const result = await pool.query<PgRow>(
+      `SELECT slack_team_id, slack_channel_id, slack_thread_ts, chat_id, user_id, workspace_id
+       FROM brain_slack_thread_chat
+       WHERE chat_id = $1
+       LIMIT 1`,
+      [chatId.trim()],
+    );
+    const row = result.rows[0];
+    return row ? toThreadChat(row) : null;
+  }
+
   async function upsertThreadChat(input: SlackThreadChat): Promise<SlackThreadChat> {
     await ensureBrainSchema(pool);
     await pool.query(
@@ -177,6 +190,7 @@ export function createSlackInboundStore(pool: Pool) {
     deleteIdentity,
     latestIdentityForUser,
     getThreadChat,
+    getThreadChatByChatId,
     upsertThreadChat,
   };
 }

@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createWorkspaceStore } from "@/lib/auth/workspaces/store";
 import { createSlackInboundStore, resolveSlackInboundUser } from "@/lib/chat/slack-inbound/store";
+import { getChatStore } from "@/lib/chat/store";
 import { getPool, resetPoolForTests } from "@/lib/db/pool";
 import { ensureBrainSchema } from "@/lib/db/schema";
 
@@ -130,6 +131,48 @@ if (!url) {
         slackUserId: "U2",
       });
       expect(await store.lookupBySlackUser("T2", "U2")).toEqual(resolved);
+    });
+
+    it("looks up a thread mapping by Brain chat id and drops the old chat after remap", async () => {
+      const workspaces = createWorkspaceStore(pool);
+      const personal = await workspaces.ensurePersonalWorkspace("slack-id-user-a");
+      const store = createSlackInboundStore(pool);
+      const chats = getChatStore();
+      const first = await chats.createChat("slack-id-user-a", {
+        title: "Slack DM",
+        workspaceId: personal.id,
+      });
+      const second = await chats.createChat("slack-id-user-a", {
+        title: "Slack DM",
+        workspaceId: personal.id,
+      });
+      await store.upsertThreadChat({
+        slackTeamId: "T1",
+        slackChannelId: "D1",
+        slackThreadTs: "10.0",
+        chatId: first.id,
+        userId: "slack-id-user-a",
+        workspaceId: personal.id,
+      });
+      expect(await store.getThreadChatByChatId(first.id)).toEqual({
+        slackTeamId: "T1",
+        slackChannelId: "D1",
+        slackThreadTs: "10.0",
+        chatId: first.id,
+        userId: "slack-id-user-a",
+        workspaceId: personal.id,
+      });
+
+      await store.upsertThreadChat({
+        slackTeamId: "T1",
+        slackChannelId: "D1",
+        slackThreadTs: "10.0",
+        chatId: second.id,
+        userId: "slack-id-user-a",
+        workspaceId: personal.id,
+      });
+      expect(await store.getThreadChatByChatId(first.id)).toBeNull();
+      expect((await store.getThreadChatByChatId(second.id))?.chatId).toBe(second.id);
     });
   });
 }

@@ -51,8 +51,6 @@ export default defineHook({
         await appendSlackThreadEvent({
           ...thread,
           event,
-          sessionId: ctx.session.id,
-          continuationToken: ctx.channel.continuationToken,
         });
       } catch {
         // Transcript persistence must not fail the Slack turn.

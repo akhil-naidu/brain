@@ -51,8 +51,6 @@ export async function appendSlackThreadEvent(input: {
   readonly slackChannelId: string;
   readonly slackThreadTs: string;
   readonly event: HandleMessageStreamEvent;
-  readonly sessionId: string;
-  readonly continuationToken?: string;
 }): Promise<void> {
   const mapping = await getSlackInboundStore().getThreadChat(
     input.slackTeamId,
@@ -63,11 +61,6 @@ export async function appendSlackThreadEvent(input: {
     return;
   }
   await getChatStore().updateChat(mapping.userId, mapping.workspaceId, mapping.chatId, {
-    eveSession: {
-      sessionId: input.sessionId,
-      ...(input.continuationToken ? { continuationToken: input.continuationToken } : {}),
-      streamIndex: 0,
-    },
     appendEvents: [input.event],
   });
 }
