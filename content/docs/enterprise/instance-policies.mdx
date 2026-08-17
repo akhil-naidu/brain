@@ -1,16 +1,33 @@
 ---
 title: Instance policies
-description: Control signup mode, workspace creation, auto personal workspace, and forgot-password.
+description: Control signup mode, agent safety posture, workspace creation, auto personal workspace, and forgot-password.
 ---
 
-On **`/settings/instance`**, instance admins set host-wide policies. Licensed hosts may lock some options based on [entitlements](/docs/enterprise/license).
+On **`/settings/instance`**, instance admins set host-wide policies. Licensed hosts may lock some options based on [entitlements](/docs/enterprise/license). Signed-in members can read the current values; only the instance admin can change them.
 
 | Policy | UI label | Meaning |
 | --- | --- | --- |
 | Signup mode | Invite only / Open signup / SSO only | Who can create accounts |
+| Agent safety posture | Strict / Auto / Dangerous | How tool calls pause for in-chat approval |
 | Allow create workspace | Allow creating workspaces | Users may create additional workspaces |
 | Auto personal workspace | Auto personal workspace | Provision a personal workspace for new users |
 | Allow forgot password | Allow forgot password | Self-serve reset (needs SMTP for email) |
+
+### Agent safety posture
+
+Default is **Auto** (today’s behavior). This control applies to interactive Agent turns.
+
+| Posture | HITL |
+| --- | --- |
+| **Strict** | Almost every tool waits for in-chat approval, including reviewed reads and sandbox bash/write |
+| **Auto** | Allowlisted reads run; writes and unknown tools wait |
+| **Dangerous** | Skips those approval pauses |
+
+A **command policy** still blocks high-risk shell (recursive `rm`, `mkfs`, `dd` to `/dev/`, fork bombs) and destructive SQL (`DROP TABLE`, `TRUNCATE`, Mongo drop tools) in **every** posture, including Dangerous. Denied calls never become an approve prompt.
+
+Ask mode still blocks tools. Plan-style mutating-tool limits still apply if that mode is used. Scheduled morning briefs and playbooks keep Auto HITL so they do not hang waiting for a person; command policy still applies.
+
+See [Approvals](/docs/chat/approvals).
 
 ### Signup mode notes
 

@@ -5,7 +5,7 @@ description: Hardening checklist for production Brain hosts.
 
 Treat the Brain host as a **trusted** runtime: MCP tokens and BYOA secrets live on disk under `.eve/`.
 
-Product-level guardrails (workspaces, HITL approvals, Ask mode) are described in [Architecture](/docs/self-hosting/architecture).
+Product-level guardrails (workspaces, HITL approvals, Ask mode, agent safety posture) are described in [Architecture](/docs/self-hosting/architecture) and [Instance policies](/docs/enterprise/instance-policies).
 
 ## Checklist
 
@@ -16,9 +16,10 @@ Product-level guardrails (workspaces, HITL approvals, Ask mode) are described in
 5. **Ports** — Expose Next (`:3000`) only; keep eve (`:4274`) on loopback  
 6. **`.eve/`** — Restrict filesystem permissions; include in backups; exclude from public artifacts  
 7. **Signup mode** — Prefer invite-only or SSO-only on shared hosts ([Instance policies](/docs/enterprise/instance-policies))  
-8. **SMTP** — Configure only if you need invite / forgot-password email; otherwise copy invite links  
-9. **License secret** — If using `BRAIN_LICENSE_SECRET`, store it with other host secrets  
-10. **Sessions** — Users can revoke devices under `/settings/account`; admins can reset passwords (signs out all sessions)  
+8. **Agent safety posture** — Leave **Auto** unless you intend Strict (more pauses) or Dangerous (fewer pauses). Command policy still blocks high-risk shell and SQL.  
+9. **SMTP** — Configure only if you need invite / forgot-password email; otherwise copy invite links  
+10. **License secret** — If using `BRAIN_LICENSE_SECRET`, store it with other host secrets  
+11. **Sessions** — Users can revoke devices under `/settings/account`; admins can reset passwords (signs out all sessions)  
 
 ## Related
 

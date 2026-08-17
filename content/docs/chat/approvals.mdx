@@ -7,12 +7,16 @@ Agent mode can pause a turn for two reasons:
 
 ## Tool approval (HITL)
 
-Write tools (create issues, send messages, update records, …) may show an **approval** prompt in the conversation before Brain executes them.
+Write tools (create issues, send messages, update records, …) may show an **approval** prompt in the conversation before Brain executes them. How often that happens depends on the host **agent safety posture** on [`/settings/instance`](/docs/enterprise/instance-policies) (default **Auto**).
 
 - **Approve** — run the tool with the shown arguments  
 - **Reject / deny** — skip that call; the agent continues without it  
 
-Read-only tools for many apps are allowlisted and may run without a prompt. Ask mode never invokes these tools.
+In Auto, read-only tools for many apps are allowlisted and may run without a prompt. Strict also pauses those reads (and sandbox bash/write). Dangerous skips Auto’s write pauses.
+
+A host **command policy** can **deny** a call outright (recursive deletes, destructive SQL). Those denials never become an approve prompt.
+
+Ask mode never invokes connection or sandbox tools, regardless of posture.
 
 ## Connection authorization
 
