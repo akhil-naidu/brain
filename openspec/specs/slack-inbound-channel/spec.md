@@ -78,6 +78,10 @@ When an allowlist of Slack channel ids is configured (instance-stored or `SLACK_
 - **WHEN** an instance admin opens Slack inbound settings with a bot token saved
 - **THEN** they can limit mentions using a checklist of channels the bot can list, plus optional pasted ids for channels Slack did not return
 
+#### Scenario: Owner replies from the Brain sidebar
+- **WHEN** the mapped owner sends from the personal Brain chat linked to a Slack thread
+- **THEN** the prompt and assistant reply are posted into that Slack thread and HITL for that turn is in Brain
+
 ### Requirement: Slack actor maps to a Brain user or the turn is dropped
 The system MUST map the Slack user id (and Slack team id) to exactly one Brain user before starting a turn. Primary mapping MUST use Slack user/team ids stored when that user completed Slack MCP Connect. If no stored id matches, the system MAY map by the Slack profile email when it uniquely matches a Brain account email. If mapping fails or is ambiguous, the system MUST NOT run as anonymous, MUST NOT use another user's principal, MUST NOT start the turn, and MUST send a private reply telling the Slack user to sign in to Brain and Connect Slack.
 

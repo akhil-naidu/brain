@@ -61,7 +61,7 @@ Inbound mapping uses the Slack user id stored at Connect. If you have not Connec
 - Optional channel allowlist limits @mentions (Tools checklist or env); DMs are not filtered
 - HITL approve/deny appears as Slack buttons and uses instance posture (not schedule unattended rules)
 - `/new` starts a fresh Slack session and is not sent to the model
-- Each Slack thread is stored as a **personal** Brain sidebar chat (a transcript). Continue the conversation in Slack; opening it in the browser does not resume the live Slack session
+- Each Slack thread is stored as a **personal** Brain sidebar chat. Opening it in Brain continues that Slack thread: your prompt and Brain’s reply are posted there. HITL for turns you start in Brain is in the app; turns started in Slack still use Slack buttons. Allowlist still applies to Slack @mentions only (not to this Brain→Slack post).
 
 ## Callback URL
 
