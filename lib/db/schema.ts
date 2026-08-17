@@ -4,7 +4,7 @@ import type { Pool } from "pg";
  * Bump when Brain DDL changes so long-lived dev processes re-apply
  * idempotent ALTERs without a full restart.
  */
-export const BRAIN_SCHEMA_REVISION = 4;
+export const BRAIN_SCHEMA_REVISION = 5;
 
 const globalForSchema = globalThis as typeof globalThis & {
   brainSchemaRevision?: number;
@@ -203,6 +203,32 @@ export async function ensureBrainSchema(pool: Pool): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS brain_custom_model_scope_workspace_idx
       ON brain_custom_model (scope, workspace_id);
+
+    CREATE TABLE IF NOT EXISTS brain_slack_identity (
+      user_id TEXT NOT NULL,
+      workspace_id TEXT NOT NULL REFERENCES brain_workspace(id) ON DELETE CASCADE,
+      slack_team_id TEXT NOT NULL,
+      slack_user_id TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (user_id, workspace_id),
+      UNIQUE (slack_team_id, slack_user_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS brain_slack_identity_user_updated_idx
+      ON brain_slack_identity (user_id, updated_at DESC);
+
+    CREATE TABLE IF NOT EXISTS brain_slack_thread_chat (
+      slack_team_id TEXT NOT NULL,
+      slack_channel_id TEXT NOT NULL,
+      slack_thread_ts TEXT NOT NULL,
+      chat_id TEXT NOT NULL REFERENCES chat(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL,
+      workspace_id TEXT NOT NULL,
+      PRIMARY KEY (slack_team_id, slack_channel_id, slack_thread_ts)
+    );
+
+    CREATE INDEX IF NOT EXISTS brain_slack_thread_chat_channel_thread_idx
+      ON brain_slack_thread_chat (slack_channel_id, slack_thread_ts);
 
     INSERT INTO brain_instance_policy (
       id, signup_mode, auto_personal_workspace, allow_create_workspace, allow_forgot_password,
