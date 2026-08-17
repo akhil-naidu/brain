@@ -34,11 +34,23 @@ export function brainUserPrincipal(
   };
 }
 
-export function sessionAuthContext(userId: string, workspaceId?: string | null) {
+export function sessionAuthContext(
+  userId: string,
+  workspaceId?: string | null,
+  extraAttributes?: Readonly<Record<string, string>>,
+) {
   const attributes: Record<string, string> = {};
   const trimmedWorkspace = workspaceId?.trim();
   if (trimmedWorkspace) {
     attributes["workspaceId"] = trimmedWorkspace;
+  }
+  if (extraAttributes) {
+    for (const [key, value] of Object.entries(extraAttributes)) {
+      const trimmed = value.trim();
+      if (trimmed) {
+        attributes[key] = trimmed;
+      }
+    }
   }
   return {
     attributes,
@@ -47,4 +59,11 @@ export function sessionAuthContext(userId: string, workspaceId?: string | null) 
     principalId: userId,
     principalType: "user" as const,
   };
+}
+
+export function isBrainSessionIssuer(issuer: string | null | undefined): boolean {
+  if (typeof issuer !== "string") {
+    return false;
+  }
+  return issuer === BRAIN_AUTH_ISSUER || issuer.startsWith(`${BRAIN_AUTH_ISSUER}:`);
 }
