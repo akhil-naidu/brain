@@ -6,6 +6,7 @@ import {
   isBrainChatModelId,
   isCustomBrainModelId,
 } from "@/agent/lib/models";
+import { wrapChatModelWithToolResultScreening } from "@/agent/lib/wrap-chat-model-screening";
 import { isCommandCodeApiKeyConfigured } from "@/lib/chat/provider-setup";
 import { customModelSelectableId, parseCustomModelRowId } from "@/lib/chat/custom-models/ids";
 import { decryptCustomModelApiKey } from "@/lib/chat/custom-models/secret";
@@ -25,6 +26,13 @@ const COMMAND_CODE_BASE_URL = "https://api.commandcode.ai/provider/v1";
  * “provider API key missing” before the request reaches the host.
  */
 const OPENAI_COMPAT_PLACEHOLDER_API_KEY = "ollama";
+
+function screenedModel(model: LanguageModel): LanguageModel {
+  if (typeof model === "string") {
+    return model;
+  }
+  return wrapChatModelWithToolResultScreening(model);
+}
 
 function commandCodeClient(env: Record<string, string | undefined>) {
   return createOpenAI({
@@ -52,7 +60,7 @@ export function createCommandCodeFallbackModel(
 ): ResolvedChatModel {
   const meta = getBrainChatModel(DEFAULT_BRAIN_CHAT_MODEL_ID);
   return {
-    model: commandCodeClient(env).chat(meta.id),
+    model: screenedModel(commandCodeClient(env).chat(meta.id)),
     modelContextWindowTokens: meta.contextWindowTokens,
     selectableId: meta.id,
   };
@@ -74,7 +82,7 @@ export async function resolveChatModelSelection(input: {
   if (requested && isBrainChatModelId(requested) && isCommandCodeApiKeyConfigured(env)) {
     const meta = getBrainChatModel(requested);
     return {
-      model: commandCodeClient(env).chat(meta.id),
+      model: screenedModel(commandCodeClient(env).chat(meta.id)),
       modelContextWindowTokens: meta.contextWindowTokens,
       selectableId: meta.id,
     };
@@ -106,7 +114,7 @@ export async function resolveChatModelSelection(input: {
               name: `custom-${row.id}`,
             });
             return {
-              model: client.chat(row.providerModelId),
+              model: screenedModel(client.chat(row.providerModelId)),
               modelContextWindowTokens: row.contextWindowTokens,
               selectableId: requested,
             };

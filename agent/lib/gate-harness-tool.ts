@@ -6,6 +6,7 @@ import {
   principalForSandboxAuth,
 } from "@/agent/lib/ensure-attached-repo";
 import { resolveAgentSafetyPosture } from "@/agent/lib/resolve-agent-safety-posture";
+import { applyToolResultScreening } from "@/agent/lib/screen-tool-result";
 import { turnChatMode } from "@/agent/lib/turn-chat-mode-state";
 import { turnUnattended } from "@/agent/lib/turn-unattended-state";
 
@@ -14,7 +15,8 @@ export type GatedHarnessKind = "bash" | "write_file";
 /**
  * Replaces a built-in harness tool: omit it in Ask mode (plain chat),
  * keep the default in Agent mode. Before execute, shallow-clone an attached
- * GitHub repo into `/workspace` when needed.
+ * GitHub repo into `/workspace` when needed. After execute, Auto/Strict
+ * (and unattended runs) screen the output even when `kind` is omitted.
  */
 export function gateHarnessTool(defaultTool: ToolDefinition, kind?: GatedHarnessKind) {
   return defineDynamic({
@@ -46,7 +48,11 @@ export function gateHarnessTool(defaultTool: ToolDefinition, kind?: GatedHarness
               sandbox,
               principal: principalForSandboxAuth(toolCtx.session.auth),
             });
-            return defaultTool.execute(input, toolCtx);
+            const output = await defaultTool.execute(input, toolCtx);
+            return applyToolResultScreening(output, {
+              posture: await resolveAgentSafetyPosture(),
+              unattended: turnUnattended.get(),
+            });
           },
         });
       },

@@ -2,8 +2,29 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const getSecretById = vi.fn();
 const listVisibleModels = vi.fn();
-const createOpenAI = vi.fn((options: { apiKey?: string; baseURL?: string; name?: string }) => ({
-  chat: (modelId: string) => ({ modelId, providerOptions: options }),
+
+function fakeChatModel(modelId: string) {
+  return {
+    specificationVersion: "v3" as const,
+    provider: "mock",
+    modelId,
+    supportedUrls: {},
+    async doGenerate() {
+      return {
+        content: [],
+        finishReason: "stop" as const,
+        usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+        warnings: [],
+      };
+    },
+    async doStream() {
+      return { stream: new ReadableStream() };
+    },
+  };
+}
+
+const createOpenAI = vi.fn((_options: { apiKey?: string; baseURL?: string; name?: string }) => ({
+  chat: (modelId: string) => fakeChatModel(modelId),
 }));
 
 vi.mock("@ai-sdk/openai", () => ({
@@ -67,6 +88,10 @@ describe("resolveChatModelSelection", () => {
 
     expect(resolved.selectableId).toBe(`custom:${rowId}`);
     expect(resolved.modelContextWindowTokens).toBe(8192);
+    expect(typeof resolved.model).toBe("object");
+    if (typeof resolved.model !== "string") {
+      expect(Reflect.get(resolved.model, "specificationVersion")).toBe("v4");
+    }
   });
 
   it("falls back when custom model is out of workspace scope", async () => {
