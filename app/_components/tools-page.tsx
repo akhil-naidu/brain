@@ -26,6 +26,7 @@ import {
   shouldOfferConnectionConfigure,
   shouldOfferConnectionConnect,
   shouldOfferConnectionDisconnect,
+  shouldOfferLabeledConnectionSetup,
 } from "@/lib/chat/connection-ui";
 import {
   disconnectConnection,
@@ -275,6 +276,7 @@ export function ToolsPage() {
               const showConnect = shouldOfferConnectionConnect(status);
               const showDisconnect = shouldOfferConnectionDisconnect(status, key);
               const showConfigure = shouldOfferConnectionConfigure(status, key);
+              const showLabeledSetup = shouldOfferLabeledConnectionSetup(status, key);
               const adminSetupHint = connectionAdminSetupHint(status, key);
               const allowEnable = canEnableConnection(status);
               const isConnecting = connectingId === key;
@@ -338,7 +340,18 @@ export function ToolsPage() {
                     </div>
 
                     <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:justify-end">
-                      {showConfigure ? (
+                      {showConfigure && showLabeledSetup ? (
+                        <Button
+                          onClick={() => {
+                            setConfigureId(key);
+                          }}
+                          size="sm"
+                          type="button"
+                        >
+                          Set up
+                        </Button>
+                      ) : null}
+                      {showConfigure && !showLabeledSetup ? (
                         <IconTooltip label={connectionConfigureLabel(status)} side="bottom">
                           <Button
                             aria-label={connectionConfigureLabel(status)}
@@ -445,7 +458,17 @@ export function ToolsPage() {
                     </div>
                   ) : null}
                   {key === "slack" ? (
-                    <SlackInboundSettings autoOpen={focusConnectionId === "slack-inbound"} />
+                    <SlackInboundSettings
+                      autoOpen={focusConnectionId === "slack-inbound"}
+                      onConfigureSlack={
+                        showConfigure
+                          ? () => {
+                              setConfigureId("slack");
+                            }
+                          : undefined
+                      }
+                      slackAuthStatus={status?.status ?? null}
+                    />
                   ) : null}
                 </SettingsPanel>
               );

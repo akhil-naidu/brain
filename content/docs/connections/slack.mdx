@@ -34,14 +34,16 @@ Instance admins configure the bot on **`/tools`** → **Slack** → **Set up inb
 | `SLACK_BOT_TOKEN` | Bot token for Events API replies and HITL |
 | `SLACK_SIGNING_SECRET` | Verifies Slack webhooks |
 
-In the Slack app:
+In the Slack app ([api.slack.com/apps](https://api.slack.com/apps) → your Brain app):
 
-1. **Event Subscriptions** Request URL: `{BRAIN_PUBLIC_URL}/eve/v1/slack`
+1. **Event Subscriptions** → turn **Enable Events** on → **Request URL**: `{BRAIN_PUBLIC_URL}/eve/v1/slack` (wait for Verified)
 2. Subscribe to bot events: `app_mention`, `message.im`, and `message.channels` (thread follow-ups; add `message.groups` for private channels)
-3. **Interactivity** Request URL: `{BRAIN_PUBLIC_URL}/eve/v1/slack`
+3. **Interactivity & Shortcuts** → turn Interactivity on → **Request URL**: `{BRAIN_PUBLIC_URL}/eve/v1/slack`
 4. Bot scopes as needed: `chat:write`, `im:history`, `im:write`, `users:read`, `users:read.email`, plus channel history (`channels:history` / `groups:history`)
 
-Without a bot token and signing secret, inbound Slack is off. MCP Connect still works.
+The Event URL is also on **Tools → Slack** when inbound is on (copy it from there). Do not paste it as an OAuth redirect — that is `{BRAIN_PUBLIC_URL}/api/connections/slack/callback` in **App settings**.
+
+Without a bot token and signing secret, inbound Slack is off. MCP Connect still works only after client id and secret are saved in **Set up** / **App settings**. Inbound on does not unlock Connect.
 
 Optional: turn on **Limit @mentions to selected channels** in the same inbound dialog. Brain lists public and private channels the bot can see; tick those that may @mention Brain. Paste extra `C…` / `G…` ids for channels Slack did not list (invite the bot, or paste the id). Leave the switch **off** to allow every channel. DMs always work. @mentions and thread follow-ups outside the list are ignored (no reply), including leftover active threads. Saving with the switch off stores “unrestricted” and ignores env `SLACK_INBOUND_CHANNEL_IDS`.
 

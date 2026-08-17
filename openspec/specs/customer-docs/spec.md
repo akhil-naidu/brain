@@ -68,7 +68,7 @@ Customer documentation MUST describe how to enable Slack as an inbound channel: 
 
 #### Scenario: Operator reads Slack connection docs
 - **WHEN** a visitor opens the Slack connection documentation page
-- **THEN** the page documents inbound Event Subscriptions, `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, optional channel allowlist (Tools checklist / `SLACK_INBOUND_CHANNEL_IDS`), continuing a Slack thread from the Brain sidebar, and that Vercel Connect is not used
+- **THEN** the page documents inbound Event Subscriptions and Interactivity Request URL (`{BRAIN_PUBLIC_URL}/eve/v1/slack`), `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, optional channel allowlist (Tools checklist / `SLACK_INBOUND_CHANNEL_IDS`), that inbound on does not unlock Connect, continuing a Slack thread from the Brain sidebar, and that Vercel Connect is not used
 
 #### Scenario: User reads Slack inbound approvals docs
 - **WHEN** a visitor opens the approvals documentation page

@@ -8,6 +8,7 @@ import {
   integrationStatusText,
   shouldOfferConnectionConfigure,
   shouldOfferConnectionConnect,
+  shouldOfferLabeledConnectionSetup,
   shouldOfferConnectionDisconnect,
 } from "@/lib/chat/connection-ui";
 
@@ -320,6 +321,34 @@ describe("shouldOfferConnectionConfigure", () => {
       ),
     ).toBe(true);
     expect(shouldOfferConnectionConfigure(undefined, "slack")).toBe(false);
+  });
+
+  it("offers a labeled Set up button only when credentials are missing", () => {
+    expect(
+      shouldOfferLabeledConnectionSetup(
+        {
+          id: "slack",
+          displayName: "Slack",
+          status: "needs_setup",
+          canConfigureApp: true,
+        },
+        "slack",
+      ),
+    ).toBe(true);
+    expect(
+      shouldOfferLabeledConnectionSetup(
+        {
+          id: "slack",
+          displayName: "Slack",
+          status: "needs_sign_in",
+          canConfigureApp: true,
+        },
+        "slack",
+      ),
+    ).toBe(false);
+    expect(
+      shouldOfferConnectionConnect({ id: "slack", displayName: "Slack", status: "needs_setup" }),
+    ).toBe(false);
   });
 
   it("labels configure as Set up or App settings", () => {

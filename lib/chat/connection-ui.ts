@@ -54,6 +54,14 @@ export function connectionConfigureLabel(status: ConnectionStatus | undefined): 
   return status?.status === "needs_setup" ? "Set up" : "App settings";
 }
 
+/** Show a labeled Set up button instead of the settings icon when credentials are missing. */
+export function shouldOfferLabeledConnectionSetup(
+  status: ConnectionStatus | undefined,
+  connectionId: string,
+): boolean {
+  return shouldOfferConnectionConfigure(status, connectionId) && status?.status === "needs_setup";
+}
+
 /** Member-facing hint when credentials are missing and they cannot configure. */
 export function connectionAdminSetupHint(
   status: ConnectionStatus | undefined,

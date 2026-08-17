@@ -78,6 +78,14 @@ When an allowlist of Slack channel ids is configured (instance-stored or `SLACK_
 - **WHEN** an instance admin opens Slack inbound settings with a bot token saved
 - **THEN** they can limit mentions using a checklist of channels the bot can list, plus optional pasted ids for channels Slack did not return
 
+#### Scenario: Tools card does not treat inbound as Connect
+- **WHEN** inbound bot credentials are saved and Slack MCP client id and secret are not configured
+- **THEN** Tools does not offer Connect and tells the operator to Set up Slack (client id and secret) before Connect
+
+#### Scenario: Tools card links inbound to Connect identity
+- **WHEN** inbound is on and the signed-in user has not Connected Slack
+- **THEN** Tools says Connect is required for DMs to run as them and shows the Event URL to paste in Slack Event Subscriptions and Interactivity
+
 #### Scenario: Owner replies from the Brain sidebar
 - **WHEN** the mapped owner sends from the personal Brain chat linked to a Slack thread
 - **THEN** the prompt and assistant reply are posted into that Slack thread and HITL for that turn is in Brain

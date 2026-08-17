@@ -20,6 +20,13 @@ import {
   type SlackInboundListedChannel,
   slackInboundAllowlistSaveText,
 } from "@/lib/chat/slack-inbound/channel-picker";
+import {
+  type SlackAuthStatus,
+  slackInboundCardDescription,
+  slackInboundDialogDescription,
+  slackInboundEventUrlHelp,
+  slackInboundIdentityHint,
+} from "@/lib/chat/slack-inbound/settings-copy";
 import { showToast } from "@/lib/ui/toast-store";
 import { cn } from "@/lib/utils";
 
@@ -138,7 +145,15 @@ function parseListedChannels(data: unknown): SlackInboundListedChannel[] | null 
   return channels;
 }
 
-export function SlackInboundSettings({ autoOpen = false }: { readonly autoOpen?: boolean }) {
+export function SlackInboundSettings({
+  autoOpen = false,
+  onConfigureSlack,
+  slackAuthStatus = null,
+}: {
+  readonly autoOpen?: boolean;
+  readonly onConfigureSlack?: () => void;
+  readonly slackAuthStatus?: SlackAuthStatus | null;
+}) {
   const [status, setStatus] = useState<SlackInboundStatus | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -305,6 +320,10 @@ export function SlackInboundSettings({ autoOpen = false }: { readonly autoOpen?:
   }
 
   const ready = status.hasBotToken && status.hasSigningSecret;
+  const identityHint = slackInboundIdentityHint({
+    inboundReady: ready,
+    slackAuthStatus,
+  });
   const statusCopy = inboundStatusCopy(status);
   const hasStored = status.source === "stored" || status.source === "mixed";
   const selectedIds = listedChannels
@@ -457,13 +476,47 @@ export function SlackInboundSettings({ autoOpen = false }: { readonly autoOpen?:
             </span>
           </div>
           <p className="text-muted-foreground text-xs leading-relaxed">
-            Let people talk to Brain in Slack. Uses a bot token, not Slack Connect.
-            {status.allowedChannelIds.length > 0
-              ? ` Limited to ${status.allowedChannelIds.length} ${
-                  status.allowedChannelIds.length === 1 ? "channel" : "channels"
-                }.`
-              : ""}
+            {slackInboundCardDescription(status.allowedChannelIds.length)}
           </p>
+          {identityHint ? (
+            <p className="text-xs leading-relaxed text-amber-800 dark:text-amber-200">
+              {identityHint}
+              {onConfigureSlack && slackAuthStatus === "needs_setup" ? (
+                <>
+                  {" "}
+                  <button
+                    className="underline underline-offset-2"
+                    onClick={onConfigureSlack}
+                    type="button"
+                  >
+                    Set up Slack
+                  </button>
+                </>
+              ) : null}
+            </p>
+          ) : null}
+          {ready && status.eventUrl ? (
+            <div className="min-w-0">
+              <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
+                Event URL
+              </p>
+              <p className="text-muted-foreground mt-0.5 text-[11px] leading-relaxed">
+                {slackInboundEventUrlHelp()}
+              </p>
+              <p className="text-foreground mt-1 font-mono text-[11px] break-all">
+                {status.eventUrl}
+              </p>
+              <Button
+                className="mt-1.5"
+                onClick={copyEventUrl}
+                size="xs"
+                type="button"
+                variant="outline"
+              >
+                {copied ? "Copied" : "Copy Event URL"}
+              </Button>
+            </div>
+          ) : null}
         </div>
         <Button
           onClick={() => {
@@ -482,9 +535,8 @@ export function SlackInboundSettings({ autoOpen = false }: { readonly autoOpen?:
           <DialogHeader>
             <DialogTitle>Slack inbound</DialogTitle>
             <DialogDescription>
-              Bot token and signing secret for DMs, @mentions, and approval buttons. Optionally
-              limit mentions to channels the bot can see. This is separate from Slack Connect, which
-              is for tools.
+              {slackInboundDialogDescription()} Optionally limit mentions to channels the bot can
+              see.
             </DialogDescription>
           </DialogHeader>
 
@@ -497,10 +549,7 @@ export function SlackInboundSettings({ autoOpen = false }: { readonly autoOpen?:
                   <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
                     Event URL
                   </p>
-                  <p className="text-muted-foreground mt-1 text-xs">
-                    Paste this as the Event Subscriptions and Interactivity Request URL in your
-                    Slack app.
-                  </p>
+                  <p className="text-muted-foreground mt-1 text-xs">{slackInboundEventUrlHelp()}</p>
                   <p className="text-foreground mt-1 font-mono text-xs break-all">
                     {status.eventUrl}
                   </p>
