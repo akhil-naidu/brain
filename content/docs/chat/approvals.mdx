@@ -14,6 +14,8 @@ Write tools (create issues, send messages, update records, …) may show an **ap
 
 In Auto, read-only tools for many apps are allowlisted and may run without a prompt. Strict also pauses those reads (and sandbox bash/write). Dangerous skips Auto’s write pauses.
 
+**Slack inbound** uses the same instance posture as browser Agent chat. Approve or deny from Slack buttons in the thread. Slack is not a scheduled run: Strict still pauses reviewed reads, and command policy still denies matching calls. Morning-brief and other schedules keep unattended Auto HITL.
+
 ## Command policy (no execute)
 
 A host **command policy** can **deny** a call outright **before** it runs (recursive deletes, destructive SQL). Those denials never become an approve prompt.
