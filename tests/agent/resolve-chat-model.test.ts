@@ -1,7 +1,9 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const getSecretById = vi.fn();
 const listVisibleModels = vi.fn();
+const listDisabledBuiltinModelIds = vi.fn();
+const listDisabledCustomModelIds = vi.fn();
 
 function fakeChatModel(modelId: string) {
   return {
@@ -36,6 +38,13 @@ vi.mock("@/lib/chat/custom-models/store", () => ({
   getCustomModelStore: () => ({
     getSecretById,
     listVisibleModels,
+    listDisabledModelIds: listDisabledCustomModelIds,
+  }),
+}));
+
+vi.mock("@/lib/chat/builtin-models/store", () => ({
+  getBuiltinModelStore: () => ({
+    listDisabledModelIds: listDisabledBuiltinModelIds,
   }),
 }));
 
@@ -43,10 +52,27 @@ import { resolveChatModelSelection } from "@/agent/lib/resolve-chat-model";
 import { encryptCustomModelApiKey } from "@/lib/chat/custom-models/secret";
 
 describe("resolveChatModelSelection", () => {
+  beforeEach(() => {
+    listDisabledBuiltinModelIds.mockResolvedValue([]);
+    listDisabledCustomModelIds.mockResolvedValue([]);
+  });
+
   afterEach(() => {
     getSecretById.mockReset();
     listVisibleModels.mockReset();
+    listDisabledBuiltinModelIds.mockReset();
+    listDisabledCustomModelIds.mockReset();
     createOpenAI.mockClear();
+  });
+
+  it("falls back when the requested built-in is disabled", async () => {
+    listDisabledBuiltinModelIds.mockResolvedValue(["deepseek/deepseek-v4-flash"]);
+    const resolved = await resolveChatModelSelection({
+      modelId: "deepseek/deepseek-v4-flash",
+      workspaceId: "ws-1",
+      env: { COMMAND_CODE_API_KEY: "sk-test" },
+    });
+    expect(resolved.selectableId).toBe("deepseek/deepseek-v4-pro");
   });
 
   it("resolves curated models when Command Code is configured", async () => {
@@ -92,6 +118,32 @@ describe("resolveChatModelSelection", () => {
     if (typeof resolved.model !== "string") {
       expect(Reflect.get(resolved.model, "specificationVersion")).toBe("v4");
     }
+  });
+
+  it("falls back when the requested custom model is disabled", async () => {
+    const rowId = "22222222-2222-4222-8222-222222222222";
+    listDisabledCustomModelIds.mockResolvedValue([rowId]);
+    getSecretById.mockResolvedValue({
+      id: rowId,
+      scope: "workspace",
+      workspaceId: "ws-1",
+      label: "Local",
+      description: "",
+      baseUrl: "http://127.0.0.1:11434/v1",
+      providerModelId: "llama3.2",
+      contextWindowTokens: 8192,
+      hasApiKey: false,
+      apiKeyCiphertext: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    const resolved = await resolveChatModelSelection({
+      modelId: `custom:${rowId}`,
+      workspaceId: "ws-1",
+      env: { COMMAND_CODE_API_KEY: "sk-test" },
+    });
+    expect(resolved.selectableId).toBe("deepseek/deepseek-v4-pro");
   });
 
   it("falls back when custom model is out of workspace scope", async () => {

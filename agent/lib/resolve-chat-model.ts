@@ -7,6 +7,11 @@ import {
   isCustomBrainModelId,
 } from "@/agent/lib/models";
 import { wrapChatModelWithToolResultScreening } from "@/agent/lib/wrap-chat-model-screening";
+import {
+  firstEnabledBuiltinModelId,
+  isBuiltinModelEnabled,
+} from "@/lib/chat/builtin-models/availability";
+import { getBuiltinModelStore } from "@/lib/chat/builtin-models/store";
 import { isCommandCodeApiKeyConfigured } from "@/lib/chat/provider-setup";
 import { customModelSelectableId, parseCustomModelRowId } from "@/lib/chat/custom-models/ids";
 import { decryptCustomModelApiKey } from "@/lib/chat/custom-models/secret";
@@ -70,6 +75,32 @@ export function createCommandCodeFallbackModel(
  * Resolve a turn model id to a live LanguageModel.
  * Custom models are loaded from Postgres and checked against workspace visibility.
  */
+async function loadDisabledModelIds(
+  workspaceId: string | null | undefined,
+  list: (workspaceId: string) => Promise<readonly string[]>,
+): Promise<readonly string[]> {
+  if (!workspaceId) {
+    return [];
+  }
+  try {
+    return await list(workspaceId);
+  } catch {
+    return [];
+  }
+}
+
+function resolveEnabledCommandCodeModel(
+  modelId: string,
+  env: Record<string, string | undefined>,
+): ResolvedChatModel {
+  const meta = getBrainChatModel(modelId);
+  return {
+    model: screenedModel(commandCodeClient(env).chat(meta.id)),
+    modelContextWindowTokens: meta.contextWindowTokens,
+    selectableId: meta.id,
+  };
+}
+
 export async function resolveChatModelSelection(input: {
   readonly modelId: string | null | undefined;
   readonly workspaceId: string | null | undefined;
@@ -78,21 +109,30 @@ export async function resolveChatModelSelection(input: {
   const env = input.env ?? process.env;
   const fallback = createCommandCodeFallbackModel(env);
   const requested = typeof input.modelId === "string" ? input.modelId.trim() : "";
+  const customStore = getCustomModelStore(env);
+  const [disabledBuiltinIds, disabledCustomIds] = await Promise.all([
+    loadDisabledModelIds(input.workspaceId, (workspaceId) =>
+      getBuiltinModelStore(env).listDisabledModelIds(workspaceId),
+    ),
+    loadDisabledModelIds(input.workspaceId, (workspaceId) =>
+      customStore.listDisabledModelIds(workspaceId),
+    ),
+  ]);
 
-  if (requested && isBrainChatModelId(requested) && isCommandCodeApiKeyConfigured(env)) {
-    const meta = getBrainChatModel(requested);
-    return {
-      model: screenedModel(commandCodeClient(env).chat(meta.id)),
-      modelContextWindowTokens: meta.contextWindowTokens,
-      selectableId: meta.id,
-    };
+  if (
+    requested &&
+    isBrainChatModelId(requested) &&
+    isCommandCodeApiKeyConfigured(env) &&
+    isBuiltinModelEnabled(requested, disabledBuiltinIds)
+  ) {
+    return resolveEnabledCommandCodeModel(requested, env);
   }
 
   if (requested && isCustomBrainModelId(requested)) {
     const rowId = parseCustomModelRowId(requested);
-    if (rowId) {
+    if (rowId && !disabledCustomIds.includes(rowId)) {
       try {
-        const row = await getCustomModelStore(env).getSecretById(rowId);
+        const row = await customStore.getSecretById(rowId);
         if (row) {
           const visible =
             row.scope === "instance" ||
@@ -127,13 +167,16 @@ export async function resolveChatModelSelection(input: {
   }
 
   if (isCommandCodeApiKeyConfigured(env)) {
-    return fallback;
+    const enabledId = firstEnabledBuiltinModelId(disabledBuiltinIds);
+    if (enabledId) {
+      return resolveEnabledCommandCodeModel(enabledId, env);
+    }
   }
 
   if (input.workspaceId) {
     try {
-      const visible = await getCustomModelStore(env).listVisibleModels(input.workspaceId);
-      const first = visible[0];
+      const visible = await customStore.listVisibleModels(input.workspaceId);
+      const first = visible.find((model) => !disabledCustomIds.includes(model.id));
       if (first) {
         return resolveChatModelSelection({
           modelId: customModelSelectableId(first.id),

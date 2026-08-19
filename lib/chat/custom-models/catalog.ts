@@ -1,4 +1,5 @@
 import { BRAIN_CHAT_MODELS, type BrainChatModel } from "@/agent/lib/models";
+import { getBuiltinModelStore } from "@/lib/chat/builtin-models/store";
 import { isCommandCodeApiKeyConfigured } from "@/lib/chat/provider-setup";
 import {
   catalogContainsModelId,
@@ -20,11 +21,12 @@ export type CatalogModel = {
   readonly source: CatalogModelSource;
 };
 
-function curatedEntries(includeCurated: boolean): CatalogModel[] {
+function curatedEntries(includeCurated: boolean, disabledIds: readonly string[]): CatalogModel[] {
   if (!includeCurated) {
     return [];
   }
-  return BRAIN_CHAT_MODELS.map((model) => ({
+  const disabled = new Set(disabledIds);
+  return BRAIN_CHAT_MODELS.filter((model) => !disabled.has(model.id)).map((model) => ({
     id: model.id,
     label: model.label,
     description: model.description,
@@ -45,16 +47,38 @@ function customEntry(model: CustomModelRecord): CatalogModel {
   };
 }
 
+export function attachCustomModelEnabled<T extends { readonly id: string }>(
+  models: readonly T[],
+  disabledIds: readonly string[],
+): readonly (T & { readonly enabled: boolean })[] {
+  const disabled = new Set(disabledIds);
+  return models.map((model) => ({ ...model, enabled: !disabled.has(model.id) }));
+}
+
 export async function buildMergedModelCatalog(input: {
   readonly workspaceId: string;
   readonly includeCurated?: boolean;
+  readonly disabledBuiltinModelIds?: readonly string[];
+  readonly disabledCustomModelIds?: readonly string[];
   readonly env?: Record<string, string | undefined>;
 }): Promise<readonly CatalogModel[]> {
   const env = input.env ?? process.env;
   const includeCurated = input.includeCurated ?? isCommandCodeApiKeyConfigured(env);
   const store = getCustomModelStore(env);
-  const customs = await store.listVisibleModels(input.workspaceId);
-  return [...curatedEntries(includeCurated), ...customs.map(customEntry)];
+  const [customs, disabledBuiltinModelIds, disabledCustomModelIds] = await Promise.all([
+    store.listVisibleModels(input.workspaceId),
+    input.disabledBuiltinModelIds
+      ? Promise.resolve(input.disabledBuiltinModelIds)
+      : getBuiltinModelStore(env).listDisabledModelIds(input.workspaceId),
+    input.disabledCustomModelIds
+      ? Promise.resolve(input.disabledCustomModelIds)
+      : store.listDisabledModelIds(input.workspaceId),
+  ]);
+  const disabledCustoms = new Set(disabledCustomModelIds);
+  return [
+    ...curatedEntries(includeCurated, disabledBuiltinModelIds),
+    ...customs.filter((model) => !disabledCustoms.has(model.id)).map(customEntry),
+  ];
 }
 
 export function toBrainChatModelShape(entry: CatalogModel): BrainChatModel {
