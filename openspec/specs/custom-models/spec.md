@@ -43,7 +43,7 @@ Each custom model MUST store at least: a stable internal id, display label, Open
 - **THEN** the model is stored without an API key and remains usable
 
 ### Requirement: Models management page
-The system MUST provide a dedicated Models page where authorized admins can list and manage custom models for the scopes they control. The page MUST show instance models to instance admins and workspace models for the active workspace to workspace owners/admins. Ordinary members MUST be able to view which models are available but MUST NOT see mutation controls or secret values.
+The system MUST provide a dedicated Models page where authorized admins can list and manage custom models for the scopes they control. The page MUST show instance models to instance admins and workspace models for the active workspace to workspace owners/admins. The page MUST also list curated Command Code built-in models and let a workspace owner/admin or instance admin enable or disable each built-in for the active workspace. Disabled built-ins MUST be omitted from that workspace’s chat catalog. Ordinary members MUST be able to view which models are available but MUST NOT see mutation controls, built-in toggles, or secret values.
 
 #### Scenario: Instance admin manages host models on the page
 - **WHEN** an instance admin opens the Models page
@@ -56,6 +56,29 @@ The system MUST provide a dedicated Models page where authorized admins can list
 #### Scenario: Member sees read-only availability
 - **WHEN** a workspace member who cannot manage models opens the Models page
 - **THEN** they can see available models for the active workspace without edit or delete actions
+
+#### Scenario: Workspace admin disables a built-in model
+- **WHEN** a workspace owner or admin turns off a built-in model on the Models page
+- **THEN** that model is omitted from the active workspace’s chat catalog
+- **AND** other workspaces are unaffected
+
+#### Scenario: Workspace admin toggles every built-in at once
+- **WHEN** a workspace owner or admin uses the built-in Turn all off or Turn all on control
+- **THEN** every curated built-in for the active workspace is disabled or enabled together
+
+#### Scenario: Workspace admin disables a custom model
+- **WHEN** a workspace owner or admin turns off a custom model on the Models page
+- **THEN** that model is omitted from the active workspace’s chat catalog
+- **AND** the model remains stored
+- **AND** other workspaces are unaffected
+
+#### Scenario: Workspace admin toggles every custom model at once
+- **WHEN** a workspace owner or admin uses the Your models Turn all off or Turn all on control
+- **THEN** every custom model visible in the active workspace is disabled or enabled together
+
+#### Scenario: Member cannot toggle built-in models
+- **WHEN** a workspace member who cannot manage models opens the Models page
+- **THEN** built-in model switches are not actionable
 
 ### Requirement: Discovery-assisted provider model id
 When an admin can manage custom models, the Models create/edit UI MUST offer a control to fetch discovered model ids for the entered base URL (and optional API key) and let the admin select a candidate into the provider model id field. Manual entry of provider model id MUST remain available when discovery fails or returns no candidates.

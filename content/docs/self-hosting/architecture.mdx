@@ -29,7 +29,7 @@ Expose **3000** (or your reverse-proxy target). Keep **4274** on loopback. Detai
 
 ## Models
 
-- **Built-in** — set `COMMAND_CODE_API_KEY` for the curated Command Code catalog (OpenAI-compatible chat completions).
+- **Built-in** — set `COMMAND_CODE_API_KEY` for the curated Command Code catalog (OpenAI-compatible chat completions). Workspace admins can turn individual built-ins off on `/models` so they leave that workspace's composer.
 - **Custom** — instance or workspace admins register any OpenAI-compatible base URL on `/models`, including **Azure AI Foundry**. Chat works without Command Code if a usable custom model exists for the workspace.
 - Brain **does not train models**. Fine-tuning and content filters belong at the model host (Foundry or equivalent). Native Anthropic Messages / Claude-as-provider is not wired.
 

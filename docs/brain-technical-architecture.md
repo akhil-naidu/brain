@@ -41,7 +41,7 @@ Brain does **not** require Vercel AI Gateway, Neon, Upstash, Vercel Connect, Ver
 - **Human-in-the-loop** — mutating tools require in-chat approval; Ask mode blocks tools entirely.
 - **Playbooks** — named, reusable prompts shared in the workspace.
 - **Schedules** — morning brief and playbook schedules, optional Slack delivery.
-- **Model picker** — curated Command Code models plus instance- and workspace-scoped custom models.
+- **Model picker** — curated Command Code models (workspace-togglable on `/models`) plus instance- and workspace-scoped custom models.
 - **Custom models page** — admins register OpenAI-compatible endpoints (Foundry, company proxies, local servers).
 - **Production deploy** — Dockerfile → dFlow Enterprise, with operator Postgres and bootstrap of the first operator at `/setup`.
 

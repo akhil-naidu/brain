@@ -1027,7 +1027,7 @@ Stay signed in as the operator.
 5. Click the id you pulled (for example `llama3.2`) so **Model id** fills in
 6. Click **Save**
 
-The model appears under **Your models** with **All workspaces** or **This workspace**, and **No key**. It should also appear under **Available in chat**.
+The model appears under **Your models** with **All workspaces** or **This workspace**, and **No key**.
 
 If **Fetch models** fails: is the tunnel window still open? Did laptop `curl` to `/api/tags` work? Does the URL end with `/v1`? You can type **Model id** by hand from `ollama list` and still Save.
 
@@ -1180,7 +1180,7 @@ Stop `pnpm dev` with **Ctrl+C**, then:
 pnpm dev
 ```
 
-Open `/models`. **Available in chat** should list **Built-in** entries. Pick one in the composer.
+Open `/models`. **Your models** lists custom endpoints first. **Built-in models** lists each Command Code model with an In chat switch. Turn one off to hide it from this workspace's composer.
 
 You can use Command Code **and** Ollama. Chat does not require Command Code when a custom model exists. [Models overview](/docs/models).
 
