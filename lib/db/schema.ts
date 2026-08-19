@@ -4,7 +4,7 @@ import type { Pool } from "pg";
  * Bump when Brain DDL changes so long-lived dev processes re-apply
  * idempotent ALTERs without a full restart.
  */
-export const BRAIN_SCHEMA_REVISION = 5;
+export const BRAIN_SCHEMA_REVISION = 7;
 
 const globalForSchema = globalThis as typeof globalThis & {
   brainSchemaRevision?: number;
@@ -203,6 +203,26 @@ export async function ensureBrainSchema(pool: Pool): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS brain_custom_model_scope_workspace_idx
       ON brain_custom_model (scope, workspace_id);
+
+    CREATE TABLE IF NOT EXISTS brain_workspace_disabled_builtin_model (
+      workspace_id TEXT NOT NULL REFERENCES brain_workspace(id) ON DELETE CASCADE,
+      model_id TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (workspace_id, model_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS brain_workspace_disabled_builtin_model_workspace_idx
+      ON brain_workspace_disabled_builtin_model (workspace_id);
+
+    CREATE TABLE IF NOT EXISTS brain_workspace_disabled_custom_model (
+      workspace_id TEXT NOT NULL REFERENCES brain_workspace(id) ON DELETE CASCADE,
+      model_id TEXT NOT NULL REFERENCES brain_custom_model(id) ON DELETE CASCADE,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (workspace_id, model_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS brain_workspace_disabled_custom_model_workspace_idx
+      ON brain_workspace_disabled_custom_model (workspace_id);
 
     CREATE TABLE IF NOT EXISTS brain_slack_identity (
       user_id TEXT NOT NULL,

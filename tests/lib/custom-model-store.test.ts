@@ -25,7 +25,8 @@ if (!url) {
       resetCustomModelStoreForTests();
       await ensureBrainSchema(pool);
       await pool.query(`
-        TRUNCATE brain_custom_model,
+        TRUNCATE brain_workspace_disabled_custom_model,
+                 brain_custom_model,
                  brain_workspace_invite,
                  brain_user_active_workspace,
                  brain_workspace_member,
@@ -76,6 +77,31 @@ if (!url) {
 
       const secret = await store.getSecretById(instance.id);
       expect(secret?.apiKeyCiphertext).toBeTruthy();
+    });
+
+    it("disables custom models for one workspace without deleting them", async () => {
+      const workspaces = createWorkspaceStore(pool);
+      const personal = await workspaces.ensurePersonalWorkspace("user-1");
+      const other = await workspaces.ensurePersonalWorkspace("user-2");
+      const store = createCustomModelStore(pool, env);
+
+      const instance = await store.create({
+        scope: "instance",
+        label: "Host Ollama",
+        baseUrl: "http://127.0.0.1:11434/v1",
+        providerModelId: "llama3.2",
+        contextWindowTokens: 8192,
+      });
+
+      await store.setEnabled(personal.id, instance.id, false);
+      expect(await store.listDisabledModelIds(personal.id)).toEqual([instance.id]);
+      expect(await store.listDisabledModelIds(other.id)).toEqual([]);
+
+      await store.setAllEnabled(personal.id, true);
+      expect(await store.listDisabledModelIds(personal.id)).toEqual([]);
+
+      await store.setAllEnabled(personal.id, false);
+      expect(await store.listDisabledModelIds(personal.id)).toEqual([instance.id]);
     });
 
     it("rejects invalid base URLs", async () => {

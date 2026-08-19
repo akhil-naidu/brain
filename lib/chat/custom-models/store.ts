@@ -78,6 +78,9 @@ export type CustomModelStore = {
   listInstanceModels(): Promise<readonly CustomModelRecord[]>;
   listWorkspaceModels(workspaceId: string): Promise<readonly CustomModelRecord[]>;
   listVisibleModels(workspaceId: string): Promise<readonly CustomModelRecord[]>;
+  listDisabledModelIds(workspaceId: string): Promise<readonly string[]>;
+  setEnabled(workspaceId: string, modelId: string, enabled: boolean): Promise<void>;
+  setAllEnabled(workspaceId: string, enabled: boolean): Promise<void>;
   getById(id: string): Promise<CustomModelRecord | null>;
   getSecretById(id: string): Promise<CustomModelSecretRow | null>;
   create(input: CreateCustomModelInput): Promise<CustomModelRecord>;
@@ -126,6 +129,77 @@ export function createCustomModelStore(
         [workspaceId],
       );
       return result.rows.map(mapPublic);
+    },
+
+    async listDisabledModelIds(workspaceId) {
+      await ready();
+      const result = await pool.query<{ model_id: string }>(
+        `SELECT model_id FROM brain_workspace_disabled_custom_model
+         WHERE workspace_id = $1
+         ORDER BY model_id ASC`,
+        [workspaceId],
+      );
+      return result.rows.map((row) => row.model_id);
+    },
+
+    async setEnabled(workspaceId, modelId, enabled) {
+      await ready();
+      if (!workspaceId.trim()) {
+        throw new CustomModelValidationError("Workspace id is required.");
+      }
+      const existing = await this.getById(modelId);
+      const visible =
+        existing &&
+        (existing.scope === "instance" ||
+          (existing.scope === "workspace" && existing.workspaceId === workspaceId));
+      if (!visible) {
+        throw new CustomModelValidationError("Unknown custom model id.");
+      }
+      if (enabled) {
+        await pool.query(
+          `DELETE FROM brain_workspace_disabled_custom_model
+           WHERE workspace_id = $1 AND model_id = $2`,
+          [workspaceId, modelId],
+        );
+        return;
+      }
+      await pool.query(
+        `INSERT INTO brain_workspace_disabled_custom_model (workspace_id, model_id, updated_at)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (workspace_id, model_id) DO UPDATE SET updated_at = EXCLUDED.updated_at`,
+        [workspaceId, modelId, nowIso()],
+      );
+    },
+
+    async setAllEnabled(workspaceId, enabled) {
+      await ready();
+      if (!workspaceId.trim()) {
+        throw new CustomModelValidationError("Workspace id is required.");
+      }
+      if (enabled) {
+        await pool.query(
+          `DELETE FROM brain_workspace_disabled_custom_model WHERE workspace_id = $1`,
+          [workspaceId],
+        );
+        return;
+      }
+      const visible = await this.listVisibleModels(workspaceId);
+      if (visible.length === 0) {
+        return;
+      }
+      const updatedAt = nowIso();
+      const values: unknown[] = [];
+      const rows = visible.map((model, index) => {
+        const workspaceParam = index * 3 + 1;
+        values.push(workspaceId, model.id, updatedAt);
+        return `($${workspaceParam}, $${workspaceParam + 1}, $${workspaceParam + 2})`;
+      });
+      await pool.query(
+        `INSERT INTO brain_workspace_disabled_custom_model (workspace_id, model_id, updated_at)
+         VALUES ${rows.join(", ")}
+         ON CONFLICT (workspace_id, model_id) DO UPDATE SET updated_at = EXCLUDED.updated_at`,
+        values,
+      );
     },
 
     async getById(id) {
