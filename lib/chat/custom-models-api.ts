@@ -18,6 +18,7 @@ const customModelSchema = z.object({
   providerModelId: z.string().min(1),
   contextWindowTokens: z.number().int().positive(),
   hasApiKey: z.boolean(),
+  enabled: z.boolean().default(true),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -27,9 +28,19 @@ const catalogResponseSchema = z.object({
   workspaceId: z.string().min(1),
 });
 
+const builtinModelSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  description: z.string(),
+  contextWindowTokens: z.number().int().positive(),
+  enabled: z.boolean(),
+});
+
 const manageResponseSchema = z.object({
   instanceModels: z.array(customModelSchema),
   workspaceModels: z.array(customModelSchema),
+  builtinModels: z.array(builtinModelSchema),
+  commandCodeConfigured: z.boolean(),
   capabilities: z.object({
     canManageInstance: z.boolean(),
     canManageWorkspace: z.boolean(),
@@ -39,6 +50,7 @@ const manageResponseSchema = z.object({
 
 export type CatalogModelDto = z.infer<typeof catalogModelSchema>;
 export type CustomModelDto = z.infer<typeof customModelSchema>;
+export type BuiltinModelDto = z.infer<typeof builtinModelSchema>;
 
 export type CustomModelWriteInput = {
   readonly label: string;
@@ -75,6 +87,78 @@ export async function fetchModelCatalog(): Promise<{
     throw new Error(await readError(response));
   }
   return catalogResponseSchema.parse(await response.json());
+}
+
+async function patchBuiltinModels(body: {
+  readonly modelId?: string;
+  readonly all?: true;
+  readonly enabled: boolean;
+}): Promise<readonly BuiltinModelDto[]> {
+  const response = await fetch("/api/models/builtin", {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    throw new Error(await readError(response));
+  }
+  const data: unknown = await response.json();
+  return z.object({ builtinModels: z.array(builtinModelSchema) }).parse(data).builtinModels;
+}
+
+export async function setBuiltinModelEnabled(
+  modelId: string,
+  enabled: boolean,
+): Promise<readonly BuiltinModelDto[]> {
+  return patchBuiltinModels({ modelId, enabled });
+}
+
+export async function setAllBuiltinModelsEnabled(
+  enabled: boolean,
+): Promise<readonly BuiltinModelDto[]> {
+  return patchBuiltinModels({ all: true, enabled });
+}
+
+export async function setCustomModelEnabled(
+  modelId: string,
+  enabled: boolean,
+): Promise<{
+  readonly instanceModels: readonly CustomModelDto[];
+  readonly workspaceModels: readonly CustomModelDto[];
+}> {
+  return patchCustomModelVisibility({ modelId, enabled });
+}
+
+export async function setAllCustomModelsEnabled(enabled: boolean): Promise<{
+  readonly instanceModels: readonly CustomModelDto[];
+  readonly workspaceModels: readonly CustomModelDto[];
+}> {
+  return patchCustomModelVisibility({ all: true, enabled });
+}
+
+async function patchCustomModelVisibility(body: {
+  readonly modelId?: string;
+  readonly all?: true;
+  readonly enabled: boolean;
+}): Promise<{
+  readonly instanceModels: readonly CustomModelDto[];
+  readonly workspaceModels: readonly CustomModelDto[];
+}> {
+  const response = await fetch("/api/models/custom/visibility", {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    throw new Error(await readError(response));
+  }
+  const data: unknown = await response.json();
+  return z
+    .object({
+      instanceModels: z.array(customModelSchema),
+      workspaceModels: z.array(customModelSchema),
+    })
+    .parse(data);
 }
 
 export async function fetchCustomModelsManage(): Promise<z.infer<typeof manageResponseSchema>> {

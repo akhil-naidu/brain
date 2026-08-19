@@ -5,6 +5,7 @@ import { MoreHorizontalIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-rea
 import { useChatShell } from "@/app/_components/chat-shell-context";
 import { SettingsCardsSkeleton } from "@/components/loading/skeletons";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -25,8 +26,12 @@ import {
   deleteCustomModel,
   discoverCustomModels,
   fetchCustomModelsManage,
+  setAllBuiltinModelsEnabled,
+  setAllCustomModelsEnabled,
+  setBuiltinModelEnabled,
+  setCustomModelEnabled,
   updateCustomModel,
-  type CatalogModelDto,
+  type BuiltinModelDto,
   type CustomModelDto,
   type CustomModelWriteInput,
   type DiscoveredModelDto,
@@ -124,6 +129,26 @@ function formFromModel(model: CustomModelDto): FormState {
   };
 }
 
+function withEnabledFlag<T extends { readonly enabled: boolean }>(model: T, enabled: boolean): T {
+  if (model.enabled === enabled) {
+    return model;
+  }
+  return Object.assign({}, model, { enabled });
+}
+
+function mapEnabled<T extends { readonly enabled: boolean; readonly id: string }>(
+  models: readonly T[],
+  enabled: boolean,
+  modelId?: string,
+): readonly T[] {
+  return models.map((model) => {
+    if (modelId !== undefined && model.id !== modelId) {
+      return model;
+    }
+    return withEnabledFlag(model, enabled);
+  });
+}
+
 function hostFromUrl(url: string): string {
   try {
     return new URL(url).host || url;
@@ -132,60 +157,104 @@ function hostFromUrl(url: string): string {
   }
 }
 
-function sourceLabel(source: CatalogModelDto["source"]): string {
-  if (source === "command-code") {
-    return "Built-in";
-  }
-  if (source === "instance") {
-    return "Instance";
-  }
-  return "Workspace";
-}
+function BuiltInModels({
+  canManage,
+  commandCodeConfigured,
+  models,
+  onToggle,
+  onToggleAll,
+  togglingId,
+}: {
+  readonly canManage: boolean;
+  readonly commandCodeConfigured: boolean;
+  readonly models: readonly BuiltinModelDto[];
+  readonly onToggle: (modelId: string, enabled: boolean) => void;
+  readonly onToggleAll: (enabled: boolean) => void;
+  readonly togglingId: string | null;
+}) {
+  const enabledCount = models.filter((model) => model.enabled).length;
+  const allEnabled = enabledCount === models.length && models.length > 0;
+  const busy = togglingId !== null;
 
-function AvailableInChat({ models }: { readonly models: readonly CatalogModelDto[] }) {
   return (
     <section className="space-y-3">
-      <div className="flex items-baseline justify-between gap-3 px-0.5">
+      <div className="flex flex-wrap items-end justify-between gap-3 px-0.5">
         <div>
-          <h2 className="text-sm font-medium tracking-tight">Available in chat</h2>
-          <p className="text-muted-foreground text-xs">Shown in the composer model menu</p>
+          <h2 className="text-sm font-medium tracking-tight">Built-in models</h2>
+          <p className="text-muted-foreground text-xs">
+            {canManage
+              ? "Turn off models you do not want in this workspace's composer."
+              : "Shown in the composer when enabled for this workspace."}
+          </p>
         </div>
-        <span className="text-muted-foreground text-xs tabular-nums">{models.length}</span>
-      </div>
-      {models.length === 0 ? (
-        <p className="text-muted-foreground border-border/80 rounded-2xl border px-4 py-8 text-center text-sm">
-          No models available yet.
-        </p>
-      ) : (
-        <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {models.map((model) => (
-            <li
-              className="border-border/80 bg-card/40 flex items-start justify-between gap-3 rounded-xl border px-3.5 py-3"
-              key={model.id}
+        <div className="flex items-center gap-2">
+          {canManage ? (
+            <Button
+              disabled={busy}
+              onClick={() => {
+                onToggleAll(!allEnabled);
+              }}
+              size="sm"
+              type="button"
+              variant="outline"
             >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{model.label}</p>
-                <p className="text-muted-foreground truncate text-xs">{model.description}</p>
-              </div>
-              <span className="text-muted-foreground shrink-0 text-[11px]">
-                {sourceLabel(model.source)}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
+              {allEnabled ? "Turn all off" : "Turn all on"}
+            </Button>
+          ) : null}
+          <span className="text-muted-foreground text-xs tabular-nums">
+            {enabledCount}/{models.length}
+          </span>
+        </div>
+      </div>
+      {!commandCodeConfigured ? (
+        <p className="text-muted-foreground text-xs">
+          Command Code is not configured on this host, so built-ins stay out of chat until a key is
+          set.
+        </p>
+      ) : null}
+      <ul className="grid gap-2 sm:grid-cols-2">
+        {models.map((model) => (
+          <li
+            className={cn(
+              "border-border/80 bg-card/40 flex items-center justify-between gap-3 rounded-xl border px-3.5 py-3",
+              !model.enabled && "opacity-70",
+            )}
+            key={model.id}
+          >
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium">{model.label}</p>
+              <p className="text-muted-foreground truncate text-xs">{model.description}</p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="text-muted-foreground text-[11px]">In chat</span>
+              <Switch
+                aria-label={`${model.label} in chat`}
+                checked={model.enabled}
+                disabled={!canManage || busy}
+                onCheckedChange={(enabled) => {
+                  onToggle(model.id, enabled);
+                }}
+              />
+            </div>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
 
 export function ModelsPage() {
-  const { catalogModels, refreshModelCatalog } = useChatShell();
+  const { refreshModelCatalog } = useChatShell();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [instanceModels, setInstanceModels] = useState<readonly CustomModelDto[]>([]);
   const [workspaceModels, setWorkspaceModels] = useState<readonly CustomModelDto[]>([]);
+  const [builtinModels, setBuiltinModels] = useState<readonly BuiltinModelDto[]>([]);
+  const [commandCodeConfigured, setCommandCodeConfigured] = useState(false);
   const [canManageInstance, setCanManageInstance] = useState(false);
   const [canManageWorkspace, setCanManageWorkspace] = useState(false);
+  const [togglingBuiltinId, setTogglingBuiltinId] = useState<string | null>(null);
+  const [togglingCustomId, setTogglingCustomId] = useState<string | null>(null);
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
@@ -195,6 +264,7 @@ export function ModelsPage() {
   const [discoverError, setDiscoverError] = useState<string | null>(null);
 
   const canAddAnything = canManageInstance || canManageWorkspace;
+  const canManageBuiltin = canManageInstance || canManageWorkspace;
   const defaultCreateScope: ModelScope = canManageWorkspace ? "workspace" : "instance";
 
   const models = useMemo(
@@ -210,6 +280,8 @@ export function ModelsPage() {
         const data = await fetchCustomModelsManage();
         setInstanceModels(data.instanceModels);
         setWorkspaceModels(data.workspaceModels);
+        setBuiltinModels(data.builtinModels);
+        setCommandCodeConfigured(data.commandCodeConfigured);
         setCanManageInstance(data.capabilities.canManageInstance);
         setCanManageWorkspace(data.capabilities.canManageWorkspace);
       } catch (loadError) {
@@ -331,8 +403,108 @@ export function ModelsPage() {
     }
   };
 
+  const applyBuiltinModels = async (
+    nextModels: readonly BuiltinModelDto[],
+    persist: () => Promise<readonly BuiltinModelDto[]>,
+    busyId: string,
+  ) => {
+    if (!canManageBuiltin) {
+      return;
+    }
+    const previous = builtinModels;
+    setBuiltinModels(nextModels);
+    setTogglingBuiltinId(busyId);
+    try {
+      const next = await persist();
+      setBuiltinModels(next);
+      refreshModelCatalog();
+    } catch (toggleError) {
+      setBuiltinModels(previous);
+      showToast({
+        title:
+          toggleError instanceof Error ? toggleError.message : "Unable to update built-in model.",
+        variant: "error",
+      });
+    } finally {
+      setTogglingBuiltinId(null);
+    }
+  };
+
+  const toggleBuiltin = async (modelId: string, enabled: boolean) => {
+    await applyBuiltinModels(
+      mapEnabled(builtinModels, enabled, modelId),
+      () => setBuiltinModelEnabled(modelId, enabled),
+      modelId,
+    );
+  };
+
+  const toggleAllBuiltins = async (enabled: boolean) => {
+    await applyBuiltinModels(
+      mapEnabled(builtinModels, enabled),
+      () => setAllBuiltinModelsEnabled(enabled),
+      "*",
+    );
+  };
+
+  const applyCustomVisibility = async (
+    nextInstance: readonly CustomModelDto[],
+    nextWorkspace: readonly CustomModelDto[],
+    persist: () => Promise<{
+      readonly instanceModels: readonly CustomModelDto[];
+      readonly workspaceModels: readonly CustomModelDto[];
+    }>,
+    busyId: string,
+  ) => {
+    if (!canManageBuiltin) {
+      return;
+    }
+    const previousInstance = instanceModels;
+    const previousWorkspace = workspaceModels;
+    setInstanceModels(nextInstance);
+    setWorkspaceModels(nextWorkspace);
+    setTogglingCustomId(busyId);
+    try {
+      const next = await persist();
+      setInstanceModels(next.instanceModels);
+      setWorkspaceModels(next.workspaceModels);
+      refreshModelCatalog();
+    } catch (toggleError) {
+      setInstanceModels(previousInstance);
+      setWorkspaceModels(previousWorkspace);
+      showToast({
+        title:
+          toggleError instanceof Error ? toggleError.message : "Unable to update custom model.",
+        variant: "error",
+      });
+    } finally {
+      setTogglingCustomId(null);
+    }
+  };
+
+  const toggleCustom = async (modelId: string, enabled: boolean) => {
+    await applyCustomVisibility(
+      mapEnabled(instanceModels, enabled, modelId),
+      mapEnabled(workspaceModels, enabled, modelId),
+      () => setCustomModelEnabled(modelId, enabled),
+      modelId,
+    );
+  };
+
+  const toggleAllCustoms = async (enabled: boolean) => {
+    await applyCustomVisibility(
+      mapEnabled(instanceModels, enabled),
+      mapEnabled(workspaceModels, enabled),
+      () => setAllCustomModelsEnabled(enabled),
+      "*",
+    );
+  };
+
   const canManageModel = (model: CustomModelDto) =>
     model.scope === "instance" ? canManageInstance : canManageWorkspace;
+  const canManageCustomVisibility = canManageInstance || canManageWorkspace;
+  const customBusy = togglingCustomId !== null;
+  const customEnabledCount = models.filter((model) => model.enabled).length;
+  const allCustomsEnabled = customEnabledCount === models.length && models.length > 0;
 
   return (
     <div className="h-full overflow-y-auto">
@@ -352,7 +524,7 @@ export function ModelsPage() {
               <div className="space-y-1.5">
                 <h1 className="text-2xl font-semibold tracking-tight">Models</h1>
                 <p className="text-muted-foreground max-w-md text-sm leading-relaxed">
-                  OpenAI-compatible models for chat. Added models show up in the composer.
+                  Choose which built-in models appear in chat, and add OpenAI-compatible endpoints.
                 </p>
               </div>
               {canAddAnything && models.length > 0 ? (
@@ -409,16 +581,45 @@ export function ModelsPage() {
               </section>
             ) : (
               <section className="space-y-3">
-                <div className="flex items-baseline justify-between gap-3 px-0.5">
-                  <h2 className="text-sm font-medium tracking-tight">Your models</h2>
-                  <p className="text-muted-foreground text-xs tabular-nums">{models.length}</p>
+                <div className="flex flex-wrap items-end justify-between gap-3 px-0.5">
+                  <div>
+                    <h2 className="text-sm font-medium tracking-tight">Your models</h2>
+                    <p className="text-muted-foreground text-xs">
+                      {canManageCustomVisibility
+                        ? "Turn off models you do not want in this workspace's composer."
+                        : "Shown in the composer when enabled for this workspace."}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {canManageCustomVisibility ? (
+                      <Button
+                        disabled={customBusy}
+                        onClick={() => {
+                          void toggleAllCustoms(!allCustomsEnabled);
+                        }}
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
+                        {allCustomsEnabled ? "Turn all off" : "Turn all on"}
+                      </Button>
+                    ) : null}
+                    <span className="text-muted-foreground text-xs tabular-nums">
+                      {customEnabledCount}/{models.length}
+                    </span>
+                  </div>
                 </div>
                 <ul className="grid gap-3 sm:grid-cols-2">
                   {models.map((model) => {
                     const manageable = canManageModel(model);
                     return (
                       <li key={model.id}>
-                        <div className="border-border/80 bg-card/40 hover:border-border group relative flex h-full flex-col rounded-2xl border p-4 transition-colors">
+                        <div
+                          className={cn(
+                            "border-border/80 bg-card/40 hover:border-border group relative flex h-full flex-col rounded-2xl border p-4 transition-colors",
+                            !model.enabled && "opacity-70",
+                          )}
+                        >
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0 space-y-1 pr-8">
                               <p className="truncate text-sm font-medium tracking-tight">
@@ -470,20 +671,33 @@ export function ModelsPage() {
                             {hostFromUrl(model.baseUrl)}
                           </p>
 
-                          <div className="mt-auto flex flex-wrap items-center gap-2 pt-4">
-                            <span
-                              className={cn(
-                                "rounded-full px-2 py-0.5 text-[11px] font-medium",
-                                model.scope === "instance"
-                                  ? "bg-sky-500/10 text-sky-700 dark:text-sky-300"
-                                  : "bg-violet-500/10 text-violet-700 dark:text-violet-300",
-                              )}
-                            >
-                              {model.scope === "instance" ? "All workspaces" : "This workspace"}
-                            </span>
-                            <span className="text-muted-foreground text-[11px]">
-                              {model.hasApiKey ? "Key saved" : "No key"}
-                            </span>
+                          <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-4">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span
+                                className={cn(
+                                  "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                                  model.scope === "instance"
+                                    ? "bg-sky-500/10 text-sky-700 dark:text-sky-300"
+                                    : "bg-violet-500/10 text-violet-700 dark:text-violet-300",
+                                )}
+                              >
+                                {model.scope === "instance" ? "All workspaces" : "This workspace"}
+                              </span>
+                              <span className="text-muted-foreground text-[11px]">
+                                {model.hasApiKey ? "Key saved" : "No key"}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground text-[11px]">In chat</span>
+                              <Switch
+                                aria-label={`${model.label} in chat`}
+                                checked={model.enabled}
+                                disabled={!canManageCustomVisibility || customBusy}
+                                onCheckedChange={(enabled) => {
+                                  void toggleCustom(model.id, enabled);
+                                }}
+                              />
+                            </div>
                           </div>
                         </div>
                       </li>
@@ -506,7 +720,20 @@ export function ModelsPage() {
               </section>
             )}
 
-            <AvailableInChat models={catalogModels} />
+            {builtinModels.length > 0 ? (
+              <BuiltInModels
+                canManage={canManageBuiltin}
+                commandCodeConfigured={commandCodeConfigured}
+                models={builtinModels}
+                onToggle={(modelId, enabled) => {
+                  void toggleBuiltin(modelId, enabled);
+                }}
+                onToggleAll={(enabled) => {
+                  void toggleAllBuiltins(enabled);
+                }}
+                togglingId={togglingBuiltinId}
+              />
+            ) : null}
           </div>
         )}
       </div>

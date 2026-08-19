@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isOperatorUserId } from "@/lib/auth/require-operator-session";
 import { requireWorkspaceSession } from "@/lib/auth/require-workspace-session";
+import { builtinModelsWithAvailability } from "@/lib/chat/builtin-models/availability";
+import { getBuiltinModelStore } from "@/lib/chat/builtin-models/store";
+import { attachCustomModelEnabled } from "@/lib/chat/custom-models/catalog";
 import { CustomModelValidationError, getCustomModelStore } from "@/lib/chat/custom-models/store";
+import { isCommandCodeApiKeyConfigured } from "@/lib/chat/provider-setup";
 
 export const runtime = "nodejs";
 
@@ -32,14 +36,19 @@ export async function GET() {
   const isInstanceAdmin = await isOperatorUserId(auth.session.userId);
   const canManageWs = canManageWorkspace(auth.session.role);
 
-  const [instanceModels, workspaceModels] = await Promise.all([
-    store.listInstanceModels(),
-    store.listWorkspaceModels(auth.session.workspaceId),
-  ]);
+  const [instanceModels, workspaceModels, disabledBuiltinIds, disabledCustomIds] =
+    await Promise.all([
+      store.listInstanceModels(),
+      store.listWorkspaceModels(auth.session.workspaceId),
+      getBuiltinModelStore().listDisabledModelIds(auth.session.workspaceId),
+      store.listDisabledModelIds(auth.session.workspaceId),
+    ]);
 
   return NextResponse.json({
-    instanceModels,
-    workspaceModels,
+    instanceModels: attachCustomModelEnabled(instanceModels, disabledCustomIds),
+    workspaceModels: attachCustomModelEnabled(workspaceModels, disabledCustomIds),
+    builtinModels: builtinModelsWithAvailability(disabledBuiltinIds),
+    commandCodeConfigured: isCommandCodeApiKeyConfigured(),
     capabilities: {
       canManageInstance: isInstanceAdmin,
       canManageWorkspace: canManageWs,
