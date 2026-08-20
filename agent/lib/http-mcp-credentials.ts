@@ -9,6 +9,7 @@ import {
 } from "@/agent/lib/connection-credentials";
 import {
   getHttpMcpUrlConnection,
+  httpMcpRequiresBearer,
   parseHttpMcpServerUrl,
   type HttpMcpUrlConnection,
 } from "@/agent/lib/http-mcp-url";
@@ -154,8 +155,11 @@ export async function getHttpMcpCredentialSetupError(
     return "Unknown connection.";
   }
   const resolved = await resolveHttpMcpCredentials(connectionName, workspaceId, env);
-  if (resolved) {
-    return null;
+  if (!resolved) {
+    return `Set up ${connection.displayName} to continue`;
   }
-  return `Set up ${connection.displayName} to continue`;
+  if (httpMcpRequiresBearer(connection) && !resolved.bearerToken) {
+    return `Set up ${connection.displayName} to continue`;
+  }
+  return null;
 }

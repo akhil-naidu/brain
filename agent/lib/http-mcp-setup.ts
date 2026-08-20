@@ -1,6 +1,7 @@
 import {
   deleteStoredHttpMcpCredentials,
   deleteWorkspaceHttpMcpCredentials,
+  getHttpMcpCredentialSetupError,
   readStoredHttpMcpCredentials,
   readWorkspaceHttpMcpCredentials,
   resolveHttpMcpCredentials,
@@ -9,6 +10,7 @@ import {
 } from "@/agent/lib/http-mcp-credentials";
 import {
   getHttpMcpUrlConnection,
+  httpMcpRequiresBearer,
   parseHttpMcpServerUrl,
   type HttpMcpUrlConnection,
 } from "@/agent/lib/http-mcp-url";
@@ -17,8 +19,8 @@ export type HttpMcpSetupResponse = {
   readonly id: string;
   readonly displayName: string;
   readonly setupKind: "http_mcp";
-  readonly requiresClientSecret: false;
-  readonly optionalClientSecret: true;
+  readonly requiresClientSecret: boolean;
+  readonly optionalClientSecret: boolean;
   readonly hasStoredCredentials?: boolean;
   readonly hasWorkspaceCredentials?: boolean;
   readonly hasCredentials: boolean;
@@ -42,6 +44,28 @@ function requireConnection(id: string): HttpMcpUrlConnection {
   return connection;
 }
 
+function httpMcpSetupSecretFlags(connection: HttpMcpUrlConnection): {
+  readonly requiresClientSecret: boolean;
+  readonly optionalClientSecret: boolean;
+} {
+  if (httpMcpRequiresBearer(connection)) {
+    return { requiresClientSecret: true, optionalClientSecret: false };
+  }
+  return { requiresClientSecret: false, optionalClientSecret: true };
+}
+
+function nextHttpMcpBearerToken(
+  connection: HttpMcpUrlConnection,
+  inputToken: string | undefined,
+  existingToken: string | undefined,
+): string | undefined {
+  const nextToken = inputToken?.trim() || existingToken;
+  if (httpMcpRequiresBearer(connection) && !nextToken) {
+    throw new Error(`${connection.displayName} needs an API key.`);
+  }
+  return nextToken;
+}
+
 export async function buildWorkspaceHttpMcpSetupResponse(input: {
   readonly connectionId: string;
   readonly workspaceId: string;
@@ -51,14 +75,14 @@ export async function buildWorkspaceHttpMcpSetupResponse(input: {
   const connection = requireConnection(input.connectionId);
   const stored = await readWorkspaceHttpMcpCredentials(input.workspaceId, connection.name);
   const resolved = await resolveHttpMcpCredentials(connection.name, input.workspaceId);
+  const setupError = await getHttpMcpCredentialSetupError(connection.name, input.workspaceId);
   return {
     id: connection.name,
     displayName: connection.displayName,
     setupKind: "http_mcp",
-    requiresClientSecret: false,
-    optionalClientSecret: true,
+    ...httpMcpSetupSecretFlags(connection),
     hasWorkspaceCredentials: Boolean(stored?.mcpServerUrl),
-    hasCredentials: Boolean(resolved),
+    hasCredentials: setupError === null,
     credentialSource: resolved?.source ?? null,
     storedClientId: input.canManageCredentials ? (stored?.mcpServerUrl ?? null) : null,
     clientIdEnv: connection.envUrlKey,
@@ -80,14 +104,14 @@ export async function buildHostHttpMcpSetupResponse(input: {
   const connection = requireConnection(input.connectionId);
   const stored = await readStoredHttpMcpCredentials(connection.name);
   const resolved = await resolveHttpMcpCredentials(connection.name, null);
+  const setupError = await getHttpMcpCredentialSetupError(connection.name, null);
   return {
     id: connection.name,
     displayName: connection.displayName,
     setupKind: "http_mcp",
-    requiresClientSecret: false,
-    optionalClientSecret: true,
+    ...httpMcpSetupSecretFlags(connection),
     hasStoredCredentials: Boolean(stored?.mcpServerUrl),
-    hasCredentials: Boolean(resolved),
+    hasCredentials: setupError === null,
     credentialSource: resolved?.source ?? null,
     storedClientId: input.canManageCredentials ? (stored?.mcpServerUrl ?? null) : null,
     clientIdEnv: connection.envUrlKey,
@@ -110,7 +134,7 @@ export async function saveWorkspaceHttpMcpSetup(
     throw new Error(`Enter a valid ${connection.displayName} MCP server URL.`);
   }
   const existing = await readWorkspaceHttpMcpCredentials(workspaceId, connection.name);
-  const nextToken = input.bearerToken?.trim() || existing?.bearerToken;
+  const nextToken = nextHttpMcpBearerToken(connection, input.bearerToken, existing?.bearerToken);
   await writeWorkspaceHttpMcpCredentials(workspaceId, connection, {
     mcpServerUrl: input.mcpServerUrl,
     bearerToken: nextToken,
@@ -127,7 +151,7 @@ export async function saveHostHttpMcpSetup(
     throw new Error(`Enter a valid ${connection.displayName} MCP server URL.`);
   }
   const existing = await readStoredHttpMcpCredentials(connection.name);
-  const nextToken = input.bearerToken?.trim() || existing?.bearerToken;
+  const nextToken = nextHttpMcpBearerToken(connection, input.bearerToken, existing?.bearerToken);
   await writeStoredHttpMcpCredentials(connection, {
     mcpServerUrl: input.mcpServerUrl,
     bearerToken: nextToken,

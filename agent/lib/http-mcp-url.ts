@@ -12,6 +12,8 @@ export type HttpMcpUrlConnection = {
   readonly safeReadOnlyTools: readonly string[];
   readonly urlPlaceholder: string;
   readonly setupHint: string;
+  /** When true, status stays needs_setup until a non-empty bearer token is stored. */
+  readonly requiresBearer?: boolean;
 };
 
 export const HTTP_MCP_URL_CONNECTIONS: readonly HttpMcpUrlConnection[] = [
@@ -62,6 +64,50 @@ export const HTTP_MCP_URL_CONNECTIONS: readonly HttpMcpUrlConnection[] = [
       "Paste the MCP Toolbox Streamable HTTP URL (see mcp-toolbox.dev). Deploy Toolbox with your tools.yaml and point Brain at that endpoint.",
     safeReadOnlyTools: [],
   },
+  {
+    name: "rybbit",
+    displayName: "Rybbit",
+    envUrlKey: "RYBBIT_MCP_URL",
+    envTokenKey: "RYBBIT_MCP_TOKEN",
+    urlPlaceholder: "https://app.rybbit.io/api/mcp",
+    setupHint:
+      "Paste the Rybbit Streamable HTTP MCP URL and a personal or organization API key. Cloud: https://app.rybbit.io/api/mcp. Self-hosted: {BASE_URL}/api/mcp.",
+    requiresBearer: true,
+    safeReadOnlyTools: [
+      "get_overview",
+      "get_overview_timeseries",
+      "get_breakdown",
+      "get_live_stats",
+      "get_event_names",
+      "get_errors",
+      "get_web_vitals",
+      "get_retention",
+      "get_journeys",
+      "list_sites",
+      "get_site",
+      "get_goals",
+      "get_funnels",
+      "analyze_funnel",
+      "get_users",
+      "get_user",
+      "list_members",
+      "list_teams",
+      "get_sessions",
+      "get_session",
+      "get_events",
+      "get_query_schema",
+    ],
+  },
+  {
+    name: "bytebot",
+    displayName: "Bytebot",
+    envUrlKey: "BYTEBOT_MCP_URL",
+    envTokenKey: "BYTEBOT_MCP_TOKEN",
+    urlPlaceholder: "http://localhost:9990/mcp",
+    setupHint:
+      "Paste the Bytebot desktop MCP URL (default http://localhost:9990/mcp). Token is optional. If Streamable HTTP POST fails, put a Streamable HTTP gateway in front — Brain does not speak legacy SSE-only MCP.",
+    safeReadOnlyTools: [],
+  },
 ] as const;
 
 export function getHttpMcpUrlConnection(id: string): HttpMcpUrlConnection | undefined {
@@ -70,6 +116,10 @@ export function getHttpMcpUrlConnection(id: string): HttpMcpUrlConnection | unde
 
 export function isHttpMcpUrlConnectionId(id: string): boolean {
   return Boolean(getHttpMcpUrlConnection(id));
+}
+
+export function httpMcpRequiresBearer(connection: HttpMcpUrlConnection): boolean {
+  return connection.requiresBearer === true;
 }
 
 /** Accept http(s) MCP endpoint URLs; strip trailing slash except root. */
