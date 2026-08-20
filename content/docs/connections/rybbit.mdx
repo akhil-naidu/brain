@@ -1,0 +1,24 @@
+---
+title: Rybbit
+description: Point Brain at Rybbit analytics MCP (cloud or self-hosted).
+---
+
+**Auth:** HTTP MCP URL + **required** API key.
+
+Rybbit’s MCP is Streamable HTTP. Create a personal or organization API key in Rybbit, then register the endpoint in Brain. There is no OAuth Connect in v1.
+
+## Admin: Set up
+
+1. Create an API key in Rybbit (**Settings → Account** for a personal key, or **Settings → Organization** for an org key).
+2. **`/tools`** → **Rybbit** → **Set up**
+3. Paste MCP URL and API key
+4. Enable for Agent chats
+
+Cloud URL: `https://app.rybbit.io/api/mcp`  
+Self-hosted: `{BASE_URL}/api/mcp`
+
+Env fallback: `RYBBIT_MCP_URL`, `RYBBIT_MCP_TOKEN`.
+
+Reads (overview, sites, sessions) can run without approval in Auto. Writes, deletes, and `run_query` wait for in-chat approval.
+
+Docs: [Rybbit MCP](https://rybbit.com/docs/mcp).

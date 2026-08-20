@@ -14,7 +14,7 @@ Credentials and grants are **per signed-in user × active workspace**. Enabling 
 | **Dynamic client registration (DCR)** | ClickUp, Notion, Linear, Atlassian, Zernio, Sentry, dFlow | Click **Connect** — no client id/secret required |
 | **Static OAuth app** | Slack, Asana, Gmail, GitHub | Workspace/instance admin **Set up** client id/secret, then each user **Connect** |
 | **PAT** | Snowflake | Admin **Set up** MCP URL + programmatic access token |
-| **HTTP MCP URL** | MongoDB, MCP Toolbox | Admin **Set up** Streamable HTTP URL (+ optional bearer) |
+| **HTTP MCP URL** | MongoDB, MCP Toolbox, Rybbit, Bytebot | Admin **Set up** Streamable HTTP URL (+ bearer; required for Rybbit) |
 
 Members without configure rights see a message that a workspace admin must set the app up first.
 
@@ -45,4 +45,5 @@ Menu Connect stores tokens under **`.eve/`** on the host. Persist that directory
 - [ClickUp](/docs/connections/clickup) · [Notion](/docs/connections/notion) · [Linear](/docs/connections/linear) · [Atlassian](/docs/connections/atlassian)  
 - [Zernio](/docs/connections/zernio) · [Sentry](/docs/connections/sentry) · [dFlow](/docs/connections/dflow)  
 - [Slack](/docs/connections/slack) · [Asana](/docs/connections/asana) · [Gmail](/docs/connections/gmail) · [GitHub](/docs/connections/github)  
-- [Snowflake](/docs/connections/snowflake) · [MongoDB](/docs/connections/mongodb) · [MCP Toolbox](/docs/connections/toolbox)
+- [Snowflake](/docs/connections/snowflake) · [MongoDB](/docs/connections/mongodb) · [MCP Toolbox](/docs/connections/toolbox)  
+- [Rybbit](/docs/connections/rybbit) · [Bytebot](/docs/connections/bytebot)

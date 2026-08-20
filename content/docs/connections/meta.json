@@ -16,6 +16,8 @@
     "github",
     "snowflake",
     "mongodb",
-    "toolbox"
+    "toolbox",
+    "rybbit",
+    "bytebot"
   ]
 }

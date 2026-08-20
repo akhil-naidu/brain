@@ -1,0 +1,25 @@
+---
+title: Bytebot
+description: Point Brain at a Bytebot desktop MCP endpoint for computer-use tools.
+---
+
+**Auth:** HTTP MCP URL + optional bearer token.
+
+Bytebot’s desktop container exposes MCP at `{origin}/mcp` (default `http://localhost:9990/mcp`). Brain does not run Bytebot for you — deploy the desktop stack, then paste that URL.
+
+There is no OAuth Connect. Desktop tools (screenshot, click, type) **always wait for approval** in Auto.
+
+## Admin: Set up
+
+1. Run Bytebot (Docker Compose or your host) so the desktop API is reachable from Brain
+2. **`/tools`** → **Bytebot** → **Set up**
+3. Paste the MCP URL (token only if you enabled auth)
+4. Enable for Agent chats
+
+Env fallback: `BYTEBOT_MCP_URL`, `BYTEBOT_MCP_TOKEN`.
+
+## Transport
+
+Brain’s HTTP MCP proxy uses ordinary `fetch` (Streamable HTTP). Bytebot docs also mention SSE. If POST to `/mcp` fails, put a Streamable HTTP gateway in front of Bytebot and paste **that** URL. Brain does not spawn `mcp-remote` or speak legacy SSE-only MCP.
+
+Docs: [Bytebot desktop environment](https://docs.bytebot.ai/core-concepts/desktop-environment).
