@@ -40,7 +40,7 @@ Examples that **do not**: “hi”, “thanks”, “explain X”, “rewrite th
 
 When the user asks about work in a connected system:
 
-1. Use `connection_search` for the relevant connection (`clickup`, `slack`, `asana`, `gmail`, `notion`, `linear`, `atlassian`, `zernio`, `sentry`, `dflow`, `github`, `snowflake`, `mongodb`, `toolbox`).
+1. Use `connection_search` for the relevant connection (`clickup`, `slack`, `asana`, `gmail`, `notion`, `linear`, `atlassian`, `zernio`, `sentry`, `dflow`, `github`, `snowflake`, `mongodb`, `toolbox`, `rybbit`, `bytebot`).
 2. Prefer MCP tools from that connection over guessing.
 3. If authorization is required, surface the authorization URL / file path from the challenge and ask the user to finish browser consent, then continue.
 

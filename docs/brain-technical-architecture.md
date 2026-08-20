@@ -49,7 +49,7 @@ Brain does **not** require Vercel AI Gateway, Neon, Upstash, Vercel Connect, Ver
 
 **Exercised against live Upglobe systems in the PoC:** Snowflake, Asana, Slack, ClickUp, Gmail, GitHub.
 
-**Also shipped in the product** (available to connect; not all were required for the Upglobe PoC): Notion, Linear, Atlassian (Jira/Confluence), Zernio, Sentry, dFlow, MongoDB, MCP Toolbox for Databases.
+**Also shipped in the product** (available to connect; not all were required for the Upglobe PoC): Notion, Linear, Atlassian (Jira/Confluence), Zernio, Sentry, dFlow, MongoDB, MCP Toolbox for Databases, Rybbit, Bytebot.
 
 ---
 
@@ -194,6 +194,8 @@ Brain requires `BRAIN_DATABASE_URL` (or `DATABASE_URL`). If Postgres is missing 
 | Snowflake | SQL / Cortex / warehouse | Managed MCP URL + PAT |
 | MongoDB | Query and schema | Streamable HTTP MCP URL + optional bearer |
 | MCP Toolbox | SQL / databases via MCP Toolbox for Databases | Streamable HTTP MCP URL + optional bearer |
+| Rybbit | Analytics, sites, goals | Streamable HTTP MCP URL + required API key |
+| Bytebot | Desktop computer-use | HTTP MCP URL + optional bearer |
 
 **PoC live set:** Snowflake, Asana, Slack, ClickUp, Gmail, GitHub.
 
@@ -204,7 +206,7 @@ Brain requires `BRAIN_DATABASE_URL` (or `DATABASE_URL`). If Postgres is missing 
 
 Resolution order for app credentials: workspace BYOA → host-stored → env → DCR when the provider supports it.
 
-DCR providers (ClickUp, Notion, Linear, Atlassian, Zernio, Sentry, dFlow) usually need no app-secret setup: members Connect. Snowflake / MongoDB / Toolbox are Set up (URL + token), not OAuth Connect.
+DCR providers (ClickUp, Notion, Linear, Atlassian, Zernio, Sentry, dFlow) usually need no app-secret setup: members Connect. Snowflake / MongoDB / Toolbox / Rybbit / Bytebot are Set up (URL + token), not OAuth Connect.
 
 ### 5.3 How more connectors are added
 
@@ -214,7 +216,7 @@ Brain is built to grow by **the same three patterns**, not by a one-off integrat
 | --- | --- | --- |
 | Official remote MCP + OAuth DCR | The vendor publishes MCP and supports dynamic client registration | ClickUp, dFlow, Notion |
 | Official remote MCP + static OAuth app | The vendor requires a pre-registered client id/secret | Slack, Asana, Gmail, GitHub |
-| Streamable HTTP MCP URL (+ bearer or PAT) | The customer hosts or is issued an MCP server | Snowflake, MongoDB, MCP Toolbox |
+| Streamable HTTP MCP URL (+ bearer or PAT) | The customer hosts or is issued an MCP server | Snowflake, MongoDB, MCP Toolbox, Rybbit, Bytebot |
 
 Adding a connector means: define the connection (URL, auth, read-vs-write approval list), list it in the Tools catalog, and store credentials with the same workspace isolation. Any vendor that speaks MCP can be added this way — including additional databases via MCP Toolbox’s `tools.yaml`, additional warehouses, or internal OpenAPI-wrapped MCP servers. Brain does not require Vercel Connect connector UIDs.
 

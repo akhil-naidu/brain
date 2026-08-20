@@ -136,7 +136,10 @@ export function ArchitectureDiagram({ className }: { readonly className?: string
       <text className="label sub" textAnchor="middle" x="860" y="532">
         MCP Toolbox, dFlow
       </text>
-      <text className="label sub" textAnchor="middle" x="860" y="556">
+      <text className="label sub" textAnchor="middle" x="860" y="550">
+        Rybbit, Bytebot
+      </text>
+      <text className="label sub" textAnchor="middle" x="860" y="572">
         Writes require in-chat approval
       </text>
 

@@ -78,7 +78,8 @@
   <text x="860" y="488" text-anchor="middle" class="label sub">Gmail, GitHub</text>
   <text x="860" y="514" text-anchor="middle" class="label sub">Snowflake, MongoDB</text>
   <text x="860" y="532" text-anchor="middle" class="label sub">MCP Toolbox, dFlow</text>
-  <text x="860" y="556" text-anchor="middle" class="label sub">Writes require in-chat approval</text>
+  <text x="860" y="550" text-anchor="middle" class="label sub">Rybbit, Bytebot</text>
+  <text x="860" y="572" text-anchor="middle" class="label sub">Writes require in-chat approval</text>
 
   <text x="550" y="616" text-anchor="middle" class="label sub">Brain owns accounts and transcripts. Work data stays in the source systems. Models are called at an endpoint the organization chooses.</text>
   <text x="550" y="640" text-anchor="middle" class="label caption">BRAIN LOGICAL ARCHITECTURE - DFLOW ENTERPRISE - AUGUST 2026</text>

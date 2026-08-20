@@ -20,6 +20,8 @@ This agent must stay **self-hostable and independent of Vercel infrastructure**.
 - Snowflake: managed MCP with workspace/host UI MCP URL + PAT (env `SNOWFLAKE_MCP_SERVER_URL` / `SNOWFLAKE_PAT_TOKEN` as fallback; no OAuth app) (`agent/connections/snowflake.ts`)
 - MongoDB: official MCP over Streamable HTTP — Tools → Set up for MCP URL (+ optional bearer); env `MONGODB_MCP_URL` / `MONGODB_MCP_TOKEN` as fallback (`agent/connections/mongodb.ts`)
 - MCP Toolbox: Google MCP Toolbox for Databases over Streamable HTTP — Tools → Set up for MCP URL (+ optional bearer); env `TOOLBOX_MCP_URL` / `TOOLBOX_MCP_TOKEN` as fallback (`agent/connections/toolbox.ts`)
+- Rybbit: official analytics MCP over Streamable HTTP — Tools → Set up for MCP URL + API key; env `RYBBIT_MCP_URL` / `RYBBIT_MCP_TOKEN` as fallback (`agent/connections/rybbit.ts`)
+- Bytebot: desktop computer-use MCP over HTTP — Tools → Set up for MCP URL (+ optional bearer); env `BYTEBOT_MCP_URL` / `BYTEBOT_MCP_TOKEN` as fallback (`agent/connections/bytebot.ts`)
 
 See `.cursor/rules/no-vercel-infra.mdc`.
 

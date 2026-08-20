@@ -87,7 +87,7 @@ These live Upglobe systems were used in the PoC:
 
 The same pattern already supports more work systems, to turn on when needed:
 
-**Notion · Linear · Atlassian (Jira / Confluence) · Sentry · dFlow · MongoDB · database tools (MCP Toolbox) · Zernio**
+**Notion · Linear · Atlassian (Jira / Confluence) · Sentry · dFlow · MongoDB · database tools (MCP Toolbox) · Rybbit · Bytebot · Zernio**
 
 ### What can be added later
 
