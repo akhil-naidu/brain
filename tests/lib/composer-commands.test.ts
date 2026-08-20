@@ -22,6 +22,8 @@ describe("composer commands", () => {
       snowflake: false,
       mongodb: false,
       toolbox: false,
+      rybbit: false,
+      bytebot: false,
     },
     playbooks: [
       {

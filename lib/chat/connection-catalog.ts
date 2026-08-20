@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 import {
   AsanaIcon,
   AtlassianIcon,
+  BytebotIcon,
   ClickUpIcon,
   DflowIcon,
   GitHubIcon,
@@ -9,6 +10,7 @@ import {
   LinearIcon,
   MongoDbIcon,
   NotionIcon,
+  RybbitIcon,
   SentryIcon,
   SlackIcon,
   SnowflakeIcon,
@@ -38,9 +40,12 @@ export const PAT_CONNECTION_IDS = ["snowflake"] as const satisfies ReadonlyArray
 >;
 
 /** Remote Streamable HTTP MCP (MCP URL + optional bearer). Set up; no OAuth Connect. */
-export const HTTP_MCP_URL_CONNECTION_IDS = ["mongodb", "toolbox"] as const satisfies ReadonlyArray<
-  keyof EnabledConnections
->;
+export const HTTP_MCP_URL_CONNECTION_IDS = [
+  "mongodb",
+  "toolbox",
+  "rybbit",
+  "bytebot",
+] as const satisfies ReadonlyArray<keyof EnabledConnections>;
 
 export function connectionUsesPatAuth(connectionId: string): boolean {
   return (PAT_CONNECTION_IDS as readonly string[]).includes(connectionId);
@@ -156,6 +161,18 @@ export const CONNECTION_ITEMS: readonly ConnectionItem[] = [
     label: "MCP Toolbox",
     description: "SQL tools via MCP Toolbox for Databases (HTTP URL).",
     Icon: ToolboxIcon,
+  },
+  {
+    key: "rybbit",
+    label: "Rybbit",
+    description: "Analytics, sites, and goals via Rybbit MCP (HTTP URL + API key).",
+    Icon: RybbitIcon,
+  },
+  {
+    key: "bytebot",
+    label: "Bytebot",
+    description: "Desktop computer-use tools via Bytebot MCP (HTTP URL).",
+    Icon: BytebotIcon,
   },
 ];
 

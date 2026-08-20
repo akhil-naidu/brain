@@ -26,6 +26,8 @@ describe("HOME_CONNECTION_APPS", () => {
       "snowflake",
       "mongodb",
       "toolbox",
+      "rybbit",
+      "bytebot",
     ]);
     for (const app of HOME_CONNECTION_APPS) {
       expect(app.label.trim().length).toBeGreaterThan(0);

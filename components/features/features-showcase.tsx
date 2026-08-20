@@ -5,6 +5,7 @@ import { Space_Grotesk } from "next/font/google";
 import {
   AsanaIcon,
   AtlassianIcon,
+  BytebotIcon,
   ClickUpIcon,
   DflowIcon,
   GitHubIcon,
@@ -12,6 +13,7 @@ import {
   LinearIcon,
   MongoDbIcon,
   NotionIcon,
+  RybbitIcon,
   SentryIcon,
   SlackIcon,
   SnowflakeIcon,
@@ -69,6 +71,8 @@ const CONNECTION_ICONS: Record<
   snowflake: SnowflakeIcon,
   mongodb: MongoDbIcon,
   toolbox: ToolboxIcon,
+  rybbit: RybbitIcon,
+  bytebot: BytebotIcon,
 };
 
 const SCENE_MOCKS: Record<(typeof HOME_TOUR_SCENES)[number]["id"], ReactNode> = {

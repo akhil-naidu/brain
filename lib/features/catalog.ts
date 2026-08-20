@@ -40,6 +40,8 @@ export const HOME_CONNECTION_APPS = [
   { id: "snowflake", label: "Snowflake" },
   { id: "mongodb", label: "MongoDB" },
   { id: "toolbox", label: "MCP Toolbox" },
+  { id: "rybbit", label: "Rybbit" },
+  { id: "bytebot", label: "Bytebot" },
 ] as const satisfies readonly HomeConnectionApp[];
 
 /** Three-plane story for the home architecture section. */
@@ -78,7 +80,7 @@ export const HOME_TOUR_SCENES: readonly HomeTourScene[] = [
     id: "connections",
     title: "Connect the apps you already use",
     summary:
-      "ClickUp, Slack, Asana, Gmail, Notion, Linear, Atlassian, Zernio, Sentry, dFlow, GitHub, Snowflake, MongoDB, and MCP Toolbox — set up once, sign in from the menu, then turn tools on when you need them.",
+      "ClickUp, Slack, Asana, Gmail, Notion, Linear, Atlassian, Zernio, Sentry, dFlow, GitHub, Snowflake, MongoDB, MCP Toolbox, Rybbit, and Bytebot — set up once, sign in from the menu, then turn tools on when you need them.",
     points: [
       "See Connected, Connect, or Set up needed at a glance",
       "Connect, Disconnect, or App settings without leaving chat",

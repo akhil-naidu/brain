@@ -27,6 +27,8 @@ const SCHEDULED_CONNECTIONS = {
   slack: true,
   snowflake: true,
   toolbox: true,
+  rybbit: true,
+  bytebot: true,
   zernio: true,
 } as const;
 

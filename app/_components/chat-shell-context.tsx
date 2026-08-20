@@ -38,6 +38,8 @@ export type EnabledConnections = {
   readonly snowflake: boolean;
   readonly mongodb: boolean;
   readonly toolbox: boolean;
+  readonly rybbit: boolean;
+  readonly bytebot: boolean;
 };
 
 type ChatShellValue = {
@@ -110,6 +112,8 @@ export function ChatShellProvider({ children }: { readonly children: ReactNode }
     snowflake: false,
     mongodb: false,
     toolbox: false,
+    rybbit: false,
+    bytebot: false,
   });
   const [selectedModelId, setSelectedModelIdState] = useState(DEFAULT_BRAIN_CHAT_MODEL_ID);
   const [chatMode, setChatModeState] = useState<BrainChatMode>(DEFAULT_BRAIN_CHAT_MODE);

@@ -83,6 +83,8 @@ vi.mock("@/app/_components/chat-shell-context", () => ({
       slack: true,
       snowflake: true,
       toolbox: true,
+      rybbit: true,
+      bytebot: true,
       zernio: true,
     },
     refreshModelCatalog: vi.fn(),

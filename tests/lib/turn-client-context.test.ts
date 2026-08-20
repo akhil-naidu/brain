@@ -19,6 +19,8 @@ describe("createTurnClientContext", () => {
         slack: true,
         snowflake: false,
         toolbox: false,
+        rybbit: false,
+        bytebot: false,
         zernio: false,
       },
     });
@@ -48,6 +50,8 @@ describe("createTurnClientContext", () => {
         slack: true,
         snowflake: true,
         toolbox: true,
+        rybbit: true,
+        bytebot: true,
         zernio: true,
       },
     });
@@ -75,6 +79,8 @@ describe("createTurnClientContext", () => {
         slack: false,
         snowflake: false,
         toolbox: false,
+        rybbit: false,
+        bytebot: false,
         zernio: false,
       },
     });
@@ -101,6 +107,8 @@ describe("createTurnClientContext", () => {
         slack: true,
         snowflake: true,
         toolbox: true,
+        rybbit: true,
+        bytebot: true,
         zernio: true,
       },
     });
@@ -127,6 +135,8 @@ describe("createTurnClientContext", () => {
         slack: false,
         snowflake: false,
         toolbox: false,
+        rybbit: false,
+        bytebot: false,
         zernio: false,
       },
     });
@@ -153,6 +163,8 @@ describe("createTurnClientContext", () => {
         slack: false,
         snowflake: false,
         toolbox: false,
+        rybbit: false,
+        bytebot: false,
         zernio: false,
       },
     });
@@ -178,6 +190,8 @@ describe("createTurnClientContext", () => {
         slack: false,
         snowflake: false,
         toolbox: false,
+        rybbit: false,
+        bytebot: false,
         zernio: false,
       },
     });
@@ -203,6 +217,8 @@ describe("createTurnClientContext", () => {
         slack: true,
         snowflake: true,
         toolbox: true,
+        rybbit: true,
+        bytebot: true,
         zernio: true,
       },
     });

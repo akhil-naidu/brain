@@ -2,8 +2,11 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { bytebotHttpMcp, bytebotMcpUrl } from "@/agent/connections/bytebot";
 import { mongodbHttpMcp, mongodbMcpUrl } from "@/agent/connections/mongodb";
+import { rybbitHttpMcp, rybbitMcpUrl } from "@/agent/connections/rybbit";
 import { toolboxHttpMcp } from "@/agent/connections/toolbox";
+import { saveHostHttpMcpSetup } from "@/agent/lib/http-mcp-setup";
 import {
   HTTP_MCP_URL_CONNECTIONS,
   isHttpMcpUrlConnectionId,
@@ -45,12 +48,26 @@ afterEach(async () => {
 });
 
 describe("HTTP MCP URL connections", () => {
-  it("registers MongoDB and Toolbox behind the Brain proxy", () => {
-    expect(HTTP_MCP_URL_CONNECTIONS.map((c) => c.name)).toEqual(["mongodb", "toolbox"]);
+  it("registers MongoDB, Toolbox, Rybbit, and Bytebot behind the Brain proxy", () => {
+    expect(HTTP_MCP_URL_CONNECTIONS.map((c) => c.name)).toEqual([
+      "mongodb",
+      "toolbox",
+      "rybbit",
+      "bytebot",
+    ]);
     expect(isHttpMcpUrlConnectionId("mongodb")).toBe(true);
     expect(connectionUsesHttpMcpUrl("toolbox")).toBe(true);
+    expect(connectionUsesHttpMcpUrl("rybbit")).toBe(true);
+    expect(connectionUsesHttpMcpUrl("bytebot")).toBe(true);
     expect(connectionOffersAppSetup("mongodb")).toBe(true);
+    expect(connectionOffersAppSetup("rybbit")).toBe(true);
     expect(mongodbMcpUrl).toContain("/api/mcp/http/mongodb");
+    expect(rybbitMcpUrl).toContain("/api/mcp/http/rybbit");
+    expect(bytebotMcpUrl).toContain("/api/mcp/http/bytebot");
+    expect(HTTP_MCP_URL_CONNECTIONS.find((c) => c.name === "rybbit")?.requiresBearer).toBe(true);
+    expect(
+      HTTP_MCP_URL_CONNECTIONS.find((c) => c.name === "bytebot")?.requiresBearer,
+    ).toBeUndefined();
     expect(parseHttpMcpServerUrl("https://db.example/mcp/")).toEqual({
       mcpUrl: "https://db.example/mcp",
     });
@@ -142,5 +159,69 @@ describe("HTTP MCP URL connections", () => {
         "toolbox__search-hotels-by-name",
       ),
     ).toBe("user-approval");
+  });
+
+  it("requires a Rybbit API key even when the MCP URL is set", async () => {
+    await useTemporaryWorkingDirectory();
+    await writeStoredHttpMcpCredentials(rybbitHttpMcp, {
+      mcpServerUrl: "https://app.rybbit.io/api/mcp",
+    });
+    expect(await getHttpMcpCredentialSetupError("rybbit", null, {})).toBe(
+      "Set up Rybbit to continue",
+    );
+    const status = await resolveHttpMcpConnectionAuthStatus(rybbitHttpMcp, principal, {});
+    expect(status.status).toBe("needs_setup");
+
+    await writeStoredHttpMcpCredentials(rybbitHttpMcp, {
+      mcpServerUrl: "https://app.rybbit.io/api/mcp",
+      bearerToken: "rb_key",
+    });
+    expect(await getHttpMcpCredentialSetupError("rybbit", null, {})).toBeNull();
+    const connected = await resolveHttpMcpConnectionAuthStatus(rybbitHttpMcp, principal, {});
+    expect(connected.status).toBe("connected");
+  });
+
+  it("connects Bytebot with a URL and no token", async () => {
+    await useTemporaryWorkingDirectory();
+    await writeStoredHttpMcpCredentials(bytebotHttpMcp, {
+      mcpServerUrl: "http://localhost:9990/mcp",
+    });
+    expect(await getHttpMcpCredentialSetupError("bytebot", null, {})).toBeNull();
+    const status = await resolveHttpMcpConnectionAuthStatus(bytebotHttpMcp, principal, {});
+    expect(status.status).toBe("connected");
+  });
+
+  it("rejects saving Rybbit without an API key", async () => {
+    await useTemporaryWorkingDirectory();
+    await expect(
+      saveHostHttpMcpSetup("rybbit", { mcpServerUrl: "https://app.rybbit.io/api/mcp" }),
+    ).rejects.toThrow(/API key/i);
+  });
+
+  it("auto-approves Rybbit reads and gates writes, query, and Bytebot desktop tools", () => {
+    expect(approvalForTool("rybbit", rybbitHttpMcp.safeReadOnlyTools, "rybbit__list_sites")).toBe(
+      "not-applicable",
+    );
+    expect(approvalForTool("rybbit", rybbitHttpMcp.safeReadOnlyTools, "rybbit__delete_site")).toBe(
+      "user-approval",
+    );
+    expect(approvalForTool("rybbit", rybbitHttpMcp.safeReadOnlyTools, "rybbit__run_query")).toBe(
+      "user-approval",
+    );
+    expect(
+      approvalForTool("bytebot", bytebotHttpMcp.safeReadOnlyTools, "bytebot__screenshot"),
+    ).toBe("user-approval");
+    expect(
+      shouldOfferConnectionDisconnect(
+        { id: "rybbit", displayName: "Rybbit", status: "connected" },
+        "rybbit",
+      ),
+    ).toBe(false);
+    expect(
+      shouldOfferConnectionDisconnect(
+        { id: "bytebot", displayName: "Bytebot", status: "connected" },
+        "bytebot",
+      ),
+    ).toBe(false);
   });
 });

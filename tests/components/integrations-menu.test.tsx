@@ -43,6 +43,18 @@ const fetchConnectionStatuses = vi.hoisted(() =>
       status: "needs_setup" as const,
       detail: "Set up MCP Toolbox to continue",
     },
+    {
+      id: "rybbit",
+      displayName: "Rybbit",
+      status: "needs_setup" as const,
+      detail: "Set up Rybbit to continue",
+    },
+    {
+      id: "bytebot",
+      displayName: "Bytebot",
+      status: "needs_setup" as const,
+      detail: "Set up Bytebot to continue",
+    },
   ]),
 );
 
@@ -427,6 +439,8 @@ describe("IntegrationsMenu status", () => {
           slack: true,
           snowflake: false,
           toolbox: false,
+          rybbit: false,
+          bytebot: false,
           zernio: false,
         }}
         onConnectionEnabledChange={vi.fn()}
@@ -473,6 +487,8 @@ describe("IntegrationsMenu status", () => {
           slack: false,
           snowflake: false,
           toolbox: false,
+          rybbit: false,
+          bytebot: false,
           zernio: false,
         }}
         onConnectionEnabledChange={vi.fn()}
