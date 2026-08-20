@@ -187,3 +187,31 @@ export function ToolboxIcon({ className }: { readonly className?: string }) {
     </svg>
   );
 }
+
+/** Rybbit frog-green mark (simplified). */
+export function RybbitIcon({ className }: { readonly className?: string }) {
+  return (
+    <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
+      <circle cx="12" cy="13" fill="#3D8B40" r="8" />
+      <circle cx="9" cy="11.5" fill="#F4F9F4" r="1.6" />
+      <circle cx="15" cy="11.5" fill="#F4F9F4" r="1.6" />
+      <path
+        d="M9 16c1 .9 2 1.3 3 1.3s2-.4 3-1.3"
+        stroke="#F4F9F4"
+        strokeLinecap="round"
+        strokeWidth="1.4"
+      />
+    </svg>
+  );
+}
+
+/** Bytebot desktop mark (simplified). */
+export function BytebotIcon({ className }: { readonly className?: string }) {
+  return (
+    <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
+      <rect fill="#1F2937" height="12" rx="1.5" width="16" x="4" y="4.5" />
+      <rect fill="#38BDF8" height="7" width="12" x="6" y="6.5" />
+      <path d="M8 19.5h8" stroke="#1F2937" strokeLinecap="round" strokeWidth="1.75" />
+    </svg>
+  );
+}

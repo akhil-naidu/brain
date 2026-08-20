@@ -191,6 +191,39 @@ const CONNECTION_SVG: Readonly<Record<string, SvgIconSpec>> = {
       },
     ],
   },
+  rybbit: {
+    viewBox: "0 0 24 24",
+    children: [
+      { type: "circle", cx: "12", cy: "13", r: "8", fill: "#3D8B40" },
+      { type: "circle", cx: "9", cy: "11.5", r: "1.6", fill: "#F4F9F4" },
+      { type: "circle", cx: "15", cy: "11.5", r: "1.6", fill: "#F4F9F4" },
+      {
+        type: "path",
+        d: "M9 16c1 .9 2 1.3 3 1.3s2-.4 3-1.3",
+        stroke: "#F4F9F4",
+      },
+    ],
+  },
+  bytebot: {
+    viewBox: "0 0 24 24",
+    children: [
+      {
+        type: "path",
+        d: "M4 4.5h16a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 15V6A1.5 1.5 0 0 1 4 4.5z",
+        fill: "#1F2937",
+      },
+      {
+        type: "path",
+        d: "M6 6.5h12v7H6z",
+        fill: "#38BDF8",
+      },
+      {
+        type: "path",
+        d: "M8 19.5h8",
+        stroke: "#1F2937",
+      },
+    ],
+  },
 };
 
 function createSvgFromSpec(
