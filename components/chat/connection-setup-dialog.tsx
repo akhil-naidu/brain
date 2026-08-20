@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { setupSecretPayload } from "@/lib/chat/connection-setup-secret";
 import {
   connectionSetupCanManageBoth,
   resolveConnectionSetupTarget,
@@ -167,7 +168,11 @@ export function ConnectionSetupDialog({
       try {
         const payload = {
           clientId,
-          clientSecret: info?.requiresClientSecret ? clientSecret : undefined,
+          clientSecret: setupSecretPayload({
+            requiresClientSecret: Boolean(info?.requiresClientSecret),
+            optionalClientSecret: info?.optionalClientSecret,
+            clientSecret,
+          }),
         };
         if (target === "workspace") {
           await saveWorkspaceConnectionSetup(connectionId, payload);
